@@ -49,16 +49,16 @@ body {
 }
 
 .profile-image {
-    width: 200px;
-    height: 200px;
+    width: 324px;
+    height: 324px;
     border-radius: 50%;
     object-fit: cover;
     border: 5px solid transparent;
-    background: linear-gradient(45deg, #ff8a00, #e52e71, #b92b27, #1565C0);
+    background: linear-gradient(45deg, #fff700, #2eb5d4, #a4d0f2, #1beb10);
     background-size: 300% 300%;
     padding: 5px;
     animation: gradientBorder 4s ease infinite;
-    box-shadow: 0 0 50px rgba(255, 138, 0, 0.5);
+    box-shadow: 0 0 50px rgba(119, 238, 125, 0.759);
     transition: transform 0.5s ease;
 }
 
@@ -84,7 +84,7 @@ body {
     font-size: 2.5rem;
     margin-bottom: 15px;
     font-weight: 700;
-    background: linear-gradient(45deg, #ff8a00, #e52e71, #b92b27, #1565C0);
+    background: linear-gradient(45deg, #fff700, #2eb5d4, #a4d0f2, #1beb10);
     -webkit-background-clip: text;
     background-clip: text;
     color: transparent;
