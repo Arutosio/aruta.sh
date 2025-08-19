@@ -1,0 +1,473 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rosario Aruta - Profilo Personale</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            background: #000;
+            color: #fff;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            overflow-x: hidden;
+            position: relative;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        /* Sfondo nero sfumato */
+        .background {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(circle at center, #222 0%, #000 70%);
+            z-index: -1;
+        }
+        
+        /* Contenuto principale */
+        .container {
+            width: 100%;
+            max-width: 800px;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            z-index: 1;
+        }
+        
+        /* Foto profilo - AUMENTATA DI DIMENSIONE */
+        .profile-container {
+            margin: 30px 0;
+            position: relative;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        .profile-image {
+            width: 280px;  /* Aumentata da 200px */
+            height: 280px; /* Aumentata da 200px */
+            border-radius: 50%;
+            object-fit: cover;
+            border: 5px solid transparent;
+            /* NUOVA COMBINAZIONE: verde, rosa, viola */
+            background: linear-gradient(45deg, #4CAF50, #E91E63, #9C27B0);
+            background-size: 300% 300%;
+            padding: 5px;
+            animation: gradientBorder 4s ease infinite;
+            box-shadow: 0 0 50px rgba(76, 175, 80, 0.5);
+            transition: transform 0.5s ease;
+        }
+        
+        .profile-image:hover {
+            transform: scale(1.05);
+        }
+        
+        @keyframes gradientBorder {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+        
+        /* Descrizione */
+        .description {
+            text-align: center;
+            margin: 30px 0;
+            max-width: 600px;
+            padding: 0 20px;
+        }
+        
+        .description h1 {
+            font-size: 2.5rem;
+            margin-bottom: 15px;
+            font-weight: 700;
+            /* NUOVA COMBINAZIONE: verde, rosa, viola */
+            background: linear-gradient(45deg, #4CAF50, #E91E63, #9C27B0);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            background-size: 300% 300%;
+            animation: gradientText 4s ease infinite;
+        }
+        
+        @keyframes gradientText {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+        
+        .description p {
+            font-size: 1.2rem;
+            line-height: 1.6;
+            color: #ccc;
+        }
+        
+        /* Link social */
+        .social-links {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 20px;
+            margin: 40px 0;
+            width: 100%;
+            max-width: 600px;
+        }
+        
+        .social-link {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-decoration: none;
+            color: #fff;
+            transition: all 0.3s ease;
+            width: 80px;
+        }
+        
+        .social-icon {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 1.8rem;
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            transition: all 0.3s ease;
+            margin-bottom: 10px;
+        }
+        
+        .social-link:hover .social-icon {
+            transform: translateY(-10px) scale(1.1);
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.3);
+        }
+        
+        .social-link:hover {
+            color: #fff;
+            text-decoration: none;
+        }
+        
+        .social-name {
+            font-size: 0.9rem;
+            text-align: center;
+            opacity: 0.8;
+        }
+        
+        /* Instagram - AGGIORNATO con nuovi colori */
+        .instagram:hover .social-icon {
+            background: linear-gradient(45deg, #4CAF50, #E91E63, #9C27B0);
+            color: white;
+        }
+        
+        /* Twitch - AGGIORNATO con nuovi colori */
+        .twitch:hover .social-icon {
+            background: linear-gradient(45deg, #4CAF50, #E91E63);
+            color: white;
+        }
+        
+        /* GitHub - AGGIORNATO con nuovi colori */
+        .github:hover .social-icon {
+            background: linear-gradient(45deg, #4CAF50, #9C27B0);
+            color: white;
+        }
+        
+        /* YouTube - AGGIORNATO con nuovi colori */
+        .youtube:hover .social-icon {
+            background: linear-gradient(45deg, #E91E63, #9C27B0);
+            color: white;
+        }
+        
+        /* Twitter - AGGIORNATO con nuovi colori */
+        .twitter:hover .social-icon {
+            background: linear-gradient(45deg, #4CAF50, #9C27B0);
+            color: white;
+        }
+        
+        /* LinkedIn - AGGIORNATO con nuovi colori */
+        .linkedin:hover .social-icon {
+            background: linear-gradient(45deg, #4CAF50, #E91E63);
+            color: white;
+        }
+        
+        /* Facebook - AGGIORNATO con nuovi colori */
+        .facebook:hover .social-icon {
+            background: linear-gradient(45deg, #4CAF50, #9C27B0);
+            color: white;
+        }
+        
+        /* Footer */
+        .footer {
+            margin-top: auto;
+            padding: 30px;
+            text-align: center;
+            color: #666;
+            font-size: 0.9rem;
+            width: 100%;
+        }
+        
+        /* Animazioni */
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .animate-fade-in {
+            opacity: 0;
+            animation: fadeIn 1s ease forwards;
+        }
+        
+        .delay-1 { animation-delay: 0.2s; }
+        .delay-2 { animation-delay: 0.4s; }
+        .delay-3 { animation-delay: 0.6s; }
+        .delay-4 { animation-delay: 0.8s; }
+        .delay-5 { animation-delay: 1.0s; }
+        
+        /* Effetti particellari - AGGIORNATO con nuovi colori */
+        .particles {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 0;
+        }
+        
+        /* Responsive */
+        @media (max-width: 768px) {
+            .profile-image {
+                width: 220px;  /* Aumentata da 150px */
+                height: 220px; /* Aumentata da 150px */
+            }
+            
+            .description h1 {
+                font-size: 2rem;
+            }
+            
+            .description p {
+                font-size: 1rem;
+            }
+            
+            .social-links {
+                gap: 15px;
+            }
+            
+            .social-link {
+                width: 70px;
+            }
+            
+            .social-icon {
+                width: 50px;
+                height: 50px;
+                font-size: 1.5rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Sfondo sfumato -->
+    <div class="background"></div>
+    
+    <!-- Canvas per le particelle -->
+    <canvas class="particles"></canvas>
+    
+    <!-- Contenuto principale -->
+    <div class="container">
+        <!-- Foto profilo -->
+        <div class="profile-container animate-fade-in">
+            <img src="https://placehold.co/280x280/333/white?text=RA" alt="Rosario Aruta" class="profile-image">
+        </div>
+        
+        <!-- Descrizione -->
+        <div class="description animate-fade-in delay-1">
+            <h1>Rosario Aruta</h1>
+            <p>Sviluppatore web appassionato di tecnologia, design e innovazione. Creo esperienze digitali coinvolgenti e funzionali con un'attenzione particolare ai dettagli e all'estetica.</p>
+        </div>
+        
+        <!-- Link social -->
+        <div class="social-links">
+            <!-- Instagram -->
+            <a href="https://instagram.com/rosarioaruta" class="social-link instagram animate-fade-in delay-2">
+                <div class="social-icon">
+                    <i class="fab fa-instagram"></i>
+                </div>
+                <span class="social-name">Instagram</span>
+            </a>
+            
+            <!-- Twitch -->
+            <a href="https://twitch.tv/rosarioaruta" class="social-link twitch animate-fade-in delay-3">
+                <div class="social-icon">
+                    <i class="fab fa-twitch"></i>
+                </div>
+                <span class="social-name">Twitch</span>
+            </a>
+            
+            <!-- GitHub -->
+            <a href="https://github.com/rosarioaruta" class="social-link github animate-fade-in delay-4">
+                <div class="social-icon">
+                    <i class="fab fa-github"></i>
+                </div>
+                <span class="social-name">GitHub</span>
+            </a>
+            
+            <!-- YouTube -->
+            <a href="https://youtube.com/rosarioaruta" class="social-link youtube animate-fade-in delay-5">
+                <div class="social-icon">
+                    <i class="fab fa-youtube"></i>
+                </div>
+                <span class="social-name">YouTube</span>
+            </a>
+            
+            <!-- Twitter -->
+            <a href="https://twitter.com/rosarioaruta" class="social-link twitter animate-fade-in delay-2">
+                <div class="social-icon">
+                    <i class="fab fa-twitter"></i>
+                </div>
+                <span class="social-name">Twitter</span>
+            </a>
+            
+            <!-- LinkedIn -->
+            <a href="https://linkedin.com/in/rosarioaruta" class="social-link linkedin animate-fade-in delay-3">
+                <div class="social-icon">
+                    <i class="fab fa-linkedin"></i>
+                </div>
+                <span class="social-name">LinkedIn</span>
+            </a>
+            
+            <!-- Facebook -->
+            <a href="https://facebook.com/rosarioaruta" class="social-link facebook animate-fade-in delay-4">
+                <div class="social-icon">
+                    <i class="fab fa-facebook"></i>
+                </div>
+                <span class="social-name">Facebook</span>
+            </a>
+            
+            <!-- TikTok -->
+            <a href="https://tiktok.com/@rosarioaruta" class="social-link animate-fade-in delay-5">
+                <div class="social-icon">
+                    <i class="fab fa-tiktok"></i>
+                </div>
+                <span class="social-name">TikTok</span>
+            </a>
+        </div>
+    </div>
+    
+    <!-- Footer -->
+    <div class="footer animate-fade-in delay-5">
+        <p>© 2023 Rosario Aruta. Tutti i diritti riservati.</p>
+    </div>
+
+    <!-- JavaScript per animazioni e particelle -->
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Inizializza le particelle
+            initParticles();
+            
+            // Animazione di digitazione per la descrizione
+            const description = document.querySelector('.description p');
+            const originalText = description.textContent;
+            description.textContent = '';
+            let i = 0;
+            
+            function typeWriter() {
+                if (i < originalText.length) {
+                    description.textContent += originalText.charAt(i);
+                    i++;
+                    setTimeout(typeWriter, 50);
+                }
+            }
+            
+            // Avvia l'effetto di digitazione quando l'elemento è visibile
+            setTimeout(typeWriter, 1000);
+        });
+        
+        function initParticles() {
+            const canvas = document.querySelector('.particles');
+            const ctx = canvas.getContext('2d');
+            let particlesArray = [];
+            
+            // Imposta le dimensioni del canvas
+            function setCanvasSize() {
+                canvas.width = window.innerWidth;
+                canvas.height = window.innerHeight;
+            }
+            
+            setCanvasSize();
+            window.addEventListener('resize', function() {
+                setCanvasSize();
+            });
+            
+            // Classe Particella
+            class Particle {
+                constructor() {
+                    this.x = Math.random() * canvas.width;
+                    this.y = Math.random() * canvas.height;
+                    this.size = Math.random() * 2 + 0.5;
+                    this.speedX = Math.random() * 1 - 0.5;
+                    this.speedY = Math.random() * 1 - 0.5;
+                    // NUOVI COLORI: verde, rosa, viola
+                    this.color = `rgba(${Math.floor(Math.random() * 50 + 76)}, 
+                                  ${Math.floor(Math.random() * 100 + 63)}, 
+                                  ${Math.floor(Math.random() * 50 + 176)}, 
+                                  ${Math.random() * 0.3 + 0.1})`;
+                }
+                
+                update() {
+                    this.x += this.speedX;
+                    this.y += this.speedY;
+                    
+                    if (this.x > canvas.width || this.x < 0) {
+                        this.speedX = -this.speedX;
+                    }
+                    if (this.y > canvas.height || this.y < 0) {
+                        this.speedY = -this.speedY;
+                    }
+                }
+                
+                draw() {
+                    ctx.fillStyle = this.color;
+                    ctx.beginPath();
+                    ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+            }
+            
+            // Crea le particelle
+            function init() {
+                particlesArray = [];
+                const numberOfParticles = (canvas.height * canvas.width) / 9000;
+                
+                for (let i = 0; i < numberOfParticles; i++) {
+                    particlesArray.push(new Particle());
+                }
+            }
+            
+            // Anima le particelle
+            function animate() {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                
+                for (let i = 0; i < particlesArray.length; i++) {
+                    particlesArray[i].update();
+                    particlesArray[i].draw();
+                }
+                
+                requestAnimationFrame(animate);
+            }
+            
+            init();
+            animate();
+        }
+    </script>
+</body>
+</html>

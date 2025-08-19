@@ -44,6 +44,11 @@ function initParticles() {
             this.size = Math.random() * 2 + 0.5;
             this.speedX = Math.random() * 1 - 0.5;
             this.speedY = Math.random() * 1 - 0.5;
+            // NUOVI COLORI: verde, rosa, viola
+            this.color = `rgba(${Math.floor(Math.random() * 50 + 76)}, 
+                            ${Math.floor(Math.random() * 100 + 63)}, 
+                            ${Math.floor(Math.random() * 50 + 176)}, 
+                            ${Math.random() * 0.3 + 0.1})`;
         }
         
         update() {
@@ -59,7 +64,7 @@ function initParticles() {
         }
         
         draw() {
-            ctx.fillStyle = 'rgba(255, 255, 255, 0.2)';
+            ctx.fillStyle = this.color;
             ctx.beginPath();
             ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
             ctx.fill();
