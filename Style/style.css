@@ -335,18 +335,27 @@ html, body {
     scrollbar-width: none;
     overscroll-behavior: contain; /* don't propagate scroll to the page */
     scroll-behavior: smooth;
-    padding: 22px 5% 18px 5%;
+    padding: 14px 5% 12px 5%;
     display: flex;
     flex-direction: column;
-    gap: 13px;
+    gap: 8px;
 }
 .vn-inner::-webkit-scrollbar { display: none; }
 
+/* ── Header row: name left, bio right ── */
+.vn-header {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 20px;
+}
+
 /* ── Name plate ── */
 .vn-nametag {
+    flex-shrink: 0;
     display: flex;
     flex-direction: column;
-    gap: 3px;
+    gap: 1px;
     border-left: 2px solid var(--lb-act);
     padding-left: 14px;
 }
@@ -354,14 +363,14 @@ html, body {
 /* ── Text ── */
 .hero-pre {
     font-family: 'Almendra', serif; font-style: italic;
-    font-size: clamp(.80rem, 1.9vw, .96rem);
+    font-size: clamp(.96rem, 2.2vw, 1.12rem);
     color: var(--pre-c); letter-spacing: .09em;
     text-shadow: 0 1px 10px rgba(0,0,0,.9);
     transition: color 1.4s;
 }
 .hero-name {
     font-family: 'MedievalSharp', serif;
-    font-size: clamp(2.8rem, 8vw, 5.4rem); letter-spacing: .04em; line-height: 1;
+    font-size: clamp(3.2rem, 9vw, 6rem); letter-spacing: .04em; line-height: 1;
     color: var(--name-c);
     text-shadow:
         0 0 32px var(--name-sh),
@@ -371,7 +380,7 @@ html, body {
     transition: color 1.4s, text-shadow 1.4s;
 }
 .hero-cls {
-    font-family: 'Almendra', serif; font-size: clamp(.68rem, 1.7vw, .82rem);
+    font-family: 'Almendra', serif; font-size: clamp(.80rem, 2vw, .96rem);
     font-weight: 700; letter-spacing: .18em;
     color: var(--cls-c);
     text-shadow: 0 1px 8px rgba(0,0,0,.85);
@@ -389,12 +398,14 @@ html, body {
 }
 .rule span { font-size: .62rem; color: var(--rule-c); flex-shrink: 0; transition: color 1.4s; }
 
-/* ── Bio ── */
+/* ── Bio (fills the space to the right of the name) ── */
 .bio {
-    font-family: 'IM Fell English', serif; font-size: clamp(.88rem, 2.1vw, 1rem);
-    line-height: 1.9; color: var(--bio-c);
+    flex: 1;
+    min-width: 0; /* allow text to wrap inside flex */
+    font-family: 'IM Fell English', serif; font-size: clamp(1rem, 2.4vw, 1.14rem);
+    line-height: 1.65; color: var(--bio-c);
     text-shadow: 0 1px 8px rgba(0,0,0,.8);
-    min-height: 1.9em; transition: color 1.4s;
+    transition: color 1.4s;
 }
 .cur {
     display: inline-block; width: 2px; height: .9em;
@@ -405,13 +416,13 @@ html, body {
 
 /* ── Tags ── */
 .tags {
-    display: flex; flex-wrap: wrap; gap: 7px;
+    display: flex; flex-wrap: wrap; gap: 5px;
     pointer-events: all;
 }
 .tags span {
-    font-family: 'Almendra', serif; font-size: .80rem;
+    font-family: 'Almendra', serif; font-size: .88rem;
     color: var(--tag-txt); background: var(--tag-bg); border: 1px solid var(--tag-bdr);
-    border-radius: 100px; padding: 4px 13px; cursor: default;
+    border-radius: 100px; padding: 3px 11px; cursor: default;
     backdrop-filter: blur(10px);
     text-shadow: 0 1px 6px rgba(0,0,0,.7);
     transition: all .22s;
@@ -420,15 +431,15 @@ html, body {
 [data-theme="light"] .tags span:hover { background: rgba(0,0,0,.09); }
 
 /* ── Socials ── */
-.socials { display: flex; flex-wrap: wrap; gap: 8px; pointer-events: all; }
+.socials { display: flex; flex-wrap: wrap; gap: 6px; pointer-events: all; }
 .sl {
-    display: flex; align-items: center; gap: 8px; text-decoration: none;
+    display: flex; align-items: center; gap: 7px; text-decoration: none;
     color: var(--sl-txt); background: var(--sl-bg); border: 1px solid var(--sl-bdr);
-    border-radius: 100px; padding: 9px 20px;
-    font-family: 'Cinzel', serif; font-size: .72rem; font-weight: 600; letter-spacing: .09em;
+    border-radius: 100px; padding: 7px 17px;
+    font-family: 'Cinzel', serif; font-size: .80rem; font-weight: 600; letter-spacing: .09em;
     backdrop-filter: blur(14px); transition: all .26s;
 }
-.sl i, .sl svg { font-size: .88rem; flex-shrink: 0; }
+.sl i, .sl svg { font-size: .95rem; flex-shrink: 0; }
 .sl.twitch    { --p: rgba(145,70,255,.55); }
 .sl.kick      { --p: rgba(28,230,35,.5);   }
 .sl.youtube   { --p: rgba(255,0,0,.5);     }
@@ -460,18 +471,19 @@ html, body {
 
 /* Phone portrait */
 @media (max-width: 540px) {
+    .vn-header { flex-direction: column; align-items: flex-start; gap: 6px; }
     .vn-sprite   { max-width: 65vw; }
     .vn-sky-area { min-height: 30vh; }
     .vn-inner {
         max-height: 55vh;
         min-height: 160px;
-        padding: 14px 5% 12px;
-        gap: 9px;
+        padding: 10px 5% 8px;
+        gap: 7px;
     }
-    .hero-name { font-size: clamp(1.8rem, 12vw, 2.6rem); }
+    .hero-name { font-size: clamp(2rem, 12vw, 2.8rem); }
     .lb  { padding: 3px 7px; }
     .sl span { display: none; }
-    .sl  { padding: 9px 12px; }
+    .sl  { padding: 7px 12px; }
 }
 
 /* Very small phones (iPhone SE, Galaxy A series) */
@@ -479,8 +491,8 @@ html, body {
     .vn-sprite { max-width: 58vw; }
     .rule        { display: none; }
     .footer-note { display: none; }
-    .vn-inner { gap: 8px; padding: 12px 5% 10px; }
-    .tags span { font-size: .74rem; padding: 3px 10px; }
+    .vn-inner { gap: 6px; padding: 8px 5% 8px; }
+    .tags span { font-size: .80rem; padding: 2px 9px; }
 }
 
 /* Landscape mobile — sky area is tiny, give more room to dialog */
