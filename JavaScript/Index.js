@@ -21,8 +21,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
     buildTags();
     buildSocials();
+    buildFooter();
     applyTheme();
     setLangBtn(lang);
+    document.documentElement.setAttribute('lang', lang);
 
     initAtmo();
     showPage();
@@ -52,8 +54,13 @@ function buildSocials() {
     document.getElementById('socials').innerHTML =
         CONFIG.socials.map(s => {
             const icon = s.icon === 'kick' ? KICK_SVG : `<i class="${s.icon}"></i>`;
-            return `<a href="${s.url}" class="sl ${s.id}" target="_blank" rel="noopener">${icon}<span>${s.label}</span></a>`;
+            return `<a href="${s.url}" class="sl ${s.id}" target="_blank" rel="noopener" aria-label="${s.label}">${icon}<span>${s.label}</span></a>`;
         }).join('');
+}
+
+function buildFooter() {
+    const el = document.getElementById('footer-note');
+    if (el) el.textContent = `✦ ${CONFIG.fullName} · ${CONFIG.year} ✦`;
 }
 
 /* ════════════════════════════
@@ -125,10 +132,13 @@ function toggleTheme() {
     applyTheme();
     localStorage.setItem('aruta_theme', theme);
 }
+const THEME_COLORS = { dark: '#08042a', light: '#1a6cd8' };
 function applyTheme() {
     document.documentElement.setAttribute('data-theme', theme);
     document.getElementById('ticon').className =
         theme === 'dark' ? 'fas fa-sun' : 'fas fa-moon';
+    const m = document.getElementById('meta-theme-color');
+    if (m) m.content = THEME_COLORS[theme];
 }
 
 /* ════════════════════════════

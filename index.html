@@ -3,12 +3,39 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>aruta.sh</title>
-    <meta name="description" content="Stefano Aruta — Streamer, Programmer, Adventurer.">
+
+    <title>Aruta — Il Mago Errante</title>
+    <meta name="description" content="Stefano Aruta — Streamer su Twitch, Kick e YouTube. Programmatore, amante di anime, D&D e Ultima Online.">
+
+    <!-- Favicon emoji -->
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🧙</text></svg>">
+
+    <!-- Browser chrome color (updated by JS on theme change) -->
+    <meta name="theme-color" id="meta-theme-color" content="#08042a">
+
+    <!-- Open Graph (link preview su Discord, Facebook, Telegram…) -->
+    <meta property="og:type"        content="website">
+    <meta property="og:url"         content="https://aruta.sh">
+    <meta property="og:title"       content="Aruta — Il Mago Errante">
+    <meta property="og:description" content="Streamer · Programmer · Adventurer. Benvenuto nel mondo di Aruta.">
+    <meta property="og:image"       content="https://aruta.sh/Images/aru2_meta.png">
+
+    <!-- Twitter / X Card -->
+    <meta name="twitter:card"        content="summary_large_image">
+    <meta name="twitter:site"        content="@aruta.sh">
+    <meta name="twitter:title"       content="Aruta — Il Mago Errante">
+    <meta name="twitter:description" content="Streamer · Programmer · Adventurer. Benvenuto nel mondo di Aruta.">
+    <meta name="twitter:image"       content="https://aruta.sh/Images/aru2_meta.png">
+
+    <!-- Preload portrait so it's ready when JS shows the page -->
+    <link rel="preload" as="image" href="./Images/aru2_meta.png">
+
+    <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=MedievalSharp&family=Almendra:ital,wght@0,400;0,700;1,400&family=IM+Fell+English:ital@0;1&family=Cinzel:wght@400;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
     <link rel="stylesheet" href="Style/style.css">
 </head>
 <body>
@@ -30,18 +57,18 @@
 <main id="page" class="hidden">
 
     <div class="topbar">
-        <div class="lang-row">
-            <button class="lb" data-lang="it">IT</button>
-            <button class="lb" data-lang="en">EN</button>
-            <button class="lb" data-lang="es">ES</button>
-            <button class="lb" data-lang="ja">JA</button>
+        <div class="lang-row" role="group" aria-label="Language selector">
+            <button class="lb" data-lang="it" aria-label="Italiano">IT</button>
+            <button class="lb" data-lang="en" aria-label="English">EN</button>
+            <button class="lb" data-lang="es" aria-label="Español">ES</button>
+            <button class="lb" data-lang="ja" aria-label="日本語">JA</button>
         </div>
         <button id="tbtn" class="tbtn" aria-label="Toggle theme">
             <i class="fas fa-sun" id="ticon"></i>
         </button>
     </div>
 
-    <!-- Sky area: contains the character sprite -->
+    <!-- Sky area: character sprite -->
     <div class="vn-sky-area">
         <div class="vn-char">
             <img src="./Images/aru2_meta.png" alt="Aruta" class="vn-sprite">
@@ -64,9 +91,9 @@
 
             <div class="tags" id="tags"></div>
 
-            <nav class="socials" id="socials"></nav>
+            <nav class="socials" id="socials" aria-label="Social links"></nav>
 
-            <p class="footer-note">✦ Stefano Aruta · 2025 ✦</p>
+            <p class="footer-note" id="footer-note"></p>
 
         </div>
     </div>

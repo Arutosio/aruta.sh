@@ -6,9 +6,9 @@
 const CONFIG = {
 
     /* ── Dati generali ── */
-    name:    'Aruta',
-    year:    2025,
-    portrait: './Images/aru2_meta.png',
+    name:     'Aruta',
+    fullName: 'Stefano Aruta',
+    year:     2025,
 
     /* ── Testi per lingua ──────────────────────────────────────
        Aggiungi una nuova lingua copiando uno dei blocchi qui sotto

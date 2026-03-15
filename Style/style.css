@@ -103,6 +103,8 @@ html, body {
     width: 100%; height: 100%;
     overflow: hidden;
     font-family: 'IM Fell English', Georgia, serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
 }
 
 /* ════════════════════════════
@@ -282,6 +284,7 @@ html, body {
     max-width: 78vw;    /* never wider than ~¾ of the viewport */
     /* float animation on the image itself — container stays at bottom: 0 */
     animation: charFloat 7s ease-in-out infinite alternate;
+    will-change: transform; /* hint browser to GPU-accelerate the float */
     /* subtle bottom fade to blend feet into the ground */
     mask-image: linear-gradient(to top, transparent 0%, black 5%);
     -webkit-mask-image: linear-gradient(to top, transparent 0%, black 5%);
@@ -330,6 +333,8 @@ html, body {
     min-height: 200px;
     overflow-y: auto;
     scrollbar-width: none;
+    overscroll-behavior: contain; /* don't propagate scroll to the page */
+    scroll-behavior: smooth;
     padding: 22px 5% 18px 5%;
     display: flex;
     flex-direction: column;
@@ -342,6 +347,8 @@ html, body {
     display: flex;
     flex-direction: column;
     gap: 3px;
+    border-left: 2px solid var(--lb-act);
+    padding-left: 14px;
 }
 
 /* ── Text ── */
