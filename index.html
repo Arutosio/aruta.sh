@@ -1,111 +1,236 @@
 <!DOCTYPE html>
-<html lang="it">
+<html lang="it" data-theme="dark">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Aruta.sh</title>
-    <!-- Bootstrap 5.3 CSS -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <!-- Font Awesome per le icone -->
+    <title>aruta.sh — Tome of Aruta</title>
+    <meta name="description" content="Stefano Aruta — Streamer, Programmer, Adventurer.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@400;700;900&family=Cinzel:wght@400;600;700&family=IM+Fell+English:ital@0;1&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="Style/style.css">
 </head>
 <body>
-    <!-- Sfondo sfumato -->
-    <div class="background"></div>
-    
-    <!-- Canvas per le particelle -->
-    <canvas class="particles"></canvas>
-    
-    <!-- Contenuto principale -->
-    <div class="container">
-        <!-- Foto profilo -->
-        <div class="profile-container animate-fade-in">
-            <img src="./Images/aru2_meta.png" alt="Stefano Aruta" class="profile-image">
-        </div>
-        
-        <!-- Descrizione -->
-        <div class="description animate-fade-in delay-1">
-            <h1>aruta.sh</h1>
-            <p>My name is Stefano Aruta, a passionate programmer with a love for anime, manga, UltimaOnline, Minecraft and D&D. I’m especially drawn to open-world sandbox and online games where freedom and creativity have no limits. With every project I build, I aim to bring the same sense of exploration, imagination, and detail that inspires me.</p>
-        </div>
-        
-        <!-- Link social -->
-        <div class="social-links">
-            <!-- Instagram -->
-            <a href="https://instagram.com/aruta_sr" class="social-link instagram animate-fade-in delay-2">
-                <div class="social-icon">
-                    <i class="fab fa-instagram"></i>
-                </div>
-                <span class="social-name">Instagram</span>
-            </a>
-            
-            <!-- Twitch -->
-            <a href="https://twitch.tv/aruta.sh" class="social-link twitch animate-fade-in delay-3">
-                <div class="social-icon">
-                    <i class="fab fa-twitch"></i>
-                </div>
-                <span class="social-name">Twitch</span>
-            </a>
 
-            <!-- Kick -->
-            <a href="https://kick.com/aruta_sh" class="social-link kick animate-fade-in delay-3">
-                <div class="social-icon">
-                    <img src="https://external-content.duckduckgo.com/ip3/kick.com.ico" alt="Kick" style="width: 30px; height: 30px;">
-                </div>
-                <span class="social-name">Kick</span>
-            </a>
-            
-            <!-- GitHub -->
-            <!-- <a href="https://github.com/arutosio" class="social-link github animate-fade-in delay-4">
-                <div class="social-icon">
-                    <i class="fab fa-github"></i>
-                </div>
-                <span class="social-name">GitHub</span>
-            </a> -->
-            
-            <!-- YouTube -->
-            <!-- <a href="https://youtube.com/aruta.sh" class="social-link youtube animate-fade-in delay-5">
-                <div class="social-icon">
-                    <i class="fab fa-youtube"></i>
-                </div>
-                <span class="social-name">YouTube</span>
-            </a> -->
-            
-            <!-- Twitter -->
-            <a href="https://twitter.com/aruta.sh" class="social-link twitter animate-fade-in delay-2">
-                <div class="social-icon">
-                    <i class="fab fa-twitter"></i>
-                </div>
-                <span class="social-name">Twitter</span>
-            </a>
-            
-            <!-- Facebook -->
-            <!-- <a href="https://facebook.com/aruta.sh" class="social-link facebook animate-fade-in delay-4">
-                <div class="social-icon">
-                    <i class="fab fa-facebook"></i>
-                </div>
-                <span class="social-name">Facebook</span>
-            </a> -->
-            
-            <!-- Altro social -->
-            <!-- <a href="https://tiktok.com/@aruta.sh" class="social-link animate-fade-in delay-5">
-                <div class="social-icon">
-                    <i class="fab fa-tiktok"></i>
-                </div>
-                <span class="social-name">TikTok</span>
-            </a> -->
+    <!-- SVG Filters for hand-drawn / anime-sketch feel -->
+    <svg class="svg-defs" aria-hidden="true">
+        <defs>
+            <filter id="roughen" x="-5%" y="-5%" width="110%" height="110%">
+                <feTurbulence type="fractalNoise" baseFrequency="0.018" numOctaves="3" seed="5" result="noise"/>
+                <feDisplacementMap in="SourceGraphic" in2="noise" scale="2.5"
+                    xChannelSelector="R" yChannelSelector="G"/>
+            </filter>
+            <filter id="glow-gold">
+                <feGaussianBlur stdDeviation="3" result="blur"/>
+                <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+            </filter>
+            <filter id="glow-purple">
+                <feGaussianBlur stdDeviation="4" result="blur"/>
+                <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+            </filter>
+        </defs>
+    </svg>
+
+    <!-- ░░ SUMMONING OVERLAY ░░ -->
+    <div id="summon-overlay">
+        <canvas id="summon-canvas"></canvas>
+        <div class="summon-text-wrap">
+            <div class="summon-logo">✦ ARUTA.SH ✦</div>
+            <div id="summon-log"></div>
         </div>
     </div>
-    
-    <!-- Footer -->
-    <div class="footer animate-fade-in delay-5">
-        <p>© 2025 Stefano Aruta. Tutti i diritti riservati.</p>
-    </div>
 
-    <!-- Scripts -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
-    <!-- JavaScript per animazioni e particelle -->
-    <script type="module" src="./JavaScript/Index.js"></script>
+    <!-- ░░ MAIN CANVAS (background) ░░ -->
+    <canvas id="bg-canvas"></canvas>
+
+    <!-- ░░ APP ░░ -->
+    <main id="app" class="hidden">
+
+        <!-- HUD BAR -->
+        <div class="hud-bar">
+            <div class="hud-left">
+                <span class="hud-rune" aria-hidden="true">⚜</span>
+                <span class="hud-realm" data-i18n="realm">REALM OF ARUTA</span>
+            </div>
+            <div class="hud-right">
+                <div class="lang-group">
+                    <button class="lang-btn" data-lang="it">IT</button>
+                    <button class="lang-btn" data-lang="en">EN</button>
+                    <button class="lang-btn" data-lang="es">ES</button>
+                    <button class="lang-btn" data-lang="ja">JA</button>
+                </div>
+                <button class="theme-btn" id="theme-btn" title="Toggle theme">
+                    <i class="fas fa-moon" id="theme-icon"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- GRIMOIRE CARD -->
+        <div class="grimoire" id="grimoire">
+
+            <!-- Decorative corners (SVG) -->
+            <svg class="corner-deco tl" viewBox="0 0 60 60" aria-hidden="true">
+                <path d="M2,58 L2,8 Q2,2 8,2 L58,2" fill="none" stroke="currentColor" stroke-width="1.5"/>
+                <path d="M2,30 L18,2" fill="none" stroke="currentColor" stroke-width="0.8" opacity="0.5"/>
+                <circle cx="2" cy="2" r="3" fill="currentColor" opacity="0.6"/>
+                <circle cx="8" cy="8" r="1.5" fill="none" stroke="currentColor" stroke-width="1"/>
+            </svg>
+            <svg class="corner-deco tr" viewBox="0 0 60 60" aria-hidden="true">
+                <path d="M58,58 L58,8 Q58,2 52,2 L2,2" fill="none" stroke="currentColor" stroke-width="1.5"/>
+                <path d="M58,30 L42,2" fill="none" stroke="currentColor" stroke-width="0.8" opacity="0.5"/>
+                <circle cx="58" cy="2" r="3" fill="currentColor" opacity="0.6"/>
+                <circle cx="52" cy="8" r="1.5" fill="none" stroke="currentColor" stroke-width="1"/>
+            </svg>
+            <svg class="corner-deco bl" viewBox="0 0 60 60" aria-hidden="true">
+                <path d="M2,2 L2,52 Q2,58 8,58 L58,58" fill="none" stroke="currentColor" stroke-width="1.5"/>
+                <path d="M2,30 L18,58" fill="none" stroke="currentColor" stroke-width="0.8" opacity="0.5"/>
+                <circle cx="2" cy="58" r="3" fill="currentColor" opacity="0.6"/>
+                <circle cx="8" cy="52" r="1.5" fill="none" stroke="currentColor" stroke-width="1"/>
+            </svg>
+            <svg class="corner-deco br" viewBox="0 0 60 60" aria-hidden="true">
+                <path d="M58,2 L58,52 Q58,58 52,58 L2,58" fill="none" stroke="currentColor" stroke-width="1.5"/>
+                <path d="M58,30 L42,58" fill="none" stroke="currentColor" stroke-width="0.8" opacity="0.5"/>
+                <circle cx="58" cy="58" r="3" fill="currentColor" opacity="0.6"/>
+                <circle cx="52" cy="52" r="1.5" fill="none" stroke="currentColor" stroke-width="1"/>
+            </svg>
+
+            <!-- Grimoire header -->
+            <div class="grimoire-header">
+                <div class="header-line"></div>
+                <span class="grimoire-title-label" data-i18n="tome_label">✦ TOME OF THE WANDERING MAGE ✦</span>
+                <div class="header-line"></div>
+            </div>
+
+            <!-- Profile + info -->
+            <div class="grimoire-body">
+
+                <!-- Portrait -->
+                <div class="portrait-zone">
+                    <div class="magic-circle-frame">
+                        <svg class="mc-svg" viewBox="0 0 200 200" aria-hidden="true">
+                            <!-- Outer ring -->
+                            <circle cx="100" cy="100" r="95" fill="none" stroke="currentColor" stroke-width="0.8" stroke-dasharray="4 6" opacity="0.5"/>
+                            <!-- Triangle -->
+                            <polygon points="100,10 188,155 12,155" fill="none" stroke="currentColor" stroke-width="0.8" opacity="0.35"/>
+                            <!-- Inner circle -->
+                            <circle cx="100" cy="100" r="70" fill="none" stroke="currentColor" stroke-width="1" opacity="0.6"/>
+                            <!-- Rune dots -->
+                            <circle cx="100" cy="6"   r="2.5" fill="currentColor" opacity="0.7"/>
+                            <circle cx="194" cy="100" r="2.5" fill="currentColor" opacity="0.7"/>
+                            <circle cx="6"   cy="100" r="2.5" fill="currentColor" opacity="0.7"/>
+                            <circle cx="100" cy="194" r="2.5" fill="currentColor" opacity="0.7"/>
+                            <circle cx="163" cy="33"  r="2"   fill="currentColor" opacity="0.5"/>
+                            <circle cx="37"  cy="33"  r="2"   fill="currentColor" opacity="0.5"/>
+                            <circle cx="163" cy="167" r="2"   fill="currentColor" opacity="0.5"/>
+                            <circle cx="37"  cy="167" r="2"   fill="currentColor" opacity="0.5"/>
+                        </svg>
+                        <div class="portrait-img-wrap">
+                            <img src="./Images/aru2_meta.png" alt="Aruta" class="portrait-img">
+                        </div>
+                    </div>
+                    <div class="portrait-name-small">
+                        <span class="portrait-status-dot"></span>
+                        <span data-i18n="status">Online</span>
+                    </div>
+                </div>
+
+                <!-- Info -->
+                <div class="char-info">
+                    <div class="char-subtitle" data-i18n="char_subtitle">— The Wanderer —</div>
+                    <h1 class="char-name">Aruta</h1>
+                    <div class="char-class" data-i18n="char_class">Streamer · Programmer · Adventurer</div>
+                    <p class="char-bio" id="char-bio"></p>
+                </div>
+
+            </div>
+
+            <!-- Divider rune -->
+            <div class="rune-divider">
+                <div class="rune-line"></div>
+                <span class="rune-sym" aria-hidden="true">⋆ ✦ ⋆</span>
+                <div class="rune-line"></div>
+            </div>
+
+            <!-- Attributes -->
+            <div class="attributes-panel">
+                <div class="attr-title" data-i18n="attr_title">⊕ Attributes</div>
+                <div class="attr-item">
+                    <span class="attr-name" data-i18n="stat_gaming">Adventuring</span>
+                    <div class="attr-track"><div class="attr-fill" data-val="95" style="width:0%"></div></div>
+                    <span class="attr-num">95</span>
+                </div>
+                <div class="attr-item">
+                    <span class="attr-name" data-i18n="stat_coding">Spellcrafting</span>
+                    <div class="attr-track"><div class="attr-fill" data-val="88" style="width:0%"></div></div>
+                    <span class="attr-num">88</span>
+                </div>
+                <div class="attr-item">
+                    <span class="attr-name" data-i18n="stat_stream">Bardic Arts</span>
+                    <div class="attr-track"><div class="attr-fill" data-val="82" style="width:0%"></div></div>
+                    <span class="attr-num">82</span>
+                </div>
+                <div class="attr-item">
+                    <span class="attr-name" data-i18n="stat_creativity">Arcane Wisdom</span>
+                    <div class="attr-track"><div class="attr-fill" data-val="90" style="width:0%"></div></div>
+                    <span class="attr-num">90</span>
+                </div>
+            </div>
+
+            <!-- Divider -->
+            <div class="rune-divider">
+                <div class="rune-line"></div>
+                <span class="rune-sym" aria-hidden="true">⋆ ✦ ⋆</span>
+                <div class="rune-line"></div>
+            </div>
+
+            <!-- Interests -->
+            <div class="interests-row">
+                <span class="interest-seal">🎮 Ultima Online</span>
+                <span class="interest-seal">⚔️ D&amp;D</span>
+                <span class="interest-seal">🌍 Minecraft</span>
+                <span class="interest-seal">🌸 Anime · Manga</span>
+                <span class="interest-seal">📖 Programming</span>
+            </div>
+
+            <!-- Divider -->
+            <div class="rune-divider">
+                <div class="rune-line"></div>
+                <span class="rune-sym" aria-hidden="true">⋆ ✦ ⋆</span>
+                <div class="rune-line"></div>
+            </div>
+
+            <!-- Social scrolls -->
+            <div class="scrolls-row">
+                <a href="https://twitch.tv/aruta.sh" class="scroll-link twitch" target="_blank" rel="noopener">
+                    <i class="fab fa-twitch"></i><span>Twitch</span>
+                </a>
+                <a href="https://kick.com/aruta_sh" class="scroll-link kick" target="_blank" rel="noopener">
+                    <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor" aria-hidden="true">
+                        <path d="M2 2h4v6l4-6h5l-5 7 5 7h-5l-4-6v6H2V2z"/>
+                    </svg>
+                    <span>Kick</span>
+                </a>
+                <a href="https://youtube.com/@aruta.sh" class="scroll-link youtube" target="_blank" rel="noopener">
+                    <i class="fab fa-youtube"></i><span>YouTube</span>
+                </a>
+                <a href="https://instagram.com/aruta_sr" class="scroll-link instagram" target="_blank" rel="noopener">
+                    <i class="fab fa-instagram"></i><span>Instagram</span>
+                </a>
+                <a href="https://twitter.com/aruta.sh" class="scroll-link twitter" target="_blank" rel="noopener">
+                    <i class="fab fa-twitter"></i><span>Twitter</span>
+                </a>
+            </div>
+
+            <!-- Footer inscription -->
+            <div class="grimoire-footer">
+                <span>✦ Anno Domini MMXXV ✦</span>
+                <span>Stefano Aruta</span>
+            </div>
+
+        </div>
+    </main>
+
+    <script src="JavaScript/Index.js"></script>
 </body>
 </html>
