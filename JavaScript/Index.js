@@ -1,533 +1,312 @@
 /* ============================================================
-   ARUTA.SH — Medieval Fantasy Script
+   ARUTA.SH — Main logic
+   Tutti i contenuti sono in JavaScript/config.js
    ============================================================ */
-
-/* ════════════════════════════
-   TRANSLATIONS
-════════════════════════════ */
-const i18n = {
-    it: {
-        realm:         'IL REGNO DI ARUTA',
-        tome_label:    '✦ TOMO DEL MAGO ERRANTE ✦',
-        char_subtitle: '— Il Viandante —',
-        char_class:    'Streamer · Programmatore · Avventuriero',
-        status:        'Online',
-        attr_title:    '⊕ Attributi',
-        stat_gaming:   'Avventura',
-        stat_coding:   'Magia delle Rune',
-        stat_stream:   'Arti Bardiche',
-        stat_creativity:'Saggezza Arcana',
-        bio: 'Mi chiamo Stefano Aruta. Programmatore appassionato con un amore profondo per anime, manga, Ultima Online, Minecraft e D&D. Come i protagonisti delle storie isekai, mi lancio ora in un nuovo viaggio: lo streaming. Cercando mondi senza confini dove libertà e creatività non hanno limite.',
-        boot: [
-            '✦ Un\'anima si risveglia in questo reame...',
-            '⊕ Consultando il Tomo Antico...',
-            '⋆ I Quattro Elementi rispondono...',
-            '✦ Il cerchio magico prende forma...',
-            '⊕ Il portale si apre...',
-            '✦ Benvenuto nel Reame di Aruta ✦'
-        ]
-    },
-    en: {
-        realm:         'REALM OF ARUTA',
-        tome_label:    '✦ TOME OF THE WANDERING MAGE ✦',
-        char_subtitle: '— The Wanderer —',
-        char_class:    'Streamer · Programmer · Adventurer',
-        status:        'Online',
-        attr_title:    '⊕ Attributes',
-        stat_gaming:   'Adventuring',
-        stat_coding:   'Spellcrafting',
-        stat_stream:   'Bardic Arts',
-        stat_creativity:'Arcane Wisdom',
-        bio: 'My name is Stefano Aruta. A passionate programmer with a deep love for anime, manga, Ultima Online, Minecraft and D&D. Like the heroes of isekai tales, I now embark on a new journey: streaming. Seeking worlds without boundaries, where freedom and creativity know no limits.',
-        boot: [
-            '✦ A soul awakens in this realm...',
-            '⊕ Consulting the Ancient Tome...',
-            '⋆ The Four Elements respond...',
-            '✦ The magic circle takes shape...',
-            '⊕ The portal opens...',
-            '✦ Welcome to the Realm of Aruta ✦'
-        ]
-    },
-    es: {
-        realm:         'REINO DE ARUTA',
-        tome_label:    '✦ TOMO DEL MAGO ERRANTE ✦',
-        char_subtitle: '— El Viajero —',
-        char_class:    'Streamer · Programador · Aventurero',
-        status:        'En línea',
-        attr_title:    '⊕ Atributos',
-        stat_gaming:   'Aventura',
-        stat_coding:   'Magia Rúnica',
-        stat_stream:   'Artes Bárdicas',
-        stat_creativity:'Sabiduría Arcana',
-        bio: 'Me llamo Stefano Aruta. Programador apasionado con un profundo amor por el anime, manga, Ultima Online, Minecraft y D&D. Como los protagonistas de las historias isekai, me lanzo ahora a un nuevo viaje: el streaming. Buscando mundos sin límites donde la libertad y la creatividad no tienen fronteras.',
-        boot: [
-            '✦ Un alma despierta en este reino...',
-            '⊕ Consultando el Tomo Antiguo...',
-            '⋆ Los Cuatro Elementos responden...',
-            '✦ El círculo mágico toma forma...',
-            '⊕ El portal se abre...',
-            '✦ Bienvenido al Reino de Aruta ✦'
-        ]
-    },
-    ja: {
-        realm:         'アルタの王国',
-        tome_label:    '✦ 放浪の魔法使いの書 ✦',
-        char_subtitle: '— 旅人 —',
-        char_class:    'ストリーマー · プログラマー · 冒険者',
-        status:        'オンライン',
-        attr_title:    '⊕ ステータス',
-        stat_gaming:   '冒険',
-        stat_coding:   'ルーン魔法',
-        stat_stream:   '吟遊詩人の技',
-        stat_creativity:'秘術の知恵',
-        bio: '私はStefano Arutaです。アニメ、マンガ、ウルティマオンライン、マインクラフト、D&Dへの深い愛を持つ情熱的なプログラマーです。異世界転生の主人公のように、今私は新たな旅へ踏み出します——ストリーミングの世界へ。自由と創造性に限界のない世界を求めて。',
-        boot: [
-            '✦ この王国に魂が目覚める...',
-            '⊕ 古代の書を開く...',
-            '⋆ 四つの元素が応答する...',
-            '✦ 魔法陣が形を成す...',
-            '⊕ 転移門が開く...',
-            '✦ アルタの王国へようこそ ✦'
-        ]
-    }
-};
 
 /* ════════════════════════════
    STATE
 ════════════════════════════ */
-let currentLang  = 'it';
-let currentTheme = 'dark';
-let bioTimeout   = null;
+let lang  = 'it';
+let theme = 'dark';
+let bioTmr = null;
 
 /* ════════════════════════════
-   INIT
+   BOOT
 ════════════════════════════ */
 document.addEventListener('DOMContentLoaded', () => {
-    const savedLang  = localStorage.getItem('aruta_lang');
-    const savedTheme = localStorage.getItem('aruta_theme');
+    const sl = localStorage.getItem('aruta_lang');
+    const st = localStorage.getItem('aruta_theme');
+    lang  = (sl && CONFIG.i18n[sl]) ? sl : detectLang();
+    theme = st || 'dark';
 
-    currentLang  = (savedLang && i18n[savedLang]) ? savedLang : detectLanguage();
-    currentTheme = savedTheme || 'dark';
+    buildTags();
+    buildSocials();
+    applyTheme();
+    setLangBtn(lang);
 
-    document.documentElement.setAttribute('data-theme', currentTheme);
-    updateThemeIcon();
-    setActiveLangBtn(currentLang);
+    initAtmo();
+    showPage();
 
-    initSummonCanvas();
-    runSummoning(() => showApp());
-
-    document.getElementById('theme-btn').addEventListener('click', toggleTheme);
-    document.querySelectorAll('.lang-btn').forEach(btn =>
-        btn.addEventListener('click', () => switchLanguage(btn.dataset.lang))
+    document.getElementById('tbtn').onclick = toggleTheme;
+    document.querySelectorAll('.lb').forEach(b =>
+        b.addEventListener('click', () => setLang(b.dataset.lang))
     );
-
-    initBgCanvas();
-    initCardTilt();
 });
 
-/* ════════════════════════════
-   LANGUAGE DETECTION
-════════════════════════════ */
-function detectLanguage() {
-    const code = (navigator.language || 'en').split('-')[0].toLowerCase();
-    if (i18n[code]) return code;
-    const map = { pt:'es', ca:'es', gl:'es', zh:'ja', ko:'ja' };
-    return map[code] || 'en';
+function detectLang() {
+    const c = (navigator.language || 'en').split('-')[0].toLowerCase();
+    return CONFIG.i18n[c] ? c : ({ pt:'es', ca:'es', gl:'es', zh:'ja', ko:'ja' }[c] || 'en');
 }
 
 /* ════════════════════════════
-   SUMMONING CIRCLE (boot canvas)
+   BUILD DOM FROM CONFIG
 ════════════════════════════ */
-function initSummonCanvas() {
-    const canvas = document.getElementById('summon-canvas');
-    if (!canvas) return;
-    const ctx = canvas.getContext('2d');
-    let raf;
-
-    function resize() {
-        canvas.width  = window.innerWidth;
-        canvas.height = window.innerHeight;
-    }
-    resize();
-    window.addEventListener('resize', resize);
-
-    let t = 0;
-    function drawSummonCircle() {
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-        const cx = canvas.width  / 2;
-        const cy = canvas.height / 2;
-        const maxR = Math.min(canvas.width, canvas.height) * 0.34;
-
-        // Grow-in factor
-        const grow = Math.min(1, t / 80);
-
-        ctx.save();
-        ctx.translate(cx, cy);
-
-        // Outer ring (clockwise)
-        ctx.rotate(t * 0.008);
-        drawRing(ctx, 0, 0, maxR * grow, 1.2, 'rgba(212,175,55,0.35)', [4, 8]);
-        drawRing(ctx, 0, 0, maxR * grow, 0.6, 'rgba(212,175,55,0.15)', [1, 6]);
-        drawRuneDots(ctx, 0, 0, maxR * grow, 8, 'rgba(212,175,55,0.6)', 3);
-
-        // Middle ring (counter-clockwise)
-        ctx.rotate(-t * 0.016);
-        drawRing(ctx, 0, 0, maxR * 0.7 * grow, 1, 'rgba(167,139,250,0.4)', [2, 5]);
-        drawTriangle(ctx, 0, 0, maxR * 0.7 * grow, 'rgba(167,139,250,0.2)');
-
-        // Inner ring (clockwise)
-        ctx.rotate(t * 0.024);
-        drawRing(ctx, 0, 0, maxR * 0.45 * grow, 0.8, 'rgba(52,211,153,0.35)', [3, 7]);
-        drawRuneDots(ctx, 0, 0, maxR * 0.45 * grow, 6, 'rgba(52,211,153,0.7)', 2);
-
-        // Innermost star
-        ctx.rotate(-t * 0.012);
-        drawStar(ctx, 0, 0, maxR * 0.22 * grow, 6, 'rgba(212,175,55,0.25)');
-
-        ctx.restore();
-
-        // Central glow
-        const grd = ctx.createRadialGradient(cx, cy, 0, cx, cy, maxR * 0.25 * grow);
-        grd.addColorStop(0,   'rgba(212,175,55,0.15)');
-        grd.addColorStop(0.5, 'rgba(167,139,250,0.08)');
-        grd.addColorStop(1,   'transparent');
-        ctx.fillStyle = grd;
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-        t++;
-        raf = requestAnimationFrame(drawSummonCircle);
-    }
-    drawSummonCircle();
-
-    // Store cancel reference
-    window._cancelSummon = () => cancelAnimationFrame(raf);
+function buildTags() {
+    document.getElementById('tags').innerHTML =
+        CONFIG.tags.map(t => `<span>${t.emoji} ${t.label}</span>`).join('');
 }
 
-function drawRing(ctx, x, y, r, lw, color, dash) {
-    ctx.save();
-    ctx.beginPath();
-    ctx.arc(x, y, r, 0, Math.PI * 2);
-    ctx.strokeStyle = color;
-    ctx.lineWidth   = lw;
-    ctx.setLineDash(dash);
-    ctx.stroke();
-    ctx.setLineDash([]);
-    ctx.restore();
-}
-function drawRuneDots(ctx, cx, cy, r, count, color, dotR) {
-    for (let i = 0; i < count; i++) {
-        const a = (i / count) * Math.PI * 2;
-        const x = cx + Math.cos(a) * r;
-        const y = cy + Math.sin(a) * r;
-        ctx.beginPath();
-        ctx.arc(x, y, dotR, 0, Math.PI * 2);
-        ctx.fillStyle = color;
-        ctx.fill();
-    }
-}
-function drawTriangle(ctx, cx, cy, r, color) {
-    ctx.beginPath();
-    for (let i = 0; i < 3; i++) {
-        const a = (i / 3) * Math.PI * 2 - Math.PI / 2;
-        const x = cx + Math.cos(a) * r;
-        const y = cy + Math.sin(a) * r;
-        i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
-    }
-    ctx.closePath();
-    ctx.strokeStyle = color;
-    ctx.lineWidth = 0.8;
-    ctx.stroke();
-}
-function drawStar(ctx, cx, cy, r, points, color) {
-    ctx.beginPath();
-    for (let i = 0; i < points * 2; i++) {
-        const a = (i / (points * 2)) * Math.PI * 2 - Math.PI / 2;
-        const rr = i % 2 === 0 ? r : r * 0.45;
-        const x  = cx + Math.cos(a) * rr;
-        const y  = cy + Math.sin(a) * rr;
-        i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
-    }
-    ctx.closePath();
-    ctx.strokeStyle = color;
-    ctx.lineWidth = 0.8;
-    ctx.stroke();
+const KICK_SVG = `<svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="M2 2h4v6l4-6h5l-5 7 5 7h-5l-4-6v6H2V2z"/></svg>`;
+
+function buildSocials() {
+    document.getElementById('socials').innerHTML =
+        CONFIG.socials.map(s => {
+            const icon = s.icon === 'kick' ? KICK_SVG : `<i class="${s.icon}"></i>`;
+            return `<a href="${s.url}" class="sl ${s.id}" target="_blank" rel="noopener">${icon}<span>${s.label}</span></a>`;
+        }).join('');
 }
 
 /* ════════════════════════════
-   SUMMONING SEQUENCE (boot text)
+   SHOW PAGE
 ════════════════════════════ */
-function runSummoning(onComplete) {
-    const logEl = document.getElementById('summon-log');
-    const lines  = i18n[currentLang].boot;
-    let idx = 0;
-
-    function addLine() {
-        if (idx < lines.length) {
-            const span = document.createElement('span');
-            span.className   = 'summon-line';
-            span.textContent = lines[idx];
-            logEl.appendChild(span);
-            idx++;
-            setTimeout(addLine, 380);
-        } else {
-            setTimeout(() => {
-                if (window._cancelSummon) window._cancelSummon();
-                const overlay = document.getElementById('summon-overlay');
-                overlay.classList.add('fade-out');
-                setTimeout(onComplete, 850);
-            }, 500);
-        }
-    }
-    addLine();
+function showPage() {
+    const page = document.getElementById('page');
+    page.classList.remove('hidden');
+    page.classList.add('visible');
+    translate(lang);
+    setTimeout(() => typewriter(CONFIG.i18n[lang].bio), 400);
 }
 
 /* ════════════════════════════
-   SHOW APP
+   TRANSLATE
 ════════════════════════════ */
-function showApp() {
-    const app = document.getElementById('app');
-    app.classList.remove('hidden');
-    app.classList.add('visible');
-
-    applyTranslations(currentLang);
-    setTimeout(() => typewriterBio(i18n[currentLang].bio), 400);
-    setTimeout(() => animateAttributes(), 700);
-}
-
-/* ════════════════════════════
-   TRANSLATIONS
-════════════════════════════ */
-function applyTranslations(lang) {
-    const t = i18n[lang];
+function translate(l) {
     document.querySelectorAll('[data-i18n]').forEach(el => {
-        const key = el.dataset.i18n;
-        if (t[key] !== undefined) el.textContent = t[key];
+        const v = CONFIG.i18n[l][el.dataset.i18n];
+        if (v !== undefined) el.textContent = v;
     });
 }
 
 /* ════════════════════════════
    TYPEWRITER
 ════════════════════════════ */
-function typewriterBio(text) {
-    const el = document.getElementById('char-bio');
+function typewriter(text) {
+    const el = document.getElementById('bio');
     if (!el) return;
-    if (bioTimeout) clearTimeout(bioTimeout);
+    if (bioTmr) clearTimeout(bioTmr);
     el.innerHTML = '';
-
-    const cursor = document.createElement('span');
-    cursor.className = 'cursor';
-    el.appendChild(cursor);
-
+    const cur = document.createElement('span');
+    cur.className = 'cur';
+    el.appendChild(cur);
     let i = 0;
-    function type() {
+    (function t() {
         if (i < text.length) {
-            el.insertBefore(document.createTextNode(text.charAt(i)), cursor);
-            i++;
-            bioTimeout = setTimeout(type, 22);
+            el.insertBefore(document.createTextNode(text[i++]), cur);
+            bioTmr = setTimeout(t, 20);
         } else {
-            setTimeout(() => cursor.remove(), 2500);
+            setTimeout(() => cur.remove(), 2500);
         }
-    }
-    type();
+    })();
 }
 
 /* ════════════════════════════
-   ATTRIBUTES ANIMATION
+   LANGUAGE
 ════════════════════════════ */
-function animateAttributes() {
-    document.querySelectorAll('.attr-fill').forEach(bar => {
-        bar.style.width = bar.dataset.val + '%';
-    });
+function setLang(l) {
+    if (!CONFIG.i18n[l] || l === lang) return;
+    lang = l;
+    localStorage.setItem('aruta_lang', l);
+    document.documentElement.setAttribute('lang', l);
+    setLangBtn(l);
+    translate(l);
+    typewriter(CONFIG.i18n[l].bio);
 }
-
-/* ════════════════════════════
-   LANGUAGE SWITCH
-════════════════════════════ */
-function switchLanguage(lang) {
-    if (!i18n[lang] || lang === currentLang) return;
-    currentLang = lang;
-    localStorage.setItem('aruta_lang', lang);
-    document.documentElement.setAttribute('lang', lang);
-    setActiveLangBtn(lang);
-    applyTranslations(lang);
-    typewriterBio(i18n[lang].bio);
-}
-function setActiveLangBtn(lang) {
-    document.querySelectorAll('.lang-btn').forEach(btn =>
-        btn.classList.toggle('active', btn.dataset.lang === lang)
+function setLangBtn(l) {
+    document.querySelectorAll('.lb').forEach(b =>
+        b.classList.toggle('active', b.dataset.lang === l)
     );
 }
 
 /* ════════════════════════════
-   THEME TOGGLE
+   THEME
 ════════════════════════════ */
 function toggleTheme() {
-    currentTheme = currentTheme === 'dark' ? 'light' : 'dark';
-    document.documentElement.setAttribute('data-theme', currentTheme);
-    localStorage.setItem('aruta_theme', currentTheme);
-    updateThemeIcon();
+    theme = theme === 'dark' ? 'light' : 'dark';
+    applyTheme();
+    localStorage.setItem('aruta_theme', theme);
 }
-function updateThemeIcon() {
-    const icon = document.getElementById('theme-icon');
-    if (!icon) return;
-    icon.className = currentTheme === 'dark' ? 'fas fa-sun' : 'fas fa-moon';
-}
-
-/* ════════════════════════════
-   3D CARD TILT
-════════════════════════════ */
-function initCardTilt() {
-    const card = document.getElementById('grimoire');
-    if (!card || window.matchMedia('(hover: none)').matches) return;
-
-    card.addEventListener('mouseenter', () => {
-        card.style.transition = 'transform 0.1s ease, background 0.5s, border-color 0.5s, box-shadow 0.5s';
-    });
-    card.addEventListener('mousemove', (e) => {
-        const rect = card.getBoundingClientRect();
-        const dx   = ((e.clientX - rect.left) / rect.width  - 0.5) * 2;
-        const dy   = ((e.clientY - rect.top)  / rect.height - 0.5) * 2;
-        card.style.transform = `perspective(1200px) rotateY(${dx * 4}deg) rotateX(${-dy * 3}deg)`;
-    });
-    card.addEventListener('mouseleave', () => {
-        card.style.transition = 'transform 0.6s ease, background 0.5s, border-color 0.5s, box-shadow 0.5s';
-        card.style.transform  = 'perspective(1200px) rotateY(0deg) rotateX(0deg)';
-    });
+function applyTheme() {
+    document.documentElement.setAttribute('data-theme', theme);
+    document.getElementById('ticon').className =
+        theme === 'dark' ? 'fas fa-sun' : 'fas fa-moon';
 }
 
 /* ════════════════════════════
-   BACKGROUND CANVAS
-   (floating magic particles)
+   ATMOSPHERIC CANVAS
+   Night: stars + aurora borealis
+   Day:   sun rays + light haze
 ════════════════════════════ */
-function initBgCanvas() {
-    const canvas = document.getElementById('bg-canvas');
+function initAtmo() {
+    const canvas = document.getElementById('atmo');
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
-    let orbs = [];
+    let stars = [];
+    let t = 0;
 
     function resize() {
-        canvas.width  = window.innerWidth;
-        canvas.height = window.innerHeight;
+        canvas.width  = innerWidth;
+        canvas.height = innerHeight;
+        makeStars();
     }
     resize();
-    window.addEventListener('resize', () => { resize(); createOrbs(); });
+    addEventListener('resize', resize);
 
-    function getColors() {
-        const dark = document.documentElement.getAttribute('data-theme') !== 'light';
-        return dark
-            ? { orbs: ['212,175,55', '167,139,250', '52,211,153', '251,191,36'] }
-            : { orbs: ['120,60,10',  '109,40,217',  '5,100,60',   '180,120,20'] };
+    /* ── Stars ── */
+    function makeStars() {
+        const n = Math.floor(canvas.width * canvas.height / 1200);
+        stars = Array.from({ length: n }, () => ({
+            x:      Math.random() * canvas.width,
+            y:      Math.random() * canvas.height * 0.78,
+            r:      Math.random() * 1.3 + 0.2,
+            phase:  Math.random() * Math.PI * 2,
+            speed:  Math.random() * 0.008 + 0.003,
+            bright: Math.random() > 0.88
+        }));
     }
 
-    class Orb {
-        constructor() { this.reset(true); }
+    function drawStars() {
+        stars.forEach(s => {
+            const a = (0.25 + 0.75 * Math.abs(Math.sin(s.phase))) * 0.9;
+            ctx.beginPath();
+            ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
+            ctx.fillStyle = `rgba(255,252,230,${a})`;
+            ctx.fill();
+            if (s.bright) {
+                ctx.strokeStyle = `rgba(255,252,230,${a * 0.32})`;
+                ctx.lineWidth = 0.5;
+                ctx.beginPath();
+                ctx.moveTo(s.x - s.r * 3.2, s.y); ctx.lineTo(s.x + s.r * 3.2, s.y);
+                ctx.moveTo(s.x, s.y - s.r * 3.2); ctx.lineTo(s.x, s.y + s.r * 3.2);
+                ctx.stroke();
+            }
+            s.phase += s.speed;
+        });
+    }
+
+    /* ── Aurora borealis ── */
+    const AURORA = [
+        { col: '0,255,180',  yf: 0.20, amp: 46, wl: 0.72, spd: 3.6 },
+        { col: '70,110,255', yf: 0.29, amp: 33, wl: 1.15, spd: 2.5 },
+        { col: '200,80,255', yf: 0.37, amp: 27, wl: 0.56, spd: 4.2 }
+    ];
+    function drawAurora() {
+        AURORA.forEach((a, idx) => {
+            const baseY = canvas.height * a.yf;
+            ctx.beginPath();
+            ctx.moveTo(0, baseY);
+            for (let x = 0; x <= canvas.width; x += 4) {
+                const xn = x / canvas.width;
+                const y  = baseY
+                    + Math.sin((xn * a.spd * Math.PI) + t * a.wl) * a.amp
+                    + Math.sin((xn * a.spd * Math.PI * 1.8) + t * a.wl * 1.5) * a.amp * 0.36;
+                ctx.lineTo(x, y);
+            }
+            ctx.lineTo(canvas.width, 0);
+            ctx.lineTo(0, 0);
+            ctx.closePath();
+
+            const op = 0.048 + 0.022 * Math.sin(t * 0.48 + idx * 1.1);
+            const gr = ctx.createLinearGradient(0, baseY - a.amp, 0, baseY + a.amp * 1.9);
+            gr.addColorStop(0,    `rgba(${a.col},0)`);
+            gr.addColorStop(0.32, `rgba(${a.col},${op})`);
+            gr.addColorStop(0.68, `rgba(${a.col},${op * 1.45})`);
+            gr.addColorStop(1,    `rgba(${a.col},0)`);
+            ctx.fillStyle = gr;
+            ctx.fill();
+        });
+    }
+
+    /* ── Sun rays (day) ── */
+    function drawSunRays() {
+        const sx = canvas.width  * 0.90;
+        const sy = canvas.height * 0.10;
+        for (let i = 0; i < 14; i++) {
+            const angle = (i / 14) * Math.PI * 2;
+            const len   = (52 + 22 * Math.sin(t * 0.7 + i)) * (0.65 + 0.35 * Math.sin(t * 0.35 + i * 0.8));
+            const ex    = sx + Math.cos(angle) * len;
+            const ey    = sy + Math.sin(angle) * len;
+            const gr    = ctx.createLinearGradient(sx, sy, ex, ey);
+            gr.addColorStop(0, 'rgba(255,230,90,0.18)');
+            gr.addColorStop(1, 'transparent');
+            ctx.beginPath();
+            ctx.moveTo(sx, sy);
+            ctx.lineTo(ex, ey);
+            ctx.strokeStyle = gr;
+            ctx.lineWidth = 2.2;
+            ctx.stroke();
+        }
+    }
+
+    /* ── Fireflies (night) / sparkles (day) ── */
+    const DARK_C = ['150,255,80', '190,255,110', '80,255,180', '220,255,90'];
+    const DAY_C  = ['255,200,50', '255,175,70',  '255,230,100', '210,160,255'];
+
+    class Particle {
+        constructor(initial) {
+            this.reset(initial);
+        }
         reset(initial = false) {
-            const c   = getColors().orbs;
+            const dark = document.documentElement.getAttribute('data-theme') !== 'light';
+            const cols = dark ? DARK_C : DAY_C;
             this.x    = Math.random() * canvas.width;
-            this.y    = initial ? Math.random() * canvas.height : canvas.height + 10;
-            this.vy   = -(Math.random() * 0.4 + 0.1);
-            this.vx   = (Math.random() - 0.5) * 0.18;
-            this.r    = Math.random() * 3 + 1;
-            this.maxA = Math.random() * 0.45 + 0.1;
-            this.alpha = 0;
-            this.phase = Math.random() * Math.PI * 2;
-            this.color = c[Math.floor(Math.random() * c.length)];
-            this.fadeIn  = true;
-            this.fadeOut = false;
+            this.y    = initial
+                ? Math.random() * canvas.height
+                : canvas.height * (0.5 + Math.random() * 0.5);
+            this.vy   = -(Math.random() * 0.35 + 0.08);
+            this.vx   = (Math.random() - 0.5) * 0.2;
+            this.sz   = 1.6 + Math.random() * 2.4;
+            this.maxA = dark ? 0.45 + Math.random() * 0.5 : 0.35 + Math.random() * 0.4;
+            this.a    = 0;
+            this.ph   = Math.random() * Math.PI * 2;
+            this.life = 0;
+            this.max  = 160 + Math.random() * 140;
+            this.col  = cols[Math.floor(Math.random() * cols.length)];
         }
         update() {
-            this.x += this.vx;
-            this.y += this.vy;
-            this.phase += 0.02;
-            // Gentle horizontal drift
-            this.x += Math.sin(this.phase) * 0.3;
-
-            if (this.fadeIn) {
-                this.alpha = Math.min(this.alpha + 0.008, this.maxA);
-                if (this.alpha >= this.maxA) this.fadeIn = false;
-            }
-            if (this.y < canvas.height * 0.15 && !this.fadeIn) {
-                this.fadeOut = true;
-            }
-            if (this.fadeOut) {
-                this.alpha = Math.max(this.alpha - 0.006, 0);
-            }
-            if (this.alpha <= 0 && this.fadeOut) this.reset();
+            this.life++;
+            this.ph += 0.036;
+            this.x  += this.vx + Math.sin(this.ph) * 0.3;
+            this.y  += this.vy;
+            const p  = this.life / this.max;
+            this.a   = p < 0.15 ? (p / 0.15) * this.maxA
+                     : p > 0.82 ? ((1 - p) / 0.18) * this.maxA
+                     : this.maxA;
+            if (this.life >= this.max || this.y < 0) this.reset();
         }
         draw() {
-            // Glow
-            const grd = ctx.createRadialGradient(this.x, this.y, 0, this.x, this.y, this.r * 3);
-            grd.addColorStop(0,   `rgba(${this.color},${this.alpha})`);
-            grd.addColorStop(0.4, `rgba(${this.color},${this.alpha * 0.5})`);
-            grd.addColorStop(1,   `rgba(${this.color},0)`);
+            const g = ctx.createRadialGradient(this.x, this.y, 0, this.x, this.y, this.sz * 5.5);
+            g.addColorStop(0,   `rgba(${this.col},${this.a * 0.9})`);
+            g.addColorStop(0.3, `rgba(${this.col},${this.a * 0.35})`);
+            g.addColorStop(1,   `rgba(${this.col},0)`);
             ctx.beginPath();
-            ctx.arc(this.x, this.y, this.r * 3, 0, Math.PI * 2);
-            ctx.fillStyle = grd;
-            ctx.fill();
-            // Core
+            ctx.arc(this.x, this.y, this.sz * 5.5, 0, Math.PI * 2);
+            ctx.fillStyle = g; ctx.fill();
             ctx.beginPath();
-            ctx.arc(this.x, this.y, this.r, 0, Math.PI * 2);
-            ctx.fillStyle = `rgba(${this.color},${this.alpha})`;
-            ctx.fill();
+            ctx.arc(this.x, this.y, this.sz * 0.44, 0, Math.PI * 2);
+            ctx.fillStyle = `rgba(${this.col},${this.a})`; ctx.fill();
         }
     }
 
-    // Background magic circle (large, very faint)
-    let bgRot = 0;
-    function drawBgCircle() {
-        const cx = canvas.width  / 2;
-        const cy = canvas.height / 2;
-        const r  = Math.min(canvas.width, canvas.height) * 0.38;
-        const dark = document.documentElement.getAttribute('data-theme') !== 'light';
-        const alpha = dark ? 0.045 : 0.035;
-        const col   = dark ? `rgba(167,139,250,${alpha})` : `rgba(109,40,217,${alpha})`;
-        const goldc = dark ? `rgba(212,175,55,${alpha * 0.8})` : `rgba(120,60,10,${alpha * 0.8})`;
-
-        ctx.save();
-        ctx.translate(cx, cy);
-        ctx.rotate(bgRot);
-        // Rings
-        for (const [rr, dash, c] of [
-            [r,       [6,10], col],
-            [r*0.75,  [3,6],  goldc],
-            [r*0.5,   [2,5],  col],
-        ]) {
-            ctx.beginPath();
-            ctx.arc(0, 0, rr, 0, Math.PI * 2);
-            ctx.setLineDash(dash);
-            ctx.strokeStyle = c;
-            ctx.lineWidth = 0.8;
-            ctx.stroke();
-            ctx.setLineDash([]);
-        }
-        // Triangle
-        ctx.beginPath();
-        for (let i = 0; i < 3; i++) {
-            const a = (i/3) * Math.PI * 2 - Math.PI/2;
-            i === 0
-                ? ctx.moveTo(Math.cos(a)*r, Math.sin(a)*r)
-                : ctx.lineTo(Math.cos(a)*r, Math.sin(a)*r);
-        }
-        ctx.closePath();
-        ctx.strokeStyle = goldc;
-        ctx.lineWidth = 0.6;
-        ctx.stroke();
-
-        ctx.restore();
-        bgRot += 0.0005;
+    let particles = [];
+    function makeParticles() {
+        const n = Math.max(20, Math.floor(canvas.width * canvas.height / 10000));
+        particles = Array.from({ length: n }, (_, i) => new Particle(i < n * 0.6));
     }
+    makeParticles();
+    addEventListener('resize', makeParticles);
 
-    function createOrbs() {
-        const n = Math.floor((canvas.width * canvas.height) / 9000);
-        orbs = Array.from({ length: n }, () => new Orb());
-    }
-    createOrbs();
-
-    function animate() {
+    /* ── Main loop ── */
+    (function frame() {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
-        drawBgCircle();
-        orbs.forEach(o => { o.update(); o.draw(); });
-        requestAnimationFrame(animate);
-    }
-    animate();
+        const dark = document.documentElement.getAttribute('data-theme') !== 'light';
+        if (dark) {
+            drawStars();
+            drawAurora();
+        } else {
+            drawSunRays();
+        }
+        particles.forEach(p => { p.update(); p.draw(); });
+        t += 0.011;
+        requestAnimationFrame(frame);
+    })();
 }

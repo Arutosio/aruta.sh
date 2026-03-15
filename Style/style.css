@@ -1,711 +1,497 @@
 /* ============================================================
-   ARUTA.SH — Medieval Fantasy Grimoire Theme
+   ARUTA.SH
    ============================================================ */
 
 *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
 
-/* ── HIDDEN SVG defs ── */
-.svg-defs { position: absolute; width: 0; height: 0; overflow: hidden; }
-
-/* ══════════════════════════════
-   THEME VARIABLES
-══════════════════════════════ */
+/* ── VARIABLES ── */
 :root {
-    /* Dark (moonlit grimoire) */
-    --bg:           #0c0a1a;
-    --bg-grad:      radial-gradient(ellipse at 50% 40%, #1a1035 0%, #0c0a1a 65%);
-    --card-bg:      rgba(18, 12, 32, 0.93);
-    --card-border:  rgba(212, 175, 55, 0.35);
-    --card-glow:    rgba(212, 175, 55, 0.08);
-    --gold:         #d4af37;
-    --gold-light:   #f0d060;
-    --purple:       #a78bfa;
-    --purple-dim:   rgba(167, 139, 250, 0.5);
-    --emerald:      #34d399;
-    --text:         #f0e6c8;
-    --text-dim:     #7a6a50;
-    --text-faint:   #4a3d30;
-    --parchment:    rgba(240, 220, 170, 0.06);
-    --bar-bg:       rgba(255, 255, 255, 0.06);
-    --bar-fill:     linear-gradient(90deg, #a78bfa, #d4af37);
-    --seal-bg:      rgba(212, 175, 55, 0.07);
-    --seal-border:  rgba(212, 175, 55, 0.22);
-    --hud-bg:       rgba(8, 5, 18, 0.8);
-    --corner-color: #d4af37;
-    --mc-color:     #a78bfa;
-    --magic-orb:    rgba(167, 139, 250, 0.6);
-    --status-color: #34d399;
+    /* Night */
+    --sky-a: #02010d;
+    --sky-b: #08042a;
+    --sky-c: #160850;
+    --sky-d: #2e1265;
+    --sky-e: #5c2280;
+    --sky-f: #9a4090;
+    --sky-g: #c85878;
+
+    --cloud-c:  rgba(40, 24, 80, 0.48);
+    --cel-c:    #dde0ff;
+    --cel-glow: rgba(160, 155, 255, 0.42);
+
+    --name-c:    #ffffff;
+    --name-sh:   rgba(190, 155, 255, 0.6);
+    --pre-c:     rgba(200, 175, 255, 0.82);
+    --cls-c:     rgba(180, 215, 255, 0.65);
+    --bio-c:     rgba(238, 225, 200, 0.88);
+    --rule-c:    rgba(190, 155, 255, 0.38);
+    --footer-c:  rgba(200, 170, 130, 0.28);
+
+    --tag-bg:  rgba(255, 255, 255, 0.07);
+    --tag-bdr: rgba(255, 255, 255, 0.13);
+    --tag-txt: rgba(240, 225, 200, 0.72);
+
+    --sl-bg:   rgba(255, 255, 255, 0.08);
+    --sl-bdr:  rgba(255, 255, 255, 0.15);
+    --sl-txt:  rgba(255, 248, 235, 0.88);
+
+    --ctrl-bg:  rgba(4, 2, 18, 0.60);
+    --ctrl-bdr: rgba(180, 150, 255, 0.22);
+    --lb-dim:   rgba(200, 175, 255, 0.45);
+    --lb-act:   #f0d060;
+    --lb-act-b: rgba(240, 208, 80, 0.18);
+
+    --pr-ra:   rgba(175, 140, 255, 0.4);
+    --pr-rb:   rgba(212, 176, 74, 0.45);
+    --pr-bdr:  rgba(210, 185, 255, 0.7);
+    --pr-glow: rgba(175, 140, 255, 0.22);
+
+    --dlg-bg:  rgba(2, 1, 20, 0.84);
+    --dlg-bdr: rgba(180, 150, 255, 0.30);
+    --dlg-sh:  rgba(0, 0, 0, 0.55);
+    --dlg-orn: rgba(180, 150, 255, 0.65);
 }
 
 [data-theme="light"] {
-    --bg:           #f5ead8;
-    --bg-grad:      radial-gradient(ellipse at 50% 30%, #fef3c7 0%, #f0dfc0 60%, #e8d0a8 100%);
-    --card-bg:      rgba(255, 248, 225, 0.96);
-    --card-border:  rgba(120, 70, 10, 0.28);
-    --card-glow:    rgba(120, 70, 10, 0.06);
-    --gold:         #92400e;
-    --gold-light:   #b45309;
-    --purple:       #6d28d9;
-    --purple-dim:   rgba(109, 40, 217, 0.5);
-    --emerald:      #065f46;
-    --text:         #2c1810;
-    --text-dim:     #78503a;
-    --text-faint:   #b08060;
-    --parchment:    rgba(0, 0, 0, 0.03);
-    --bar-bg:       rgba(0, 0, 0, 0.08);
-    --bar-fill:     linear-gradient(90deg, #6d28d9, #92400e);
-    --seal-bg:      rgba(120, 70, 10, 0.07);
-    --seal-border:  rgba(120, 70, 10, 0.2);
-    --hud-bg:       rgba(245, 234, 210, 0.88);
-    --corner-color: #92400e;
-    --mc-color:     #6d28d9;
-    --magic-orb:    rgba(109, 40, 217, 0.5);
-    --status-color: #065f46;
+    --sky-a: #0d4db5;
+    --sky-b: #1a6cd8;
+    --sky-c: #3a90f0;
+    --sky-d: #65b8f8;
+    --sky-e: #9dd4ff;
+    --sky-f: #cce8ff;
+    --sky-g: #fde8b0;
+
+    --cloud-c:  rgba(255, 255, 255, 0.92);
+    --cel-c:    #ffe84a;
+    --cel-glow: rgba(255, 215, 30, 0.55);
+
+    --name-c:    #0e0500;
+    --name-sh:   rgba(180, 100, 0, 0.45);
+    --pre-c:     rgba(80, 35, 0, 0.75);
+    --cls-c:     rgba(40, 22, 0, 0.60);
+    --bio-c:     rgba(25, 12, 0, 0.80);
+    --rule-c:    rgba(140, 75, 0, 0.35);
+    --footer-c:  rgba(60, 28, 0, 0.28);
+
+    --tag-bg:  rgba(0, 0, 0, 0.06);
+    --tag-bdr: rgba(0, 0, 0, 0.12);
+    --tag-txt: rgba(35, 16, 0, 0.72);
+
+    --sl-bg:   rgba(0, 0, 0, 0.07);
+    --sl-bdr:  rgba(0, 0, 0, 0.13);
+    --sl-txt:  rgba(18, 7, 0, 0.85);
+
+    --ctrl-bg:  rgba(255, 250, 228, 0.72);
+    --ctrl-bdr: rgba(130, 72, 0, 0.22);
+    --lb-dim:   rgba(100, 50, 0, 0.50);
+    --lb-act:   rgba(148, 60, 0, 1);
+    --lb-act-b: rgba(180, 80, 0, 0.12);
+
+    --pr-ra:   rgba(195, 130, 0, 0.42);
+    --pr-rb:   rgba(100, 40, 200, 0.40);
+    --pr-bdr:  rgba(170, 95, 0, 0.72);
+    --pr-glow: rgba(195, 130, 0, 0.20);
+
+    --dlg-bg:  rgba(242, 234, 212, 0.92);
+    --dlg-bdr: rgba(140, 80, 0, 0.28);
+    --dlg-sh:  rgba(0, 0, 0, 0.18);
+    --dlg-orn: rgba(140, 80, 0, 0.60);
 }
 
-/* ══════════════════════════════
-   BASE
-══════════════════════════════ */
-html { scroll-behavior: smooth; }
-
-body {
-    background: var(--bg);
-    background-image: var(--bg-grad);
-    background-attachment: fixed;
-    color: var(--text);
-    font-family: 'IM Fell English', 'Georgia', serif;
-    min-height: 100vh;
-    overflow-x: hidden;
-    transition: background-color 0.5s ease, color 0.5s ease;
-}
-
-/* ══════════════════════════════
-   CANVASES
-══════════════════════════════ */
-#bg-canvas {
-    position: fixed;
-    inset: 0;
-    z-index: 0;
-    pointer-events: none;
-}
-#summon-canvas {
-    position: absolute;
-    inset: 0;
+/* ── BASE ── */
+html, body {
     width: 100%; height: 100%;
-}
-
-/* ══════════════════════════════
-   SUMMONING OVERLAY
-══════════════════════════════ */
-#summon-overlay {
-    position: fixed;
-    inset: 0;
-    background: #050310;
-    z-index: 999;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: opacity 0.8s ease;
-}
-#summon-overlay.fade-out {
-    opacity: 0;
-    pointer-events: none;
-}
-
-.summon-text-wrap {
-    position: absolute;
-    inset: 0;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 24px;
-    z-index: 2;
-    pointer-events: none;
-}
-
-.summon-logo {
-    font-family: 'Cinzel Decorative', serif;
-    font-size: clamp(1.6rem, 5vw, 3rem);
-    font-weight: 900;
-    color: #d4af37;
-    letter-spacing: 0.12em;
-    text-shadow:
-        0 0 20px rgba(212, 175, 55, 0.8),
-        0 0 60px rgba(212, 175, 55, 0.4),
-        0 0 100px rgba(167, 139, 250, 0.3);
-    animation: summonPulse 2s ease-in-out infinite alternate;
-}
-@keyframes summonPulse {
-    from { text-shadow: 0 0 20px rgba(212,175,55,0.7), 0 0 50px rgba(212,175,55,0.3); }
-    to   { text-shadow: 0 0 30px rgba(212,175,55,1),   0 0 80px rgba(212,175,55,0.5), 0 0 120px rgba(167,139,250,0.4); }
-}
-
-#summon-log {
-    font-family: 'IM Fell English', serif;
-    font-style: italic;
-    font-size: clamp(0.85rem, 2.2vw, 1.05rem);
-    color: #c8a86a;
-    text-align: center;
-    width: min(440px, 86vw);
-    min-height: 110px;
-    line-height: 2.2;
-    opacity: 0.9;
-}
-.summon-line {
-    display: block;
-    animation: summonLineIn 0.4s ease forwards;
-}
-@keyframes summonLineIn {
-    from { opacity: 0; transform: translateY(6px); }
-    to   { opacity: 1; transform: translateY(0); }
-}
-
-/* ══════════════════════════════
-   MAIN APP
-══════════════════════════════ */
-#app {
-    position: relative;
-    z-index: 2;
-    min-height: 100vh;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    padding: 80px 20px 56px;
-    transition: opacity 0.5s;
-}
-#app.hidden  { opacity: 0; pointer-events: none; }
-#app.visible { animation: pageReveal 1s cubic-bezier(0.22, 1, 0.36, 1) forwards; }
-@keyframes pageReveal {
-    from { opacity: 0; transform: translateY(20px); }
-    to   { opacity: 1; transform: translateY(0); }
-}
-
-/* ══════════════════════════════
-   HUD BAR
-══════════════════════════════ */
-.hud-bar {
-    position: fixed;
-    top: 0; left: 0; right: 0;
-    z-index: 100;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 10px 22px;
-    background: var(--hud-bg);
-    backdrop-filter: blur(14px);
-    -webkit-backdrop-filter: blur(14px);
-    border-bottom: 1px solid var(--card-border);
-    transition: background 0.5s, border-color 0.5s;
-}
-.hud-left, .hud-right {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-}
-.hud-rune {
-    font-size: 1.1rem;
-    color: var(--gold);
-    opacity: 0.7;
-    animation: runeFloat 3s ease-in-out infinite alternate;
-}
-@keyframes runeFloat {
-    from { transform: translateY(0); opacity: 0.7; }
-    to   { transform: translateY(-2px); opacity: 1; }
-}
-.hud-realm {
-    font-family: 'Cinzel', serif;
-    font-size: 0.68rem;
-    font-weight: 600;
-    letter-spacing: 0.2em;
-    color: var(--gold);
-    opacity: 0.65;
-}
-
-/* Language buttons */
-.lang-group { display: flex; gap: 4px; }
-.lang-btn {
-    font-family: 'Cinzel', serif;
-    font-size: 0.62rem;
-    font-weight: 700;
-    letter-spacing: 0.06em;
-    color: var(--text-dim);
-    background: transparent;
-    border: 1px solid rgba(212, 175, 55, 0.18);
-    border-radius: 2px;
-    padding: 3px 8px;
-    cursor: pointer;
-    transition: all 0.25s ease;
-}
-.lang-btn:hover, .lang-btn.active {
-    color: var(--gold);
-    border-color: var(--gold);
-    background: var(--seal-bg);
-    box-shadow: 0 0 8px var(--card-glow);
-}
-
-/* Theme toggle */
-.theme-btn {
-    background: transparent;
-    border: 1px solid var(--card-border);
-    color: var(--gold);
-    width: 34px; height: 34px;
-    border-radius: 50%;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 0.85rem;
-    transition: all 0.35s ease;
-}
-.theme-btn:hover {
-    background: var(--seal-bg);
-    box-shadow: 0 0 14px var(--card-glow);
-    transform: rotate(20deg);
-}
-
-/* ══════════════════════════════
-   GRIMOIRE CARD
-══════════════════════════════ */
-.grimoire {
-    position: relative;
-    width: min(820px, 100%);
-    background: var(--card-bg);
-    border: 1px solid var(--card-border);
-    border-radius: 3px;
-    padding: 40px 36px 32px;
-    box-shadow:
-        0 0 60px var(--card-glow),
-        0 0 120px var(--card-glow),
-        inset 0 0 80px var(--parchment);
-    transition: background 0.5s, border-color 0.5s, box-shadow 0.5s;
-    /* Hand-drawn feel */
-    filter: url(#roughen);
-    transform: perspective(1200px);
-}
-
-/* Corner decoration SVGs */
-.corner-deco {
-    position: absolute;
-    width: 60px; height: 60px;
-    color: var(--corner-color);
-    opacity: 0.7;
-    transition: color 0.5s, opacity 0.3s;
-    z-index: 3;
-    /* Remove roughen so corners stay crisp */
-    filter: none;
-}
-.corner-deco.tl { top:  0; left:  0; }
-.corner-deco.tr { top:  0; right: 0; transform: scaleX(-1); }
-.corner-deco.bl { bottom: 0; left:  0; transform: scaleY(-1); }
-.corner-deco.br { bottom: 0; right: 0; transform: scale(-1); }
-.grimoire:hover .corner-deco { opacity: 1; }
-
-/* ── Grimoire header ── */
-.grimoire-header {
-    display: flex;
-    align-items: center;
-    gap: 14px;
-    margin-bottom: 32px;
-    position: relative;
-    z-index: 1;
-    filter: none; /* override roughen on child */
-}
-.header-line {
-    flex: 1;
-    height: 1px;
-    background: linear-gradient(90deg, transparent, var(--card-border), transparent);
-}
-.grimoire-title-label {
-    font-family: 'Cinzel', serif;
-    font-size: 0.68rem;
-    font-weight: 600;
-    letter-spacing: 0.22em;
-    color: var(--gold);
-    opacity: 0.7;
-    white-space: nowrap;
-    flex-shrink: 0;
-    transition: color 0.5s;
-}
-
-/* ── Grimoire body ── */
-.grimoire-body {
-    display: flex;
-    gap: 36px;
-    align-items: flex-start;
-    margin-bottom: 30px;
-    position: relative;
-    z-index: 1;
-}
-
-/* ── Portrait zone ── */
-.portrait-zone {
-    flex-shrink: 0;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 12px;
-}
-.magic-circle-frame {
-    position: relative;
-    width: 180px; height: 180px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-.mc-svg {
-    position: absolute;
-    inset: 0;
-    width: 100%; height: 100%;
-    color: var(--mc-color);
-    animation: mcRotate 18s linear infinite;
-    filter: drop-shadow(0 0 6px var(--magic-orb));
-    transition: color 0.5s, filter 0.5s;
-}
-@keyframes mcRotate {
-    from { transform: rotate(0deg); }
-    to   { transform: rotate(360deg); }
-}
-.portrait-img-wrap {
-    position: relative;
-    z-index: 1;
-    width: 116px; height: 116px;
-    border-radius: 50%;
     overflow: hidden;
-    border: 2px solid var(--gold);
-    box-shadow:
-        0 0 20px var(--card-glow),
-        0 0 40px var(--card-glow),
-        inset 0 0 20px rgba(0,0,0,0.4);
-    transition: border-color 0.5s, box-shadow 0.5s;
-}
-.portrait-img {
-    width: 100%; height: 100%;
-    object-fit: cover;
-    transition: transform 0.5s ease;
-}
-.portrait-img-wrap:hover .portrait-img { transform: scale(1.07); }
-
-.portrait-name-small {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    font-family: 'Cinzel', serif;
-    font-size: 0.68rem;
-    color: var(--status-color);
-    letter-spacing: 0.12em;
-    transition: color 0.5s;
-}
-.portrait-status-dot {
-    width: 7px; height: 7px;
-    border-radius: 50%;
-    background: var(--status-color);
-    box-shadow: 0 0 6px var(--status-color);
-    animation: statusPulse 2s ease infinite;
-    transition: background 0.5s, box-shadow 0.5s;
-}
-@keyframes statusPulse {
-    0%, 100% { transform: scale(1);   opacity: 1; }
-    50%       { transform: scale(1.4); opacity: 0.7; }
+    font-family: 'IM Fell English', Georgia, serif;
 }
 
-/* ── Character info ── */
-.char-info { flex: 1; min-width: 0; }
-.char-subtitle {
-    font-family: 'IM Fell English', serif;
-    font-style: italic;
-    font-size: 0.88rem;
-    color: var(--gold);
-    opacity: 0.65;
-    letter-spacing: 0.06em;
-    margin-bottom: 6px;
-    transition: color 0.5s;
-}
-.char-name {
-    font-family: 'Cinzel Decorative', serif;
-    font-size: clamp(2rem, 5vw, 3.2rem);
-    font-weight: 900;
-    color: var(--gold-light);
-    letter-spacing: 0.04em;
-    line-height: 1.1;
-    margin-bottom: 8px;
-    text-shadow:
-        0 0 20px rgba(212, 175, 55, 0.4),
-        0 2px 4px rgba(0,0,0,0.5);
-    transition: color 0.5s, text-shadow 0.5s;
-}
-.char-class {
-    font-family: 'Cinzel', serif;
-    font-size: 0.78rem;
-    font-weight: 600;
-    letter-spacing: 0.18em;
-    color: var(--purple);
-    margin-bottom: 18px;
-    transition: color 0.5s;
-}
-.char-bio {
-    font-family: 'IM Fell English', serif;
-    font-size: 1rem;
-    line-height: 1.85;
-    color: var(--text);
-    opacity: 0.9;
-    min-height: 4em;
-    transition: color 0.5s;
-}
-/* Typewriter cursor */
-.cursor {
-    display: inline-block;
-    width: 2px; height: 1em;
-    background: var(--gold);
-    margin-left: 2px;
-    vertical-align: middle;
-    animation: blinkCursor 0.8s step-end infinite;
-    transition: background 0.5s;
-}
-@keyframes blinkCursor { 50% { opacity: 0; } }
-
-/* ══════════════════════════════
-   DIVIDERS
-══════════════════════════════ */
-.rune-divider {
-    display: flex;
-    align-items: center;
-    gap: 14px;
-    margin: 24px 0;
-    position: relative;
-    z-index: 1;
-}
-.rune-line {
-    flex: 1;
-    height: 1px;
-    background: linear-gradient(90deg, transparent, var(--card-border), transparent);
-    transition: background 0.5s;
-}
-.rune-sym {
-    font-size: 0.75rem;
-    color: var(--gold);
-    opacity: 0.5;
-    letter-spacing: 0.25em;
-    white-space: nowrap;
-    flex-shrink: 0;
-    transition: color 0.5s;
-}
-
-/* ══════════════════════════════
-   ATTRIBUTES
-══════════════════════════════ */
-.attributes-panel {
-    position: relative;
-    z-index: 1;
-}
-.attr-title {
-    font-family: 'Cinzel', serif;
-    font-size: 0.72rem;
-    font-weight: 700;
-    letter-spacing: 0.22em;
-    color: var(--gold);
-    margin-bottom: 18px;
-    transition: color 0.5s;
-}
-.attr-item {
-    display: grid;
-    grid-template-columns: 130px 1fr 38px;
-    align-items: center;
-    gap: 14px;
-    margin-bottom: 12px;
-}
-.attr-item:last-child { margin-bottom: 0; }
-.attr-name {
-    font-family: 'IM Fell English', serif;
-    font-style: italic;
-    font-size: 0.9rem;
-    color: var(--text-dim);
-    text-align: right;
-    transition: color 0.5s;
-}
-.attr-track {
-    height: 6px;
-    background: var(--bar-bg);
-    border-radius: 10px;
-    overflow: hidden;
-    position: relative;
-    transition: background 0.5s;
-}
-/* Subtle parchment grain on track */
-.attr-track::after {
-    content: '';
-    position: absolute;
-    inset: 0;
-    background: repeating-linear-gradient(
-        90deg,
-        transparent 0px,
-        transparent 8px,
-        rgba(255,255,255,0.04) 8px,
-        rgba(255,255,255,0.04) 9px
+/* ════════════════════════════
+   SKY
+════════════════════════════ */
+.sky {
+    position: fixed; inset: 0; z-index: 0;
+    background: linear-gradient(
+        to bottom,
+        var(--sky-a)  0%,
+        var(--sky-b) 14%,
+        var(--sky-c) 28%,
+        var(--sky-d) 45%,
+        var(--sky-e) 62%,
+        var(--sky-f) 80%,
+        var(--sky-g) 100%
     );
+    transition: background 1.4s ease;
+}
+
+/* ════════════════════════════
+   ATMOSPHERIC CANVAS
+════════════════════════════ */
+#atmo {
+    position: fixed; inset: 0; z-index: 1;
+    width: 100%; height: 100%;
     pointer-events: none;
 }
-.attr-fill {
+
+/* ════════════════════════════
+   CELESTIAL
+════════════════════════════ */
+.celestial {
+    position: fixed;
+    top: 7%; right: 10%;
+    width: 64px; height: 64px;
+    border-radius: 50%;
+    background: var(--cel-c);
+    box-shadow: 0 0 26px var(--cel-glow), 0 0 65px var(--cel-glow), 0 0 120px var(--cel-glow);
+    transition: all 1.4s ease;
+    z-index: 2;
+}
+.cel-halo {
+    position: absolute; inset: -28px;
+    border-radius: 50%;
+    background: radial-gradient(circle, var(--cel-glow) 0%, transparent 68%);
+    animation: halo 4s ease-in-out infinite alternate;
+    transition: background 1.4s;
+}
+@keyframes halo {
+    from { transform: scale(1);    opacity: .65; }
+    to   { transform: scale(1.24); opacity: 1;   }
+}
+[data-theme="light"] .celestial {
+    width: 74px; height: 74px; top: 8%; right: 9%;
+    box-shadow:
+        0 0 0 10px rgba(255,225,30,0.12),
+        0 0 0 26px rgba(255,210,0,0.06),
+        0 0 42px rgba(255,200,0,0.68),
+        0 0 105px rgba(255,200,0,0.35);
+}
+
+/* ════════════════════════════
+   CLOUDS
+════════════════════════════ */
+.cloud-layer { position: fixed; inset: 0; z-index: 3; pointer-events: none; }
+.cloud {
+    position: absolute; left: -340px;
+    background: var(--cloud-c);
+    border-radius: 60px;
+    animation: sail linear infinite;
+    transition: background 1.4s;
+}
+.cloud::before, .cloud::after {
+    content: ''; position: absolute;
+    background: inherit; border-radius: 50%;
+}
+.cloud::before { width: 52%; height: 168%; top: -46%; left: 22%; }
+.cloud::after  { width: 38%; height: 136%; top: -33%; left: 54%; }
+@keyframes sail {
+    from { transform: translateX(0); }
+    to   { transform: translateX(calc(100vw + 380px)); }
+}
+
+/* ════════════════════════════
+   VIGNETTE
+════════════════════════════ */
+.vignette {
+    position: fixed; inset: 0; z-index: 4; pointer-events: none;
+    background: radial-gradient(ellipse at 50% 50%, transparent 45%, rgba(0,0,0,0.4) 100%);
+    transition: background 1.4s;
+}
+[data-theme="light"] .vignette {
+    background: radial-gradient(ellipse at 50% 50%, transparent 45%, rgba(0,0,0,0.18) 100%);
+}
+
+/* ════════════════════════════
+   PAGE
+════════════════════════════ */
+#page {
+    position: fixed; inset: 0; z-index: 10;
+    display: flex; flex-direction: column;
+    pointer-events: none;
+}
+#page.hidden  { opacity: 0; }
+#page.visible { animation: reveal .9s ease forwards; }
+
+/* ── Sky area (flexible space above the dialog) ── */
+.vn-sky-area {
+    flex: 1;
+    position: relative;
+    overflow: visible; /* let sprite head peek above if needed */
+    min-height: 0;
+}
+@keyframes reveal {
+    from { opacity: 0; transform: translateY(12px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ── Controls ── */
+.topbar {
+    position: fixed; top: 14px; right: 16px; z-index: 20;
+    display: flex; align-items: center; gap: 8px;
+    pointer-events: all;
+}
+.lang-row { display: flex; gap: 3px; }
+.lb {
+    font-family: 'Cinzel', serif; font-size: 0.59rem; font-weight: 700; letter-spacing: .07em;
+    color: var(--lb-dim);
+    background: var(--ctrl-bg); border: 1px solid var(--ctrl-bdr);
+    border-radius: 3px; padding: 4px 9px; cursor: pointer;
+    backdrop-filter: blur(12px); transition: all .22s;
+}
+.lb:hover, .lb.active { color: var(--lb-act); border-color: var(--lb-act); background: var(--lb-act-b); }
+.tbtn {
+    width: 33px; height: 33px; border-radius: 50%; cursor: pointer;
+    display: flex; align-items: center; justify-content: center; font-size: .82rem;
+    color: var(--lb-act); background: var(--ctrl-bg); border: 1px solid var(--ctrl-bdr);
+    backdrop-filter: blur(12px); transition: all .34s; pointer-events: all;
+}
+.tbtn:hover { transform: rotate(28deg); background: var(--lb-act-b); }
+
+/* ════════════════════════════
+   VN CHARACTER SPRITE
+════════════════════════════ */
+@keyframes charFloat {
+    from { transform: translateY(0px);  }
+    to   { transform: translateY(-6px); }
+}
+/* Character is absolutely positioned inside .vn-sky-area, anchored bottom-left */
+.vn-char {
+    position: absolute;
+    left: 0;
+    bottom: 0; /* feet always flush with dialog top border */
     height: 100%;
-    background: var(--bar-fill);
-    border-radius: 10px;
-    transition: width 1.5s cubic-bezier(0.22, 1, 0.36, 1), background 0.5s;
-    box-shadow: 0 0 10px rgba(167, 139, 250, 0.4);
-    position: relative;
+    padding-top: 2vh; /* breathing room so head never clips at top */
+    display: flex;
+    align-items: flex-end;
+    z-index: 12;
+    pointer-events: none;
+    filter:
+        drop-shadow(0 0 28px rgba(175, 140, 255, 0.45))
+        drop-shadow(0 0 70px rgba(175, 140, 255, 0.20));
+    /* animation on the sprite, not the container, so bottom stays flush */
 }
-.attr-fill::after {
-    content: '';
+[data-theme="light"] .vn-char {
+    filter:
+        drop-shadow(0 0 28px rgba(200, 130, 0, 0.40))
+        drop-shadow(0 0 70px rgba(200, 130, 0, 0.18));
+}
+.vn-sprite {
+    display: block;
+    /* scale freely while respecting both axes — never clips, never distorts */
+    height: auto;
+    width: auto;
+    max-height: 100%;   /* never taller than sky area          */
+    max-width: 78vw;    /* never wider than ~¾ of the viewport */
+    /* float animation on the image itself — container stays at bottom: 0 */
+    animation: charFloat 7s ease-in-out infinite alternate;
+    /* subtle bottom fade to blend feet into the ground */
+    mask-image: linear-gradient(to top, transparent 0%, black 5%);
+    -webkit-mask-image: linear-gradient(to top, transparent 0%, black 5%);
+}
+
+/* ════════════════════════════
+   VN DIALOGUE PANEL
+════════════════════════════ */
+.vn-dialog {
+    /* In the flex column flow — naturally sits below the sky area */
+    position: relative;
+    flex-shrink: 0;
+    z-index: 11;
+    overflow: visible; /* so ::before/::after ornaments show above the border */
+    pointer-events: all;
+
+    background: var(--dlg-bg);
+    backdrop-filter: blur(26px) saturate(1.4);
+    border-top: 1px solid var(--dlg-bdr);
+    box-shadow:
+        0 -10px 70px var(--dlg-sh),
+        0 -1px 0 rgba(255, 255, 255, 0.04),
+        inset 0 1px 0 rgba(255, 255, 255, 0.03);
+    transition: background 1.4s, border-color 1.4s, box-shadow 1.4s;
+}
+
+/* Corner ornaments floating above the border */
+.vn-dialog::before,
+.vn-dialog::after {
+    content: '✦';
     position: absolute;
-    right: 0; top: -2px;
-    width: 4px; height: calc(100% + 4px);
-    background: var(--gold-light);
-    border-radius: 2px;
-    box-shadow: 0 0 6px var(--gold);
-    opacity: 0.8;
-    transition: background 0.5s, box-shadow 0.5s;
+    top: -0.6em;
+    font-size: 0.62rem;
+    line-height: 1;
+    color: var(--dlg-orn);
+    background: var(--dlg-bg);
+    padding: 0 10px;
+    transition: color 1.4s, background 1.4s;
 }
-.attr-num {
-    font-family: 'Cinzel', serif;
-    font-size: 0.72rem;
-    color: var(--gold);
-    text-align: right;
-    transition: color 0.5s;
-}
+.vn-dialog::before { left: 26px; }
+.vn-dialog::after  { right: 26px; }
 
-/* ══════════════════════════════
-   INTEREST SEALS
-══════════════════════════════ */
-.interests-row {
+/* ── Inner scroll container ── */
+.vn-inner {
+    max-height: 46vh;
+    min-height: 200px;
+    overflow-y: auto;
+    scrollbar-width: none;
+    padding: 22px 5% 18px 5%;
     display: flex;
-    flex-wrap: wrap;
-    gap: 9px;
-    position: relative;
-    z-index: 1;
+    flex-direction: column;
+    gap: 13px;
 }
-.interest-seal {
-    font-family: 'IM Fell English', serif;
-    font-size: 0.88rem;
-    color: var(--text);
-    background: var(--seal-bg);
-    border: 1px solid var(--seal-border);
-    border-radius: 2px;
-    padding: 5px 14px;
-    cursor: default;
-    transition: all 0.25s ease;
-    /* slight organic border */
-    border-radius: 4px 2px 4px 2px;
-}
-.interest-seal:hover {
-    background: rgba(212, 175, 55, 0.12);
-    border-color: var(--gold);
-    color: var(--gold-light);
-    transform: translateY(-3px) rotate(-0.5deg);
-    box-shadow: 0 6px 16px var(--card-glow);
-}
+.vn-inner::-webkit-scrollbar { display: none; }
 
-/* ══════════════════════════════
-   SOCIAL SCROLLS
-══════════════════════════════ */
-.scrolls-row {
+/* ── Name plate ── */
+.vn-nametag {
     display: flex;
-    flex-wrap: wrap;
-    gap: 10px;
-    position: relative;
-    z-index: 1;
-}
-.scroll-link {
-    display: flex;
-    align-items: center;
-    gap: 9px;
-    text-decoration: none;
-    color: var(--text);
-    background: var(--seal-bg);
-    border: 1px solid var(--seal-border);
-    border-radius: 3px 8px 3px 8px; /* organic shape */
-    padding: 10px 20px;
-    font-family: 'Cinzel', serif;
-    font-size: 0.8rem;
-    font-weight: 600;
-    letter-spacing: 0.1em;
-    transition: all 0.28s ease;
-    position: relative;
-    overflow: hidden;
-}
-.scroll-link::before {
-    content: '';
-    position: absolute;
-    inset: 0;
-    background: var(--gold);
-    opacity: 0;
-    transition: opacity 0.25s;
-}
-.scroll-link:hover::before { opacity: 0.05; }
-.scroll-link i, .scroll-link svg { font-size: 0.95rem; flex-shrink: 0; }
-
-/* Per-platform accent */
-.scroll-link.twitch    { --pc: #9146FF; }
-.scroll-link.kick      { --pc: #1ce623; }
-.scroll-link.youtube   { --pc: #FF0000; }
-.scroll-link.instagram { --pc: #E1306C; }
-.scroll-link.twitter   { --pc: #1DA1F2; }
-
-.scroll-link:hover {
-    color: var(--pc);
-    border-color: var(--pc);
-    transform: translateY(-4px);
-    box-shadow: 0 8px 24px rgba(0,0,0,0.2), 0 0 14px color-mix(in srgb, var(--pc) 20%, transparent);
+    flex-direction: column;
+    gap: 3px;
 }
 
-/* ══════════════════════════════
-   GRIMOIRE FOOTER
-══════════════════════════════ */
-.grimoire-footer {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding-top: 18px;
-    border-top: 1px solid var(--card-border);
-    font-family: 'IM Fell English', serif;
-    font-style: italic;
-    font-size: 0.78rem;
-    color: var(--text-faint);
-    letter-spacing: 0.06em;
-    position: relative;
-    z-index: 1;
-    transition: border-color 0.5s, color 0.5s;
+/* ── Text ── */
+.hero-pre {
+    font-family: 'Almendra', serif; font-style: italic;
+    font-size: clamp(.80rem, 1.9vw, .96rem);
+    color: var(--pre-c); letter-spacing: .09em;
+    text-shadow: 0 1px 10px rgba(0,0,0,.9);
+    transition: color 1.4s;
+}
+.hero-name {
+    font-family: 'MedievalSharp', serif;
+    font-size: clamp(2.8rem, 8vw, 5.4rem); letter-spacing: .04em; line-height: 1;
+    color: var(--name-c);
+    text-shadow:
+        0 0 32px var(--name-sh),
+        0 0 75px var(--name-sh),
+        0 2px 0 rgba(0,0,0,.85),
+        0 4px 16px rgba(0,0,0,.7);
+    transition: color 1.4s, text-shadow 1.4s;
+}
+.hero-cls {
+    font-family: 'Almendra', serif; font-size: clamp(.68rem, 1.7vw, .82rem);
+    font-weight: 700; letter-spacing: .18em;
+    color: var(--cls-c);
+    text-shadow: 0 1px 8px rgba(0,0,0,.85);
+    transition: color 1.4s;
 }
 
-/* ══════════════════════════════
+/* ── Rule ── */
+.rule {
+    display: flex; align-items: center; gap: 12px;
+}
+.rule::before, .rule::after {
+    content: ''; flex: 1; height: 1px;
+    background: linear-gradient(90deg, transparent, var(--rule-c), transparent);
+    transition: background 1.4s;
+}
+.rule span { font-size: .62rem; color: var(--rule-c); flex-shrink: 0; transition: color 1.4s; }
+
+/* ── Bio ── */
+.bio {
+    font-family: 'IM Fell English', serif; font-size: clamp(.88rem, 2.1vw, 1rem);
+    line-height: 1.9; color: var(--bio-c);
+    text-shadow: 0 1px 8px rgba(0,0,0,.8);
+    min-height: 1.9em; transition: color 1.4s;
+}
+.cur {
+    display: inline-block; width: 2px; height: .9em;
+    background: var(--lb-act); margin-left: 2px; vertical-align: middle;
+    animation: blink .75s step-end infinite; transition: background 1.4s;
+}
+@keyframes blink { 50% { opacity: 0; } }
+
+/* ── Tags ── */
+.tags {
+    display: flex; flex-wrap: wrap; gap: 7px;
+    pointer-events: all;
+}
+.tags span {
+    font-family: 'Almendra', serif; font-size: .80rem;
+    color: var(--tag-txt); background: var(--tag-bg); border: 1px solid var(--tag-bdr);
+    border-radius: 100px; padding: 4px 13px; cursor: default;
+    backdrop-filter: blur(10px);
+    text-shadow: 0 1px 6px rgba(0,0,0,.7);
+    transition: all .22s;
+}
+.tags span:hover { background: rgba(255,255,255,.13); transform: translateY(-2px); }
+[data-theme="light"] .tags span:hover { background: rgba(0,0,0,.09); }
+
+/* ── Socials ── */
+.socials { display: flex; flex-wrap: wrap; gap: 8px; pointer-events: all; }
+.sl {
+    display: flex; align-items: center; gap: 8px; text-decoration: none;
+    color: var(--sl-txt); background: var(--sl-bg); border: 1px solid var(--sl-bdr);
+    border-radius: 100px; padding: 9px 20px;
+    font-family: 'Cinzel', serif; font-size: .72rem; font-weight: 600; letter-spacing: .09em;
+    backdrop-filter: blur(14px); transition: all .26s;
+}
+.sl i, .sl svg { font-size: .88rem; flex-shrink: 0; }
+.sl.twitch    { --p: rgba(145,70,255,.55); }
+.sl.kick      { --p: rgba(28,230,35,.5);   }
+.sl.youtube   { --p: rgba(255,0,0,.5);     }
+.sl.instagram { --p: rgba(225,48,108,.5);  }
+.sl.twitter   { --p: rgba(29,161,242,.5);  }
+.sl:hover {
+    background: var(--p); border-color: rgba(255,255,255,.22);
+    transform: translateY(-4px); box-shadow: 0 8px 26px rgba(0,0,0,.22);
+}
+[data-theme="light"] .sl:hover { border-color: rgba(0,0,0,.15); }
+
+/* ── Footer ── */
+.footer-note {
+    font-family: 'IM Fell English', serif; font-style: italic; font-size: .72rem;
+    color: var(--footer-c); letter-spacing: .07em;
+    text-shadow: 0 1px 6px rgba(0,0,0,.8); transition: color 1.4s;
+}
+
+/* ════════════════════════════
    RESPONSIVE
-══════════════════════════════ */
-@media (max-width: 640px) {
-    #app { padding: 72px 12px 44px; }
-    .grimoire { padding: 32px 18px 26px; }
+════════════════════════════ */
 
-    .grimoire-body {
-        flex-direction: column;
-        align-items: center;
-        gap: 24px;
-    }
-    .char-info { text-align: center; }
-    .char-subtitle { display: none; }
-
-    .magic-circle-frame { width: 150px; height: 150px; }
-    .portrait-img-wrap  { width:  96px; height:  96px; }
-
-    .attr-item { grid-template-columns: 100px 1fr 34px; gap: 8px; }
-
-    .hud-realm { display: none; }
-    .lang-btn  { padding: 2px 7px; font-size: 0.58rem; }
-
-    .scrolls-row { justify-content: center; }
-    .scroll-link { padding: 9px 14px; font-size: 0.74rem; }
-
-    .grimoire-footer span:last-child { display: none; }
+/* Tablet portrait */
+@media (max-width: 840px) {
+    .vn-sky-area { min-height: 36vh; }
+    .vn-inner    { max-height: 50vh; }
+    .hero-name   { font-size: clamp(2.4rem, 11vw, 3.8rem); }
 }
-@media (max-width: 400px) {
-    .char-name { font-size: 1.8rem; }
-    .scroll-link span { display: none; }
-    .scroll-link { padding: 11px 15px; }
-    .lang-group { gap: 2px; }
+
+/* Phone portrait */
+@media (max-width: 540px) {
+    .vn-sprite   { max-width: 65vw; }
+    .vn-sky-area { min-height: 30vh; }
+    .vn-inner {
+        max-height: 55vh;
+        min-height: 160px;
+        padding: 14px 5% 12px;
+        gap: 9px;
+    }
+    .hero-name { font-size: clamp(1.8rem, 12vw, 2.6rem); }
+    .lb  { padding: 3px 7px; }
+    .sl span { display: none; }
+    .sl  { padding: 9px 12px; }
+}
+
+/* Very small phones (iPhone SE, Galaxy A series) */
+@media (max-width: 380px) {
+    .vn-sprite { max-width: 58vw; }
+    .rule        { display: none; }
+    .footer-note { display: none; }
+    .vn-inner { gap: 8px; padding: 12px 5% 10px; }
+    .tags span { font-size: .74rem; padding: 3px 10px; }
+}
+
+/* Landscape mobile — sky area is tiny, give more room to dialog */
+@media (max-height: 500px) and (orientation: landscape) {
+    .vn-char    { padding-top: 1vh; }
+    .vn-sprite  { max-width: 35vw; max-height: 96%; }
+    .vn-sky-area { min-height: 0; }
+    .vn-inner {
+        max-height: 78vh;
+        min-height: 0;
+        padding: 10px 5% 8px;
+        gap: 7px;
+    }
+    .hero-name   { font-size: clamp(1.5rem, 5vh, 2.2rem); }
+    .hero-cls    { display: none; }
+    .rule        { display: none; }
+    .footer-note { display: none; }
+    .lb  { padding: 3px 7px; }
+    .sl span { display: none; }
+    .sl  { padding: 8px 11px; }
 }
