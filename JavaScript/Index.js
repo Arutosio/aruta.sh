@@ -6,9 +6,11 @@
 /* ════════════════════════════
    STATE
 ════════════════════════════ */
-let lang  = 'it';
-let theme = 'dark';
-let bioTmr = null;
+let lang    = 'it';
+let theme   = 'dark';
+let section = 'home';
+let bioTmr  = null;
+let clockTmr = null;
 
 /* ════════════════════════════
    BOOT
@@ -19,12 +21,13 @@ document.addEventListener('DOMContentLoaded', () => {
     lang  = (sl && CONFIG.i18n[sl]) ? sl : detectLang();
     theme = st || 'dark';
 
-    buildTags();
-    buildSocials();
-    buildFooter();
     applyTheme();
     setLangBtn(lang);
     document.documentElement.setAttribute('lang', lang);
+
+    buildNav();
+    renderSection('home');
+    startClock();
 
     initAtmo();
     showPage();
@@ -41,54 +44,142 @@ function detectLang() {
 }
 
 /* ════════════════════════════
-   BUILD DOM FROM CONFIG
-════════════════════════════ */
-function buildTags() {
-    document.getElementById('tags').innerHTML =
-        CONFIG.tags.map(t => `<span>${t.emoji} ${t.label}</span>`).join('');
-}
-
-const KICK_SVG = `<svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="M2 2h4v6l4-6h5l-5 7 5 7h-5l-4-6v6H2V2z"/></svg>`;
-
-function buildSocials() {
-    document.getElementById('socials').innerHTML =
-        CONFIG.socials.map(s => {
-            const icon = s.icon === 'kick' ? KICK_SVG : `<i class="${s.icon}"></i>`;
-            return `<a href="${s.url}" class="sl ${s.id}" target="_blank" rel="noopener" aria-label="${s.label}">${icon}<span>${s.label}</span></a>`;
-        }).join('');
-}
-
-function buildFooter() {
-    const el = document.getElementById('footer-note');
-    if (el) el.textContent = `✦ ${CONFIG.fullName} · ${CONFIG.year} ✦`;
-}
-
-/* ════════════════════════════
    SHOW PAGE
 ════════════════════════════ */
 function showPage() {
     const page = document.getElementById('page');
     page.classList.remove('hidden');
     page.classList.add('visible');
-    translate(lang);
-    setTimeout(() => typewriter(CONFIG.i18n[lang].bio), 400);
 }
 
 /* ════════════════════════════
-   TRANSLATE
+   CLOCK
 ════════════════════════════ */
-function translate(l) {
-    document.querySelectorAll('[data-i18n]').forEach(el => {
-        const v = CONFIG.i18n[l][el.dataset.i18n];
-        if (v !== undefined) el.textContent = v;
+function startClock() {
+    tickClock();
+    clockTmr = setInterval(tickClock, 1000);
+}
+
+function tickClock() {
+    const locale = CONFIG.locales[lang] || 'en-US';
+    const now    = new Date();
+
+    const timeEl = document.getElementById('clock-time');
+    const dateEl = document.getElementById('clock-date');
+
+    if (timeEl) timeEl.textContent = now.toLocaleTimeString(locale, {
+        hour: '2-digit', minute: '2-digit', second: '2-digit'
     });
+    if (dateEl) dateEl.textContent = now.toLocaleDateString(locale, {
+        weekday: 'short', day: 'numeric', month: 'short'
+    });
+}
+
+/* ════════════════════════════
+   NAV
+════════════════════════════ */
+function buildNav() {
+    const t = CONFIG.i18n[lang];
+    document.getElementById('vn-nav').innerHTML = CONFIG.sections.map(s =>
+        `<button class="vn-choice${s.id === section ? ' active' : ''}" data-section="${s.id}">
+            <i class="${s.icon}"></i>
+            <span>${t['nav_' + s.id]}</span>
+        </button>`
+    ).join('');
+    document.querySelectorAll('.vn-choice').forEach(b =>
+        b.addEventListener('click', () => renderSection(b.dataset.section))
+    );
+}
+
+/* ════════════════════════════
+   SECTION RENDERING
+════════════════════════════ */
+const KICK_SVG = `<svg viewBox="0 0 24 24" width="15" height="15" fill="currentColor"><path d="M2 2h4v6l4-6h5l-5 7 5 7h-5l-4-6v6H2V2z"/></svg>`;
+
+function socialIcon(s) {
+    return s.icon === 'kick' ? KICK_SVG : `<i class="${s.icon}"></i>`;
+}
+function socialLink(s) {
+    return `<a href="${s.url}" class="sl ${s.id}" target="_blank" rel="noopener" aria-label="${s.label}">${socialIcon(s)}<span>${s.label}</span></a>`;
+}
+
+function renderSection(id) {
+    section = id;
+    const t   = CONFIG.i18n[lang];
+    const inner = document.getElementById('vn-inner');
+    if (!inner) return;
+
+    /* update nav active state */
+    document.querySelectorAll('.vn-choice').forEach(b =>
+        b.classList.toggle('active', b.dataset.section === id)
+    );
+
+    if (id === 'home')   inner.innerHTML = homeHTML(t);
+    if (id === 'stream') inner.innerHTML = streamHTML(t);
+    if (id === 'links')  inner.innerHTML = linksHTML(t);
+
+    /* typewriter only for home bio */
+    if (id === 'home') {
+        if (bioTmr) clearTimeout(bioTmr);
+        setTimeout(() => typewriter(t.bio, 'bio'), 120);
+    }
+}
+
+function homeHTML(t) {
+    const tags = CONFIG.tags.map(tg => `<span>${tg.emoji} ${tg.label}</span>`).join('');
+    const socials = CONFIG.socials.map(s => socialLink(s)).join('');
+    return `
+        <div class="vn-header">
+            <div class="vn-nametag">
+                <p class="hero-pre">${t.pre}</p>
+                <h1 class="hero-name">${CONFIG.name}</h1>
+                <p class="hero-cls">${t.cls}</p>
+            </div>
+            <p class="bio" id="bio"></p>
+        </div>
+        <div class="rule"><span>✦</span></div>
+        <div class="tags">${tags}</div>
+        <nav class="socials" aria-label="Social links">${socials}</nav>
+        <p class="footer-note">✦ ${CONFIG.fullName} · ${CONFIG.year} ✦</p>`;
+}
+
+function streamHTML(t) {
+    const platforms = CONFIG.socials.filter(s => s.stream);
+    const cards = platforms.map(s => `
+        <a href="${s.url}" class="stream-card ${s.id}" target="_blank" rel="noopener" aria-label="${s.label}">
+            ${socialIcon(s)}
+            <span class="stream-card-label">${s.label}</span>
+        </a>`).join('');
+    return `
+        <div class="vn-nametag">
+            <p class="hero-pre">${t.stream_pre}</p>
+            <h1 class="hero-name">${CONFIG.name}</h1>
+        </div>
+        <div class="rule"><span>✦</span></div>
+        <p class="section-desc">${t.stream_desc}</p>
+        <div class="stream-cards">${cards}</div>
+        <p class="stream-note">${t.stream_note}</p>
+        <p class="footer-note">✦ ${CONFIG.fullName} · ${CONFIG.year} ✦</p>`;
+}
+
+function linksHTML(t) {
+    const all = CONFIG.socials.map(s => socialLink(s)).join('');
+    return `
+        <div class="vn-nametag">
+            <p class="hero-pre">${t.links_pre}</p>
+            <h1 class="hero-name">${CONFIG.name}</h1>
+        </div>
+        <div class="rule"><span>✦</span></div>
+        <p class="section-desc">${t.links_desc}</p>
+        <nav class="socials links-socials" aria-label="All links">${all}</nav>
+        <p class="footer-note">✦ ${CONFIG.fullName} · ${CONFIG.year} ✦</p>`;
 }
 
 /* ════════════════════════════
    TYPEWRITER
 ════════════════════════════ */
-function typewriter(text) {
-    const el = document.getElementById('bio');
+function typewriter(text, elId) {
+    const el = document.getElementById(elId);
     if (!el) return;
     if (bioTmr) clearTimeout(bioTmr);
     el.innerHTML = '';
@@ -99,7 +190,7 @@ function typewriter(text) {
     (function t() {
         if (i < text.length) {
             el.insertBefore(document.createTextNode(text[i++]), cur);
-            bioTmr = setTimeout(t, 20);
+            bioTmr = setTimeout(t, 18);
         } else {
             setTimeout(() => cur.remove(), 2500);
         }
@@ -115,8 +206,8 @@ function setLang(l) {
     localStorage.setItem('aruta_lang', l);
     document.documentElement.setAttribute('lang', l);
     setLangBtn(l);
-    translate(l);
-    typewriter(CONFIG.i18n[l].bio);
+    buildNav();
+    renderSection(section);
 }
 function setLangBtn(l) {
     document.querySelectorAll('.lb').forEach(b =>
@@ -127,12 +218,12 @@ function setLangBtn(l) {
 /* ════════════════════════════
    THEME
 ════════════════════════════ */
+const THEME_COLORS = { dark: '#08042a', light: '#1a6cd8' };
 function toggleTheme() {
     theme = theme === 'dark' ? 'light' : 'dark';
     applyTheme();
     localStorage.setItem('aruta_theme', theme);
 }
-const THEME_COLORS = { dark: '#08042a', light: '#1a6cd8' };
 function applyTheme() {
     document.documentElement.setAttribute('data-theme', theme);
     document.getElementById('ticon').className =
@@ -144,7 +235,8 @@ function applyTheme() {
 /* ════════════════════════════
    ATMOSPHERIC CANVAS
    Night: stars + aurora borealis
-   Day:   sun rays + light haze
+   Day:   sun rays
+   (particles removed for performance)
 ════════════════════════════ */
 function initAtmo() {
     const canvas = document.getElementById('atmo');
@@ -214,7 +306,6 @@ function initAtmo() {
             ctx.lineTo(canvas.width, 0);
             ctx.lineTo(0, 0);
             ctx.closePath();
-
             const op = 0.048 + 0.022 * Math.sin(t * 0.48 + idx * 1.1);
             const gr = ctx.createLinearGradient(0, baseY - a.amp, 0, baseY + a.amp * 1.9);
             gr.addColorStop(0,    `rgba(${a.col},0)`);
@@ -239,83 +330,17 @@ function initAtmo() {
             gr.addColorStop(0, 'rgba(255,230,90,0.18)');
             gr.addColorStop(1, 'transparent');
             ctx.beginPath();
-            ctx.moveTo(sx, sy);
-            ctx.lineTo(ex, ey);
-            ctx.strokeStyle = gr;
-            ctx.lineWidth = 2.2;
-            ctx.stroke();
+            ctx.moveTo(sx, sy); ctx.lineTo(ex, ey);
+            ctx.strokeStyle = gr; ctx.lineWidth = 2.2; ctx.stroke();
         }
     }
-
-    /* ── Fireflies (night) / sparkles (day) ── */
-    const DARK_C = ['150,255,80', '190,255,110', '80,255,180', '220,255,90'];
-    const DAY_C  = ['255,200,50', '255,175,70',  '255,230,100', '210,160,255'];
-
-    class Particle {
-        constructor(initial) {
-            this.reset(initial);
-        }
-        reset(initial = false) {
-            const dark = document.documentElement.getAttribute('data-theme') !== 'light';
-            const cols = dark ? DARK_C : DAY_C;
-            this.x    = Math.random() * canvas.width;
-            this.y    = initial
-                ? Math.random() * canvas.height
-                : canvas.height * (0.5 + Math.random() * 0.5);
-            this.vy   = -(Math.random() * 0.35 + 0.08);
-            this.vx   = (Math.random() - 0.5) * 0.2;
-            this.sz   = 1.6 + Math.random() * 2.4;
-            this.maxA = dark ? 0.45 + Math.random() * 0.5 : 0.35 + Math.random() * 0.4;
-            this.a    = 0;
-            this.ph   = Math.random() * Math.PI * 2;
-            this.life = 0;
-            this.max  = 160 + Math.random() * 140;
-            this.col  = cols[Math.floor(Math.random() * cols.length)];
-        }
-        update() {
-            this.life++;
-            this.ph += 0.036;
-            this.x  += this.vx + Math.sin(this.ph) * 0.3;
-            this.y  += this.vy;
-            const p  = this.life / this.max;
-            this.a   = p < 0.15 ? (p / 0.15) * this.maxA
-                     : p > 0.82 ? ((1 - p) / 0.18) * this.maxA
-                     : this.maxA;
-            if (this.life >= this.max || this.y < 0) this.reset();
-        }
-        draw() {
-            const g = ctx.createRadialGradient(this.x, this.y, 0, this.x, this.y, this.sz * 5.5);
-            g.addColorStop(0,   `rgba(${this.col},${this.a * 0.9})`);
-            g.addColorStop(0.3, `rgba(${this.col},${this.a * 0.35})`);
-            g.addColorStop(1,   `rgba(${this.col},0)`);
-            ctx.beginPath();
-            ctx.arc(this.x, this.y, this.sz * 5.5, 0, Math.PI * 2);
-            ctx.fillStyle = g; ctx.fill();
-            ctx.beginPath();
-            ctx.arc(this.x, this.y, this.sz * 0.44, 0, Math.PI * 2);
-            ctx.fillStyle = `rgba(${this.col},${this.a})`; ctx.fill();
-        }
-    }
-
-    let particles = [];
-    function makeParticles() {
-        const n = Math.max(20, Math.floor(canvas.width * canvas.height / 10000));
-        particles = Array.from({ length: n }, (_, i) => new Particle(i < n * 0.6));
-    }
-    makeParticles();
-    addEventListener('resize', makeParticles);
 
     /* ── Main loop ── */
     (function frame() {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         const dark = document.documentElement.getAttribute('data-theme') !== 'light';
-        if (dark) {
-            drawStars();
-            drawAurora();
-        } else {
-            drawSunRays();
-        }
-        particles.forEach(p => { p.update(); p.draw(); });
+        if (dark) { drawStars(); drawAurora(); }
+        else      { drawSunRays(); }
         t += 0.011;
         requestAnimationFrame(frame);
     })();

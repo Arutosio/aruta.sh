@@ -56,46 +56,38 @@
 <!-- PAGE -->
 <main id="page" class="hidden">
 
-    <div class="topbar">
-        <div class="lang-row" role="group" aria-label="Language selector">
-            <button class="lb" data-lang="it" aria-label="Italiano">IT</button>
-            <button class="lb" data-lang="en" aria-label="English">EN</button>
-            <button class="lb" data-lang="es" aria-label="Español">ES</button>
-            <button class="lb" data-lang="ja" aria-label="日本語">JA</button>
+    <!-- LEFT PANEL: clock, section nav, controls -->
+    <aside class="vn-left">
+        <div class="vn-clock">
+            <span class="vn-clock-time" id="clock-time">--:--:--</span>
+            <span class="vn-clock-date" id="clock-date">···</span>
         </div>
-        <button id="tbtn" class="tbtn" aria-label="Toggle theme">
-            <i class="fas fa-sun" id="ticon"></i>
-        </button>
-    </div>
 
-    <!-- Sky area: character sprite -->
-    <div class="vn-sky-area">
-        <div class="vn-char">
-            <img src="./Images/aru2_meta.png" alt="Aruta" class="vn-sprite">
-        </div>
-    </div>
+        <nav class="vn-nav" id="vn-nav" aria-label="Sections"></nav>
 
-    <!-- VN Dialogue Panel -->
-    <div class="vn-dialog">
-        <div class="vn-inner">
-
-            <div class="vn-header">
-                <div class="vn-nametag">
-                    <p class="hero-pre" data-i18n="pre">The Wandering Mage</p>
-                    <h1 class="hero-name">Aruta</h1>
-                    <p class="hero-cls" data-i18n="cls">Streamer · Programmer · Adventurer</p>
-                </div>
-                <p class="bio" id="bio"></p>
+        <div class="vn-controls">
+            <div class="lang-row" role="group" aria-label="Language selector">
+                <button class="lb" data-lang="it" aria-label="Italiano">IT</button>
+                <button class="lb" data-lang="en" aria-label="English">EN</button>
+                <button class="lb" data-lang="es" aria-label="Español">ES</button>
+                <button class="lb" data-lang="ja" aria-label="日本語">JA</button>
             </div>
+            <button id="tbtn" class="tbtn" aria-label="Toggle theme">
+                <i class="fas fa-sun" id="ticon"></i>
+            </button>
+        </div>
+    </aside>
 
-            <div class="rule"><span>✦</span></div>
+    <!-- MAIN: sky area (character RIGHT) + dialog -->
+    <div class="vn-main">
+        <div class="vn-sky-area">
+            <div class="vn-char">
+                <img src="./Images/aru2_meta.png" alt="Aruta" class="vn-sprite">
+            </div>
+        </div>
 
-            <div class="tags" id="tags"></div>
-
-            <nav class="socials" id="socials" aria-label="Social links"></nav>
-
-            <p class="footer-note" id="footer-note"></p>
-
+        <div class="vn-dialog">
+            <div class="vn-inner" id="vn-inner"></div>
         </div>
     </div>
 
