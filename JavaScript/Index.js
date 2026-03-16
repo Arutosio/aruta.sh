@@ -24,6 +24,8 @@ document.addEventListener('DOMContentLoaded', () => {
     updateThemeIcon();
     setActiveLangBtn(currentLang);
 
+    initRuneParticles();
+    initMagicCursor();
     initSummonCanvas();
     runSummoning(() => showApp());
 
@@ -41,6 +43,123 @@ function detectLanguage() {
     if (i18n[code]) return code;
     const map = { pt:'es', ca:'es', gl:'es', zh:'ja', ko:'ja' };
     return map[code] || 'en';
+}
+
+/* ════════════════════════════
+   RUNE PARTICLES + CURSOR TRAIL
+════════════════════════════ */
+function initRuneParticles() {
+    const canvas = document.getElementById('rune-bg');
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+
+    const RUNES = 'ᚠᚢᚦᚨᚱᚲᚷᚹᚺᚾᛁᛃᛇᛈᛉᛊᛏᛒᛖᛗᛚᛜᛞᛟᛡ✦⊕⋆◈✧';
+    const COLOR  = '#6e8efb';
+    const MOUSE_R = 160;
+    let mouse = { x: -999, y: -999 };
+    let frame = 0;
+    const trail = [];
+
+    function resize() {
+        canvas.width  = window.innerWidth;
+        canvas.height = window.innerHeight;
+    }
+    resize();
+    window.addEventListener('resize', resize);
+    window.addEventListener('mousemove', e => {
+        mouse.x = e.clientX;
+        mouse.y = e.clientY;
+        trail.push({ x: e.clientX, y: e.clientY, t: Date.now() });
+        if (trail.length > 30) trail.shift();
+    });
+
+    // base: font size 16–34px, depth oscillation gives the near/far feeling
+    const particles = Array.from({ length: 65 }, () => ({
+        x:     Math.random() * window.innerWidth,
+        y:     Math.random() * window.innerHeight,
+        vx:    (Math.random() - 0.5) * 0.30,
+        vy:    (Math.random() - 0.5) * 0.30,
+        char:  RUNES[Math.floor(Math.random() * RUNES.length)],
+        base:  16 + Math.random() * 18,
+        phase: Math.random() * Math.PI * 2,
+        alpha: 0.07 + Math.random() * 0.13,
+        glow:  0
+    }));
+
+    function tick() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        frame++;
+
+        // Cursor trail
+        const now = Date.now();
+        trail.forEach(pt => {
+            const age  = now - pt.t;
+            if (age > 700) return;
+            const life = 1 - age / 700;
+            ctx.save();
+            ctx.globalAlpha = life * 0.45;
+            ctx.shadowColor = COLOR;
+            ctx.shadowBlur  = life * 16;
+            ctx.beginPath();
+            ctx.arc(pt.x, pt.y, life * 5 + 1, 0, Math.PI * 2);
+            ctx.fillStyle = COLOR;
+            ctx.fill();
+            ctx.restore();
+        });
+
+        // Rune particles with depth oscillation
+        particles.forEach(p => {
+            p.x += p.vx;
+            p.y += p.vy;
+            if (p.x < -30) p.x = canvas.width  + 30;
+            if (p.x > canvas.width  + 30) p.x = -30;
+            if (p.y < -30) p.y = canvas.height + 30;
+            if (p.y > canvas.height + 30) p.y = -30;
+
+            // Depth pulse: size slowly oscillates → feels like floating toward/away
+            const depth = 0.55 + 0.45 * Math.sin(frame * 0.011 + p.phase);
+            const size  = p.base * depth;
+
+            const dx = p.x - mouse.x, dy = p.y - mouse.y;
+            const dist = Math.sqrt(dx * dx + dy * dy);
+            const target = dist < MOUSE_R ? (1 - dist / MOUSE_R) : 0;
+            p.glow += (target - p.glow) * 0.07;
+
+            ctx.save();
+            ctx.globalAlpha = (p.alpha + p.glow * 0.65) * (0.4 + 0.6 * depth);
+            ctx.font        = `${size}px serif`;
+            ctx.fillStyle   = COLOR;
+            if (p.glow > 0.02 || depth > 0.8) {
+                ctx.shadowColor = COLOR;
+                ctx.shadowBlur  = p.glow * 26 + depth * 7;
+            }
+            ctx.fillText(p.char, p.x, p.y);
+            ctx.restore();
+        });
+
+        requestAnimationFrame(tick);
+    }
+    tick();
+}
+
+/* ════════════════════════════
+   MAGIC CURSOR
+════════════════════════════ */
+function initMagicCursor() {
+    const el = document.getElementById('magic-cursor');
+    if (!el || window.matchMedia('(pointer: coarse)').matches) return;
+
+    window.addEventListener('mousemove', e => {
+        el.style.transform = `translate(${e.clientX}px,${e.clientY}px)`;
+    });
+
+    // Ring expands over interactive elements (delegation handles dynamic cards)
+    document.addEventListener('mouseover', e => {
+        if (e.target.closest('a, button')) el.classList.add('cursor-hover');
+    });
+    document.addEventListener('mouseout', e => {
+        if (e.target.closest('a, button')) el.classList.remove('cursor-hover');
+    });
 }
 
 /* ════════════════════════════

@@ -24,6 +24,15 @@
 </head>
 <body>
 
+<!-- ░░ RUNE PARTICLE CANVAS ░░ -->
+<canvas id="rune-bg" aria-hidden="true"></canvas>
+
+<!-- ░░ MAGIC CURSOR ░░ -->
+<div id="magic-cursor" aria-hidden="true">
+    <div class="cursor-ring"></div>
+    <div class="cursor-dot"></div>
+</div>
+
 <!-- ░░ CSS MAGIC BACKGROUND (no canvas, GPU only) ░░ -->
 <div class="magic-bg" aria-hidden="true">
     <svg class="bg-ring bg-ring-1" viewBox="0 0 900 900">
@@ -73,6 +82,7 @@
                 <button class="lang-btn" data-lang="en">EN</button>
                 <button class="lang-btn" data-lang="es">ES</button>
                 <button class="lang-btn" data-lang="ja">JA</button>
+                <button class="lang-btn" data-lang="fn">ᚠᚾ</button>
             </div>
             <button class="theme-btn" id="theme-btn" title="Toggle theme">
                 <i class="fas fa-moon" id="theme-icon"></i>
@@ -159,7 +169,7 @@
     </div><!-- .content-wrap -->
 
     <footer class="footer-bar">
-        <span class="footer-copy">© 2025 Stefano Aruta</span>
+        <span class="footer-copy">© 2025 Stefano Aruta. Tutti i diritti riservati.</span>
         <span class="footer-brand">aruta.sh</span>
         <div class="footer-socials">
             <a href="https://twitch.tv/aruta.sh"     target="_blank" rel="noopener" title="Twitch"><i class="fab fa-twitch"></i></a>
