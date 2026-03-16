@@ -53,9 +53,9 @@ function initRuneParticles() {
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
 
-    const RUNES = 'ᚠᚢᚦᚨᚱᚲᚷᚹᚺᚾᛁᛃᛇᛈᛉᛊᛏᛒᛖᛗᛚᛜᛞᛟᛡ✦⊕⋆◈✧';
-    const COLOR  = '#6e8efb';
-    const MOUSE_R = 160;
+    const RUNES  = 'ᚠᚢᚦᚨᚱᚲᚷᚹᚺᚾᛁᛃᛇᛈᛉᛊᛏᛒᛖᛗᛚᛜᛞᛟᛡᛣᛤᛥᛦ✦⊕⋆◈✧';
+    const COLOR  = '#00e5ff';   // electric cyan
+    const MOUSE_R = 170;
     let mouse = { x: -999, y: -999 };
     let frame = 0;
     const trail = [];
@@ -70,21 +70,25 @@ function initRuneParticles() {
         mouse.x = e.clientX;
         mouse.y = e.clientY;
         trail.push({ x: e.clientX, y: e.clientY, t: Date.now() });
-        if (trail.length > 30) trail.shift();
+        if (trail.length > 35) trail.shift();
     });
 
-    // base: font size 16–34px, depth oscillation gives the near/far feeling
-    const particles = Array.from({ length: 65 }, () => ({
-        x:     Math.random() * window.innerWidth,
-        y:     Math.random() * window.innerHeight,
-        vx:    (Math.random() - 0.5) * 0.30,
-        vy:    (Math.random() - 0.5) * 0.30,
-        char:  RUNES[Math.floor(Math.random() * RUNES.length)],
-        base:  16 + Math.random() * 18,
-        phase: Math.random() * Math.PI * 2,
-        alpha: 0.07 + Math.random() * 0.13,
-        glow:  0
-    }));
+    function spawn() {
+        return {
+            x:     Math.random() * window.innerWidth,
+            y:     Math.random() * window.innerHeight,
+            vx:    (Math.random() - 0.5) * 0.38,
+            vy:    (Math.random() - 0.5) * 0.38,
+            char:  RUNES[Math.floor(Math.random() * RUNES.length)],
+            base:  18 + Math.random() * 22,   // 18–40px
+            phase: Math.random() * Math.PI * 2,
+            alpha: 0.12 + Math.random() * 0.20,
+            glow:  0,
+            life:  0   // fade-in counter
+        };
+    }
+
+    const particles = Array.from({ length: 120 }, spawn);
 
     function tick() {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -94,48 +98,58 @@ function initRuneParticles() {
         const now = Date.now();
         trail.forEach(pt => {
             const age  = now - pt.t;
-            if (age > 700) return;
-            const life = 1 - age / 700;
+            if (age > 750) return;
+            const life = 1 - age / 750;
             ctx.save();
-            ctx.globalAlpha = life * 0.45;
+            ctx.globalAlpha = life * 0.55;
             ctx.shadowColor = COLOR;
-            ctx.shadowBlur  = life * 16;
+            ctx.shadowBlur  = life * 22;
             ctx.beginPath();
-            ctx.arc(pt.x, pt.y, life * 5 + 1, 0, Math.PI * 2);
+            ctx.arc(pt.x, pt.y, life * 6 + 1, 0, Math.PI * 2);
             ctx.fillStyle = COLOR;
             ctx.fill();
             ctx.restore();
         });
 
-        // Rune particles with depth oscillation
-        particles.forEach(p => {
+        // Rune particles
+        for (let i = 0; i < particles.length; i++) {
+            const p = particles[i];
             p.x += p.vx;
             p.y += p.vy;
-            if (p.x < -30) p.x = canvas.width  + 30;
-            if (p.x > canvas.width  + 30) p.x = -30;
-            if (p.y < -30) p.y = canvas.height + 30;
-            if (p.y > canvas.height + 30) p.y = -30;
+            if (p.life < 1) p.life = Math.min(1, p.life + 0.012);
 
-            // Depth pulse: size slowly oscillates → feels like floating toward/away
-            const depth = 0.55 + 0.45 * Math.sin(frame * 0.011 + p.phase);
+            // Gone off-screen → respawn fresh at random interior position
+            if (p.x < -50 || p.x > canvas.width + 50 || p.y < -50 || p.y > canvas.height + 50) {
+                particles[i] = spawn();
+                continue;
+            }
+
+            // Soft edge fade (80px margin)
+            const edge = Math.min(p.x / 80, (canvas.width - p.x) / 80,
+                                  p.y / 80, (canvas.height - p.y) / 80, 1);
+
+            // Depth oscillation: near/far feel
+            const depth = 0.5 + 0.5 * Math.sin(frame * 0.011 + p.phase);
             const size  = p.base * depth;
 
+            // Mouse glow
             const dx = p.x - mouse.x, dy = p.y - mouse.y;
             const dist = Math.sqrt(dx * dx + dy * dy);
             const target = dist < MOUSE_R ? (1 - dist / MOUSE_R) : 0;
             p.glow += (target - p.glow) * 0.07;
 
+            const a    = (p.alpha + p.glow * 0.75) * (0.35 + 0.65 * depth) * edge * p.life;
+            const blur = 5 + depth * 10 + p.glow * 32;  // always glowing, electric when near
+
             ctx.save();
-            ctx.globalAlpha = (p.alpha + p.glow * 0.65) * (0.4 + 0.6 * depth);
+            ctx.globalAlpha = a;
             ctx.font        = `${size}px serif`;
             ctx.fillStyle   = COLOR;
-            if (p.glow > 0.02 || depth > 0.8) {
-                ctx.shadowColor = COLOR;
-                ctx.shadowBlur  = p.glow * 26 + depth * 7;
-            }
+            ctx.shadowColor = COLOR;
+            ctx.shadowBlur  = blur;
             ctx.fillText(p.char, p.x, p.y);
             ctx.restore();
-        });
+        }
 
         requestAnimationFrame(tick);
     }
