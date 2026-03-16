@@ -18,7 +18,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const savedTheme = localStorage.getItem('aruta_theme');
 
     currentLang  = (savedLang && i18n[savedLang]) ? savedLang : detectLanguage();
-    currentTheme = savedTheme || 'dark';
+    currentTheme = savedTheme || (window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark');
 
     document.documentElement.setAttribute('data-theme', currentTheme);
     updateThemeIcon();
@@ -52,11 +52,11 @@ function initRuneParticles() {
     const ctx = canvas.getContext('2d');
 
     const RUNES   = 'ᚠᚢᚦᚨᚱᚲᚷᚹᚺᚾᛁᛃᛇᛈᛉᛊᛏᛒᛖᛗᛚᛜᛞᛟᛡᛣᛤᛥᛦ✦⊕⋆◈✧';
-    // dark:  base #6e8efb → hot #d0eaff (light blue-white)
-    // light: base #3730a3 → hot #1e1b4b (dark indigo)
+    // dark:  base #6e8efb (blue) → hot #d0eaff (white-blue near cursor)
+    // light: base #5a320a (sepia ink) → hot #bc6c14 (amber candlelight near cursor)
     const THEMES = {
-        dark:  { br: 110, bg: 142, bb: 251, hr: 210, hg: 234, hb: 255, trail: '#eef5ff', tShadow: '#ddeeff' },
-        light: { br:  55, bg:  48, bb: 163, hr:  30, hg:  27, hb:  75, trail: '#1e1b4b', tShadow: 'rgba(30,27,75,0.6)' }
+        dark:  { br: 110, bg: 142, bb: 251, hr: 210, hg: 234, hb: 255, trail: '#eef5ff',  tShadow: '#ddeeff' },
+        light: { br:  90, bg:  50, bb:  10, hr: 188, hg: 108, hb:  20, trail: '#7a4e06',  tShadow: 'rgba(122,78,6,0.55)' }
     };
     const MOUSE_R = 170;
     const MC_R    = 190;
