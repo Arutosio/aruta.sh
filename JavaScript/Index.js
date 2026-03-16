@@ -53,12 +53,29 @@ function initRuneParticles() {
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
 
-    const RUNES  = 'ᚠᚢᚦᚨᚱᚲᚷᚹᚺᚾᛁᛃᛇᛈᛉᛊᛏᛒᛖᛗᛚᛜᛞᛟᛡᛣᛤᛥᛦ✦⊕⋆◈✧';
-    const COLOR  = '#00e5ff';   // electric cyan
+    const RUNES   = 'ᚠᚢᚦᚨᚱᚲᚷᚹᚺᚾᛁᛃᛇᛈᛉᛊᛏᛒᛖᛗᛚᛜᛞᛟᛡᛣᛤᛥᛦ✦⊕⋆◈✧';
+    // Normal: #6e8efb (original blue). Hot: #d0eaff (near-white blue, near cursor only)
+    const BASE_R = 110, BASE_G = 142, BASE_B = 251;
+    const HOT_R  = 210, HOT_G  = 234, HOT_B  = 255;
     const MOUSE_R = 170;
+    const MC_R    = 190;
     let mouse = { x: -999, y: -999 };
     let frame = 0;
     const trail = [];
+
+    function runeColor(t) {
+        return `rgb(${Math.round(BASE_R + t*(HOT_R-BASE_R))},${Math.round(BASE_G + t*(HOT_G-BASE_G))},${Math.round(BASE_B + t*(HOT_B-BASE_B))})`;
+    }
+
+    // Returns center of magic circle only when home section is visible
+    function getMCCenter() {
+        const sec = document.getElementById('sec-home');
+        if (!sec || sec.hidden) return null;
+        const el = sec.querySelector('.magic-circle-frame');
+        if (!el) return null;
+        const r = el.getBoundingClientRect();
+        return { x: r.left + r.width / 2, y: r.top + r.height / 2 };
+    }
 
     function resize() {
         canvas.width  = window.innerWidth;
@@ -70,21 +87,22 @@ function initRuneParticles() {
         mouse.x = e.clientX;
         mouse.y = e.clientY;
         trail.push({ x: e.clientX, y: e.clientY, t: Date.now() });
-        if (trail.length > 35) trail.shift();
+        if (trail.length > 25) trail.shift();
     });
 
     function spawn() {
         return {
-            x:     Math.random() * window.innerWidth,
-            y:     Math.random() * window.innerHeight,
-            vx:    (Math.random() - 0.5) * 0.38,
-            vy:    (Math.random() - 0.5) * 0.38,
-            char:  RUNES[Math.floor(Math.random() * RUNES.length)],
-            base:  18 + Math.random() * 22,   // 18–40px
-            phase: Math.random() * Math.PI * 2,
-            alpha: 0.12 + Math.random() * 0.20,
-            glow:  0,
-            life:  0   // fade-in counter
+            x:      Math.random() * window.innerWidth,
+            y:      Math.random() * window.innerHeight,
+            vx:     (Math.random() - 0.5) * 0.35,
+            vy:     (Math.random() - 0.5) * 0.35,
+            char:   RUNES[Math.floor(Math.random() * RUNES.length)],
+            base:   18 + Math.random() * 20,   // fixed normal size 18–38px
+            phase:  Math.random() * Math.PI * 2,
+            alpha:  0.13 + Math.random() * 0.17,
+            glowM:  0,   // mouse proximity → color + size
+            glowMC: 0,   // magic circle proximity → size only
+            life:   0
         };
     }
 
@@ -94,58 +112,69 @@ function initRuneParticles() {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         frame++;
 
-        // Cursor trail
+        // Thin cursor trail — white-blue, fast fade
         const now = Date.now();
         trail.forEach(pt => {
-            const age  = now - pt.t;
-            if (age > 750) return;
-            const life = 1 - age / 750;
+            const age = now - pt.t;
+            if (age > 480) return;
+            const life = 1 - age / 480;
             ctx.save();
-            ctx.globalAlpha = life * 0.55;
-            ctx.shadowColor = COLOR;
-            ctx.shadowBlur  = life * 22;
+            ctx.globalAlpha = life * 0.30;
+            ctx.shadowColor = '#ddeeff';
+            ctx.shadowBlur  = life * 8;
             ctx.beginPath();
-            ctx.arc(pt.x, pt.y, life * 6 + 1, 0, Math.PI * 2);
-            ctx.fillStyle = COLOR;
+            ctx.arc(pt.x, pt.y, life * 2.5 + 0.5, 0, Math.PI * 2);
+            ctx.fillStyle = '#eef5ff';
             ctx.fill();
             ctx.restore();
         });
 
-        // Rune particles
+        const mc = getMCCenter();
+
         for (let i = 0; i < particles.length; i++) {
             const p = particles[i];
             p.x += p.vx;
             p.y += p.vy;
             if (p.life < 1) p.life = Math.min(1, p.life + 0.012);
 
-            // Gone off-screen → respawn fresh at random interior position
+            // Off-screen → respawn
             if (p.x < -50 || p.x > canvas.width + 50 || p.y < -50 || p.y > canvas.height + 50) {
                 particles[i] = spawn();
                 continue;
             }
 
-            // Soft edge fade (80px margin)
+            // Edge fade
             const edge = Math.min(p.x / 80, (canvas.width - p.x) / 80,
                                   p.y / 80, (canvas.height - p.y) / 80, 1);
 
-            // Depth oscillation: near/far feel
-            const depth = 0.5 + 0.5 * Math.sin(frame * 0.011 + p.phase);
-            const size  = p.base * depth;
+            // Very subtle float: stays between 90%–100% so runes never "shrink to nothing"
+            const float = 0.90 + 0.10 * Math.sin(frame * 0.009 + p.phase);
 
-            // Mouse glow
+            // Mouse proximity → color shift + size boost
             const dx = p.x - mouse.x, dy = p.y - mouse.y;
-            const dist = Math.sqrt(dx * dx + dy * dy);
-            const target = dist < MOUSE_R ? (1 - dist / MOUSE_R) : 0;
-            p.glow += (target - p.glow) * 0.07;
+            const distM = Math.sqrt(dx * dx + dy * dy);
+            p.glowM += ((distM < MOUSE_R ? 1 - distM / MOUSE_R : 0) - p.glowM) * 0.07;
 
-            const a    = (p.alpha + p.glow * 0.75) * (0.35 + 0.65 * depth) * edge * p.life;
-            const blur = 5 + depth * 10 + p.glow * 32;  // always glowing, electric when near
+            // Magic circle proximity → size boost only (no color change)
+            let targetMC = 0;
+            if (mc) {
+                const mx = p.x - mc.x, my = p.y - mc.y;
+                targetMC = Math.sqrt(mx * mx + my * my) < MC_R
+                    ? 1 - Math.sqrt(mx * mx + my * my) / MC_R : 0;
+            }
+            p.glowMC += (targetMC - p.glowMC) * 0.05;
+
+            // Size grows near cursor OR magic circle, returns to base when away
+            const size  = p.base * float * (1 + Math.max(p.glowM, p.glowMC) * 0.65);
+            const color = runeColor(p.glowM);
+            const blur  = 2 + float * 3 + p.glowM * 26;
+            const alpha = (p.alpha + p.glowM * 0.55) * edge * p.life;
 
             ctx.save();
-            ctx.globalAlpha = a;
+            ctx.globalAlpha = alpha;
             ctx.font        = `${size}px serif`;
-            ctx.fillStyle   = COLOR;
-            ctx.shadowColor = COLOR;
+            ctx.fillStyle   = color;
+            ctx.shadowColor = color;
             ctx.shadowBlur  = blur;
             ctx.fillText(p.char, p.x, p.y);
             ctx.restore();
