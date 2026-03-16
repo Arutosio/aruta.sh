@@ -70,9 +70,12 @@ function tickClock() {
     if (timeEl) timeEl.textContent = now.toLocaleTimeString(locale, {
         hour: '2-digit', minute: '2-digit', second: '2-digit'
     });
-    if (dateEl) dateEl.textContent = now.toLocaleDateString(locale, {
-        weekday: 'short', day: 'numeric', month: 'short'
-    });
+    if (dateEl) {
+        const y = now.getFullYear();
+        const m = String(now.getMonth() + 1).padStart(2, '0');
+        const d = String(now.getDate()).padStart(2, '0');
+        dateEl.innerHTML = `${y}<br>${m}/${d}`;
+    }
 }
 
 /* ════════════════════════════
