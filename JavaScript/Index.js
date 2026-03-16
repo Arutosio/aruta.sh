@@ -71,19 +71,25 @@ function initRuneParticles() {
         return `rgb(${Math.round(c.br + t*(c.hr-c.br))},${Math.round(c.bg + t*(c.hg-c.bg))},${Math.round(c.bb + t*(c.hb-c.bb))})`;
     }
 
-    // Returns center of magic circle only when home section is visible
+    // Cache MC center — recompute only on resize or section change
+    let mcCache = null, mcDirty = true;
     function getMCCenter() {
+        if (!mcDirty) return mcCache;
+        mcDirty = false;
         const sec = document.getElementById('sec-home');
-        if (!sec || sec.hidden) return null;
+        if (!sec || sec.hidden) return (mcCache = null);
         const el = sec.querySelector('.magic-circle-frame');
-        if (!el) return null;
+        if (!el) return (mcCache = null);
         const r = el.getBoundingClientRect();
-        return { x: r.left + r.width / 2, y: r.top + r.height / 2 };
+        return (mcCache = { x: r.left + r.width / 2, y: r.top + r.height / 2 });
     }
+    // Invalidate cache on resize and section switches
+    document.addEventListener('click', e => { if (e.target.closest('.sec-btn')) mcDirty = true; });
 
     function resize() {
         canvas.width  = window.innerWidth;
         canvas.height = window.innerHeight;
+        mcDirty = true;
     }
     resize();
     window.addEventListener('resize', resize);
@@ -91,7 +97,7 @@ function initRuneParticles() {
         mouse.x = e.clientX;
         mouse.y = e.clientY;
         trail.push({ x: e.clientX, y: e.clientY, t: Date.now() });
-        if (trail.length > 25) trail.shift();
+        if (trail.length > 15) trail.shift();
     });
 
     const ATTRACT_R = 68;   // radius where magnet kicks in
@@ -119,29 +125,30 @@ function initRuneParticles() {
         };
     }
 
-    const particles = Array.from({ length: 120 }, spawn);
+    const particles = Array.from({ length: 65 }, spawn);
 
     function tick() {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         frame++;
 
-        // Thin cursor trail — color depends on theme
+        // Thin cursor trail — single save/restore for all points
         const now = Date.now();
         const c = getTheme();
-        trail.forEach(pt => {
+        ctx.save();
+        ctx.fillStyle = c.trail;
+        ctx.shadowColor = c.tShadow;
+        for (let ti = 0; ti < trail.length; ti++) {
+            const pt = trail[ti];
             const age = now - pt.t;
-            if (age > 480) return;
+            if (age > 480) continue;
             const life = 1 - age / 480;
-            ctx.save();
             ctx.globalAlpha = life * 0.30;
-            ctx.shadowColor = c.tShadow;
             ctx.shadowBlur  = life * 8;
             ctx.beginPath();
             ctx.arc(pt.x, pt.y, life * 2.5 + 0.5, 0, Math.PI * 2);
-            ctx.fillStyle = c.trail;
             ctx.fill();
-            ctx.restore();
-        });
+        }
+        ctx.restore();
 
         const mc = getMCCenter();
 
@@ -213,15 +220,21 @@ function initRuneParticles() {
             const blur  = 2 + float * 3 + effectiveGlow * 30;
             const alpha = (p.alpha + effectiveGlow * 0.55) * edge * p.life;
 
-            ctx.save();
+            // Skip shadow entirely when rune is far from any attractor (biggest GPU saver)
+            const sz = Math.round(size);
             ctx.globalAlpha = alpha;
-            ctx.font        = `${size}px serif`;
+            ctx.font        = `${sz}px serif`;
             ctx.fillStyle   = color;
-            ctx.shadowColor = color;
-            ctx.shadowBlur  = blur;
+            if (effectiveGlow > 0.04 || p.glowMC > 0.04) {
+                ctx.shadowColor = color;
+                ctx.shadowBlur  = blur;
+            } else {
+                ctx.shadowBlur  = 0;
+            }
             ctx.fillText(p.char, p.x, p.y);
-            ctx.restore();
         }
+        ctx.globalAlpha = 1;
+        ctx.shadowBlur  = 0;
 
         requestAnimationFrame(tick);
     }
@@ -264,8 +277,15 @@ function initSummonCanvas() {
     resize();
     window.addEventListener('resize', resize);
 
+    // Limit summoning canvas to ~30 fps to cut GPU load during page load
+    const SUMMON_INTERVAL = 1000 / 30;
+    let lastSummonTime = 0;
     let t = 0;
-    function drawSummonCircle() {
+    function drawSummonCircle(ts) {
+        raf = requestAnimationFrame(drawSummonCircle);
+        if (ts - lastSummonTime < SUMMON_INTERVAL) return;
+        lastSummonTime = ts;
+
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         const cx    = canvas.width  / 2;
         const cy    = canvas.height / 2;
@@ -284,7 +304,7 @@ function initSummonCanvas() {
         // ── L1: Anello esterno + 16 dot + glifi runici (CW lento) ──────
         ctx.save();
         ctx.rotate(t * 0.005);
-        ctx.shadowColor = `${G}0.80)`; ctx.shadowBlur = 16;
+        ctx.shadowColor = `${G}0.80)`; ctx.shadowBlur = 10;
         const r1 = maxR * grow;
         drawRing(ctx, 0, 0, r1,        3.5, `${G}0.45)`, [6, 10]);
         drawRing(ctx, 0, 0, r1 * 0.96, 1.2, `${G}0.15)`, [1, 5]);
@@ -296,7 +316,7 @@ function initSummonCanvas() {
         // ── L2: Tacche bussola (CCW lento) ─────────────────────────────
         ctx.save();
         ctx.rotate(-t * 0.009);
-        ctx.shadowColor = `${G}0.60)`; ctx.shadowBlur = 10;
+        ctx.shadowColor = `${G}0.60)`; ctx.shadowBlur = 7;
         const r2 = maxR * 0.83 * grow;
         drawRing(ctx, 0, 0, r2, 2.0, `${G}0.25)`, [3, 6]);
         drawTickMarks(ctx, 0, 0, r2, 24, r2 * 0.09, `${G}0.38)`);
@@ -305,7 +325,7 @@ function initSummonCanvas() {
         // ── L3: Esagramma (CW medio) ────────────────────────────────────
         ctx.save();
         ctx.rotate(t * 0.014);
-        ctx.shadowColor = `${P}0.85)`; ctx.shadowBlur = 20;
+        ctx.shadowColor = `${P}0.85)`; ctx.shadowBlur = 13;
         const r3 = maxR * 0.70 * grow;
         drawRing(ctx, 0, 0, r3, 2.5, `${P}0.45)`, [4, 7]);
         drawPolygon(ctx, 0, 0, r3, 3, `${P}0.24)`, 0);
@@ -316,7 +336,7 @@ function initSummonCanvas() {
         // ── L4: Pentagono (CCW medio) ───────────────────────────────────
         ctx.save();
         ctx.rotate(-t * 0.021);
-        ctx.shadowColor = `${P}0.70)`; ctx.shadowBlur = 14;
+        ctx.shadowColor = `${P}0.70)`; ctx.shadowBlur = 9;
         const r4 = maxR * 0.55 * grow;
         drawRing(ctx, 0, 0, r4, 2.0, `${P}0.35)`, [2, 5]);
         drawPolygon(ctx, 0, 0, r4, 5, `${P}0.20)`, -Math.PI / 2);
@@ -326,7 +346,7 @@ function initSummonCanvas() {
         // ── L5: Doppio anello + triangolo (CW veloce) ──────────────────
         ctx.save();
         ctx.rotate(t * 0.030);
-        ctx.shadowColor = `${E}0.90)`; ctx.shadowBlur = 22;
+        ctx.shadowColor = `${E}0.90)`; ctx.shadowBlur = 14;
         const r5 = maxR * 0.42 * grow;
         drawRing(ctx, 0, 0, r5,        3.0, `${E}0.55)`, []);
         drawRing(ctx, 0, 0, r5 * 0.91, 1.2, `${E}0.22)`, [2, 4]);
@@ -337,7 +357,7 @@ function initSummonCanvas() {
         // ── L6: Stella a 6 punte (CCW veloce) ──────────────────────────
         ctx.save();
         ctx.rotate(-t * 0.040);
-        ctx.shadowColor = `${G}0.90)`; ctx.shadowBlur = 18;
+        ctx.shadowColor = `${G}0.90)`; ctx.shadowBlur = 11;
         const r6 = maxR * 0.27 * grow;
         drawRing(ctx, 0, 0, r6, 2.2, `${G}0.45)`, []);
         drawStar(ctx, 0, 0, r6, 6, `${G}0.32)`);
@@ -345,6 +365,7 @@ function initSummonCanvas() {
 
         // ── Centro: nucleo pulsante ─────────────────────────────────────
         const coreR = maxR * 0.09 * grow * pulse;
+        ctx.shadowBlur = 0;
         const gCore = ctx.createRadialGradient(0, 0, 0, 0, 0, coreR * 2.5);
         gCore.addColorStop(0,   `${G}0.60)`);
         gCore.addColorStop(0.5, `${G}0.18)`);
@@ -365,9 +386,8 @@ function initSummonCanvas() {
         ctx.fillRect(0, 0, canvas.width, canvas.height);
 
         t++;
-        raf = requestAnimationFrame(drawSummonCircle);
     }
-    drawSummonCircle();
+    raf = requestAnimationFrame(drawSummonCircle);
     window._cancelSummon = () => cancelAnimationFrame(raf);
 }
 
