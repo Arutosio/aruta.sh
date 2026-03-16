@@ -267,35 +267,93 @@ function initSummonCanvas() {
     let t = 0;
     function drawSummonCircle() {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
-        const cx = canvas.width  / 2;
-        const cy = canvas.height / 2;
-        const maxR = Math.min(canvas.width, canvas.height) * 0.34;
-        const grow = Math.min(1, t / 80);
+        const cx    = canvas.width  / 2;
+        const cy    = canvas.height / 2;
+        const maxR  = Math.min(canvas.width, canvas.height) * 0.36;
+        const grow  = Math.min(1, t / 90);
+        const pulse = 0.82 + 0.18 * Math.sin(t * 0.05);
+
+        const light = document.documentElement.getAttribute('data-theme') === 'light';
+        const G = light ? 'rgba(90,50,8,'   : 'rgba(212,175,55,';  // ocra / oro
+        const P = light ? 'rgba(139,28,34,' : 'rgba(167,139,250,'; // cremisi / viola
+        const E = light ? 'rgba(72,40,8,'   : 'rgba(52,211,153,';  // seppia / smeraldo
 
         ctx.save();
         ctx.translate(cx, cy);
 
-        ctx.rotate(t * 0.008);
-        drawRing(ctx, 0, 0, maxR * grow, 1.2, 'rgba(212,175,55,0.35)', [4, 8]);
-        drawRing(ctx, 0, 0, maxR * grow, 0.6, 'rgba(212,175,55,0.15)', [1, 6]);
-        drawRuneDots(ctx, 0, 0, maxR * grow, 8, 'rgba(212,175,55,0.6)', 3);
+        // ── L1: Anello esterno + 16 dot + glifi runici (CW lento) ──────
+        ctx.save();
+        ctx.rotate(t * 0.005);
+        const r1 = maxR * grow;
+        drawRing(ctx, 0, 0, r1,        1.6, `${G}0.45)`, [6, 10]);
+        drawRing(ctx, 0, 0, r1 * 0.96, 0.5, `${G}0.15)`, [1, 5]);
+        drawRuneDots(ctx, 0, 0, r1, 16, `${G}0.45)`, 2);
+        drawRuneDots(ctx, 0, 0, r1, 4,  `${G}0.90)`, 4.5);
+        drawRuneArc(ctx, 0, 0, r1 * 0.89, 24, `${G}0.28)`, maxR * 0.040);
+        ctx.restore();
 
-        ctx.rotate(-t * 0.016);
-        drawRing(ctx, 0, 0, maxR * 0.7 * grow, 1, 'rgba(167,139,250,0.4)', [2, 5]);
-        drawTriangle(ctx, 0, 0, maxR * 0.7 * grow, 'rgba(167,139,250,0.2)');
+        // ── L2: Tacche bussola (CCW lento) ─────────────────────────────
+        ctx.save();
+        ctx.rotate(-t * 0.009);
+        const r2 = maxR * 0.83 * grow;
+        drawRing(ctx, 0, 0, r2, 0.7, `${G}0.25)`, [3, 6]);
+        drawTickMarks(ctx, 0, 0, r2, 24, r2 * 0.09, `${G}0.38)`);
+        ctx.restore();
 
-        ctx.rotate(t * 0.024);
-        drawRing(ctx, 0, 0, maxR * 0.45 * grow, 0.8, 'rgba(52,211,153,0.35)', [3, 7]);
-        drawRuneDots(ctx, 0, 0, maxR * 0.45 * grow, 6, 'rgba(52,211,153,0.7)', 2);
+        // ── L3: Esagramma (CW medio) ────────────────────────────────────
+        ctx.save();
+        ctx.rotate(t * 0.014);
+        const r3 = maxR * 0.70 * grow;
+        drawRing(ctx, 0, 0, r3, 1.0, `${P}0.45)`, [4, 7]);
+        drawPolygon(ctx, 0, 0, r3, 3, `${P}0.24)`, 0);
+        drawPolygon(ctx, 0, 0, r3, 3, `${P}0.24)`, Math.PI);
+        drawRuneDots(ctx, 0, 0, r3, 6, `${P}0.65)`, 2.5);
+        ctx.restore();
 
-        ctx.rotate(-t * 0.012);
-        drawStar(ctx, 0, 0, maxR * 0.22 * grow, 6, 'rgba(212,175,55,0.25)');
+        // ── L4: Pentagono (CCW medio) ───────────────────────────────────
+        ctx.save();
+        ctx.rotate(-t * 0.021);
+        const r4 = maxR * 0.55 * grow;
+        drawRing(ctx, 0, 0, r4, 0.8, `${P}0.35)`, [2, 5]);
+        drawPolygon(ctx, 0, 0, r4, 5, `${P}0.20)`, -Math.PI / 2);
+        drawRuneDots(ctx, 0, 0, r4, 5, `${P}0.55)`, 2);
+        ctx.restore();
+
+        // ── L5: Doppio anello + triangolo (CW veloce) ──────────────────
+        ctx.save();
+        ctx.rotate(t * 0.030);
+        const r5 = maxR * 0.42 * grow;
+        drawRing(ctx, 0, 0, r5,        1.3, `${E}0.55)`, []);
+        drawRing(ctx, 0, 0, r5 * 0.91, 0.5, `${E}0.22)`, [2, 4]);
+        drawPolygon(ctx, 0, 0, r5, 3, `${E}0.28)`, -Math.PI / 2);
+        drawRuneDots(ctx, 0, 0, r5, 3, `${E}0.75)`, 2.5);
+        ctx.restore();
+
+        // ── L6: Stella a 6 punte (CCW veloce) ──────────────────────────
+        ctx.save();
+        ctx.rotate(-t * 0.040);
+        const r6 = maxR * 0.27 * grow;
+        drawRing(ctx, 0, 0, r6, 0.9, `${G}0.45)`, []);
+        drawStar(ctx, 0, 0, r6, 6, `${G}0.32)`);
+        ctx.restore();
+
+        // ── Centro: nucleo pulsante ─────────────────────────────────────
+        const coreR = maxR * 0.09 * grow * pulse;
+        const gCore = ctx.createRadialGradient(0, 0, 0, 0, 0, coreR * 2.5);
+        gCore.addColorStop(0,   `${G}0.60)`);
+        gCore.addColorStop(0.5, `${G}0.18)`);
+        gCore.addColorStop(1,   `${G}0.0)`);
+        ctx.fillStyle = gCore;
+        ctx.beginPath();
+        ctx.arc(0, 0, coreR * 2.5, 0, Math.PI * 2);
+        ctx.fill();
 
         ctx.restore();
 
-        const grd = ctx.createRadialGradient(cx, cy, 0, cx, cy, maxR * 0.25 * grow);
-        grd.addColorStop(0,   'rgba(212,175,55,0.15)');
-        grd.addColorStop(0.5, 'rgba(167,139,250,0.08)');
+        // Alone ambientale
+        const grd = ctx.createRadialGradient(cx, cy, 0, cx, cy, maxR * 0.32 * grow);
+        grd.addColorStop(0,   `${G}0.10)`);
+        grd.addColorStop(0.5, `${P}0.05)`);
         grd.addColorStop(1,   'transparent');
         ctx.fillStyle = grd;
         ctx.fillRect(0, 0, canvas.width, canvas.height);
@@ -307,6 +365,7 @@ function initSummonCanvas() {
     window._cancelSummon = () => cancelAnimationFrame(raf);
 }
 
+/* ── Canvas helpers ──────────────────────────────────────────────── */
 function drawRing(ctx, x, y, r, lw, color, dash) {
     ctx.save();
     ctx.beginPath();
@@ -323,15 +382,45 @@ function drawRuneDots(ctx, cx, cy, r, count, color, dotR) {
         ctx.fillStyle = color; ctx.fill();
     }
 }
-function drawTriangle(ctx, cx, cy, r, color) {
+function drawPolygon(ctx, cx, cy, r, sides, color, rotOffset) {
+    ctx.save();
     ctx.beginPath();
-    for (let i = 0; i < 3; i++) {
-        const a = (i / 3) * Math.PI * 2 - Math.PI / 2;
+    for (let i = 0; i < sides; i++) {
+        const a = (i / sides) * Math.PI * 2 + (rotOffset || 0);
         i === 0 ? ctx.moveTo(cx + Math.cos(a) * r, cy + Math.sin(a) * r)
                 : ctx.lineTo(cx + Math.cos(a) * r, cy + Math.sin(a) * r);
     }
     ctx.closePath();
     ctx.strokeStyle = color; ctx.lineWidth = 0.8; ctx.stroke();
+    ctx.restore();
+}
+function drawTickMarks(ctx, cx, cy, r, count, len, color) {
+    ctx.save();
+    ctx.strokeStyle = color; ctx.lineWidth = 0.7;
+    for (let i = 0; i < count; i++) {
+        const a = (i / count) * Math.PI * 2;
+        ctx.beginPath();
+        ctx.moveTo(cx + Math.cos(a) * r,       cy + Math.sin(a) * r);
+        ctx.lineTo(cx + Math.cos(a) * (r - len), cy + Math.sin(a) * (r - len));
+        ctx.stroke();
+    }
+    ctx.restore();
+}
+function drawRuneArc(ctx, cx, cy, r, count, color, size) {
+    const SET = 'ᚠᚢᚦᚨᚱᚲᚷᚹᚺᚾᛁᛃᛇᛈᛉᛊᛏᛒᛖᛗᛚᛜᛞᛟ';
+    ctx.save();
+    ctx.fillStyle = color;
+    ctx.font = `${size}px serif`;
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    for (let i = 0; i < count; i++) {
+        const a = (i / count) * Math.PI * 2;
+        ctx.save();
+        ctx.translate(cx + Math.cos(a) * r, cy + Math.sin(a) * r);
+        ctx.rotate(a + Math.PI / 2);
+        ctx.fillText(SET[i % SET.length], 0, 0);
+        ctx.restore();
+    }
+    ctx.restore();
 }
 function drawStar(ctx, cx, cy, r, points, color) {
     ctx.beginPath();
