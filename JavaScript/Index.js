@@ -30,9 +30,7 @@ document.addEventListener('DOMContentLoaded', () => {
     runSummoning(() => showApp());
 
     document.getElementById('theme-btn').addEventListener('click', toggleTheme);
-    document.querySelectorAll('.lang-btn').forEach(btn =>
-        btn.addEventListener('click', () => switchLanguage(btn.dataset.lang))
-    );
+    document.getElementById('lang-select').addEventListener('change', e => switchLanguage(e.target.value));
 });
 
 /* ════════════════════════════
@@ -507,9 +505,8 @@ function switchLanguage(lang) {
     typewriterBio(i18n[lang].bio);
 }
 function setActiveLangBtn(lang) {
-    document.querySelectorAll('.lang-btn').forEach(btn =>
-        btn.classList.toggle('active', btn.dataset.lang === lang)
-    );
+    const sel = document.getElementById('lang-select');
+    if (sel) sel.value = lang;
 }
 
 /* ════════════════════════════

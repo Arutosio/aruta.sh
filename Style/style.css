@@ -50,7 +50,7 @@
 ══════════════════════════════ */
 html { scroll-behavior: smooth; }
 
-button { font: inherit; }
+button, select { font: inherit; }
 
 body {
     background: var(--bg);
@@ -245,15 +245,20 @@ body {
 .hud-time  { color: var(--gold); }
 .hud-date  { color: var(--text-dim); }
 
-/* Lang + theme */
-.lang-group { display: flex; gap: 4px; }
-.lang-btn {
+/* Lang select */
+.lang-select {
     font-size: 0.82rem; font-weight: 700; letter-spacing: 0.06em;
     color: var(--text-dim); background: transparent;
     border: 1px solid rgba(212,175,55,0.20); border-radius: 3px;
-    padding: 5px 9px; cursor: pointer; transition: all 0.25s ease;
+    padding: 5px 8px; cursor: pointer;
+    -webkit-appearance: none; appearance: none;
+    transition: color 0.25s, border-color 0.25s, background 0.25s;
 }
-.lang-btn:hover, .lang-btn.active { color: var(--gold); border-color: var(--gold); background: var(--seal-bg); }
+.lang-select:hover, .lang-select:focus {
+    color: var(--gold); border-color: var(--gold);
+    background: var(--seal-bg); outline: none;
+}
+.lang-select option { background: var(--bg); color: var(--text); }
 
 .theme-btn {
     background: transparent; border: 1px solid var(--card-border);
@@ -450,6 +455,8 @@ body {
     .interest-grid { grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); }
 }
 
+/* ── Responsive HUD priority (highest → lowest): sec-nav, theme, lang, date, time, rune ── */
+
 @media (max-width: 720px) {
     .hud-clock { flex-direction: column; gap: 2px; }
     .hud-time,
@@ -458,13 +465,12 @@ body {
 
 @media (max-width: 640px) {
     #app { padding: 76px 16px 52px; }
-    .hud-bar  { padding: 0 10px; height: 58px; gap: 6px; }
-    .hud-left { gap: 6px; }
+    .hud-bar   { padding: 0 10px; height: 58px; gap: 6px; }
+    .hud-left  { gap: 6px; }
     .hud-right { gap: 5px; }
-    .sec-btn  { font-size: 0.88rem; padding: 5px 11px; }
-    .lang-btn { padding: 4px 7px; font-size: 0.72rem; }
-    .hud-time,
-    .hud-date  { font-size: 0.92rem; }
+    .sec-btn   { font-size: 0.88rem; padding: 5px 11px; }
+    .hud-date  { display: none; }          /* date gone first */
+    .hud-time  { font-size: 0.92rem; }
     .magic-circle-frame { width: 280px; height: 280px; }
     .portrait-img-wrap  { width: 188px; height: 188px; }
     .interest-grid { grid-template-columns: 1fr; }
@@ -474,11 +480,15 @@ body {
     .footer-socials a { font-size: 1rem; }
 }
 
+@media (max-width: 500px) {
+    .hud-clock { display: none; }          /* time gone next */
+}
+
 @media (max-width: 420px) {
     .sec-btn span { display: none; }
     .sec-btn    { font-size: 1rem; padding: 5px 10px; }
     .char-name  { font-size: 2rem; }
-    .lang-group { display: none; }
+    .hud-rune   { display: none; }         /* decorative rune gone last */
     .magic-circle-frame { width: 240px; height: 240px; }
     .portrait-img-wrap  { width: 162px; height: 162px; }
 }

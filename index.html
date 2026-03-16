@@ -72,18 +72,18 @@
         </div>
         <!-- Center: clock -->
         <div class="hud-clock">
-            <span class="hud-time" id="hud-time">--:--:--</span>
             <span class="hud-date" id="hud-date">----/--/--</span>
+            <span class="hud-time" id="hud-time">--:--:--</span>
         </div>
         <!-- Right: lang + theme -->
         <div class="hud-right">
-            <div class="lang-group">
-                <button class="lang-btn" data-lang="it">IT</button>
-                <button class="lang-btn" data-lang="en">EN</button>
-                <button class="lang-btn" data-lang="es">ES</button>
-                <button class="lang-btn" data-lang="ja">JA</button>
-                <button class="lang-btn" data-lang="fn">ᚠᚾ</button>
-            </div>
+            <select id="lang-select" class="lang-select" aria-label="Language">
+                <option value="it">IT</option>
+                <option value="en">EN</option>
+                <option value="es">ES</option>
+                <option value="ja">JA</option>
+                <option value="fn">ᚠᚾ</option>
+            </select>
             <button class="theme-btn" id="theme-btn" title="Toggle theme">
                 <i class="fas fa-moon" id="theme-icon"></i>
             </button>
