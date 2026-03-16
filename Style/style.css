@@ -8,51 +8,41 @@
    THEME VARIABLES
 ══════════════════════════════ */
 :root {
-    --bg:           #0c0a1a;
-    --bg-grad:      radial-gradient(ellipse at 50% 40%, #1a1035 0%, #0c0a1a 65%);
-    --card-border:  rgba(212, 175, 55, 0.30);
-    --card-glow:    rgba(212, 175, 55, 0.08);
-    --gold:         #d4af37;
-    --gold-light:   #f0d060;
-    --purple:       #a78bfa;
-    --emerald:      #34d399;
-    --text:         #f0e6c8;
-    --text-dim:     #8a7a60;
-    --text-faint:   #5a4d3c;
-    --bar-bg:       rgba(255, 255, 255, 0.07);
-    --bar-fill:     linear-gradient(90deg, #a78bfa, #d4af37);
-    --seal-bg:      rgba(212, 175, 55, 0.07);
-    --seal-border:  rgba(212, 175, 55, 0.22);
-    --hud-bg:       rgba(6, 4, 16, 0.85);
-    --mc-color:     #a78bfa;
-    --magic-orb:    rgba(167, 139, 250, 0.55);
-    --status-color: #34d399;
-    --bg-ring-col:  #a78bfa;
-    --meta-color:   #0c0a1a;
+    --bg:          #0c0a1a;
+    --bg-grad:     radial-gradient(ellipse at 50% 40%, #1a1035 0%, #0c0a1a 65%);
+    --card-border: rgba(212, 175, 55, 0.30);
+    --card-glow:   rgba(212, 175, 55, 0.08);
+    --gold:        #d4af37;
+    --gold-light:  #f0d060;
+    --purple:      #a78bfa;
+    --text:        #f0e6c8;
+    --text-dim:    #8a7a60;
+    --text-faint:  #5a4d3c;
+    --seal-bg:     rgba(212, 175, 55, 0.07);
+    --seal-border: rgba(212, 175, 55, 0.22);
+    --hud-bg:      rgba(6, 4, 16, 0.85);
+    --mc-color:    #a78bfa;
+    --magic-orb:   rgba(167, 139, 250, 0.55);
+    --bg-ring-col: #a78bfa;
 }
 
 [data-theme="light"] {
-    --bg:           #f5ead8;
-    --bg-grad:      radial-gradient(ellipse at 50% 30%, #fef3c7 0%, #f0dfc0 55%, #e8d0a8 100%);
-    --card-border:  rgba(120, 70, 10, 0.25);
-    --card-glow:    rgba(120, 70, 10, 0.06);
-    --gold:         #92400e;
-    --gold-light:   #b45309;
-    --purple:       #6d28d9;
-    --emerald:      #065f46;
-    --text:         #2c1810;
-    --text-dim:     #785038;
-    --text-faint:   #b08060;
-    --bar-bg:       rgba(0, 0, 0, 0.08);
-    --bar-fill:     linear-gradient(90deg, #6d28d9, #92400e);
-    --seal-bg:      rgba(120, 70, 10, 0.07);
-    --seal-border:  rgba(120, 70, 10, 0.2);
-    --hud-bg:       rgba(245, 234, 210, 0.90);
-    --mc-color:     #6d28d9;
-    --magic-orb:    rgba(109, 40, 217, 0.45);
-    --status-color: #065f46;
-    --bg-ring-col:  #6d28d9;
-    --meta-color:   #f5ead8;
+    --bg:          #f5ead8;
+    --bg-grad:     radial-gradient(ellipse at 50% 30%, #fef3c7 0%, #f0dfc0 55%, #e8d0a8 100%);
+    --card-border: rgba(120, 70, 10, 0.25);
+    --card-glow:   rgba(120, 70, 10, 0.06);
+    --gold:        #92400e;
+    --gold-light:  #b45309;
+    --purple:      #6d28d9;
+    --text:        #2c1810;
+    --text-dim:    #785038;
+    --text-faint:  #b08060;
+    --seal-bg:     rgba(120, 70, 10, 0.07);
+    --seal-border: rgba(120, 70, 10, 0.2);
+    --hud-bg:      rgba(245, 234, 210, 0.90);
+    --mc-color:    #6d28d9;
+    --magic-orb:   rgba(109, 40, 217, 0.45);
+    --bg-ring-col: #6d28d9;
 }
 
 /* ══════════════════════════════
@@ -72,20 +62,16 @@ body {
 }
 
 /* ══════════════════════════════
-   CSS MAGIC BACKGROUND (GPU only — no canvas)
+   CSS MAGIC BACKGROUND (GPU only)
 ══════════════════════════════ */
 .magic-bg {
     position: fixed; inset: 0;
-    z-index: 0; pointer-events: none;
-    overflow: hidden;
+    z-index: 0; pointer-events: none; overflow: hidden;
 }
-
-/* Floating color orbs */
 .magic-bg::before,
 .magic-bg::after {
     content: ''; position: absolute;
-    border-radius: 50%;
-    will-change: transform;
+    border-radius: 50%; will-change: transform;
 }
 .magic-bg::before {
     width: 70vmax; height: 70vmax;
@@ -100,18 +86,14 @@ body {
     animation: orbB 22s ease-in-out infinite alternate;
 }
 [data-theme="light"] .magic-bg::before { background: radial-gradient(circle, rgba(109,40,217,0.08) 0%, transparent 65%); }
-[data-theme="light"] .magic-bg::after  { background: radial-gradient(circle, rgba(120,60,10,0.07) 0%, transparent 65%); }
+[data-theme="light"] .magic-bg::after  { background: radial-gradient(circle, rgba(120,60,10,0.07)  0%, transparent 65%); }
 
-@keyframes orbA { to { transform: translate(7vw, 10vh);  } }
+@keyframes orbA { to { transform: translate(7vw,  10vh); } }
 @keyframes orbB { to { transform: translate(-5vw, -8vh); } }
 
-/* Background rotating magic rings */
 .bg-ring {
-    position: absolute;
-    top: 50%; left: 50%;
-    color: var(--bg-ring-col);
-    will-change: transform;
-    pointer-events: none;
+    position: absolute; top: 50%; left: 50%;
+    color: var(--bg-ring-col); will-change: transform; pointer-events: none;
 }
 .bg-ring-1 {
     width: min(95vmin, 900px); height: min(95vmin, 900px);
@@ -129,15 +111,10 @@ body {
 /* ══════════════════════════════
    SUMMONING OVERLAY
 ══════════════════════════════ */
-#summon-canvas {
-    position: absolute; inset: 0;
-    width: 100%; height: 100%;
-}
+#summon-canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
 #summon-overlay {
-    position: fixed; inset: 0;
-    background: #050310;
-    z-index: 999;
-    display: flex; align-items: center; justify-content: center;
+    position: fixed; inset: 0; background: #050310;
+    z-index: 999; display: flex; align-items: center; justify-content: center;
     transition: opacity 0.8s ease;
 }
 #summon-overlay.fade-out { opacity: 0; pointer-events: none; }
@@ -149,10 +126,8 @@ body {
     gap: 24px; z-index: 2; pointer-events: none;
 }
 .summon-logo {
-    font-family: 'IM Fell English', serif;
     font-size: clamp(2.2rem, 7vw, 4rem);
-    font-weight: 900; color: #d4af37;
-    letter-spacing: 0.12em;
+    font-weight: 900; color: #d4af37; letter-spacing: 0.12em;
     text-shadow: 0 0 20px rgba(212,175,55,0.8), 0 0 60px rgba(212,175,55,0.4), 0 0 100px rgba(167,139,250,0.3);
     animation: summonPulse 2s ease-in-out infinite alternate;
 }
@@ -161,16 +136,11 @@ body {
     to   { text-shadow: 0 0 30px rgba(212,175,55,1),   0 0 80px rgba(212,175,55,0.5), 0 0 120px rgba(167,139,250,0.4); }
 }
 #summon-log {
-    font-family: 'IM Fell English', serif; font-style: italic;
-    font-size: clamp(1.1rem, 3vw, 1.4rem);
+    font-style: italic; font-size: clamp(1.1rem, 3vw, 1.4rem);
     color: #c8a86a; text-align: center;
-    width: min(560px, 88vw); min-height: 120px;
-    line-height: 2.2; opacity: 0.9;
+    width: min(560px, 88vw); min-height: 120px; line-height: 2.2; opacity: 0.9;
 }
-.summon-line {
-    display: block;
-    animation: summonLineIn 0.4s ease forwards;
-}
+.summon-line { display: block; animation: summonLineIn 0.4s ease forwards; }
 @keyframes summonLineIn {
     from { opacity: 0; transform: translateY(6px); }
     to   { opacity: 1; transform: translateY(0); }
@@ -180,11 +150,9 @@ body {
    MAIN APP
 ══════════════════════════════ */
 #app {
-    position: relative; z-index: 2;
-    min-height: 100vh;
+    position: relative; z-index: 2; min-height: 100vh;
     display: flex; flex-direction: column; align-items: center;
-    padding: 90px 24px 70px;
-    transition: opacity 0.5s;
+    padding: 90px 24px 70px; transition: opacity 0.5s;
 }
 #app.hidden  { opacity: 0; pointer-events: none; }
 #app.visible { animation: pageReveal 1s cubic-bezier(0.22,1,0.36,1) forwards; }
@@ -197,94 +165,59 @@ body {
    HUD BAR
 ══════════════════════════════ */
 .hud-bar {
-    position: fixed; top: 0; left: 0; right: 0;
-    z-index: 100;
-    display: flex; align-items: center;
-    justify-content: space-between;
-    gap: 8px;
-    padding: 0 12px;
-    height: 62px;
+    position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 8px; padding: 0 12px; height: 62px;
     background: var(--hud-bg);
-    backdrop-filter: blur(18px);
-    -webkit-backdrop-filter: blur(18px);
+    backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px);
     border-bottom: 1px solid var(--card-border);
     transition: background 0.5s, border-color 0.5s;
 }
-.hud-left, .hud-right {
-    display: flex; align-items: center; gap: 8px;
-    flex-shrink: 0;
-}
+.hud-left, .hud-right { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+
 .hud-rune {
     font-size: 1.15rem; color: var(--gold); opacity: 0.75;
     animation: runeFloat 3s ease-in-out infinite alternate;
 }
 @keyframes runeFloat {
-    from { transform: translateY(0); opacity: 0.75; }
+    from { transform: translateY(0);   opacity: 0.75; }
     to   { transform: translateY(-2px); opacity: 1; }
 }
-.hud-realm {
-    font-family: 'IM Fell English', serif; font-size: 0.70rem;
-    font-weight: 700; letter-spacing: 0.18em;
-    color: var(--gold); opacity: 0.65;
-    white-space: nowrap;
-}
 
-/* ── Section nav buttons ── */
+/* Section nav */
 .sec-nav { display: flex; gap: 5px; }
 .sec-btn {
-    font-family: 'IM Fell English', serif; font-size: 1rem;
-    font-weight: 700; letter-spacing: 0.08em;
-    color: var(--text-dim);
-    background: transparent;
-    border: 1px solid rgba(212,175,55,0.20);
-    border-radius: 4px; padding: 6px 15px;
-    cursor: pointer; white-space: nowrap;
+    font-size: 1rem; font-weight: 700; letter-spacing: 0.08em;
+    color: var(--text-dim); background: transparent;
+    border: 1px solid rgba(212,175,55,0.20); border-radius: 4px;
+    padding: 6px 15px; cursor: pointer; white-space: nowrap;
     transition: all 0.25s ease;
 }
-.sec-btn:hover {
-    color: var(--gold); border-color: var(--gold);
-    background: var(--seal-bg);
-}
-.sec-btn.active {
-    color: var(--gold); border-color: var(--gold);
-    background: var(--seal-bg);
-    box-shadow: 0 0 12px var(--card-glow), inset 0 0 12px rgba(212,175,55,0.06);
-}
+.sec-btn:hover        { color: var(--gold); border-color: var(--gold); background: var(--seal-bg); }
+.sec-btn.active       { color: var(--gold); border-color: var(--gold); background: var(--seal-bg);
+                         box-shadow: 0 0 12px var(--card-glow), inset 0 0 12px rgba(212,175,55,0.06); }
 
-/* ── Clock ── */
-.hud-clock {
-    display: flex; flex-direction: row;
-    align-items: center; gap: 10px;
-    flex-shrink: 0;
-}
+/* Clock */
+.hud-clock { display: flex; flex-direction: row; align-items: center; gap: 10px; flex-shrink: 0; }
 .hud-time,
-.hud-date {
-    font-family: 'IM Fell English', serif; font-size: 1.25rem;
-    font-weight: 700; letter-spacing: 0.08em; line-height: 1;
-    transition: color 0.5s;
-}
-.hud-time { color: var(--gold); }
-.hud-date { color: var(--text-dim); }
+.hud-date  { font-size: 1.25rem; font-weight: 700; letter-spacing: 0.08em; line-height: 1; transition: color 0.5s; }
+.hud-time  { color: var(--gold); }
+.hud-date  { color: var(--text-dim); }
 
-/* ── Lang + theme ── */
+/* Lang + theme */
 .lang-group { display: flex; gap: 4px; }
 .lang-btn {
-    font-family: 'IM Fell English', serif; font-size: 0.82rem;
-    font-weight: 700; letter-spacing: 0.06em;
+    font-size: 0.82rem; font-weight: 700; letter-spacing: 0.06em;
     color: var(--text-dim); background: transparent;
-    border: 1px solid rgba(212,175,55,0.20);
-    border-radius: 3px; padding: 5px 9px;
-    cursor: pointer; transition: all 0.25s ease;
+    border: 1px solid rgba(212,175,55,0.20); border-radius: 3px;
+    padding: 5px 9px; cursor: pointer; transition: all 0.25s ease;
 }
-.lang-btn:hover, .lang-btn.active {
-    color: var(--gold); border-color: var(--gold);
-    background: var(--seal-bg);
-}
+.lang-btn:hover, .lang-btn.active { color: var(--gold); border-color: var(--gold); background: var(--seal-bg); }
+
 .theme-btn {
     background: transparent; border: 1px solid var(--card-border);
-    color: var(--gold); width: 36px; height: 36px;
-    border-radius: 50%; cursor: pointer;
-    display: flex; align-items: center; justify-content: center;
+    color: var(--gold); width: 36px; height: 36px; border-radius: 50%;
+    cursor: pointer; display: flex; align-items: center; justify-content: center;
     font-size: 1rem; transition: all 0.35s ease;
 }
 .theme-btn:hover { background: var(--seal-bg); transform: rotate(20deg); }
@@ -292,51 +225,24 @@ body {
 /* ══════════════════════════════
    CONTENT WRAP
 ══════════════════════════════ */
-.content-wrap {
-    width: min(880px, 100%);
-    padding-bottom: 48px;
-}
-
-/* ── Tome header ── */
-.grimoire-header {
-    display: flex; align-items: center; gap: 14px;
-    margin-bottom: 36px;
-}
-.header-line {
-    flex: 1; height: 1px;
-    background: linear-gradient(90deg, transparent, var(--card-border), transparent);
-}
-.grimoire-title-label {
-    font-family: 'IM Fell English', serif; font-size: 0.70rem;
-    font-weight: 700; letter-spacing: 0.22em;
-    color: var(--gold); opacity: 0.65;
-    white-space: nowrap; flex-shrink: 0;
-    transition: color 0.5s;
-}
-
-/* ── Sections ── */
+.content-wrap { width: min(880px, 100%); padding-bottom: 48px; }
 .page-section { padding: 4px 0; }
 
 /* ══════════════════════════════
-   HOME HERO (centrato)
+   HOME HERO
 ══════════════════════════════ */
 .home-hero {
     display: flex; flex-direction: column;
-    align-items: center; gap: 28px;
-    padding: 20px 0 8px;
+    align-items: center; gap: 28px; padding: 20px 0 8px;
 }
-.home-tagline {
-    text-align: center;
-}
+.home-tagline { text-align: center; }
+
 .magic-circle-frame {
-    position: relative;
-    width: 400px; height: 400px;
+    position: relative; width: 400px; height: 400px;
     display: flex; align-items: center; justify-content: center;
 }
-/* Two SVG rings that rotate in opposite directions */
 .mc-svg {
-    position: absolute; inset: 0;
-    width: 100%; height: 100%;
+    position: absolute; inset: 0; width: 100%; height: 100%;
     color: var(--mc-color);
     filter: drop-shadow(0 0 8px var(--magic-orb));
     transition: color 0.5s, filter 0.5s;
@@ -349,14 +255,10 @@ body {
 
 .portrait-img-wrap {
     position: relative; z-index: 1;
-    width: 268px; height: 268px;
-    border-radius: 50%; overflow: hidden;
+    width: 268px; height: 268px; border-radius: 50%; overflow: hidden;
     border: 2.5px solid var(--gold);
-    box-shadow:
-        0 0 0 4px rgba(212,175,55,0.10),
-        0 0 30px var(--card-glow),
-        0 0 70px var(--card-glow),
-        inset 0 0 24px rgba(0,0,0,0.5);
+    box-shadow: 0 0 0 4px rgba(212,175,55,0.10), 0 0 30px var(--card-glow),
+                0 0 70px var(--card-glow), inset 0 0 24px rgba(0,0,0,0.5);
     transition: border-color 0.5s, box-shadow 0.5s;
 }
 .portrait-img {
@@ -366,49 +268,43 @@ body {
 }
 .portrait-img-wrap:hover .portrait-img { transform: scale(1.06); }
 
-.portrait-status {
-    display: flex; align-items: center; gap: 7px;
-    font-family: 'IM Fell English', serif; font-size: 0.76rem;
-    color: var(--status-color); letter-spacing: 0.12em;
-    transition: color 0.5s;
-}
-.portrait-status-dot {
-    width: 8px; height: 8px; border-radius: 50%;
-    background: var(--status-color);
-    box-shadow: 0 0 8px var(--status-color);
-    animation: statusPulse 2.2s ease infinite;
-    transition: background 0.5s, box-shadow 0.5s;
-}
-@keyframes statusPulse {
-    0%, 100% { transform: scale(1);    opacity: 1; }
-    50%       { transform: scale(1.45); opacity: 0.7; }
-}
-
 .char-name {
-    font-family: 'IM Fell English', serif;
-    font-size: clamp(2.2rem, 5.5vw, 3.6rem);
-    font-weight: 900; color: var(--gold-light);
-    letter-spacing: 0.04em; line-height: 1.1;
-    margin-bottom: 10px;
+    font-size: clamp(2.2rem, 5.5vw, 3.6rem); font-weight: 900;
+    color: var(--gold-light); letter-spacing: 0.04em; line-height: 1.1; margin-bottom: 10px;
     text-shadow: 0 0 28px rgba(212,175,55,0.45), 0 2px 6px rgba(0,0,0,0.6);
     transition: color 0.5s, text-shadow 0.5s;
 }
 .char-class {
-    font-family: 'IM Fell English', serif; font-size: 0.88rem;
-    font-weight: 700; letter-spacing: 0.18em;
-    color: var(--purple); margin-bottom: 22px;
-    transition: color 0.5s;
+    font-size: 0.88rem; font-weight: 700; letter-spacing: 0.18em;
+    color: var(--purple); margin-bottom: 22px; transition: color 0.5s;
 }
 .char-bio {
-    font-family: 'IM Fell English', serif;
     font-size: 1.12rem; line-height: 1.90;
-    color: var(--text); opacity: 0.9;
-    margin-bottom: 8px;
-    transition: color 0.5s;
+    color: var(--text); opacity: 0.9; margin-bottom: 8px; transition: color 0.5s;
+}
+.cursor {
+    display: inline-block; width: 2px; height: 1em;
+    background: var(--gold); margin-left: 2px; vertical-align: middle;
+    animation: blinkCursor 0.8s step-end infinite; transition: background 0.5s;
+}
+@keyframes blinkCursor { 50% { opacity: 0; } }
+
+/* ══════════════════════════════
+   DIVIDERS
+══════════════════════════════ */
+.rune-divider { display: flex; align-items: center; gap: 14px; margin: 30px 0; }
+.rune-line {
+    flex: 1; height: 1px;
+    background: linear-gradient(90deg, transparent, var(--card-border), transparent);
+    transition: background 0.5s;
+}
+.rune-sym {
+    font-size: 0.78rem; font-weight: 700; color: var(--gold); opacity: 0.5;
+    letter-spacing: 0.25em; white-space: nowrap; flex-shrink: 0; transition: color 0.5s;
 }
 
 /* ══════════════════════════════
-   INTEREST GRID (About section)
+   INTEREST GRID (About)
 ══════════════════════════════ */
 .interest-grid {
     display: grid;
@@ -417,73 +313,28 @@ body {
 }
 .interest-card {
     display: flex; align-items: center; gap: 18px;
-    padding: 18px 22px;
-    background: var(--seal-bg);
-    border: 1px solid var(--seal-border);
-    border-radius: 6px;
+    padding: 18px 22px; background: var(--seal-bg);
+    border: 1px solid var(--seal-border); border-radius: 6px;
     transition: all 0.25s ease;
 }
 .interest-card:hover {
-    border-color: var(--gold);
-    background: rgba(212,175,55,0.08);
-    transform: translateY(-3px);
-    box-shadow: 0 8px 24px var(--card-glow);
+    border-color: var(--gold); background: rgba(212,175,55,0.08);
+    transform: translateY(-3px); box-shadow: 0 8px 24px var(--card-glow);
 }
-.interest-icon {
-    font-size: 2rem; flex-shrink: 0; line-height: 1;
-}
-.interest-body {
-    display: flex; flex-direction: column; gap: 4px; min-width: 0;
-}
+.interest-icon { font-size: 2rem; flex-shrink: 0; line-height: 1; }
+.interest-body { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
 .interest-name {
-    font-family: 'IM Fell English', serif; font-size: 0.95rem;
-    font-weight: 700; color: var(--text); letter-spacing: 0.06em;
-    transition: color 0.25s;
+    font-size: 0.95rem; font-weight: 700; color: var(--text);
+    letter-spacing: 0.06em; transition: color 0.25s;
 }
 .interest-card:hover .interest-name { color: var(--gold); }
-.interest-detail {
-    font-family: 'IM Fell English', serif; font-style: italic;
-    font-size: 0.88rem; color: var(--text-dim);
-    transition: color 0.25s;
-}
-.cursor {
-    display: inline-block; width: 2px; height: 1em;
-    background: var(--gold); margin-left: 2px;
-    vertical-align: middle;
-    animation: blinkCursor 0.8s step-end infinite;
-    transition: background 0.5s;
-}
-@keyframes blinkCursor { 50% { opacity: 0; } }
-
-/* ══════════════════════════════
-   DIVIDERS
-══════════════════════════════ */
-.rune-divider {
-    display: flex; align-items: center; gap: 14px;
-    margin: 30px 0;
-}
-.rune-line {
-    flex: 1; height: 1px;
-    background: linear-gradient(90deg, transparent, var(--card-border), transparent);
-    transition: background 0.5s;
-}
-.rune-sym {
-    font-family: 'IM Fell English', serif; font-size: 0.78rem;
-    font-weight: 700; color: var(--gold); opacity: 0.5;
-    letter-spacing: 0.25em; white-space: nowrap; flex-shrink: 0;
-    transition: color 0.5s;
-}
-
+.interest-detail { font-style: italic; font-size: 0.88rem; color: var(--text-dim); transition: color 0.25s; }
 
 /* ══════════════════════════════
    LINKS SECTION
 ══════════════════════════════ */
 .links-intro { margin-bottom: 24px; }
-.links-desc {
-    font-family: 'IM Fell English', serif; font-style: italic;
-    font-size: 1.05rem; color: var(--text-dim);
-    letter-spacing: 0.04em; transition: color 0.5s;
-}
+.links-desc  { font-style: italic; font-size: 1.05rem; color: var(--text-dim); letter-spacing: 0.04em; transition: color 0.5s; }
 
 .link-cards {
     display: grid;
@@ -493,57 +344,37 @@ body {
 .link-card {
     display: flex; align-items: center; gap: 18px;
     text-decoration: none; color: var(--text);
-    background: var(--seal-bg);
-    border: 1px solid var(--seal-border);
+    background: var(--seal-bg); border: 1px solid var(--seal-border);
     border-radius: 6px; padding: 20px 24px;
-    transition: all 0.28s ease;
-    position: relative; overflow: hidden;
+    transition: all 0.28s ease; position: relative; overflow: hidden;
 }
 .link-card::before {
-    content: ''; position: absolute;
-    inset: 0; opacity: 0;
+    content: ''; position: absolute; inset: 0; opacity: 0;
     background: linear-gradient(135deg, var(--pc, transparent) 0%, transparent 60%);
     transition: opacity 0.28s;
 }
 .link-card:hover::before { opacity: 0.08; }
 .link-card:hover {
-    border-color: var(--pc, var(--gold));
-    transform: translateY(-4px);
+    border-color: var(--pc, var(--gold)); transform: translateY(-4px);
     box-shadow: 0 10px 30px rgba(0,0,0,0.25), 0 0 18px color-mix(in srgb, var(--pc, var(--gold)) 18%, transparent);
 }
 .link-card-icon {
-    font-size: 1.8rem; flex-shrink: 0;
-    color: var(--pc, var(--gold));
-    transition: transform 0.28s, color 0.3s;
-    width: 2rem; text-align: center;
+    font-size: 1.8rem; flex-shrink: 0; color: var(--pc, var(--gold));
+    transition: transform 0.28s, color 0.3s; width: 2rem; text-align: center;
 }
 .link-card:hover .link-card-icon { transform: scale(1.15); }
 .link-card svg.link-card-icon { width: 1.8rem; height: 1.8rem; }
 
-.link-card-text {
-    flex: 1; min-width: 0;
-    display: flex; flex-direction: column; gap: 3px;
-}
-.link-card-platform {
-    font-family: 'IM Fell English', serif; font-size: 1rem;
-    font-weight: 700; letter-spacing: 0.10em;
-    color: var(--text); transition: color 0.28s;
-}
+.link-card-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.link-card-platform { font-size: 1rem; font-weight: 700; letter-spacing: 0.10em; color: var(--text); transition: color 0.28s; }
 .link-card:hover .link-card-platform { color: var(--pc, var(--gold)); }
-.link-card-handle {
-    font-family: 'IM Fell English', serif; font-style: italic;
-    font-size: 0.88rem; color: var(--text-dim);
-    transition: color 0.28s;
-}
+.link-card-handle { font-style: italic; font-size: 0.88rem; color: var(--text-dim); transition: color 0.28s; }
 .link-card-arrow {
-    font-size: 0.9rem; color: var(--text-faint);
-    flex-shrink: 0; opacity: 0;
-    transform: translateX(-6px);
-    transition: opacity 0.28s, transform 0.28s;
+    font-size: 0.9rem; color: var(--text-faint); flex-shrink: 0;
+    opacity: 0; transform: translateX(-6px); transition: opacity 0.28s, transform 0.28s;
 }
 .link-card:hover .link-card-arrow { opacity: 1; transform: translateX(0); }
 
-/* Per-platform colors */
 .link-card.twitch    { --pc: #9146FF; }
 .link-card.kick      { --pc: #1ce623; }
 .link-card.youtube   { --pc: #FF0000; }
@@ -555,66 +386,37 @@ body {
    FOOTER BAR
 ══════════════════════════════ */
 .footer-bar {
-    position: fixed; bottom: 0; left: 0; right: 0;
-    z-index: 100;
-    display: flex; align-items: center;
-    justify-content: space-between;
-    gap: 12px;
-    padding: 0 20px;
-    height: 44px;
+    position: fixed; bottom: 0; left: 0; right: 0; z-index: 100;
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 12px; padding: 0 20px; height: 44px;
     background: var(--hud-bg);
-    backdrop-filter: blur(18px);
-    -webkit-backdrop-filter: blur(18px);
+    backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px);
     border-top: 1px solid var(--card-border);
     transition: background 0.5s, border-color 0.5s;
 }
-.footer-copy {
-    font-family: 'IM Fell English', serif; font-size: 0.72rem;
-    font-weight: 700; color: var(--text-faint); letter-spacing: 0.08em;
-    white-space: nowrap;
-    transition: color 0.5s;
-}
-.footer-brand {
-    font-family: 'IM Fell English', serif; font-size: 0.80rem;
-    font-weight: 700; color: var(--gold); opacity: 0.75;
-    letter-spacing: 0.12em;
-    transition: color 0.5s, opacity 0.5s;
-}
-.footer-socials {
-    display: flex; align-items: center; gap: 14px;
-}
-.footer-socials a {
-    color: var(--text-faint); font-size: 0.95rem;
-    text-decoration: none;
-    transition: color 0.2s, transform 0.2s;
-}
-.footer-socials a:hover {
-    color: var(--gold);
-    transform: translateY(-2px);
-}
+.footer-copy  { font-size: 0.72rem; font-weight: 700; color: var(--text-faint); letter-spacing: 0.08em; white-space: nowrap; transition: color 0.5s; }
+.footer-brand { font-size: 0.80rem; font-weight: 700; color: var(--gold); opacity: 0.75; letter-spacing: 0.12em; transition: color 0.5s, opacity 0.5s; }
+.footer-socials { display: flex; align-items: center; gap: 14px; }
+.footer-socials a { color: var(--text-faint); font-size: 0.95rem; text-decoration: none; transition: color 0.2s, transform 0.2s; }
+.footer-socials a:hover { color: var(--gold); transform: translateY(-2px); }
 
 /* ══════════════════════════════
    RESPONSIVE
 ══════════════════════════════ */
-
-/* Tablet */
 @media (max-width: 860px) {
     .magic-circle-frame { width: 320px; height: 320px; }
     .portrait-img-wrap  { width: 215px; height: 215px; }
     .interest-grid { grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); }
 }
 
-/* Clock stacks when space is tight */
 @media (max-width: 720px) {
     .hud-clock { flex-direction: column; gap: 2px; }
     .hud-time,
     .hud-date  { font-size: 1rem; }
 }
 
-/* Phone */
 @media (max-width: 640px) {
     #app { padding: 76px 16px 52px; }
-
     .hud-bar  { padding: 0 10px; height: 58px; gap: 6px; }
     .hud-left { gap: 6px; }
     .hud-right { gap: 5px; }
@@ -622,32 +424,26 @@ body {
     .lang-btn { padding: 4px 7px; font-size: 0.72rem; }
     .hud-time,
     .hud-date  { font-size: 0.92rem; }
-
     .magic-circle-frame { width: 280px; height: 280px; }
     .portrait-img-wrap  { width: 188px; height: 188px; }
-
     .interest-grid { grid-template-columns: 1fr; }
     .link-cards { grid-template-columns: 1fr; }
     .link-card  { padding: 16px 18px; }
-
     .footer-copy { display: none; }
-    .footer-socials a { font-size: 1rem; gap: 10px; }
+    .footer-socials a { font-size: 1rem; }
 }
 
-/* Very small */
 @media (max-width: 420px) {
     .sec-btn span { display: none; }
-    .sec-btn { font-size: 1rem; padding: 5px 10px; }
-    .char-name { font-size: 2rem; }
+    .sec-btn    { font-size: 1rem; padding: 5px 10px; }
+    .char-name  { font-size: 2rem; }
     .lang-group { display: none; }
     .magic-circle-frame { width: 240px; height: 240px; }
     .portrait-img-wrap  { width: 162px; height: 162px; }
 }
 
-/* Landscape */
 @media (max-height: 500px) and (orientation: landscape) {
     #app { padding: 66px 20px 36px; }
     .magic-circle-frame { width: 160px; height: 160px; }
     .portrait-img-wrap  { width: 108px; height: 108px; }
-    .hero-section { gap: 24px; }
 }
