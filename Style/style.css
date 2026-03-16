@@ -316,9 +316,43 @@ body {
     position: relative; z-index: 1;
     width: 268px; height: 268px; border-radius: 50%; overflow: hidden;
     border: 2.5px solid var(--gold);
-    box-shadow: 0 0 0 4px rgba(212,175,55,0.10), 0 0 30px var(--card-glow),
-                0 0 70px var(--card-glow), inset 0 0 24px rgba(0,0,0,0.5);
-    transition: border-color 0.5s, box-shadow 0.5s;
+    animation: portraitPulse 4s ease-in-out infinite alternate;
+    transition: border-color 0.5s;
+}
+@keyframes portraitPulse {
+    from {
+        box-shadow: 0 0 0 4px rgba(212,175,55,0.15),
+                    0 0 18px rgba(212,175,55,0.40),
+                    0 0 40px rgba(167,139,250,0.28),
+                    0 0 70px rgba(167,139,250,0.12),
+                    inset 0 0 24px rgba(0,0,0,0.5);
+    }
+    to {
+        box-shadow: 0 0 0 6px rgba(212,175,55,0.28),
+                    0 0 32px rgba(212,175,55,0.70),
+                    0 0 65px rgba(167,139,250,0.50),
+                    0 0 110px rgba(167,139,250,0.22),
+                    inset 0 0 24px rgba(0,0,0,0.5);
+    }
+}
+[data-theme="light"] .portrait-img-wrap {
+    animation: portraitPulseLight 4s ease-in-out infinite alternate;
+}
+@keyframes portraitPulseLight {
+    from {
+        box-shadow: 0 0 0 4px rgba(122,78,6,0.18),
+                    0 0 18px rgba(122,78,6,0.42),
+                    0 0 40px rgba(139,28,34,0.28),
+                    0 0 70px rgba(139,28,34,0.12),
+                    inset 0 0 18px rgba(40,20,5,0.3);
+    }
+    to {
+        box-shadow: 0 0 0 6px rgba(122,78,6,0.32),
+                    0 0 32px rgba(122,78,6,0.68),
+                    0 0 65px rgba(139,28,34,0.48),
+                    0 0 110px rgba(139,28,34,0.20),
+                    inset 0 0 18px rgba(40,20,5,0.3);
+    }
 }
 .portrait-img {
     width: 100%; height: 100%;
