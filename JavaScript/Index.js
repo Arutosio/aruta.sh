@@ -285,8 +285,8 @@ function initSummonCanvas() {
         ctx.save();
         ctx.rotate(t * 0.005);
         const r1 = maxR * grow;
-        drawRing(ctx, 0, 0, r1,        1.6, `${G}0.45)`, [6, 10]);
-        drawRing(ctx, 0, 0, r1 * 0.96, 0.5, `${G}0.15)`, [1, 5]);
+        drawRing(ctx, 0, 0, r1,        3.5, `${G}0.45)`, [6, 10]);
+        drawRing(ctx, 0, 0, r1 * 0.96, 1.2, `${G}0.15)`, [1, 5]);
         drawRuneDots(ctx, 0, 0, r1, 16, `${G}0.45)`, 2);
         drawRuneDots(ctx, 0, 0, r1, 4,  `${G}0.90)`, 4.5);
         drawRuneArc(ctx, 0, 0, r1 * 0.89, 24, `${G}0.28)`, maxR * 0.040);
@@ -296,7 +296,7 @@ function initSummonCanvas() {
         ctx.save();
         ctx.rotate(-t * 0.009);
         const r2 = maxR * 0.83 * grow;
-        drawRing(ctx, 0, 0, r2, 0.7, `${G}0.25)`, [3, 6]);
+        drawRing(ctx, 0, 0, r2, 2.0, `${G}0.25)`, [3, 6]);
         drawTickMarks(ctx, 0, 0, r2, 24, r2 * 0.09, `${G}0.38)`);
         ctx.restore();
 
@@ -304,7 +304,7 @@ function initSummonCanvas() {
         ctx.save();
         ctx.rotate(t * 0.014);
         const r3 = maxR * 0.70 * grow;
-        drawRing(ctx, 0, 0, r3, 1.0, `${P}0.45)`, [4, 7]);
+        drawRing(ctx, 0, 0, r3, 2.5, `${P}0.45)`, [4, 7]);
         drawPolygon(ctx, 0, 0, r3, 3, `${P}0.24)`, 0);
         drawPolygon(ctx, 0, 0, r3, 3, `${P}0.24)`, Math.PI);
         drawRuneDots(ctx, 0, 0, r3, 6, `${P}0.65)`, 2.5);
@@ -314,7 +314,7 @@ function initSummonCanvas() {
         ctx.save();
         ctx.rotate(-t * 0.021);
         const r4 = maxR * 0.55 * grow;
-        drawRing(ctx, 0, 0, r4, 0.8, `${P}0.35)`, [2, 5]);
+        drawRing(ctx, 0, 0, r4, 2.0, `${P}0.35)`, [2, 5]);
         drawPolygon(ctx, 0, 0, r4, 5, `${P}0.20)`, -Math.PI / 2);
         drawRuneDots(ctx, 0, 0, r4, 5, `${P}0.55)`, 2);
         ctx.restore();
@@ -323,8 +323,8 @@ function initSummonCanvas() {
         ctx.save();
         ctx.rotate(t * 0.030);
         const r5 = maxR * 0.42 * grow;
-        drawRing(ctx, 0, 0, r5,        1.3, `${E}0.55)`, []);
-        drawRing(ctx, 0, 0, r5 * 0.91, 0.5, `${E}0.22)`, [2, 4]);
+        drawRing(ctx, 0, 0, r5,        3.0, `${E}0.55)`, []);
+        drawRing(ctx, 0, 0, r5 * 0.91, 1.2, `${E}0.22)`, [2, 4]);
         drawPolygon(ctx, 0, 0, r5, 3, `${E}0.28)`, -Math.PI / 2);
         drawRuneDots(ctx, 0, 0, r5, 3, `${E}0.75)`, 2.5);
         ctx.restore();
@@ -333,7 +333,7 @@ function initSummonCanvas() {
         ctx.save();
         ctx.rotate(-t * 0.040);
         const r6 = maxR * 0.27 * grow;
-        drawRing(ctx, 0, 0, r6, 0.9, `${G}0.45)`, []);
+        drawRing(ctx, 0, 0, r6, 2.2, `${G}0.45)`, []);
         drawStar(ctx, 0, 0, r6, 6, `${G}0.32)`);
         ctx.restore();
 
@@ -391,12 +391,12 @@ function drawPolygon(ctx, cx, cy, r, sides, color, rotOffset) {
                 : ctx.lineTo(cx + Math.cos(a) * r, cy + Math.sin(a) * r);
     }
     ctx.closePath();
-    ctx.strokeStyle = color; ctx.lineWidth = 0.8; ctx.stroke();
+    ctx.strokeStyle = color; ctx.lineWidth = 1.8; ctx.stroke();
     ctx.restore();
 }
 function drawTickMarks(ctx, cx, cy, r, count, len, color) {
     ctx.save();
-    ctx.strokeStyle = color; ctx.lineWidth = 0.7;
+    ctx.strokeStyle = color; ctx.lineWidth = 1.5;
     for (let i = 0; i < count; i++) {
         const a = (i / count) * Math.PI * 2;
         ctx.beginPath();
@@ -431,7 +431,7 @@ function drawStar(ctx, cx, cy, r, points, color) {
                 : ctx.lineTo(cx + Math.cos(a) * rr, cy + Math.sin(a) * rr);
     }
     ctx.closePath();
-    ctx.strokeStyle = color; ctx.lineWidth = 0.8; ctx.stroke();
+    ctx.strokeStyle = color; ctx.lineWidth = 1.8; ctx.stroke();
 }
 
 /* ════════════════════════════
