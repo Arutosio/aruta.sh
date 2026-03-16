@@ -1,55 +1,298 @@
 /* ============================================================
-   ARUTA.SH — Main logic
-   Tutti i contenuti sono in JavaScript/config.js
+   ARUTA.SH — Medieval Fantasy Script
    ============================================================ */
+
+/* ════════════════════════════
+   TRANSLATIONS
+════════════════════════════ */
+const i18n = {
+    it: {
+        realm:         'IL REGNO DI ARUTA',
+        tome_label:    '✦ TOMO DEL MAGO ERRANTE ✦',
+        char_subtitle: '— Il Viandante —',
+        char_class:    'Streamer · Programmatore · Avventuriero',
+        status:        'Online',
+        attr_title:    '⊕ Attributi',
+        stat_gaming:   'Avventura',
+        stat_coding:   'Magia delle Rune',
+        stat_stream:   'Arti Bardiche',
+        stat_creativity:'Saggezza Arcana',
+        sec_home:      'Home',
+        sec_about:     'About',
+        sec_links:     'Link',
+        links_desc:    'Trovami su queste piattaforme',
+        bio: 'Mi chiamo Stefano Aruta. Programmatore appassionato con un amore profondo per anime, manga, Ultima Online, Minecraft e D&D. Come i protagonisti delle storie isekai, mi lancio ora in un nuovo viaggio: lo streaming. Cercando mondi senza confini dove libertà e creatività non hanno limite.',
+        boot: [
+            '✦ Un\'anima si risveglia in questo reame...',
+            '⊕ Consultando il Tomo Antico...',
+            '⋆ I Quattro Elementi rispondono...',
+            '✦ Il cerchio magico prende forma...',
+            '⊕ Il portale si apre...',
+            '✦ Benvenuto nel Reame di Aruta ✦'
+        ]
+    },
+    en: {
+        realm:         'REALM OF ARUTA',
+        tome_label:    '✦ TOME OF THE WANDERING MAGE ✦',
+        char_subtitle: '— The Wanderer —',
+        char_class:    'Streamer · Programmer · Adventurer',
+        status:        'Online',
+        attr_title:    '⊕ Attributes',
+        stat_gaming:   'Adventuring',
+        stat_coding:   'Spellcrafting',
+        stat_stream:   'Bardic Arts',
+        stat_creativity:'Arcane Wisdom',
+        sec_home:      'Home',
+        sec_about:     'About',
+        sec_links:     'Links',
+        links_desc:    'Find me on these platforms',
+        bio: 'My name is Stefano Aruta. A passionate programmer with a deep love for anime, manga, Ultima Online, Minecraft and D&D. Like the heroes of isekai tales, I now embark on a new journey: streaming. Seeking worlds without boundaries, where freedom and creativity know no limits.',
+        boot: [
+            '✦ A soul awakens in this realm...',
+            '⊕ Consulting the Ancient Tome...',
+            '⋆ The Four Elements respond...',
+            '✦ The magic circle takes shape...',
+            '⊕ The portal opens...',
+            '✦ Welcome to the Realm of Aruta ✦'
+        ]
+    },
+    es: {
+        realm:         'REINO DE ARUTA',
+        tome_label:    '✦ TOMO DEL MAGO ERRANTE ✦',
+        char_subtitle: '— El Viajero —',
+        char_class:    'Streamer · Programador · Aventurero',
+        status:        'En línea',
+        attr_title:    '⊕ Atributos',
+        stat_gaming:   'Aventura',
+        stat_coding:   'Magia Rúnica',
+        stat_stream:   'Artes Bárdicas',
+        stat_creativity:'Sabiduría Arcana',
+        sec_home:      'Inicio',
+        sec_about:     'Sobre mí',
+        sec_links:     'Enlaces',
+        links_desc:    'Encuéntrame en estas plataformas',
+        bio: 'Me llamo Stefano Aruta. Programador apasionado con un profundo amor por el anime, manga, Ultima Online, Minecraft y D&D. Como los protagonistas de las historias isekai, me lanzo ahora a un nuevo viaje: el streaming. Buscando mundos sin límites donde la libertad y la creatividad no tienen fronteras.',
+        boot: [
+            '✦ Un alma despierta en este reino...',
+            '⊕ Consultando el Tomo Antiguo...',
+            '⋆ Los Cuatro Elementos responden...',
+            '✦ El círculo mágico toma forma...',
+            '⊕ El portal se abre...',
+            '✦ Bienvenido al Reino de Aruta ✦'
+        ]
+    },
+    ja: {
+        realm:         'アルタの王国',
+        tome_label:    '✦ 放浪の魔法使いの書 ✦',
+        char_subtitle: '— 旅人 —',
+        char_class:    'ストリーマー · プログラマー · 冒険者',
+        status:        'オンライン',
+        attr_title:    '⊕ ステータス',
+        stat_gaming:   '冒険',
+        stat_coding:   'ルーン魔法',
+        stat_stream:   '吟遊詩人の技',
+        stat_creativity:'秘術の知恵',
+        sec_home:      'ホーム',
+        sec_about:     'について',
+        sec_links:     'リンク',
+        links_desc:    'これらのプラットフォームで見つけてください',
+        bio: '私はStefano Arutaです。アニメ、マンガ、ウルティマオンライン、マインクラフト、D&Dへの深い愛を持つ情熱的なプログラマーです。異世界転生の主人公のように、今私は新たな旅へ踏み出します——ストリーミングの世界へ。自由と創造性に限界のない世界を求めて。',
+        boot: [
+            '✦ この王国に魂が目覚める...',
+            '⊕ 古代の書を開く...',
+            '⋆ 四つの元素が応答する...',
+            '✦ 魔法陣が形を成す...',
+            '⊕ 転移門が開く...',
+            '✦ アルタの王国へようこそ ✦'
+        ]
+    }
+};
 
 /* ════════════════════════════
    STATE
 ════════════════════════════ */
-let lang    = 'it';
-let theme   = 'dark';
-let section = 'home';
-let bioTmr  = null;
-let clockTmr = null;
+let currentLang  = 'it';
+let currentTheme = 'dark';
+let bioTimeout   = null;
 
 /* ════════════════════════════
-   BOOT
+   INIT
 ════════════════════════════ */
 document.addEventListener('DOMContentLoaded', () => {
-    const sl = localStorage.getItem('aruta_lang');
-    const st = localStorage.getItem('aruta_theme');
-    lang  = (sl && CONFIG.i18n[sl]) ? sl : detectLang();
-    theme = st || 'dark';
+    const savedLang  = localStorage.getItem('aruta_lang');
+    const savedTheme = localStorage.getItem('aruta_theme');
 
-    applyTheme();
-    setLangBtn(lang);
-    document.documentElement.setAttribute('lang', lang);
+    currentLang  = (savedLang && i18n[savedLang]) ? savedLang : detectLanguage();
+    currentTheme = savedTheme || 'dark';
 
-    buildNav();
-    renderSection('home');
-    startClock();
+    document.documentElement.setAttribute('data-theme', currentTheme);
+    updateThemeIcon();
+    setActiveLangBtn(currentLang);
 
-    initAtmo();
-    showPage();
+    initSummonCanvas();
+    runSummoning(() => showApp());
 
-    document.getElementById('tbtn').onclick = toggleTheme;
-    document.querySelectorAll('.lb').forEach(b =>
-        b.addEventListener('click', () => setLang(b.dataset.lang))
+    document.getElementById('theme-btn').addEventListener('click', toggleTheme);
+    document.querySelectorAll('.lang-btn').forEach(btn =>
+        btn.addEventListener('click', () => switchLanguage(btn.dataset.lang))
     );
+
 });
 
-function detectLang() {
-    const c = (navigator.language || 'en').split('-')[0].toLowerCase();
-    return CONFIG.i18n[c] ? c : ({ pt:'es', ca:'es', gl:'es', zh:'ja', ko:'ja' }[c] || 'en');
+/* ════════════════════════════
+   LANGUAGE DETECTION
+════════════════════════════ */
+function detectLanguage() {
+    const code = (navigator.language || 'en').split('-')[0].toLowerCase();
+    if (i18n[code]) return code;
+    const map = { pt:'es', ca:'es', gl:'es', zh:'ja', ko:'ja' };
+    return map[code] || 'en';
 }
 
 /* ════════════════════════════
-   SHOW PAGE
+   SUMMONING CIRCLE (boot canvas)
 ════════════════════════════ */
-function showPage() {
-    const page = document.getElementById('page');
-    page.classList.remove('hidden');
-    page.classList.add('visible');
+function initSummonCanvas() {
+    const canvas = document.getElementById('summon-canvas');
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    let raf;
+
+    function resize() {
+        canvas.width  = window.innerWidth;
+        canvas.height = window.innerHeight;
+    }
+    resize();
+    window.addEventListener('resize', resize);
+
+    let t = 0;
+    function drawSummonCircle() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        const cx = canvas.width  / 2;
+        const cy = canvas.height / 2;
+        const maxR = Math.min(canvas.width, canvas.height) * 0.34;
+
+        // Grow-in factor
+        const grow = Math.min(1, t / 80);
+
+        ctx.save();
+        ctx.translate(cx, cy);
+
+        // Outer ring (clockwise)
+        ctx.rotate(t * 0.008);
+        drawRing(ctx, 0, 0, maxR * grow, 1.2, 'rgba(212,175,55,0.35)', [4, 8]);
+        drawRing(ctx, 0, 0, maxR * grow, 0.6, 'rgba(212,175,55,0.15)', [1, 6]);
+        drawRuneDots(ctx, 0, 0, maxR * grow, 8, 'rgba(212,175,55,0.6)', 3);
+
+        // Middle ring (counter-clockwise)
+        ctx.rotate(-t * 0.016);
+        drawRing(ctx, 0, 0, maxR * 0.7 * grow, 1, 'rgba(167,139,250,0.4)', [2, 5]);
+        drawTriangle(ctx, 0, 0, maxR * 0.7 * grow, 'rgba(167,139,250,0.2)');
+
+        // Inner ring (clockwise)
+        ctx.rotate(t * 0.024);
+        drawRing(ctx, 0, 0, maxR * 0.45 * grow, 0.8, 'rgba(52,211,153,0.35)', [3, 7]);
+        drawRuneDots(ctx, 0, 0, maxR * 0.45 * grow, 6, 'rgba(52,211,153,0.7)', 2);
+
+        // Innermost star
+        ctx.rotate(-t * 0.012);
+        drawStar(ctx, 0, 0, maxR * 0.22 * grow, 6, 'rgba(212,175,55,0.25)');
+
+        ctx.restore();
+
+        // Central glow
+        const grd = ctx.createRadialGradient(cx, cy, 0, cx, cy, maxR * 0.25 * grow);
+        grd.addColorStop(0,   'rgba(212,175,55,0.15)');
+        grd.addColorStop(0.5, 'rgba(167,139,250,0.08)');
+        grd.addColorStop(1,   'transparent');
+        ctx.fillStyle = grd;
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        t++;
+        raf = requestAnimationFrame(drawSummonCircle);
+    }
+    drawSummonCircle();
+
+    // Store cancel reference
+    window._cancelSummon = () => cancelAnimationFrame(raf);
+}
+
+function drawRing(ctx, x, y, r, lw, color, dash) {
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(x, y, r, 0, Math.PI * 2);
+    ctx.strokeStyle = color;
+    ctx.lineWidth   = lw;
+    ctx.setLineDash(dash);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.restore();
+}
+function drawRuneDots(ctx, cx, cy, r, count, color, dotR) {
+    for (let i = 0; i < count; i++) {
+        const a = (i / count) * Math.PI * 2;
+        const x = cx + Math.cos(a) * r;
+        const y = cy + Math.sin(a) * r;
+        ctx.beginPath();
+        ctx.arc(x, y, dotR, 0, Math.PI * 2);
+        ctx.fillStyle = color;
+        ctx.fill();
+    }
+}
+function drawTriangle(ctx, cx, cy, r, color) {
+    ctx.beginPath();
+    for (let i = 0; i < 3; i++) {
+        const a = (i / 3) * Math.PI * 2 - Math.PI / 2;
+        const x = cx + Math.cos(a) * r;
+        const y = cy + Math.sin(a) * r;
+        i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+    }
+    ctx.closePath();
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 0.8;
+    ctx.stroke();
+}
+function drawStar(ctx, cx, cy, r, points, color) {
+    ctx.beginPath();
+    for (let i = 0; i < points * 2; i++) {
+        const a = (i / (points * 2)) * Math.PI * 2 - Math.PI / 2;
+        const rr = i % 2 === 0 ? r : r * 0.45;
+        const x  = cx + Math.cos(a) * rr;
+        const y  = cy + Math.sin(a) * rr;
+        i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+    }
+    ctx.closePath();
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 0.8;
+    ctx.stroke();
+}
+
+/* ════════════════════════════
+   SUMMONING SEQUENCE (boot text)
+════════════════════════════ */
+function runSummoning(onComplete) {
+    const logEl = document.getElementById('summon-log');
+    const lines  = i18n[currentLang].boot;
+    let idx = 0;
+
+    function addLine() {
+        if (idx < lines.length) {
+            const span = document.createElement('span');
+            span.className   = 'summon-line';
+            span.textContent = lines[idx];
+            logEl.appendChild(span);
+            idx++;
+            setTimeout(addLine, 380);
+        } else {
+            setTimeout(() => {
+                if (window._cancelSummon) window._cancelSummon();
+                const overlay = document.getElementById('summon-overlay');
+                overlay.classList.add('fade-out');
+                setTimeout(onComplete, 850);
+            }, 500);
+        }
+    }
+    addLine();
 }
 
 /* ════════════════════════════
@@ -57,294 +300,133 @@ function showPage() {
 ════════════════════════════ */
 function startClock() {
     tickClock();
-    clockTmr = setInterval(tickClock, 1000);
+    setInterval(tickClock, 1000);
 }
-
 function tickClock() {
-    const locale = CONFIG.locales[lang] || 'en-US';
-    const now    = new Date();
+    const now = new Date();
+    const h  = String(now.getHours()).padStart(2, '0');
+    const m  = String(now.getMinutes()).padStart(2, '0');
+    const s  = String(now.getSeconds()).padStart(2, '0');
+    const y  = now.getFullYear();
+    const mo = String(now.getMonth() + 1).padStart(2, '0');
+    const d  = String(now.getDate()).padStart(2, '0');
+    const tEl = document.getElementById('hud-time');
+    const dEl = document.getElementById('hud-date');
+    if (tEl) tEl.textContent = `${h}:${m}:${s}`;
+    if (dEl) dEl.textContent = `${y}/${mo}/${d}`;
+}
 
-    const timeEl = document.getElementById('clock-time');
-    const dateEl = document.getElementById('clock-date');
+/* ════════════════════════════
+   SECTION SWITCHING
+════════════════════════════ */
+function initSections() {
+    let bioTyped = false;
+    document.querySelectorAll('.sec-btn').forEach(btn =>
+        btn.addEventListener('click', () => {
+            const id = btn.dataset.sec;
+            document.querySelectorAll('.page-section').forEach(s => {
+                s.hidden = s.id !== `sec-${id}`;
+            });
+            document.querySelectorAll('.sec-btn').forEach(b =>
+                b.classList.toggle('active', b === btn)
+            );
+            if (id === 'about' && !bioTyped) {
+                bioTyped = true;
+                typewriterBio(i18n[currentLang].bio);
+            }
+        })
+    );
+}
 
-    if (timeEl) timeEl.textContent = now.toLocaleTimeString(locale, {
-        hour: '2-digit', minute: '2-digit', second: '2-digit'
+/* ════════════════════════════
+   SHOW APP
+════════════════════════════ */
+function showApp() {
+    const app = document.getElementById('app');
+    app.classList.remove('hidden');
+    app.classList.add('visible');
+
+    applyTranslations(currentLang);
+    startClock();
+    initSections();
+}
+
+/* ════════════════════════════
+   TRANSLATIONS
+════════════════════════════ */
+function applyTranslations(lang) {
+    const t = i18n[lang];
+    document.querySelectorAll('[data-i18n]').forEach(el => {
+        const key = el.dataset.i18n;
+        if (t[key] !== undefined) el.textContent = t[key];
     });
-    if (dateEl) {
-        const y = now.getFullYear();
-        const m = String(now.getMonth() + 1).padStart(2, '0');
-        const d = String(now.getDate()).padStart(2, '0');
-        dateEl.innerHTML = `${y}<br>${m}/${d}`;
-    }
-}
-
-/* ════════════════════════════
-   NAV
-════════════════════════════ */
-function buildNav() {
-    const t = CONFIG.i18n[lang];
-    document.getElementById('vn-nav').innerHTML = CONFIG.sections.map(s =>
-        `<button class="vn-choice${s.id === section ? ' active' : ''}" data-section="${s.id}">
-            <i class="${s.icon}"></i>
-            <span>${t['nav_' + s.id]}</span>
-        </button>`
-    ).join('');
-    document.querySelectorAll('.vn-choice').forEach(b =>
-        b.addEventListener('click', () => renderSection(b.dataset.section))
-    );
-}
-
-/* ════════════════════════════
-   SECTION RENDERING
-════════════════════════════ */
-const KICK_SVG = `<svg viewBox="0 0 24 24" width="15" height="15" fill="currentColor"><path d="M2 2h4v6l4-6h5l-5 7 5 7h-5l-4-6v6H2V2z"/></svg>`;
-
-function socialIcon(s) {
-    return s.icon === 'kick' ? KICK_SVG : `<i class="${s.icon}"></i>`;
-}
-function socialLink(s) {
-    return `<a href="${s.url}" class="sl ${s.id}" target="_blank" rel="noopener" aria-label="${s.label}">${socialIcon(s)}<span>${s.label}</span></a>`;
-}
-
-function renderSection(id) {
-    section = id;
-    const t   = CONFIG.i18n[lang];
-    const inner = document.getElementById('vn-inner');
-    if (!inner) return;
-
-    /* update nav active state */
-    document.querySelectorAll('.vn-choice').forEach(b =>
-        b.classList.toggle('active', b.dataset.section === id)
-    );
-
-    if (id === 'home')   inner.innerHTML = homeHTML(t);
-    if (id === 'stream') inner.innerHTML = streamHTML(t);
-    if (id === 'links')  inner.innerHTML = linksHTML(t);
-
-    /* typewriter only for home bio */
-    if (id === 'home') {
-        if (bioTmr) clearTimeout(bioTmr);
-        setTimeout(() => typewriter(t.bio, 'bio'), 120);
-    }
-}
-
-function homeHTML(t) {
-    const tags = CONFIG.tags.map(tg => `<span>${tg.emoji} ${tg.label}</span>`).join('');
-    const socials = CONFIG.socials.map(s => socialLink(s)).join('');
-    return `
-        <div class="vn-header">
-            <div class="vn-nametag">
-                <p class="hero-pre">${t.pre}</p>
-                <h1 class="hero-name">${CONFIG.name}</h1>
-                <p class="hero-cls">${t.cls}</p>
-            </div>
-            <p class="bio" id="bio"></p>
-        </div>
-        <div class="rule"><span>✦</span></div>
-        <div class="tags">${tags}</div>
-        <nav class="socials" aria-label="Social links">${socials}</nav>
-        <p class="footer-note">✦ ${CONFIG.fullName} · ${CONFIG.year} ✦</p>`;
-}
-
-function streamHTML(t) {
-    const platforms = CONFIG.socials.filter(s => s.stream);
-    const cards = platforms.map(s => `
-        <a href="${s.url}" class="stream-card ${s.id}" target="_blank" rel="noopener" aria-label="${s.label}">
-            ${socialIcon(s)}
-            <span class="stream-card-label">${s.label}</span>
-        </a>`).join('');
-    return `
-        <div class="vn-nametag">
-            <p class="hero-pre">${t.stream_pre}</p>
-            <h1 class="hero-name">${CONFIG.name}</h1>
-        </div>
-        <div class="rule"><span>✦</span></div>
-        <p class="section-desc">${t.stream_desc}</p>
-        <div class="stream-cards">${cards}</div>
-        <p class="stream-note">${t.stream_note}</p>
-        <p class="footer-note">✦ ${CONFIG.fullName} · ${CONFIG.year} ✦</p>`;
-}
-
-function linksHTML(t) {
-    const all = CONFIG.socials.map(s => socialLink(s)).join('');
-    return `
-        <div class="vn-nametag">
-            <p class="hero-pre">${t.links_pre}</p>
-            <h1 class="hero-name">${CONFIG.name}</h1>
-        </div>
-        <div class="rule"><span>✦</span></div>
-        <p class="section-desc">${t.links_desc}</p>
-        <nav class="socials links-socials" aria-label="All links">${all}</nav>
-        <p class="footer-note">✦ ${CONFIG.fullName} · ${CONFIG.year} ✦</p>`;
 }
 
 /* ════════════════════════════
    TYPEWRITER
 ════════════════════════════ */
-function typewriter(text, elId) {
-    const el = document.getElementById(elId);
+function typewriterBio(text) {
+    const el = document.getElementById('char-bio');
     if (!el) return;
-    if (bioTmr) clearTimeout(bioTmr);
+    if (bioTimeout) clearTimeout(bioTimeout);
     el.innerHTML = '';
-    const cur = document.createElement('span');
-    cur.className = 'cur';
-    el.appendChild(cur);
+
+    const cursor = document.createElement('span');
+    cursor.className = 'cursor';
+    el.appendChild(cursor);
+
     let i = 0;
-    (function t() {
+    function type() {
         if (i < text.length) {
-            el.insertBefore(document.createTextNode(text[i++]), cur);
-            bioTmr = setTimeout(t, 18);
+            el.insertBefore(document.createTextNode(text.charAt(i)), cursor);
+            i++;
+            bioTimeout = setTimeout(type, 22);
         } else {
-            setTimeout(() => cur.remove(), 2500);
+            setTimeout(() => cursor.remove(), 2500);
         }
-    })();
+    }
+    type();
 }
 
 /* ════════════════════════════
-   LANGUAGE
+   ATTRIBUTES ANIMATION
 ════════════════════════════ */
-function setLang(l) {
-    if (!CONFIG.i18n[l] || l === lang) return;
-    lang = l;
-    localStorage.setItem('aruta_lang', l);
-    document.documentElement.setAttribute('lang', l);
-    setLangBtn(l);
-    buildNav();
-    renderSection(section);
+function animateAttributes() {
+    document.querySelectorAll('.attr-fill').forEach(bar => {
+        bar.style.width = bar.dataset.val + '%';
+    });
 }
-function setLangBtn(l) {
-    document.querySelectorAll('.lb').forEach(b =>
-        b.classList.toggle('active', b.dataset.lang === l)
+
+/* ════════════════════════════
+   LANGUAGE SWITCH
+════════════════════════════ */
+function switchLanguage(lang) {
+    if (!i18n[lang] || lang === currentLang) return;
+    currentLang = lang;
+    localStorage.setItem('aruta_lang', lang);
+    document.documentElement.setAttribute('lang', lang);
+    setActiveLangBtn(lang);
+    applyTranslations(lang);
+    typewriterBio(i18n[lang].bio);
+}
+function setActiveLangBtn(lang) {
+    document.querySelectorAll('.lang-btn').forEach(btn =>
+        btn.classList.toggle('active', btn.dataset.lang === lang)
     );
 }
 
 /* ════════════════════════════
-   THEME
+   THEME TOGGLE
 ════════════════════════════ */
-const THEME_COLORS = { dark: '#08042a', light: '#1a6cd8' };
 function toggleTheme() {
-    theme = theme === 'dark' ? 'light' : 'dark';
-    applyTheme();
-    localStorage.setItem('aruta_theme', theme);
+    currentTheme = currentTheme === 'dark' ? 'light' : 'dark';
+    document.documentElement.setAttribute('data-theme', currentTheme);
+    localStorage.setItem('aruta_theme', currentTheme);
+    updateThemeIcon();
 }
-function applyTheme() {
-    document.documentElement.setAttribute('data-theme', theme);
-    document.getElementById('ticon').className =
-        theme === 'dark' ? 'fas fa-sun' : 'fas fa-moon';
-    const m = document.getElementById('meta-theme-color');
-    if (m) m.content = THEME_COLORS[theme];
+function updateThemeIcon() {
+    const icon = document.getElementById('theme-icon');
+    if (!icon) return;
+    icon.className = currentTheme === 'dark' ? 'fas fa-sun' : 'fas fa-moon';
 }
 
-/* ════════════════════════════
-   ATMOSPHERIC CANVAS
-   Night: stars + aurora borealis
-   Day:   sun rays
-   (particles removed for performance)
-════════════════════════════ */
-function initAtmo() {
-    const canvas = document.getElementById('atmo');
-    if (!canvas) return;
-    const ctx = canvas.getContext('2d');
-    let stars = [];
-    let t = 0;
-
-    function resize() {
-        canvas.width  = innerWidth;
-        canvas.height = innerHeight;
-        makeStars();
-    }
-    resize();
-    addEventListener('resize', resize);
-
-    /* ── Stars ── */
-    function makeStars() {
-        const n = Math.floor(canvas.width * canvas.height / 1200);
-        stars = Array.from({ length: n }, () => ({
-            x:      Math.random() * canvas.width,
-            y:      Math.random() * canvas.height * 0.78,
-            r:      Math.random() * 1.3 + 0.2,
-            phase:  Math.random() * Math.PI * 2,
-            speed:  Math.random() * 0.008 + 0.003,
-            bright: Math.random() > 0.88
-        }));
-    }
-
-    function drawStars() {
-        stars.forEach(s => {
-            const a = (0.25 + 0.75 * Math.abs(Math.sin(s.phase))) * 0.9;
-            ctx.beginPath();
-            ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
-            ctx.fillStyle = `rgba(255,252,230,${a})`;
-            ctx.fill();
-            if (s.bright) {
-                ctx.strokeStyle = `rgba(255,252,230,${a * 0.32})`;
-                ctx.lineWidth = 0.5;
-                ctx.beginPath();
-                ctx.moveTo(s.x - s.r * 3.2, s.y); ctx.lineTo(s.x + s.r * 3.2, s.y);
-                ctx.moveTo(s.x, s.y - s.r * 3.2); ctx.lineTo(s.x, s.y + s.r * 3.2);
-                ctx.stroke();
-            }
-            s.phase += s.speed;
-        });
-    }
-
-    /* ── Aurora borealis ── */
-    const AURORA = [
-        { col: '0,255,180',  yf: 0.20, amp: 46, wl: 0.72, spd: 3.6 },
-        { col: '70,110,255', yf: 0.29, amp: 33, wl: 1.15, spd: 2.5 },
-        { col: '200,80,255', yf: 0.37, amp: 27, wl: 0.56, spd: 4.2 }
-    ];
-    function drawAurora() {
-        AURORA.forEach((a, idx) => {
-            const baseY = canvas.height * a.yf;
-            ctx.beginPath();
-            ctx.moveTo(0, baseY);
-            for (let x = 0; x <= canvas.width; x += 4) {
-                const xn = x / canvas.width;
-                const y  = baseY
-                    + Math.sin((xn * a.spd * Math.PI) + t * a.wl) * a.amp
-                    + Math.sin((xn * a.spd * Math.PI * 1.8) + t * a.wl * 1.5) * a.amp * 0.36;
-                ctx.lineTo(x, y);
-            }
-            ctx.lineTo(canvas.width, 0);
-            ctx.lineTo(0, 0);
-            ctx.closePath();
-            const op = 0.048 + 0.022 * Math.sin(t * 0.48 + idx * 1.1);
-            const gr = ctx.createLinearGradient(0, baseY - a.amp, 0, baseY + a.amp * 1.9);
-            gr.addColorStop(0,    `rgba(${a.col},0)`);
-            gr.addColorStop(0.32, `rgba(${a.col},${op})`);
-            gr.addColorStop(0.68, `rgba(${a.col},${op * 1.45})`);
-            gr.addColorStop(1,    `rgba(${a.col},0)`);
-            ctx.fillStyle = gr;
-            ctx.fill();
-        });
-    }
-
-    /* ── Sun rays (day) ── */
-    function drawSunRays() {
-        const sx = canvas.width  * 0.90;
-        const sy = canvas.height * 0.10;
-        for (let i = 0; i < 14; i++) {
-            const angle = (i / 14) * Math.PI * 2;
-            const len   = (52 + 22 * Math.sin(t * 0.7 + i)) * (0.65 + 0.35 * Math.sin(t * 0.35 + i * 0.8));
-            const ex    = sx + Math.cos(angle) * len;
-            const ey    = sy + Math.sin(angle) * len;
-            const gr    = ctx.createLinearGradient(sx, sy, ex, ey);
-            gr.addColorStop(0, 'rgba(255,230,90,0.18)');
-            gr.addColorStop(1, 'transparent');
-            ctx.beginPath();
-            ctx.moveTo(sx, sy); ctx.lineTo(ex, ey);
-            ctx.strokeStyle = gr; ctx.lineWidth = 2.2; ctx.stroke();
-        }
-    }
-
-    /* ── Main loop ── */
-    (function frame() {
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-        const dark = document.documentElement.getAttribute('data-theme') !== 'light';
-        if (dark) { drawStars(); drawAurora(); }
-        else      { drawSunRays(); }
-        t += 0.011;
-        requestAnimationFrame(frame);
-    })();
-}
