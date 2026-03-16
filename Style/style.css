@@ -88,23 +88,22 @@ body {
     width: 30px; height: 30px;
     top: -15px; left: -15px;
     border-radius: 50%;
-    border: 1px solid rgba(110, 142, 251, 0.55);
-    box-shadow: 0 0 10px rgba(110, 142, 251, 0.28), inset 0 0 6px rgba(110, 142, 251, 0.08);
-    transition: width .18s, height .18s, top .18s, left .18s, border-color .18s, box-shadow .18s;
+    border: 1.5px solid rgba(0, 229, 255, 0.75);
+    box-shadow: 0 0 14px rgba(0, 229, 255, 0.55), 0 0 28px rgba(0, 229, 255, 0.2), inset 0 0 8px rgba(0, 229, 255, 0.12);
+    transition: width .18s, height .18s, top .18s, left .18s, box-shadow .18s;
 }
 .cursor-dot {
     position: absolute;
-    width: 4px; height: 4px;
+    width: 5px; height: 5px;
     top: -2px; left: -2px;
     border-radius: 50%;
-    background: rgba(110, 142, 251, 0.9);
-    box-shadow: 0 0 7px rgba(110, 142, 251, 0.85);
+    background: #00e5ff;
+    box-shadow: 0 0 8px #00e5ff, 0 0 16px rgba(0, 229, 255, 0.7);
 }
 #magic-cursor.cursor-hover .cursor-ring {
-    width: 46px; height: 46px;
-    top: -23px; left: -23px;
-    border-color: rgba(110, 142, 251, 0.85);
-    box-shadow: 0 0 18px rgba(110, 142, 251, 0.45), inset 0 0 10px rgba(110, 142, 251, 0.1);
+    width: 48px; height: 48px;
+    top: -24px; left: -24px;
+    box-shadow: 0 0 20px rgba(0, 229, 255, 0.75), 0 0 40px rgba(0, 229, 255, 0.3), inset 0 0 12px rgba(0, 229, 255, 0.15);
 }
 
 /* ══════════════════════════════
