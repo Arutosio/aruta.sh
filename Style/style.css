@@ -161,6 +161,8 @@ body {
 }
 #summon-overlay.fade-out { opacity: 0; pointer-events: none; }
 
+[data-theme="light"] #summon-overlay { background: #e2d8bc; }
+
 .summon-text-wrap {
     position: absolute; inset: 0;
     display: flex; flex-direction: column;
@@ -173,15 +175,25 @@ body {
     text-shadow: 0 0 20px rgba(212,175,55,0.8), 0 0 60px rgba(212,175,55,0.4), 0 0 100px rgba(167,139,250,0.3);
     animation: summonPulse 2s ease-in-out infinite alternate;
 }
+[data-theme="light"] .summon-logo {
+    color: #7a4e06;
+    text-shadow: 0 0 18px rgba(122,78,6,0.7), 0 0 50px rgba(122,78,6,0.3), 0 0 90px rgba(139,28,34,0.25);
+    animation: summonPulseLight 2s ease-in-out infinite alternate;
+}
 @keyframes summonPulse {
     from { text-shadow: 0 0 20px rgba(212,175,55,0.7), 0 0 50px rgba(212,175,55,0.3); }
     to   { text-shadow: 0 0 30px rgba(212,175,55,1),   0 0 80px rgba(212,175,55,0.5), 0 0 120px rgba(167,139,250,0.4); }
+}
+@keyframes summonPulseLight {
+    from { text-shadow: 0 0 18px rgba(122,78,6,0.6), 0 0 45px rgba(122,78,6,0.25); }
+    to   { text-shadow: 0 0 28px rgba(122,78,6,0.9), 0 0 70px rgba(122,78,6,0.4), 0 0 110px rgba(139,28,34,0.3); }
 }
 #summon-log {
     font-style: italic; font-size: clamp(1.1rem, 3vw, 1.4rem);
     color: #c8a86a; text-align: center;
     width: min(560px, 88vw); min-height: 120px; line-height: 2.2; opacity: 0.9;
 }
+[data-theme="light"] #summon-log { color: #6b3c18; }
 .summon-line { display: block; animation: summonLineIn 0.4s ease forwards; }
 @keyframes summonLineIn {
     from { opacity: 0; transform: translateY(6px); }
