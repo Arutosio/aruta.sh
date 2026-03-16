@@ -142,50 +142,7 @@
         <section class="page-section" id="sec-about" hidden>
             <p class="char-bio" id="char-bio"></p>
             <div class="rune-divider"><div class="rune-line"></div><span class="rune-sym" aria-hidden="true">⋆ ✦ ⋆</span><div class="rune-line"></div></div>
-            <div class="interest-grid">
-                <div class="interest-card">
-                    <span class="interest-icon">🎮</span>
-                    <div class="interest-body">
-                        <span class="interest-name">Gaming</span>
-                        <span class="interest-detail">Ultima Online · Minecraft · D&amp;D</span>
-                    </div>
-                </div>
-                <div class="interest-card">
-                    <span class="interest-icon">🌸</span>
-                    <div class="interest-body">
-                        <span class="interest-name">Anime &amp; Manga</span>
-                        <span class="interest-detail">Isekai · Shonen · Seinen</span>
-                    </div>
-                </div>
-                <div class="interest-card">
-                    <span class="interest-icon">💻</span>
-                    <div class="interest-body">
-                        <span class="interest-name">Programming</span>
-                        <span class="interest-detail">Web · Scripts · Automation</span>
-                    </div>
-                </div>
-                <div class="interest-card">
-                    <span class="interest-icon">📺</span>
-                    <div class="interest-body">
-                        <span class="interest-name">Streaming</span>
-                        <span class="interest-detail">Twitch · Kick · YouTube</span>
-                    </div>
-                </div>
-                <div class="interest-card">
-                    <span class="interest-icon">⚔️</span>
-                    <div class="interest-body">
-                        <span class="interest-name">Fantasy &amp; RPG</span>
-                        <span class="interest-detail">Dungeons &amp; Dragons · Roleplay</span>
-                    </div>
-                </div>
-                <div class="interest-card">
-                    <span class="interest-icon">🌍</span>
-                    <div class="interest-body">
-                        <span class="interest-name">Open World</span>
-                        <span class="interest-detail">Exploration · Sandbox · Adventure</span>
-                    </div>
-                </div>
-            </div>
+            <div class="interest-grid" id="interest-grid"></div>
         </section>
 
         <!-- ── SECTION: Links ── -->
@@ -195,56 +152,7 @@
                 <p class="links-desc" data-i18n="links_desc">Trovami su queste piattaforme</p>
             </div>
 
-            <div class="link-cards">
-                <a href="https://twitch.tv/aruta.sh"     class="link-card twitch"    target="_blank" rel="noopener">
-                    <i class="fab fa-twitch link-card-icon"></i>
-                    <div class="link-card-text">
-                        <span class="link-card-platform">Twitch</span>
-                        <span class="link-card-handle">aruta.sh</span>
-                    </div>
-                    <i class="fas fa-arrow-right link-card-arrow"></i>
-                </a>
-                <a href="https://kick.com/aruta_sh"      class="link-card kick"      target="_blank" rel="noopener">
-                    <svg class="link-card-icon" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M2 2h4v6l4-6h5l-5 7 5 7h-5l-4-6v6H2V2z"/></svg>
-                    <div class="link-card-text">
-                        <span class="link-card-platform">Kick</span>
-                        <span class="link-card-handle">aruta_sh</span>
-                    </div>
-                    <i class="fas fa-arrow-right link-card-arrow"></i>
-                </a>
-                <a href="https://youtube.com/@aruta.sh"  class="link-card youtube"   target="_blank" rel="noopener">
-                    <i class="fab fa-youtube link-card-icon"></i>
-                    <div class="link-card-text">
-                        <span class="link-card-platform">YouTube</span>
-                        <span class="link-card-handle">@aruta.sh</span>
-                    </div>
-                    <i class="fas fa-arrow-right link-card-arrow"></i>
-                </a>
-                <a href="https://twitter.com/aruta.sh"   class="link-card twitter"   target="_blank" rel="noopener">
-                    <i class="fab fa-twitter link-card-icon"></i>
-                    <div class="link-card-text">
-                        <span class="link-card-platform">Twitter / X</span>
-                        <span class="link-card-handle">@aruta.sh</span>
-                    </div>
-                    <i class="fas fa-arrow-right link-card-arrow"></i>
-                </a>
-                <a href="https://instagram.com/aruta_sr" class="link-card instagram" target="_blank" rel="noopener">
-                    <i class="fab fa-instagram link-card-icon"></i>
-                    <div class="link-card-text">
-                        <span class="link-card-platform">Instagram</span>
-                        <span class="link-card-handle">aruta_sr</span>
-                    </div>
-                    <i class="fas fa-arrow-right link-card-arrow"></i>
-                </a>
-                <a href="https://github.com/Arutosio"    class="link-card github"    target="_blank" rel="noopener">
-                    <i class="fab fa-github link-card-icon"></i>
-                    <div class="link-card-text">
-                        <span class="link-card-platform">GitHub</span>
-                        <span class="link-card-handle">Arutosio</span>
-                    </div>
-                    <i class="fas fa-arrow-right link-card-arrow"></i>
-                </a>
-            </div>
+            <div class="link-cards" id="link-cards"></div>
 
         </section>
 
@@ -264,6 +172,7 @@
     </footer>
 </main>
 
+<script src="JavaScript/config.js"></script>
 <script src="JavaScript/Index.js"></script>
 </body>
 </html>

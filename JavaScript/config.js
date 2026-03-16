@@ -1,106 +1,122 @@
 /* ============================================================
    ARUTA.SH — CONFIG
-   Modifica questo file per aggiornare contenuti, social e lingue.
+   Modifica questo file per aggiornare contenuti, social e testi.
    ============================================================ */
 
-const CONFIG = {
-
-    /* ── Dati generali ── */
-    name:     'Aruta',
-    fullName: 'Stefano Aruta',
-    year:     2025,
-
-    /* ── Locale per orologio/data ── */
-    locales: {
-        it: 'it-IT',
-        en: 'en-US',
-        es: 'es-ES',
-        ja: 'ja-JP'
+/* ════════════════════════════
+   TRANSLATIONS
+════════════════════════════ */
+const i18n = {
+    it: {
+        char_class: 'Streamer · Programmatore · Avventuriero',
+        sec_home:   'Home',
+        sec_about:  'About',
+        sec_links:  'Link',
+        links_desc: 'Trovami su queste piattaforme',
+        bio: 'Mi chiamo Stefano Aruta. Programmatore appassionato con un amore profondo per anime, manga, Ultima Online, Minecraft e D&D. Come i protagonisti delle storie isekai, mi lancio ora in un nuovo viaggio: lo streaming. Cercando mondi senza confini dove libertà e creatività non hanno limite.',
+        boot: [
+            '✦ Un\'anima si risveglia in questo reame...',
+            '⊕ Consultando il Tomo Antico...',
+            '⋆ I Quattro Elementi rispondono...',
+            '✦ Il cerchio magico prende forma...',
+            '⊕ Il portale si apre...',
+            '✦ Benvenuto nel Reame di Aruta ✦'
+        ],
+        int_gaming:    'Gaming',
+        int_anime:     'Anime & Manga',
+        int_coding:    'Programmazione',
+        int_streaming: 'Streaming',
+        int_fantasy:   'Fantasy & GdR',
+        int_openworld: 'Open World'
     },
-
-    /* ── Sezioni di navigazione ── */
-    sections: [
-        { id: 'home',   icon: 'fas fa-hat-wizard'      },
-        { id: 'stream', icon: 'fas fa-satellite-dish'  },
-        { id: 'links',  icon: 'fas fa-scroll'          }
-    ],
-
-    /* ── Testi per lingua ── */
-    i18n: {
-        it: {
-            /* nav */
-            nav_home:   'Presentazione',
-            nav_stream: 'Stream',
-            nav_links:  'Contatti',
-            /* home */
-            pre: 'Il Mago Errante',
-            cls: 'Streamer · Programmatore · Avventuriero',
-            bio: 'Mi chiamo Stefano Aruta. Programmatore appassionato, amante di anime, manga, Ultima Online, Minecraft e D&D. Attratto da mondi senza confini dove libertà e creatività regnano sovrane. Ora mi lancio in una nuova avventura: lo streaming.',
-            /* stream */
-            stream_pre:  'In diretta su',
-            stream_desc: 'Gameplay, chiacchiere e avventure fantasy. Attiva le notifiche per non perderti nessuna diretta!',
-            stream_note: '📅 Orari variabili — seguimi per aggiornamenti',
-            /* links */
-            links_pre:   'Trovami su',
-            links_desc:  'Tutti i miei canali e profili social in un unico posto.'
-        },
-        en: {
-            nav_home:   'Home',
-            nav_stream: 'Stream',
-            nav_links:  'Links',
-            pre: 'The Wandering Mage',
-            cls: 'Streamer · Programmer · Adventurer',
-            bio: 'My name is Stefano Aruta. A passionate programmer, lover of anime, manga, Ultima Online, Minecraft and D&D. Drawn to worlds without limits where freedom and creativity reign. Now embarking on a new adventure: streaming.',
-            stream_pre:  'Watch me live on',
-            stream_desc: 'Gameplay, chats and fantasy adventures. Turn on notifications so you never miss a stream!',
-            stream_note: '📅 Varied schedule — follow me for updates',
-            links_pre:   'Find me on',
-            links_desc:  'All my channels and social profiles in one place.'
-        },
-        es: {
-            nav_home:   'Inicio',
-            nav_stream: 'Stream',
-            nav_links:  'Links',
-            pre: 'El Mago Errante',
-            cls: 'Streamer · Programador · Aventurero',
-            bio: 'Me llamo Stefano Aruta. Programador apasionado, amante del anime, manga, Ultima Online, Minecraft y D&D. Atraído por mundos sin límites donde reinan la libertad y la creatividad. Ahora me embarco en una nueva aventura: el streaming.',
-            stream_pre:  'Sígueme en vivo en',
-            stream_desc: '¡Gameplay, charlas y aventuras fantásticas. Activa las notificaciones para no perderte ningún directo!',
-            stream_note: '📅 Horario variable — sígueme para actualizaciones',
-            links_pre:   'Encuéntrame en',
-            links_desc:  'Todos mis canales y perfiles sociales en un solo lugar.'
-        },
-        ja: {
-            nav_home:   'ホーム',
-            nav_stream: 'ストリーム',
-            nav_links:  'リンク',
-            pre: '放浪の魔法使い',
-            cls: 'ストリーマー · プログラマー · 冒険者',
-            bio: '私はStefano Arutaです。アニメ、マンガ、ウルティマオンライン、マインクラフト、D&Dを愛する情熱的なプログラマー。自由と創造性が支配する限界のない世界に惹かれています。そして今、新たな冒険へ——ストリーミング。',
-            stream_pre:  'ライブ配信中',
-            stream_desc: 'ゲームプレイ、雑談、ファンタジーの冒険。通知をオンにして配信を見逃さないで！',
-            stream_note: '📅 配信スケジュールは不定期 — フォローして最新情報をチェック',
-            links_pre:   'フォローはこちら',
-            links_desc:  'すべてのチャンネルとSNSプロフィールをまとめました。'
-        }
+    en: {
+        char_class: 'Streamer · Programmer · Adventurer',
+        sec_home:   'Home',
+        sec_about:  'About',
+        sec_links:  'Links',
+        links_desc: 'Find me on these platforms',
+        bio: 'My name is Stefano Aruta. A passionate programmer with a deep love for anime, manga, Ultima Online, Minecraft and D&D. Like the heroes of isekai tales, I now embark on a new journey: streaming. Seeking worlds without boundaries, where freedom and creativity know no limits.',
+        boot: [
+            '✦ A soul awakens in this realm...',
+            '⊕ Consulting the Ancient Tome...',
+            '⋆ The Four Elements respond...',
+            '✦ The magic circle takes shape...',
+            '⊕ The portal opens...',
+            '✦ Welcome to the Realm of Aruta ✦'
+        ],
+        int_gaming:    'Gaming',
+        int_anime:     'Anime & Manga',
+        int_coding:    'Programming',
+        int_streaming: 'Streaming',
+        int_fantasy:   'Fantasy & RPG',
+        int_openworld: 'Open World'
     },
-
-    /* ── Tag / interessi ── */
-    tags: [
-        { emoji: '🎮', label: 'Ultima Online' },
-        { emoji: '⚔️', label: 'D&D'           },
-        { emoji: '🌍', label: 'Minecraft'      },
-        { emoji: '🌸', label: 'Anime · Manga'  },
-        { emoji: '💻', label: 'Programming'    }
-    ],
-
-    /* ── Social links ── */
-    socials: [
-        { id: 'twitch',    url: 'https://twitch.tv/aruta.sh',     icon: 'fab fa-twitch',    label: 'Twitch',    stream: true  },
-        { id: 'kick',      url: 'https://kick.com/aruta_sh',      icon: 'kick',             label: 'Kick',      stream: true  },
-        { id: 'youtube',   url: 'https://youtube.com/@aruta.sh',  icon: 'fab fa-youtube',   label: 'YouTube',   stream: true  },
-        { id: 'instagram', url: 'https://instagram.com/aruta_sr', icon: 'fab fa-instagram', label: 'Instagram', stream: false },
-        { id: 'twitter',   url: 'https://twitter.com/aruta.sh',   icon: 'fab fa-twitter',   label: 'Twitter',   stream: false }
-    ]
-
+    es: {
+        char_class: 'Streamer · Programador · Aventurero',
+        sec_home:   'Inicio',
+        sec_about:  'Sobre mí',
+        sec_links:  'Enlaces',
+        links_desc: 'Encuéntrame en estas plataformas',
+        bio: 'Me llamo Stefano Aruta. Programador apasionado con un profundo amor por el anime, manga, Ultima Online, Minecraft y D&D. Como los protagonistas de las historias isekai, me lanzo ahora a un nuevo viaje: el streaming. Buscando mundos sin límites donde la libertad y la creatividad no tienen fronteras.',
+        boot: [
+            '✦ Un alma despierta en este reino...',
+            '⊕ Consultando el Tomo Antiguo...',
+            '⋆ Los Cuatro Elementos responden...',
+            '✦ El círculo mágico toma forma...',
+            '⊕ El portal se abre...',
+            '✦ Bienvenido al Reino de Aruta ✦'
+        ],
+        int_gaming:    'Gaming',
+        int_anime:     'Anime y Manga',
+        int_coding:    'Programación',
+        int_streaming: 'Streaming',
+        int_fantasy:   'Fantasía y RPG',
+        int_openworld: 'Mundo Abierto'
+    },
+    ja: {
+        char_class: 'ストリーマー · プログラマー · 冒険者',
+        sec_home:   'ホーム',
+        sec_about:  'について',
+        sec_links:  'リンク',
+        links_desc: 'これらのプラットフォームで見つけてください',
+        bio: '私はStefano Arutaです。アニメ、マンガ、ウルティマオンライン、マインクラフト、D&Dへの深い愛を持つ情熱的なプログラマーです。異世界転生の主人公のように、今私は新たな旅へ踏み出します——ストリーミングの世界へ。自由と創造性に限界のない世界を求めて。',
+        boot: [
+            '✦ この王国に魂が目覚める...',
+            '⊕ 古代の書を開く...',
+            '⋆ 四つの元素が応答する...',
+            '✦ 魔法陣が形を成す...',
+            '⊕ 転移門が開く...',
+            '✦ アルタの王国へようこそ ✦'
+        ],
+        int_gaming:    'ゲーム',
+        int_anime:     'アニメ & マンガ',
+        int_coding:    'プログラミング',
+        int_streaming: 'ストリーミング',
+        int_fantasy:   'ファンタジー & RPG',
+        int_openworld: 'オープンワールド'
+    }
 };
+
+/* ════════════════════════════
+   SOCIAL LINKS
+════════════════════════════ */
+const SOCIALS = [
+    { id: 'twitch',    href: 'https://twitch.tv/aruta.sh',     platform: 'Twitch',      handle: 'aruta.sh',  icon: '<i class="fab fa-twitch link-card-icon"></i>' },
+    { id: 'kick',      href: 'https://kick.com/aruta_sh',      platform: 'Kick',        handle: 'aruta_sh',  icon: '<svg class="link-card-icon" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M2 2h4v6l4-6h5l-5 7 5 7h-5l-4-6v6H2V2z"/></svg>' },
+    { id: 'youtube',   href: 'https://youtube.com/@aruta.sh',  platform: 'YouTube',     handle: '@aruta.sh', icon: '<i class="fab fa-youtube link-card-icon"></i>' },
+    { id: 'twitter',   href: 'https://twitter.com/aruta.sh',   platform: 'Twitter / X', handle: '@aruta.sh', icon: '<i class="fab fa-twitter link-card-icon"></i>' },
+    { id: 'instagram', href: 'https://instagram.com/aruta_sr', platform: 'Instagram',   handle: 'aruta_sr',  icon: '<i class="fab fa-instagram link-card-icon"></i>' },
+    { id: 'github',    href: 'https://github.com/Arutosio',    platform: 'GitHub',      handle: 'Arutosio',  icon: '<i class="fab fa-github link-card-icon"></i>' }
+];
+
+/* ════════════════════════════
+   INTERESTS
+════════════════════════════ */
+const INTERESTS = [
+    { icon: '🎮', key: 'int_gaming',    detail: 'Ultima Online · Minecraft · D&D' },
+    { icon: '🌸', key: 'int_anime',     detail: 'Isekai · Shonen · Seinen' },
+    { icon: '💻', key: 'int_coding',    detail: 'Web · Scripts · Automation' },
+    { icon: '📺', key: 'int_streaming', detail: 'Twitch · Kick · YouTube' },
+    { icon: '⚔️', key: 'int_fantasy',   detail: 'Dungeons & Dragons · Roleplay' },
+    { icon: '🌍', key: 'int_openworld', detail: 'Exploration · Sandbox · Adventure' }
+];

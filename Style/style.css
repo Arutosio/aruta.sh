@@ -50,6 +50,8 @@
 ══════════════════════════════ */
 html { scroll-behavior: smooth; }
 
+button { font: inherit; }
+
 body {
     background: var(--bg);
     background-image: var(--bg-grad);

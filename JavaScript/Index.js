@@ -1,76 +1,7 @@
 /* ============================================================
    ARUTA.SH — Medieval Fantasy Script
+   Dati e contenuti: JavaScript/config.js
    ============================================================ */
-
-/* ════════════════════════════
-   TRANSLATIONS
-════════════════════════════ */
-const i18n = {
-    it: {
-        char_class: 'Streamer · Programmatore · Avventuriero',
-        sec_home:   'Home',
-        sec_about:  'About',
-        sec_links:  'Link',
-        links_desc: 'Trovami su queste piattaforme',
-        bio: 'Mi chiamo Stefano Aruta. Programmatore appassionato con un amore profondo per anime, manga, Ultima Online, Minecraft e D&D. Come i protagonisti delle storie isekai, mi lancio ora in un nuovo viaggio: lo streaming. Cercando mondi senza confini dove libertà e creatività non hanno limite.',
-        boot: [
-            '✦ Un\'anima si risveglia in questo reame...',
-            '⊕ Consultando il Tomo Antico...',
-            '⋆ I Quattro Elementi rispondono...',
-            '✦ Il cerchio magico prende forma...',
-            '⊕ Il portale si apre...',
-            '✦ Benvenuto nel Reame di Aruta ✦'
-        ]
-    },
-    en: {
-        char_class: 'Streamer · Programmer · Adventurer',
-        sec_home:   'Home',
-        sec_about:  'About',
-        sec_links:  'Links',
-        links_desc: 'Find me on these platforms',
-        bio: 'My name is Stefano Aruta. A passionate programmer with a deep love for anime, manga, Ultima Online, Minecraft and D&D. Like the heroes of isekai tales, I now embark on a new journey: streaming. Seeking worlds without boundaries, where freedom and creativity know no limits.',
-        boot: [
-            '✦ A soul awakens in this realm...',
-            '⊕ Consulting the Ancient Tome...',
-            '⋆ The Four Elements respond...',
-            '✦ The magic circle takes shape...',
-            '⊕ The portal opens...',
-            '✦ Welcome to the Realm of Aruta ✦'
-        ]
-    },
-    es: {
-        char_class: 'Streamer · Programador · Aventurero',
-        sec_home:   'Inicio',
-        sec_about:  'Sobre mí',
-        sec_links:  'Enlaces',
-        links_desc: 'Encuéntrame en estas plataformas',
-        bio: 'Me llamo Stefano Aruta. Programador apasionado con un profundo amor por el anime, manga, Ultima Online, Minecraft y D&D. Como los protagonistas de las historias isekai, me lanzo ahora a un nuevo viaje: el streaming. Buscando mundos sin límites donde la libertad y la creatividad no tienen fronteras.',
-        boot: [
-            '✦ Un alma despierta en este reino...',
-            '⊕ Consultando el Tomo Antiguo...',
-            '⋆ Los Cuatro Elementos responden...',
-            '✦ El círculo mágico toma forma...',
-            '⊕ El portal se abre...',
-            '✦ Bienvenido al Reino de Aruta ✦'
-        ]
-    },
-    ja: {
-        char_class: 'ストリーマー · プログラマー · 冒険者',
-        sec_home:   'ホーム',
-        sec_about:  'について',
-        sec_links:  'リンク',
-        links_desc: 'これらのプラットフォームで見つけてください',
-        bio: '私はStefano Arutaです。アニメ、マンガ、ウルティマオンライン、マインクラフト、D&Dへの深い愛を持つ情熱的なプログラマーです。異世界転生の主人公のように、今私は新たな旅へ踏み出します——ストリーミングの世界へ。自由と創造性に限界のない世界を求めて。',
-        boot: [
-            '✦ この王国に魂が目覚める...',
-            '⊕ 古代の書を開く...',
-            '⋆ 四つの元素が応答する...',
-            '✦ 魔法陣が形を成す...',
-            '⊕ 転移門が開く...',
-            '✦ アルタの王国へようこそ ✦'
-        ]
-    }
-};
 
 /* ════════════════════════════
    STATE
@@ -236,12 +167,43 @@ function runSummoning(onComplete) {
 }
 
 /* ════════════════════════════
+   BUILDERS
+════════════════════════════ */
+function buildLinkCards() {
+    document.getElementById('link-cards').innerHTML = SOCIALS.map(s =>
+        `<a href="${s.href}" class="link-card ${s.id}" target="_blank" rel="noopener">
+            ${s.icon}
+            <div class="link-card-text">
+                <span class="link-card-platform">${s.platform}</span>
+                <span class="link-card-handle">${s.handle}</span>
+            </div>
+            <i class="fas fa-arrow-right link-card-arrow"></i>
+        </a>`
+    ).join('');
+}
+
+function buildInterestGrid(lang) {
+    const t = i18n[lang];
+    document.getElementById('interest-grid').innerHTML = INTERESTS.map(item =>
+        `<div class="interest-card">
+            <span class="interest-icon">${item.icon}</span>
+            <div class="interest-body">
+                <span class="interest-name">${t[item.key]}</span>
+                <span class="interest-detail">${item.detail}</span>
+            </div>
+        </div>`
+    ).join('');
+}
+
+/* ════════════════════════════
    SHOW APP
 ════════════════════════════ */
 function showApp() {
     const app = document.getElementById('app');
     app.classList.remove('hidden');
     app.classList.add('visible');
+    buildLinkCards();
+    buildInterestGrid(currentLang);
     applyTranslations(currentLang);
     startClock();
     initSections();
@@ -334,6 +296,7 @@ function switchLanguage(lang) {
     document.documentElement.setAttribute('lang', lang);
     setActiveLangBtn(lang);
     applyTranslations(lang);
+    buildInterestGrid(lang);
     typewriterBio(i18n[lang].bio);
 }
 function setActiveLangBtn(lang) {
