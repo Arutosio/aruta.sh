@@ -27,22 +27,23 @@
 }
 
 [data-theme="light"] {
-    --bg:          #f5ead8;
-    --bg-grad:     radial-gradient(ellipse at 50% 30%, #fef3c7 0%, #f0dfc0 55%, #e8d0a8 100%);
-    --card-border: rgba(120, 70, 10, 0.25);
-    --card-glow:   rgba(120, 70, 10, 0.06);
-    --gold:        #92400e;
-    --gold-light:  #b45309;
-    --purple:      #6d28d9;
-    --text:        #2c1810;
-    --text-dim:    #785038;
-    --text-faint:  #b08060;
-    --seal-bg:     rgba(120, 70, 10, 0.07);
-    --seal-border: rgba(120, 70, 10, 0.2);
-    --hud-bg:      rgba(245, 234, 210, 0.90);
-    --mc-color:    #6d28d9;
-    --magic-orb:   rgba(109, 40, 217, 0.45);
-    --bg-ring-col: #6d28d9;
+    /* Pergamena antica, inchiostro, cera rossa */
+    --bg:          #e8dfc4;
+    --bg-grad:     radial-gradient(ellipse at 50% 30%, #f4ead0 0%, #e8dbc0 50%, #d8c9a0 100%);
+    --card-border: rgba(72, 40, 8, 0.28);
+    --card-glow:   rgba(72, 40, 8, 0.07);
+    --gold:        #7a4e06;   /* oro brunito / ocra */
+    --gold-light:  #9c6510;
+    --purple:      #8b1c22;   /* cera rossa */
+    --text:        #1a0c04;   /* inchiostro scuro */
+    --text-dim:    #6b3c18;
+    --text-faint:  #a06830;
+    --seal-bg:     rgba(72, 40, 8, 0.08);
+    --seal-border: rgba(72, 40, 8, 0.22);
+    --hud-bg:      rgba(228, 218, 192, 0.93);
+    --mc-color:    #8b1c22;   /* cerchio magico in cremisi */
+    --magic-orb:   rgba(140, 28, 34, 0.35);
+    --bg-ring-col: #8b1c22;
 }
 
 /* ══════════════════════════════
@@ -98,8 +99,8 @@ body {
     top: -5px; left: -5px;
 }
 [data-theme="light"] .cursor-dot {
-    background: #1e1b4b;
-    box-shadow: 0 0 8px rgba(30,27,75,0.85), 0 0 18px rgba(30,27,75,0.45), 0 0 32px rgba(30,27,75,0.2);
+    background: #1a0c04;
+    box-shadow: 0 0 8px rgba(26,12,4,0.9), 0 0 18px rgba(72,40,8,0.5), 0 0 32px rgba(72,40,8,0.22);
 }
 
 /* ══════════════════════════════
