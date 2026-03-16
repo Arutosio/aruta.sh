@@ -284,6 +284,7 @@ function initSummonCanvas() {
         // ── L1: Anello esterno + 16 dot + glifi runici (CW lento) ──────
         ctx.save();
         ctx.rotate(t * 0.005);
+        ctx.shadowColor = `${G}0.80)`; ctx.shadowBlur = 16;
         const r1 = maxR * grow;
         drawRing(ctx, 0, 0, r1,        3.5, `${G}0.45)`, [6, 10]);
         drawRing(ctx, 0, 0, r1 * 0.96, 1.2, `${G}0.15)`, [1, 5]);
@@ -295,6 +296,7 @@ function initSummonCanvas() {
         // ── L2: Tacche bussola (CCW lento) ─────────────────────────────
         ctx.save();
         ctx.rotate(-t * 0.009);
+        ctx.shadowColor = `${G}0.60)`; ctx.shadowBlur = 10;
         const r2 = maxR * 0.83 * grow;
         drawRing(ctx, 0, 0, r2, 2.0, `${G}0.25)`, [3, 6]);
         drawTickMarks(ctx, 0, 0, r2, 24, r2 * 0.09, `${G}0.38)`);
@@ -303,6 +305,7 @@ function initSummonCanvas() {
         // ── L3: Esagramma (CW medio) ────────────────────────────────────
         ctx.save();
         ctx.rotate(t * 0.014);
+        ctx.shadowColor = `${P}0.85)`; ctx.shadowBlur = 20;
         const r3 = maxR * 0.70 * grow;
         drawRing(ctx, 0, 0, r3, 2.5, `${P}0.45)`, [4, 7]);
         drawPolygon(ctx, 0, 0, r3, 3, `${P}0.24)`, 0);
@@ -313,6 +316,7 @@ function initSummonCanvas() {
         // ── L4: Pentagono (CCW medio) ───────────────────────────────────
         ctx.save();
         ctx.rotate(-t * 0.021);
+        ctx.shadowColor = `${P}0.70)`; ctx.shadowBlur = 14;
         const r4 = maxR * 0.55 * grow;
         drawRing(ctx, 0, 0, r4, 2.0, `${P}0.35)`, [2, 5]);
         drawPolygon(ctx, 0, 0, r4, 5, `${P}0.20)`, -Math.PI / 2);
@@ -322,6 +326,7 @@ function initSummonCanvas() {
         // ── L5: Doppio anello + triangolo (CW veloce) ──────────────────
         ctx.save();
         ctx.rotate(t * 0.030);
+        ctx.shadowColor = `${E}0.90)`; ctx.shadowBlur = 22;
         const r5 = maxR * 0.42 * grow;
         drawRing(ctx, 0, 0, r5,        3.0, `${E}0.55)`, []);
         drawRing(ctx, 0, 0, r5 * 0.91, 1.2, `${E}0.22)`, [2, 4]);
@@ -332,6 +337,7 @@ function initSummonCanvas() {
         // ── L6: Stella a 6 punte (CCW veloce) ──────────────────────────
         ctx.save();
         ctx.rotate(-t * 0.040);
+        ctx.shadowColor = `${G}0.90)`; ctx.shadowBlur = 18;
         const r6 = maxR * 0.27 * grow;
         drawRing(ctx, 0, 0, r6, 2.2, `${G}0.45)`, []);
         drawStar(ctx, 0, 0, r6, 6, `${G}0.32)`);
