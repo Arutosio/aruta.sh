@@ -26,6 +26,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     initRuneParticles();
     initMagicCursor();
+    initParallax();
+    initClickSpells();
     initSummonCanvas();
     runSummoning(() => showApp());
 
@@ -236,6 +238,31 @@ function initRuneParticles() {
         ctx.globalAlpha = 1;
         ctx.shadowBlur  = 0;
 
+        // ── Constellation lines between nearby particles ──
+        ctx.save();
+        const LINK_DIST = 120;
+        for (let i = 0; i < particles.length; i++) {
+            for (let j = i + 1; j < particles.length; j++) {
+                const a = particles[i], b = particles[j];
+                const dx = a.x - b.x, dy = a.y - b.y;
+                const d = Math.sqrt(dx * dx + dy * dy);
+                if (d < LINK_DIST) {
+                    const strength = (1 - d / LINK_DIST);
+                    // Only draw if at least one particle is near cursor or magic circle
+                    const proximity = Math.max(a.glowM, b.glowM, a.glowMC * 0.5, b.glowMC * 0.5);
+                    if (proximity < 0.02) continue;
+                    ctx.globalAlpha = strength * proximity * 0.3 * Math.min(a.life, b.life);
+                    ctx.strokeStyle = runeColor(c, proximity);
+                    ctx.lineWidth = strength * 0.8;
+                    ctx.beginPath();
+                    ctx.moveTo(a.x, a.y);
+                    ctx.lineTo(b.x, b.y);
+                    ctx.stroke();
+                }
+            }
+        }
+        ctx.restore();
+
         requestAnimationFrame(tick);
     }
     tick();
@@ -258,6 +285,76 @@ function initMagicCursor() {
     });
     document.addEventListener('mouseout', e => {
         if (e.target.closest('a, button')) el.classList.remove('cursor-hover');
+    });
+}
+
+/* ════════════════════════════
+   PARALLAX DEPTH
+════════════════════════════ */
+function initParallax() {
+    const ring1 = document.querySelector('.bg-ring-1');
+    const ring2 = document.querySelector('.bg-ring-2');
+    const magicBg = document.querySelector('.magic-bg');
+    if (!ring1 || !ring2 || !magicBg) return;
+
+    let mx = 0.5, my = 0.5;
+    let cx = 0.5, cy = 0.5;
+
+    window.addEventListener('mousemove', e => {
+        mx = e.clientX / window.innerWidth;
+        my = e.clientY / window.innerHeight;
+    });
+
+    function parallaxTick() {
+        // Smooth interpolation
+        cx += (mx - cx) * 0.04;
+        cy += (my - cy) * 0.04;
+
+        const offX = (cx - 0.5) * 30;
+        const offY = (cy - 0.5) * 20;
+
+        // Shift background pseudo-elements via CSS custom properties
+        magicBg.style.setProperty('--px', `${offX * 0.6}px`);
+        magicBg.style.setProperty('--py', `${offY * 0.6}px`);
+
+        // Shift rings subtly (they already rotate, we add translation)
+        ring1.style.marginLeft = `calc(min(95vmin, 900px) / -2 + ${offX * 0.3}px)`;
+        ring1.style.marginTop  = `calc(min(95vmin, 900px) / -2 + ${offY * 0.3}px)`;
+        ring2.style.marginLeft = `calc(min(65vmin, 600px) / -2 + ${offX * -0.2}px)`;
+        ring2.style.marginTop  = `calc(min(65vmin, 600px) / -2 + ${offY * -0.2}px)`;
+
+        requestAnimationFrame(parallaxTick);
+    }
+    parallaxTick();
+}
+
+/* ════════════════════════════
+   CLICK SPELL BURST
+════════════════════════════ */
+function initClickSpells() {
+    const RUNES = 'ᚠᚢᚦᚨᚱᚲᚷᚹᚺᚾᛁᛃᛇᛈᛉᛊᛏᛒᛖᛗᛚ✦⊕⋆◈✧';
+    const BURST_COUNT = 8;
+
+    document.addEventListener('click', e => {
+        // Don't burst on interactive elements
+        if (e.target.closest('a, button, select, input')) return;
+
+        for (let i = 0; i < BURST_COUNT; i++) {
+            const el = document.createElement('div');
+            el.className = 'spell-burst';
+            el.setAttribute('data-rune', RUNES[Math.floor(Math.random() * RUNES.length)]);
+
+            const angle = (i / BURST_COUNT) * Math.PI * 2 + (Math.random() - 0.5) * 0.5;
+            const dist  = 40 + Math.random() * 60;
+            el.style.left = `${e.clientX}px`;
+            el.style.top  = `${e.clientY}px`;
+            el.style.setProperty('--bx', `${Math.cos(angle) * dist}px`);
+            el.style.setProperty('--by', `${Math.sin(angle) * dist}px`);
+            el.style.animationDelay = `${Math.random() * 0.08}s`;
+
+            document.body.appendChild(el);
+            el.addEventListener('animationend', () => el.remove());
+        }
     });
 }
 
@@ -566,18 +663,51 @@ function tickClock() {
 ════════════════════════════ */
 function initSections() {
     let bioTyped = false;
+    let transitioning = false;
+
     document.querySelectorAll('.sec-btn').forEach(btn =>
         btn.addEventListener('click', () => {
+            if (transitioning) return;
             const id = btn.dataset.sec;
-            document.querySelectorAll('.page-section').forEach(s => {
-                s.hidden = s.id !== `sec-${id}`;
-            });
+            const target = document.getElementById(`sec-${id}`);
+
+            // Find currently visible section
+            const current = document.querySelector('.page-section:not([hidden])');
+            if (current === target) return;
+
+            // Update nav buttons immediately
             document.querySelectorAll('.sec-btn').forEach(b =>
                 b.classList.toggle('active', b === btn)
             );
-            if (id === 'about' && !bioTyped) {
-                bioTyped = true;
-                typewriterBio(i18n[currentLang].bio);
+
+            // Animate out current section, then animate in new one
+            if (current) {
+                transitioning = true;
+                current.classList.add('sec-exit');
+                current.addEventListener('animationend', function handler() {
+                    current.removeEventListener('animationend', handler);
+                    current.classList.remove('sec-exit');
+                    current.hidden = true;
+
+                    // Show new section with fade-in
+                    target.hidden = false;
+                    target.style.animation = 'none';
+                    target.offsetHeight; // force reflow
+                    target.style.animation = '';
+
+                    transitioning = false;
+
+                    if (id === 'about' && !bioTyped) {
+                        bioTyped = true;
+                        typewriterBio(i18n[currentLang].bio);
+                    }
+                }, { once: true });
+            } else {
+                target.hidden = false;
+                if (id === 'about' && !bioTyped) {
+                    bioTyped = true;
+                    typewriterBio(i18n[currentLang].bio);
+                }
             }
         })
     );
