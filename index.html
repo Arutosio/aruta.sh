@@ -83,6 +83,7 @@
         <!-- Center: clock -->
         <div class="hud-clock">
             <span class="hud-date" id="hud-date">----/--/--</span>
+            <span class="hud-clock-sep" aria-hidden="true">·</span>
             <span class="hud-time" id="hud-time">--:--:--</span>
         </div>
         <!-- Right: lang + theme -->
@@ -107,45 +108,78 @@
         <section class="page-section" id="sec-home">
             <div class="home-hero">
                 <div class="magic-circle-frame">
-                    <!-- Outer ring: dashed rings + rune text arc (CW, slow) -->
+                    <!-- Outer ring: triple rings + 12 rune nodes + text arc (CW, slow) -->
                     <svg class="mc-svg mc-outer" viewBox="0 0 200 200" aria-hidden="true">
                         <defs>
                             <path id="mc-text-ring" d="M 8,100 A 92,92 0 0,1 192,100 A 92,92 0 0,1 8,100"/>
                         </defs>
-                        <circle cx="100" cy="100" r="95" fill="none" stroke="currentColor" stroke-width="0.8" stroke-dasharray="5 7" opacity="0.55"/>
-                        <circle cx="100" cy="100" r="88" fill="none" stroke="currentColor" stroke-width="0.4" stroke-dasharray="1 4" opacity="0.28"/>
-                        <circle cx="100" cy="5"   r="3"   fill="currentColor" opacity="0.85"/>
-                        <circle cx="195" cy="100" r="3"   fill="currentColor" opacity="0.85"/>
-                        <circle cx="5"   cy="100" r="3"   fill="currentColor" opacity="0.85"/>
-                        <circle cx="100" cy="195" r="3"   fill="currentColor" opacity="0.85"/>
-                        <circle cx="167" cy="33"  r="1.8" fill="currentColor" opacity="0.50"/>
-                        <circle cx="167" cy="167" r="1.8" fill="currentColor" opacity="0.50"/>
-                        <circle cx="33"  cy="167" r="1.8" fill="currentColor" opacity="0.50"/>
-                        <circle cx="33"  cy="33"  r="1.8" fill="currentColor" opacity="0.50"/>
-                        <text font-family="serif" font-size="4.5" fill="currentColor" opacity="0.38" letter-spacing="2.6">
+                        <!-- Triple outer rings -->
+                        <circle cx="100" cy="100" r="97"  fill="none" stroke="currentColor" stroke-width="0.5" opacity="0.25"/>
+                        <circle cx="100" cy="100" r="95"  fill="none" stroke="currentColor" stroke-width="1.0" stroke-dasharray="5 7" opacity="0.60"/>
+                        <circle cx="100" cy="100" r="92"  fill="none" stroke="currentColor" stroke-width="0.3" opacity="0.20"/>
+                        <circle cx="100" cy="100" r="88"  fill="none" stroke="currentColor" stroke-width="0.4" stroke-dasharray="1 4" opacity="0.30"/>
+                        <!-- 4 cardinal glowing nodes -->
+                        <circle cx="100" cy="3"   r="3.5" fill="currentColor" opacity="0.90"/>
+                        <circle cx="197" cy="100" r="3.5" fill="currentColor" opacity="0.90"/>
+                        <circle cx="3"   cy="100" r="3.5" fill="currentColor" opacity="0.90"/>
+                        <circle cx="100" cy="197" r="3.5" fill="currentColor" opacity="0.90"/>
+                        <!-- 8 intercardinal nodes -->
+                        <circle cx="167" cy="33"  r="2.2" fill="currentColor" opacity="0.55"/>
+                        <circle cx="167" cy="167" r="2.2" fill="currentColor" opacity="0.55"/>
+                        <circle cx="33"  cy="167" r="2.2" fill="currentColor" opacity="0.55"/>
+                        <circle cx="33"  cy="33"  r="2.2" fill="currentColor" opacity="0.55"/>
+                        <circle cx="134" cy="10"  r="1.5" fill="currentColor" opacity="0.35"/>
+                        <circle cx="190" cy="66"  r="1.5" fill="currentColor" opacity="0.35"/>
+                        <circle cx="10"  cy="134" r="1.5" fill="currentColor" opacity="0.35"/>
+                        <circle cx="66"  cy="190" r="1.5" fill="currentColor" opacity="0.35"/>
+                        <!-- Rune text arc -->
+                        <text font-family="serif" font-size="4.8" fill="currentColor" opacity="0.42" letter-spacing="2.4">
                             <textPath href="#mc-text-ring">✦ ARCANUM ✦ IGNIS ✦ AQUA ✦ TERRA ✦ VENTUS ✦ LUX ✦ VIA ✦ SOMNIUM ✦</textPath>
                         </text>
                     </svg>
-                    <!-- Middle ring: hexagram + dashed ring (CCW, medium) -->
+                    <!-- Middle ring: hexagram + double ring + tick marks (CCW, medium) -->
                     <svg class="mc-svg mc-mid" viewBox="0 0 200 200" aria-hidden="true">
-                        <circle cx="100" cy="100" r="82" fill="none" stroke="currentColor" stroke-width="0.8" stroke-dasharray="2 4" opacity="0.40"/>
-                        <polygon points="100,22 168,139 32,139" fill="none" stroke="currentColor" stroke-width="0.7" opacity="0.28"/>
-                        <polygon points="100,178 32,61 168,61"  fill="none" stroke="currentColor" stroke-width="0.7" opacity="0.28"/>
-                        <circle cx="100" cy="22"  r="2"   fill="currentColor" opacity="0.55"/>
-                        <circle cx="168" cy="139" r="2"   fill="currentColor" opacity="0.55"/>
-                        <circle cx="32"  cy="139" r="2"   fill="currentColor" opacity="0.55"/>
-                        <circle cx="100" cy="178" r="2"   fill="currentColor" opacity="0.55"/>
-                        <circle cx="32"  cy="61"  r="2"   fill="currentColor" opacity="0.55"/>
-                        <circle cx="168" cy="61"  r="2"   fill="currentColor" opacity="0.55"/>
+                        <circle cx="100" cy="100" r="84" fill="none" stroke="currentColor" stroke-width="0.4" opacity="0.22"/>
+                        <circle cx="100" cy="100" r="82" fill="none" stroke="currentColor" stroke-width="0.9" stroke-dasharray="2 4" opacity="0.45"/>
+                        <circle cx="100" cy="100" r="80" fill="none" stroke="currentColor" stroke-width="0.3" opacity="0.18"/>
+                        <!-- Hexagram (Star of David) -->
+                        <polygon points="100,20 170,140 30,140" fill="none" stroke="currentColor" stroke-width="0.8" opacity="0.35"/>
+                        <polygon points="100,180 30,60 170,60"  fill="none" stroke="currentColor" stroke-width="0.8" opacity="0.35"/>
+                        <!-- 6 vertex nodes -->
+                        <circle cx="100" cy="20"  r="2.5" fill="currentColor" opacity="0.65"/>
+                        <circle cx="170" cy="140" r="2.5" fill="currentColor" opacity="0.65"/>
+                        <circle cx="30"  cy="140" r="2.5" fill="currentColor" opacity="0.65"/>
+                        <circle cx="100" cy="180" r="2.5" fill="currentColor" opacity="0.65"/>
+                        <circle cx="30"  cy="60"  r="2.5" fill="currentColor" opacity="0.65"/>
+                        <circle cx="170" cy="60"  r="2.5" fill="currentColor" opacity="0.65"/>
+                        <!-- 12 tick marks around the ring -->
+                        <line x1="100" y1="18" x2="100" y2="24" stroke="currentColor" stroke-width="0.6" opacity="0.30"/>
+                        <line x1="141" y1="29" x2="138" y2="34" stroke="currentColor" stroke-width="0.6" opacity="0.30"/>
+                        <line x1="171" y1="59" x2="165" y2="62" stroke="currentColor" stroke-width="0.6" opacity="0.30"/>
+                        <line x1="182" y1="100" x2="176" y2="100" stroke="currentColor" stroke-width="0.6" opacity="0.30"/>
+                        <line x1="171" y1="141" x2="165" y2="138" stroke="currentColor" stroke-width="0.6" opacity="0.30"/>
+                        <line x1="141" y1="171" x2="138" y2="166" stroke="currentColor" stroke-width="0.6" opacity="0.30"/>
+                        <line x1="100" y1="182" x2="100" y2="176" stroke="currentColor" stroke-width="0.6" opacity="0.30"/>
+                        <line x1="59"  y1="171" x2="62"  y2="166" stroke="currentColor" stroke-width="0.6" opacity="0.30"/>
+                        <line x1="29"  y1="141" x2="35"  y2="138" stroke="currentColor" stroke-width="0.6" opacity="0.30"/>
+                        <line x1="18"  y1="100" x2="24"  y2="100" stroke="currentColor" stroke-width="0.6" opacity="0.30"/>
+                        <line x1="29"  y1="59" x2="35"   y2="62" stroke="currentColor" stroke-width="0.6" opacity="0.30"/>
+                        <line x1="59"  y1="29" x2="62"   y2="34" stroke="currentColor" stroke-width="0.6" opacity="0.30"/>
                     </svg>
-                    <!-- Inner ring: triangle + double ring (CW, fast) -->
+                    <!-- Inner ring: pentagon + triangle + triple rings (CW, fast) -->
                     <svg class="mc-svg mc-inner" viewBox="0 0 200 200" aria-hidden="true">
-                        <circle cx="100" cy="100" r="72" fill="none" stroke="currentColor" stroke-width="1"   opacity="0.65"/>
-                        <circle cx="100" cy="100" r="67" fill="none" stroke="currentColor" stroke-width="0.5" stroke-dasharray="3 5" opacity="0.28"/>
-                        <polygon points="100,28 162,136 38,136" fill="none" stroke="currentColor" stroke-width="0.9" opacity="0.38"/>
-                        <circle cx="100" cy="28"  r="2.5" fill="currentColor" opacity="0.65"/>
-                        <circle cx="162" cy="136" r="2.5" fill="currentColor" opacity="0.65"/>
-                        <circle cx="38"  cy="136" r="2.5" fill="currentColor" opacity="0.65"/>
+                        <circle cx="100" cy="100" r="73" fill="none" stroke="currentColor" stroke-width="0.4" opacity="0.22"/>
+                        <circle cx="100" cy="100" r="71" fill="none" stroke="currentColor" stroke-width="1.1" opacity="0.70"/>
+                        <circle cx="100" cy="100" r="69" fill="none" stroke="currentColor" stroke-width="0.3" opacity="0.18"/>
+                        <circle cx="100" cy="100" r="65" fill="none" stroke="currentColor" stroke-width="0.5" stroke-dasharray="3 5" opacity="0.30"/>
+                        <!-- Inner triangle -->
+                        <polygon points="100,30 160,135 40,135" fill="none" stroke="currentColor" stroke-width="1.0" opacity="0.42"/>
+                        <!-- Inner pentagon (inverted) -->
+                        <polygon points="100,155 39,73 69,28 131,28 161,73" fill="none" stroke="currentColor" stroke-width="0.5" opacity="0.18"/>
+                        <!-- Triangle vertex nodes -->
+                        <circle cx="100" cy="30"  r="3" fill="currentColor" opacity="0.75"/>
+                        <circle cx="160" cy="135" r="3" fill="currentColor" opacity="0.75"/>
+                        <circle cx="40"  cy="135" r="3" fill="currentColor" opacity="0.75"/>
                     </svg>
                     <div class="portrait-img-wrap">
                         <img src="./Images/aru2_meta.png" alt="Aruta" class="portrait-img">

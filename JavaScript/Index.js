@@ -377,6 +377,119 @@ function initClickSpells() {
 }
 
 /* ════════════════════════════
+   FIREFLY NAV SYSTEM
+════════════════════════════ */
+function initFireflies() {
+    const COUNT = 5;        // fireflies per active button
+    const pools = new Map(); // btn → firefly[]
+
+    function spawnFirefly(btn) {
+        const el = document.createElement('div');
+        el.className = 'firefly';
+        btn.appendChild(el);
+
+        // Each firefly has its own orbit params
+        const f = {
+            el,
+            // Random elliptical orbit center offset from button center
+            cx: 0.3 + Math.random() * 0.4,    // 30%-70% of width
+            cy: 0.2 + Math.random() * 0.6,    // 20%-80% of height
+            rx: 8 + Math.random() * 18,        // orbit radius X
+            ry: 4 + Math.random() * 10,        // orbit radius Y
+            angle: Math.random() * Math.PI * 2,
+            speed: 0.008 + Math.random() * 0.018, // radians per frame
+            dir: Math.random() < 0.5 ? 1 : -1,
+            wobble: Math.random() * Math.PI * 2,
+            wobbleSpeed: 0.02 + Math.random() * 0.03,
+            pulsePhase: Math.random() * Math.PI * 2,
+            size: 2 + Math.random() * 2
+        };
+        el.style.width  = f.size + 'px';
+        el.style.height = f.size + 'px';
+
+        // Fade in
+        requestAnimationFrame(() => el.classList.add('alive'));
+        return f;
+    }
+
+    function killFireflies(btn) {
+        const flies = pools.get(btn);
+        if (!flies) return;
+        flies.forEach(f => {
+            f.el.classList.remove('alive');
+            f.el.classList.add('dying');
+            setTimeout(() => f.el.remove(), 600);
+        });
+        pools.delete(btn);
+    }
+
+    function activateBtn(btn) {
+        if (pools.has(btn)) return;
+        const flies = [];
+        for (let i = 0; i < COUNT; i++) {
+            flies.push(spawnFirefly(btn));
+        }
+        pools.set(btn, flies);
+    }
+
+    // Animation loop
+    function tick() {
+        pools.forEach((flies, btn) => {
+            const w = btn.offsetWidth;
+            const h = btn.offsetHeight;
+            for (const f of flies) {
+                f.angle += f.speed * f.dir;
+                f.wobble += f.wobbleSpeed;
+
+                // Elliptical orbit with wobble
+                const wobbleX = Math.sin(f.wobble) * 3;
+                const wobbleY = Math.cos(f.wobble * 0.7) * 2;
+                const x = f.cx * w + Math.cos(f.angle) * f.rx + wobbleX;
+                const y = f.cy * h + Math.sin(f.angle) * f.ry + wobbleY;
+
+                // Pulse opacity
+                f.pulsePhase += 0.03;
+                const pulse = 0.5 + 0.5 * Math.sin(f.pulsePhase);
+                const glow = 2 + pulse * 6;
+
+                f.el.style.left = x + 'px';
+                f.el.style.top  = y + 'px';
+                f.el.style.opacity = 0.35 + pulse * 0.65;
+                // Theme-aware glow: white-green in dark, gold in light
+                const isLight = document.documentElement.getAttribute('data-theme') === 'light';
+                if (isLight) {
+                    f.el.style.boxShadow = `0 0 ${glow}px rgba(122,78,6,0.8), 0 0 ${glow * 2}px rgba(122,78,6,0.4)`;
+                } else {
+                    f.el.style.boxShadow = `0 0 ${glow}px rgba(180,255,200,0.9), 0 0 ${glow * 2}px rgba(140,255,170,0.5), 0 0 ${glow * 3}px rgba(100,255,140,0.2)`;
+                }
+            }
+        });
+        requestAnimationFrame(tick);
+    }
+    tick();
+
+    // Watch for active button changes
+    const observer = new MutationObserver(() => {
+        document.querySelectorAll('.sec-btn').forEach(btn => {
+            if (btn.classList.contains('active')) {
+                activateBtn(btn);
+            } else {
+                killFireflies(btn);
+            }
+        });
+    });
+
+    // Observe class changes on all sec-btns
+    document.querySelectorAll('.sec-btn').forEach(btn => {
+        observer.observe(btn, { attributes: true, attributeFilter: ['class'] });
+    });
+
+    // Activate initial active button
+    const initial = document.querySelector('.sec-btn.active');
+    if (initial) activateBtn(initial);
+}
+
+/* ════════════════════════════
    SUMMONING CIRCLE (boot canvas)
 ════════════════════════════ */
 function initSummonCanvas() {
@@ -743,6 +856,7 @@ function showApp() {
     applyTranslations(currentLang);
     startClock();
     initSections();
+    initFireflies();
 }
 
 /* ════════════════════════════
