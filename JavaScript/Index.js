@@ -380,7 +380,7 @@ function initClickSpells() {
    FIREFLY NAV SYSTEM
 ════════════════════════════ */
 function initFireflies() {
-    const COUNT = 5;        // fireflies per active button
+    const COUNT = 10;       // fireflies per active button
     const pools = new Map(); // btn → firefly[]
 
     function spawnFirefly(btn) {
@@ -402,7 +402,7 @@ function initFireflies() {
             wobble: Math.random() * Math.PI * 2,
             wobbleSpeed: 0.02 + Math.random() * 0.03,
             pulsePhase: Math.random() * Math.PI * 2,
-            size: 2 + Math.random() * 2
+            size: 3 + Math.random() * 3
         };
         el.style.width  = f.size + 'px';
         el.style.height = f.size + 'px';
@@ -455,12 +455,18 @@ function initFireflies() {
                 f.el.style.left = x + 'px';
                 f.el.style.top  = y + 'px';
                 f.el.style.opacity = 0.35 + pulse * 0.65;
-                // Theme-aware glow: white-green in dark, gold in light
+                // Theme-aware glow
                 const isLight = document.documentElement.getAttribute('data-theme') === 'light';
                 if (isLight) {
                     f.el.style.boxShadow = `0 0 ${glow}px rgba(122,78,6,0.8), 0 0 ${glow * 2}px rgba(122,78,6,0.4)`;
                 } else {
-                    f.el.style.boxShadow = `0 0 ${glow}px rgba(180,255,200,0.9), 0 0 ${glow * 2}px rgba(140,255,170,0.5), 0 0 ${glow * 3}px rgba(100,255,140,0.2)`;
+                    if (f.orbitDir > 0) { // ~half olive green
+                        f.el.style.background = '#8aaf30';
+                        f.el.style.boxShadow = `0 0 ${glow}px rgba(138,175,48,0.9), 0 0 ${glow * 2}px rgba(120,160,40,0.5), 0 0 ${glow * 3}px rgba(100,140,30,0.25)`;
+                    } else { // ~half pale yellow
+                        f.el.style.background = '#f0e880';
+                        f.el.style.boxShadow = `0 0 ${glow}px rgba(240,232,128,0.9), 0 0 ${glow * 2}px rgba(230,220,100,0.5), 0 0 ${glow * 3}px rgba(200,190,80,0.25)`;
+                    }
                 }
             }
         });

@@ -18,9 +18,9 @@
     --gold:        #c0c8e0;
     --gold-light:  #dce0f0;
     --purple:      #a78bfa;
-    --text:        #e8e4f0;
-    --text-dim:    #8088a8;
-    --text-faint:  #505872;
+    --text:        #e0daf0;
+    --text-dim:    #8880a8;
+    --text-faint:  #585070;
     --seal-bg:     rgba(192, 200, 224, 0.06);
     --seal-border: rgba(192, 200, 224, 0.18);
     --hud-bg:      rgba(6, 4, 16, 0.85);
@@ -334,7 +334,7 @@ html.magic-cursor-active, html.magic-cursor-active * { cursor: none !important; 
 .sec-btn {
     position: relative; overflow: hidden;
     font-size: clamp(0.88rem, 2.2vw, 1.15rem); font-weight: 700; letter-spacing: 0.06em;
-    color: var(--text-dim); background: transparent;
+    color: #6a9a28; background: transparent;
     border: none; border-radius: 0; padding: 0 14px;
     cursor: pointer; white-space: nowrap;
     display: flex; align-items: center;
@@ -351,8 +351,8 @@ html.magic-cursor-active, html.magic-cursor-active * { cursor: none !important; 
     animation: navTextPulse 2.5s ease-in-out infinite;
 }
 @keyframes navTextPulse {
-    0%, 100% { text-shadow: 0 0 6px rgba(255,255,255,0.40), 0 0 14px rgba(180,255,200,0.20); }
-    50%      { text-shadow: 0 0 12px rgba(255,255,255,0.80), 0 0 28px rgba(180,255,200,0.45), 0 0 50px rgba(120,255,160,0.15); }
+    0%, 100% { text-shadow: 0 0 6px rgba(255,255,255,0.40), 0 0 14px rgba(138,175,48,0.25); }
+    50%      { text-shadow: 0 0 12px rgba(255,255,255,0.80), 0 0 28px rgba(138,175,48,0.45), 0 0 50px rgba(200,190,80,0.15); }
 }
 /* Light mode active: gold pulsing */
 [data-theme="light"] .sec-btn.active {
@@ -367,9 +367,10 @@ html.magic-cursor-active, html.magic-cursor-active * { cursor: none !important; 
 /* Firefly particles — white/green in dark, gold in light */
 .firefly {
     position: absolute; pointer-events: none; z-index: 1;
-    width: 3px; height: 3px; border-radius: 50%;
-    background: #e0ffe8;
-    box-shadow: 0 0 4px #b0ffb8, 0 0 8px rgba(180,255,200,0.6), 0 0 14px rgba(100,255,140,0.3);
+    width: 4px; height: 4px; border-radius: 50%;
+    background: #8aaf30;
+    box-shadow: 0 0 4px #8aaf30, 0 0 8px rgba(138,175,48,0.6), 0 0 14px rgba(120,160,40,0.3);
+    /* JS overrides color per firefly: olive green (#8aaf30) or pale yellow (#f0e880) */
     opacity: 0;
     transition: opacity 0.4s;
 }
@@ -404,7 +405,7 @@ html.magic-cursor-active, html.magic-cursor-active * { cursor: none !important; 
 /* Theme button — full height */
 .theme-btn {
     background: transparent; border: none;
-    color: var(--text-dim); width: 52px; border-radius: 0;
+    color: #f0e8b0; width: 52px; border-radius: 0;
     cursor: pointer; display: flex; align-items: center; justify-content: center;
     font-size: clamp(0.95rem, 2.2vw, 1.25rem); align-self: stretch;
     transition: color 0.3s, background 0.3s;
