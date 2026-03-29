@@ -8,7 +8,7 @@
 ════════════════════════════ */
 let currentLang  = 'it';
 let currentTheme = 'dark';
-let bioTimeout   = null;
+// bioTimeout scoped inside typewriterBio
 
 /* ════════════════════════════
    INIT
@@ -21,15 +21,30 @@ document.addEventListener('DOMContentLoaded', () => {
     currentTheme = savedTheme || (window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark');
 
     document.documentElement.setAttribute('data-theme', currentTheme);
+    document.documentElement.setAttribute('lang', currentLang === 'fn' ? 'en' : currentLang);
     updateThemeIcon();
     setActiveLangBtn(currentLang);
+
+    const yearEl = document.getElementById('footer-year');
+    if (yearEl) yearEl.textContent = new Date().getFullYear();
 
     initRuneParticles();
     initMagicCursor();
     initParallax();
     initClickSpells();
-    initSummonCanvas();
-    runSummoning(() => showApp());
+
+    if (sessionStorage.getItem('aruta_summoned')) {
+        // Skip summoning on repeat visits in same session
+        const overlay = document.getElementById('summon-overlay');
+        if (overlay) overlay.remove();
+        showApp();
+    } else {
+        initSummonCanvas();
+        runSummoning(() => {
+            sessionStorage.setItem('aruta_summoned', '1');
+            showApp();
+        });
+    }
 
     document.getElementById('theme-btn').addEventListener('click', toggleTheme);
     document.getElementById('lang-select').addEventListener('change', e => switchLanguage(e.target.value));
@@ -41,7 +56,7 @@ document.addEventListener('DOMContentLoaded', () => {
 function detectLanguage() {
     const code = (navigator.language || 'en').split('-')[0].toLowerCase();
     if (i18n[code]) return code;
-    const map = { pt:'es', ca:'es', gl:'es', zh:'ja', ko:'ja' };
+    const map = { pt:'es', ca:'es', gl:'es' };
     return map[code] || 'en';
 }
 
@@ -275,6 +290,9 @@ function initMagicCursor() {
     const el = document.getElementById('magic-cursor');
     if (!el || window.matchMedia('(pointer: coarse)').matches) return;
 
+    // Only hide native cursor after magic cursor is ready
+    document.body.style.cursor = 'none';
+
     window.addEventListener('mousemove', e => {
         el.style.transform = `translate(${e.clientX}px,${e.clientY}px)`;
     });
@@ -356,6 +374,119 @@ function initClickSpells() {
             el.addEventListener('animationend', () => el.remove());
         }
     });
+}
+
+/* ════════════════════════════
+   FIREFLY NAV SYSTEM
+════════════════════════════ */
+function initFireflies() {
+    const COUNT = 5;        // fireflies per active button
+    const pools = new Map(); // btn → firefly[]
+
+    function spawnFirefly(btn) {
+        const el = document.createElement('div');
+        el.className = 'firefly';
+        btn.appendChild(el);
+
+        // Each firefly has its own orbit params
+        const f = {
+            el,
+            // Random elliptical orbit center offset from button center
+            cx: 0.3 + Math.random() * 0.4,    // 30%-70% of width
+            cy: 0.2 + Math.random() * 0.6,    // 20%-80% of height
+            rx: 8 + Math.random() * 18,        // orbit radius X
+            ry: 4 + Math.random() * 10,        // orbit radius Y
+            angle: Math.random() * Math.PI * 2,
+            speed: 0.008 + Math.random() * 0.018, // radians per frame
+            dir: Math.random() < 0.5 ? 1 : -1,
+            wobble: Math.random() * Math.PI * 2,
+            wobbleSpeed: 0.02 + Math.random() * 0.03,
+            pulsePhase: Math.random() * Math.PI * 2,
+            size: 2 + Math.random() * 2
+        };
+        el.style.width  = f.size + 'px';
+        el.style.height = f.size + 'px';
+
+        // Fade in
+        requestAnimationFrame(() => el.classList.add('alive'));
+        return f;
+    }
+
+    function killFireflies(btn) {
+        const flies = pools.get(btn);
+        if (!flies) return;
+        flies.forEach(f => {
+            f.el.classList.remove('alive');
+            f.el.classList.add('dying');
+            setTimeout(() => f.el.remove(), 600);
+        });
+        pools.delete(btn);
+    }
+
+    function activateBtn(btn) {
+        if (pools.has(btn)) return;
+        const flies = [];
+        for (let i = 0; i < COUNT; i++) {
+            flies.push(spawnFirefly(btn));
+        }
+        pools.set(btn, flies);
+    }
+
+    // Animation loop
+    function tick() {
+        pools.forEach((flies, btn) => {
+            const w = btn.offsetWidth;
+            const h = btn.offsetHeight;
+            for (const f of flies) {
+                f.angle += f.speed * f.dir;
+                f.wobble += f.wobbleSpeed;
+
+                // Elliptical orbit with wobble
+                const wobbleX = Math.sin(f.wobble) * 3;
+                const wobbleY = Math.cos(f.wobble * 0.7) * 2;
+                const x = f.cx * w + Math.cos(f.angle) * f.rx + wobbleX;
+                const y = f.cy * h + Math.sin(f.angle) * f.ry + wobbleY;
+
+                // Pulse opacity
+                f.pulsePhase += 0.03;
+                const pulse = 0.5 + 0.5 * Math.sin(f.pulsePhase);
+                const glow = 2 + pulse * 6;
+
+                f.el.style.left = x + 'px';
+                f.el.style.top  = y + 'px';
+                f.el.style.opacity = 0.35 + pulse * 0.65;
+                // Theme-aware glow: white-green in dark, gold in light
+                const isLight = document.documentElement.getAttribute('data-theme') === 'light';
+                if (isLight) {
+                    f.el.style.boxShadow = `0 0 ${glow}px rgba(122,78,6,0.8), 0 0 ${glow * 2}px rgba(122,78,6,0.4)`;
+                } else {
+                    f.el.style.boxShadow = `0 0 ${glow}px rgba(180,255,200,0.9), 0 0 ${glow * 2}px rgba(140,255,170,0.5), 0 0 ${glow * 3}px rgba(100,255,140,0.2)`;
+                }
+            }
+        });
+        requestAnimationFrame(tick);
+    }
+    tick();
+
+    // Watch for active button changes
+    const observer = new MutationObserver(() => {
+        document.querySelectorAll('.sec-btn').forEach(btn => {
+            if (btn.classList.contains('active')) {
+                activateBtn(btn);
+            } else {
+                killFireflies(btn);
+            }
+        });
+    });
+
+    // Observe class changes on all sec-btns
+    document.querySelectorAll('.sec-btn').forEach(btn => {
+        observer.observe(btn, { attributes: true, attributeFilter: ['class'] });
+    });
+
+    // Activate initial active button
+    const initial = document.querySelector('.sec-btn.active');
+    if (initial) activateBtn(initial);
 }
 
 /* ════════════════════════════
@@ -588,13 +719,13 @@ function runSummoning(onComplete) {
 ════════════════════════════ */
 function buildLinkCards() {
     document.getElementById('link-cards').innerHTML = SOCIALS.map(s =>
-        `<a href="${s.href}" class="link-card ${s.id}" target="_blank" rel="noopener">
+        `<a href="${s.href}" class="link-card ${s.id}" target="_blank" rel="noopener" aria-label="${s.platform} — ${s.handle}">
             ${s.icon}
             <div class="link-card-text">
                 <span class="link-card-platform">${s.platform}</span>
                 <span class="link-card-handle">${s.handle}</span>
             </div>
-            <i class="fas fa-arrow-right link-card-arrow"></i>
+            <i class="fas fa-arrow-right link-card-arrow" aria-hidden="true"></i>
         </a>`
     ).join('');
 }
@@ -613,6 +744,106 @@ function buildInterestGrid(lang) {
 }
 
 /* ════════════════════════════
+   PROJECT CARDS (GitHub API)
+════════════════════════════ */
+const LANG_COLORS = {
+    JavaScript: '#f1e05a', TypeScript: '#3178c6', 'C#': '#178600', Python: '#3572A5',
+    Java: '#b07219', Go: '#00ADD8', Rust: '#dea584', Ruby: '#701516', PHP: '#4F5D95',
+    Shell: '#89e051', Groovy: '#4298b8', HTML: '#e34c26', CSS: '#563d7c', Kotlin: '#A97BFF',
+    Swift: '#F05138', Dart: '#00B4AB', Lua: '#000080', C: '#555555', 'C++': '#f34b7d'
+};
+
+let projectCache = null;
+
+async function fetchCommitCount(slug) {
+    // Use per_page=1 and parse Link header to get total commit count
+    const r = await fetch(`https://api.github.com/repos/${slug}/commits?per_page=1`);
+    if (!r.ok) return 0;
+    const link = r.headers.get('Link');
+    if (!link) return 1;
+    const match = link.match(/page=(\d+)>;\s*rel="last"/);
+    return match ? parseInt(match[1], 10) : 1;
+}
+
+async function fetchProjects() {
+    if (projectCache) return projectCache;
+    const results = await Promise.allSettled(
+        PROJECTS.map(async slug => {
+            const [repoRes, commits] = await Promise.all([
+                fetch(`https://api.github.com/repos/${slug}`).then(r => r.ok ? r.json() : Promise.reject(r.status)),
+                fetchCommitCount(slug)
+            ]);
+            repoRes._commits = commits;
+            return repoRes;
+        })
+    );
+    projectCache = results.map((r, i) => r.status === 'fulfilled' ? r.value : { _error: true, _slug: PROJECTS[i] });
+    return projectCache;
+}
+
+function fmtDate(iso, lang) {
+    const loc = lang === 'fn' ? 'en' : lang;
+    return new Date(iso).toLocaleDateString(loc, { year: 'numeric', month: 'short', day: 'numeric' });
+}
+
+function renderProjectCards(repos, lang) {
+    const t = i18n[lang];
+    const grid = document.getElementById('projects-grid');
+    if (!grid) return;
+
+    grid.innerHTML = repos.map(repo => {
+        if (repo._error) {
+            return `<div class="project-card project-card--error">
+                <span class="project-error-icon">⚠</span>
+                <span class="project-error-text">${t.proj_error}: ${repo._slug}</span>
+            </div>`;
+        }
+
+        const langDot = repo.language && LANG_COLORS[repo.language]
+            ? `<span class="proj-lang-dot" style="background:${LANG_COLORS[repo.language]}"></span>`
+            : '';
+        const langName = repo.language || '—';
+        const createdStr = fmtDate(repo.created_at, lang);
+        const updatedStr = fmtDate(repo.pushed_at, lang);
+        const topics = (repo.topics || []).slice(0, 4);
+        const topicsHtml = topics.length
+            ? `<div class="proj-topics">${topics.map(t => `<span class="proj-topic">${t}</span>`).join('')}</div>`
+            : '';
+
+        return `<a href="${repo.html_url}" class="project-card" target="_blank" rel="noopener" aria-label="${repo.name}">
+            <div class="project-header">
+                <i class="fab fa-github project-gh-icon" aria-hidden="true"></i>
+                <span class="project-name">${repo.name}</span>
+                ${repo.archived ? '<span class="proj-badge proj-badge--archived">archived</span>' : ''}
+                ${repo.private ? '<span class="proj-badge proj-badge--private"><i class="fas fa-lock"></i></span>' : ''}
+            </div>
+            <p class="project-desc">${repo.description || '—'}</p>
+            ${topicsHtml}
+            <div class="project-stats">
+                <span class="proj-stat">${langDot} ${langName}</span>
+                <span class="proj-stat"><i class="fas fa-star" aria-hidden="true"></i> ${repo.stargazers_count}</span>
+                <span class="proj-stat"><i class="fas fa-code-branch" aria-hidden="true"></i> ${repo.forks_count}</span>
+                <span class="proj-stat"><i class="fas fa-code-commit" aria-hidden="true"></i> ${repo._commits} ${t.proj_commits}</span>
+                <span class="proj-stat"><i class="fas fa-circle-exclamation" aria-hidden="true"></i> ${repo.open_issues_count} ${t.proj_issues}</span>
+            </div>
+            <div class="project-dates">
+                <span class="proj-date"><i class="fas fa-calendar-plus" aria-hidden="true"></i> ${t.proj_created} ${createdStr}</span>
+                <span class="proj-date"><i class="fas fa-clock" aria-hidden="true"></i> ${t.proj_updated} ${updatedStr}</span>
+            </div>
+        </a>`;
+    }).join('');
+}
+
+async function buildProjectCards(lang) {
+    const grid = document.getElementById('projects-grid');
+    if (!grid) return;
+    const t = i18n[lang];
+    grid.innerHTML = `<div class="project-card project-card--loading"><span class="proj-loading-rune">◈</span> ${t.proj_loading}</div>`;
+    const repos = await fetchProjects();
+    renderProjectCards(repos, lang);
+}
+
+/* ════════════════════════════
    SHOW APP
 ════════════════════════════ */
 function showApp() {
@@ -621,9 +852,11 @@ function showApp() {
     app.classList.add('visible');
     buildLinkCards();
     buildInterestGrid(currentLang);
+    buildProjectCards(currentLang);
     applyTranslations(currentLang);
     startClock();
     initSections();
+    initFireflies();
 }
 
 /* ════════════════════════════
@@ -719,7 +952,7 @@ function initSections() {
 function typewriterBio(text) {
     const el = document.getElementById('char-bio');
     if (!el) return;
-    if (bioTimeout) clearTimeout(bioTimeout);
+    if (typewriterBio._timeout) clearTimeout(typewriterBio._timeout);
     el.innerHTML = '';
     const cursor = document.createElement('span');
     cursor.className = 'cursor';
@@ -728,7 +961,7 @@ function typewriterBio(text) {
     function type() {
         if (i < text.length) {
             el.insertBefore(document.createTextNode(text.charAt(i++)), cursor);
-            bioTimeout = setTimeout(type, 22);
+            typewriterBio._timeout = setTimeout(type, 22);
         } else {
             setTimeout(() => cursor.remove(), 2500);
         }
@@ -747,6 +980,7 @@ function switchLanguage(lang) {
     setActiveLangBtn(lang);
     applyTranslations(lang);
     buildInterestGrid(lang);
+    if (projectCache) renderProjectCards(projectCache, lang);
     typewriterBio(i18n[lang].bio);
 }
 function setActiveLangBtn(lang) {

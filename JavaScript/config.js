@@ -27,7 +27,16 @@ const i18n = {
         int_coding:    'Programmazione',
         int_streaming: 'Streaming',
         int_fantasy:   'Fantasy & GdR',
-        int_openworld: 'Open World'
+        int_openworld: 'Open World',
+        projects_title: 'Progetti in Corso',
+        proj_stars: 'stelle',
+        proj_forks: 'fork',
+        proj_commits: 'commit',
+        proj_issues: 'issue',
+        proj_created: 'Creato',
+        proj_updated: 'Aggiornato',
+        proj_loading: 'Consultando gli archivi...',
+        proj_error: 'Pergamena non trovata'
     },
     en: {
         char_class: 'Streamer · Programmer · Adventurer',
@@ -49,7 +58,16 @@ const i18n = {
         int_coding:    'Programming',
         int_streaming: 'Streaming',
         int_fantasy:   'Fantasy & RPG',
-        int_openworld: 'Open World'
+        int_openworld: 'Open World',
+        projects_title: 'Current Projects',
+        proj_stars: 'stars',
+        proj_forks: 'forks',
+        proj_commits: 'commits',
+        proj_issues: 'issues',
+        proj_created: 'Created',
+        proj_updated: 'Updated',
+        proj_loading: 'Consulting the archives...',
+        proj_error: 'Scroll not found'
     },
     es: {
         char_class: 'Streamer · Programador · Aventurero',
@@ -71,7 +89,16 @@ const i18n = {
         int_coding:    'Programación',
         int_streaming: 'Streaming',
         int_fantasy:   'Fantasía y RPG',
-        int_openworld: 'Mundo Abierto'
+        int_openworld: 'Mundo Abierto',
+        projects_title: 'Proyectos Actuales',
+        proj_stars: 'estrellas',
+        proj_forks: 'forks',
+        proj_commits: 'commits',
+        proj_issues: 'issues',
+        proj_created: 'Creado',
+        proj_updated: 'Actualizado',
+        proj_loading: 'Consultando los archivos...',
+        proj_error: 'Pergamino no encontrado'
     },
     ja: {
         char_class: 'ストリーマー · プログラマー · 冒険者',
@@ -93,7 +120,16 @@ const i18n = {
         int_coding:    'プログラミング',
         int_streaming: 'ストリーミング',
         int_fantasy:   'ファンタジー & RPG',
-        int_openworld: 'オープンワールド'
+        int_openworld: 'オープンワールド',
+        projects_title: '進行中のプロジェクト',
+        proj_stars: 'スター',
+        proj_forks: 'フォーク',
+        proj_commits: 'コミット',
+        proj_issues: 'イシュー',
+        proj_created: '作成日',
+        proj_updated: '更新日',
+        proj_loading: '古文書を調べています...',
+        proj_error: '巻物が見つかりません'
     },
     fn: {
         char_class: 'ᛊᛏᚱᛖᚨᛗᛖᚱ · ᛈᚱᛟᚷᚱᚨᛗᛗᛖᚱ · ᚨᛞᚹᛖᚾᛏᚢᚱᛖᚱ',
@@ -115,7 +151,16 @@ const i18n = {
         int_coding:    'ᛈᚱᛟᚷᚱᚨᛗᛗᛁᚾᚷ',
         int_streaming: 'ᛊᛏᚱᛖᚨᛗᛁᚾᚷ',
         int_fantasy:   'ᚠᚨᚾᛏᚨᛊᛃ & ᚱᛈᚷ',
-        int_openworld: 'ᛟᛈᛖᚾ ᚹᛟᚱᛚᛞ'
+        int_openworld: 'ᛟᛈᛖᚾ ᚹᛟᚱᛚᛞ',
+        projects_title: 'ᛈᚱᛟᛃᛖᚲᛏᛊ',
+        proj_stars: 'ᛊᛏᚨᚱᛊ',
+        proj_forks: 'ᚠᛟᚱᚲᛊ',
+        proj_commits: 'ᚲᛟᛗᛗᛁᛏᛊ',
+        proj_issues: 'ᛁᛊᛊᚢᛖᛊ',
+        proj_created: 'ᚲᚱᛖᚨᛏᛖᛞ',
+        proj_updated: 'ᚢᛈᛞᚨᛏᛖᛞ',
+        proj_loading: 'ᚲᛟᚾᛊᚢᛚᛏᛁᚾᚷ...',
+        proj_error: 'ᛊᚲᚱᛟᛚᛚ ᚾᛟᛏ ᚠᛟᚢᚾᛞ'
     }
 };
 
@@ -129,6 +174,14 @@ const SOCIALS = [
     { id: 'twitter',   href: 'https://twitter.com/aruta.sh',   platform: 'Twitter / X', handle: '@aruta.sh', icon: '<i class="fab fa-twitter link-card-icon"></i>' },
     { id: 'instagram', href: 'https://instagram.com/aruta_sr', platform: 'Instagram',   handle: 'aruta_sr',  icon: '<i class="fab fa-instagram link-card-icon"></i>' },
     { id: 'github',    href: 'https://github.com/Arutosio',    platform: 'GitHub',      handle: 'Arutosio',  icon: '<i class="fab fa-github link-card-icon"></i>' }
+];
+
+/* ════════════════════════════
+   PROJECTS — just change the slug to swap a repo
+════════════════════════════ */
+const PROJECTS = [
+    'Arutosio/Hina',
+    'Arutosio/AnimeWorldDownloader'
 ];
 
 /* ════════════════════════════
