@@ -1211,6 +1211,24 @@ function updateThemeIcon() {
 }
 
 /* ════════════════════════════
+   EASTER EGG — ARCANE DUEL (5 clicks on ⚜ rune)
+════════════════════════════ */
+(function initDuelTrigger() {
+    let clicks = 0, timer = null;
+    document.addEventListener('click', e => {
+        if (e.target.closest('.magic-circle-frame')) {
+            clicks++;
+            clearTimeout(timer);
+            timer = setTimeout(() => clicks = 0, 3000); // reset after 3s
+            if (clicks >= 7) {
+                clicks = 0;
+                if (typeof ArcaneDuel !== 'undefined') ArcaneDuel.start();
+            }
+        }
+    });
+})();
+
+/* ════════════════════════════
    EASTER EGG — KONAMI CODE
    ↑↑↓↓←→←→BA triggers a golden rune storm
 ════════════════════════════ */
