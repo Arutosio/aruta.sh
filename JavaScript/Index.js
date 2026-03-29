@@ -631,6 +631,106 @@ function buildInterestGrid(lang) {
 }
 
 /* ════════════════════════════
+   PROJECT CARDS (GitHub API)
+════════════════════════════ */
+const LANG_COLORS = {
+    JavaScript: '#f1e05a', TypeScript: '#3178c6', 'C#': '#178600', Python: '#3572A5',
+    Java: '#b07219', Go: '#00ADD8', Rust: '#dea584', Ruby: '#701516', PHP: '#4F5D95',
+    Shell: '#89e051', Groovy: '#4298b8', HTML: '#e34c26', CSS: '#563d7c', Kotlin: '#A97BFF',
+    Swift: '#F05138', Dart: '#00B4AB', Lua: '#000080', C: '#555555', 'C++': '#f34b7d'
+};
+
+let projectCache = null;
+
+async function fetchCommitCount(slug) {
+    // Use per_page=1 and parse Link header to get total commit count
+    const r = await fetch(`https://api.github.com/repos/${slug}/commits?per_page=1`);
+    if (!r.ok) return 0;
+    const link = r.headers.get('Link');
+    if (!link) return 1;
+    const match = link.match(/page=(\d+)>;\s*rel="last"/);
+    return match ? parseInt(match[1], 10) : 1;
+}
+
+async function fetchProjects() {
+    if (projectCache) return projectCache;
+    const results = await Promise.allSettled(
+        PROJECTS.map(async slug => {
+            const [repoRes, commits] = await Promise.all([
+                fetch(`https://api.github.com/repos/${slug}`).then(r => r.ok ? r.json() : Promise.reject(r.status)),
+                fetchCommitCount(slug)
+            ]);
+            repoRes._commits = commits;
+            return repoRes;
+        })
+    );
+    projectCache = results.map((r, i) => r.status === 'fulfilled' ? r.value : { _error: true, _slug: PROJECTS[i] });
+    return projectCache;
+}
+
+function fmtDate(iso, lang) {
+    const loc = lang === 'fn' ? 'en' : lang;
+    return new Date(iso).toLocaleDateString(loc, { year: 'numeric', month: 'short', day: 'numeric' });
+}
+
+function renderProjectCards(repos, lang) {
+    const t = i18n[lang];
+    const grid = document.getElementById('projects-grid');
+    if (!grid) return;
+
+    grid.innerHTML = repos.map(repo => {
+        if (repo._error) {
+            return `<div class="project-card project-card--error">
+                <span class="project-error-icon">⚠</span>
+                <span class="project-error-text">${t.proj_error}: ${repo._slug}</span>
+            </div>`;
+        }
+
+        const langDot = repo.language && LANG_COLORS[repo.language]
+            ? `<span class="proj-lang-dot" style="background:${LANG_COLORS[repo.language]}"></span>`
+            : '';
+        const langName = repo.language || '—';
+        const createdStr = fmtDate(repo.created_at, lang);
+        const updatedStr = fmtDate(repo.pushed_at, lang);
+        const topics = (repo.topics || []).slice(0, 4);
+        const topicsHtml = topics.length
+            ? `<div class="proj-topics">${topics.map(t => `<span class="proj-topic">${t}</span>`).join('')}</div>`
+            : '';
+
+        return `<a href="${repo.html_url}" class="project-card" target="_blank" rel="noopener" aria-label="${repo.name}">
+            <div class="project-header">
+                <i class="fab fa-github project-gh-icon" aria-hidden="true"></i>
+                <span class="project-name">${repo.name}</span>
+                ${repo.archived ? '<span class="proj-badge proj-badge--archived">archived</span>' : ''}
+                ${repo.private ? '<span class="proj-badge proj-badge--private"><i class="fas fa-lock"></i></span>' : ''}
+            </div>
+            <p class="project-desc">${repo.description || '—'}</p>
+            ${topicsHtml}
+            <div class="project-stats">
+                <span class="proj-stat">${langDot} ${langName}</span>
+                <span class="proj-stat"><i class="fas fa-star" aria-hidden="true"></i> ${repo.stargazers_count}</span>
+                <span class="proj-stat"><i class="fas fa-code-branch" aria-hidden="true"></i> ${repo.forks_count}</span>
+                <span class="proj-stat"><i class="fas fa-code-commit" aria-hidden="true"></i> ${repo._commits} ${t.proj_commits}</span>
+                <span class="proj-stat"><i class="fas fa-circle-exclamation" aria-hidden="true"></i> ${repo.open_issues_count} ${t.proj_issues}</span>
+            </div>
+            <div class="project-dates">
+                <span class="proj-date"><i class="fas fa-calendar-plus" aria-hidden="true"></i> ${t.proj_created} ${createdStr}</span>
+                <span class="proj-date"><i class="fas fa-clock" aria-hidden="true"></i> ${t.proj_updated} ${updatedStr}</span>
+            </div>
+        </a>`;
+    }).join('');
+}
+
+async function buildProjectCards(lang) {
+    const grid = document.getElementById('projects-grid');
+    if (!grid) return;
+    const t = i18n[lang];
+    grid.innerHTML = `<div class="project-card project-card--loading"><span class="proj-loading-rune">◈</span> ${t.proj_loading}</div>`;
+    const repos = await fetchProjects();
+    renderProjectCards(repos, lang);
+}
+
+/* ════════════════════════════
    SHOW APP
 ════════════════════════════ */
 function showApp() {
@@ -639,6 +739,7 @@ function showApp() {
     app.classList.add('visible');
     buildLinkCards();
     buildInterestGrid(currentLang);
+    buildProjectCards(currentLang);
     applyTranslations(currentLang);
     startClock();
     initSections();
@@ -765,6 +866,7 @@ function switchLanguage(lang) {
     setActiveLangBtn(lang);
     applyTranslations(lang);
     buildInterestGrid(lang);
+    if (projectCache) renderProjectCards(projectCache, lang);
     typewriterBio(i18n[lang].bio);
 }
 function setActiveLangBtn(lang) {
