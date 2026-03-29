@@ -290,8 +290,8 @@ function initMagicCursor() {
     const el = document.getElementById('magic-cursor');
     if (!el || window.matchMedia('(pointer: coarse)').matches) return;
 
-    // Only hide native cursor after magic cursor is ready
-    document.body.style.cursor = 'none';
+    // Hide native cursor everywhere — the magic dot replaces it
+    document.documentElement.classList.add('magic-cursor-active');
 
     window.addEventListener('mousemove', e => {
         el.style.transform = `translate(${e.clientX}px,${e.clientY}px)`;
@@ -844,6 +844,199 @@ async function buildProjectCards(lang) {
 }
 
 /* ════════════════════════════
+   FLYING LETTERS (drift like runes → assemble into Aruta.sh)
+   Phase 1: letters float/drift in the background like rune particles
+   Phase 2: letters slowly fly to their final position, color shifts to gold
+════════════════════════════ */
+let titleAnimated = false;
+let _flyingRAF = null;
+
+function flyingLettersInit() {
+    const el = document.querySelector('.char-name');
+    if (!el || titleAnimated) return;
+    titleAnimated = true;
+
+    const text = 'Aruta.sh';
+    const isLight = document.documentElement.getAttribute('data-theme') === 'light';
+    const runeColor = isLight ? 'rgb(90, 50, 10)' : 'rgb(110, 142, 251)';
+
+    el.textContent = '';
+    el.style.overflow = 'visible';
+
+    const DRIFT_DURATION = 2500;  // ms letters float before assembling
+    const FLY_DURATION   = 2200;  // ms to fly to final position
+    const FLY_STAGGER    = 180;   // ms between each letter starting to fly
+
+    // Create letter objects with physics
+    const letters = [];
+    for (let i = 0; i < text.length; i++) {
+        const span = document.createElement('span');
+        span.textContent = text[i];
+        span.className = 'fly-letter';
+        span.style.display = 'inline-block';
+        span.style.color = runeColor;
+        span.style.opacity = '0';
+        el.appendChild(span);
+
+        letters.push({
+            el: span,
+            // Scattered position (very far from center)
+            x: (Math.random() - 0.5) * 1200,
+            y: (Math.random() - 0.5) * 800,
+            rot: (Math.random() - 0.5) * 300,
+            // Slow drift velocity (like rune particles)
+            vx: (Math.random() - 0.5) * 0.6,
+            vy: (Math.random() - 0.5) * 0.4,
+            vr: (Math.random() - 0.5) * 0.3,
+            // Wobble
+            wobblePhase: Math.random() * Math.PI * 2,
+            wobbleAmp: 0.15 + Math.random() * 0.25,
+            // State
+            flying: false,
+            landed: false,
+            flyStart: 0,
+            startX: 0, startY: 0, startRot: 0
+        });
+    }
+
+    const t0 = performance.now();
+
+    function tick(now) {
+        const elapsed = now - t0;
+
+        for (let i = 0; i < letters.length; i++) {
+            const L = letters[i];
+
+            // Phase 1: drift like a rune
+            if (!L.flying) {
+                // Fade in during first 600ms
+                const fadeIn = Math.min(1, elapsed / 600);
+                L.el.style.opacity = fadeIn * 0.65;
+
+                // Drift
+                L.wobblePhase += 0.02;
+                L.x += L.vx + Math.sin(L.wobblePhase) * L.wobbleAmp;
+                L.y += L.vy + Math.cos(L.wobblePhase * 0.7) * L.wobbleAmp * 0.6;
+                L.rot += L.vr;
+
+                L.el.style.transform = `translate(${L.x}px, ${L.y}px) rotate(${L.rot}deg) scale(0.75)`;
+
+                // Trigger fly phase after drift duration (staggered per letter)
+                const flyTrigger = DRIFT_DURATION + i * FLY_STAGGER;
+                if (elapsed > flyTrigger) {
+                    L.flying = true;
+                    L.flyStart = now;
+                    L.startX = L.x;
+                    L.startY = L.y;
+                    L.startRot = L.rot;
+                }
+            }
+            // Phase 2: fly to final position
+            else if (!L.landed) {
+                const flyElapsed = now - L.flyStart;
+                // Ease out expo: 1 - 2^(-10t)
+                let t = Math.min(1, flyElapsed / FLY_DURATION);
+                t = 1 - Math.pow(2, -10 * t);
+
+                const cx = L.startX * (1 - t);
+                const cy = L.startY * (1 - t);
+                const cr = L.startRot * (1 - t);
+                const cs = 0.75 + t * 0.25; // scale 0.75 → 1
+                const co = 0.65 + t * 0.35; // opacity 0.65 → 1
+
+                L.el.style.transform = `translate(${cx}px, ${cy}px) rotate(${cr}deg) scale(${cs})`;
+                L.el.style.opacity = co;
+
+                if (flyElapsed >= FLY_DURATION) {
+                    L.landed = true;
+                    L.el.style.transform = '';
+                    L.el.style.opacity = '1';
+                    L.el.style.color = '';
+                    L.el.classList.add('fly-letter-landed');
+                }
+            }
+        }
+
+        // Continue loop until all landed
+        if (letters.some(L => !L.landed)) {
+            _flyingRAF = requestAnimationFrame(tick);
+        } else {
+            _flyingRAF = null;
+        }
+    }
+
+    _flyingRAF = requestAnimationFrame(tick);
+}
+
+/* ════════════════════════════
+   CARD ENTRANCE (CSS-based, smooth)
+════════════════════════════ */
+function revealCards(selector, delay) {
+    const els = document.querySelectorAll(selector);
+    if (!els.length) return;
+
+    els.forEach((el, i) => {
+        el.style.opacity = '0';
+        el.style.transform = 'translateY(24px) scale(0.97)';
+        el.style.transition = 'none';
+
+        // Force reflow then apply transition
+        el.offsetHeight;
+        el.style.transition = `opacity 0.5s cubic-bezier(0.22,1,0.36,1) ${delay + i * 60}ms, transform 0.5s cubic-bezier(0.22,1,0.36,1) ${delay + i * 60}ms`;
+        el.style.opacity = '1';
+        el.style.transform = 'translateY(0) scale(1)';
+    });
+
+    // Clean inline styles after all animations done
+    const totalTime = delay + els.length * 60 + 600;
+    setTimeout(() => {
+        els.forEach(el => {
+            el.style.opacity = '';
+            el.style.transform = '';
+            el.style.transition = '';
+        });
+    }, totalTime);
+}
+
+/* ════════════════════════════
+   VANILLA TILT (3D hover on cards)
+════════════════════════════ */
+function initTilt() {
+    if (typeof VanillaTilt === 'undefined' || window.matchMedia('(pointer: coarse)').matches) return;
+
+    document.querySelectorAll('.interest-card, .link-card').forEach(el => {
+        if (el.vanillaTilt) return; // already init
+        VanillaTilt.init(el, { max: 7, speed: 400, glare: true, 'max-glare': 0.10, scale: 1.02 });
+    });
+
+    document.querySelectorAll('.project-card:not(.project-card--loading):not(.project-card--error)').forEach(el => {
+        if (el.vanillaTilt) return;
+        VanillaTilt.init(el, { max: 5, speed: 400, glare: true, 'max-glare': 0.08 });
+    });
+}
+
+/* ════════════════════════════
+   SECTION ENTRANCE EFFECTS
+════════════════════════════ */
+function animateSectionEntrance(sectionId) {
+    switch (sectionId) {
+        case 'home':
+            flyingLettersInit();
+            break;
+
+        case 'about':
+            revealCards('.interest-card', 200);
+            setTimeout(initTilt, 800);
+            break;
+
+        case 'links':
+            revealCards('.link-card', 100);
+            setTimeout(initTilt, 600);
+            break;
+    }
+}
+
+/* ════════════════════════════
    SHOW APP
 ════════════════════════════ */
 function showApp() {
@@ -857,6 +1050,12 @@ function showApp() {
     startClock();
     initSections();
     initFireflies();
+
+    // Entrance animation for home section
+    setTimeout(() => {
+        animateSectionEntrance('home');
+        initTilt();
+    }, 200);
 }
 
 /* ════════════════════════════
@@ -934,6 +1133,7 @@ function initSections() {
                         bioTyped = true;
                         typewriterBio(i18n[currentLang].bio);
                     }
+                    animateSectionEntrance(id);
                 }, { once: true });
             } else {
                 target.hidden = false;
@@ -941,6 +1141,7 @@ function initSections() {
                     bioTyped = true;
                     typewriterBio(i18n[currentLang].bio);
                 }
+                animateSectionEntrance(id);
             }
         })
     );

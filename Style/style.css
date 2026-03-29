@@ -4,6 +4,9 @@
 
 *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
 
+/* Vanilla Tilt glare overlay */
+.js-tilt-glare { border-radius: inherit; }
+
 /* ══════════════════════════════
    THEME VARIABLES
 ══════════════════════════════ */
@@ -76,7 +79,8 @@ body {
 /* ══════════════════════════════
    MAGIC CURSOR (desktop only)
 ══════════════════════════════ */
-/* cursor:none applied by JS after magic cursor init — see initMagicCursor() */
+/* cursor:none applied by JS class on <html> — see initMagicCursor() */
+html.magic-cursor-active, html.magic-cursor-active * { cursor: none !important; }
 #magic-cursor {
     position: fixed; top: 0; left: 0;
     pointer-events: none; z-index: 9999;
@@ -527,6 +531,24 @@ body {
     text-shadow: 0 0 28px rgba(212,175,55,0.45), 0 2px 6px rgba(0,0,0,0.6);
     transition: color 0.5s;
     animation: titleBreathe 6s ease-in-out infinite;
+    min-height: 1.2em; /* prevent layout shift during flying letters */
+}
+/* Flying letter spans — start with rune glow, transition to gold */
+.fly-letter {
+    will-change: transform, opacity;
+    text-shadow: 0 0 14px rgba(110,142,251,0.8), 0 0 30px rgba(110,142,251,0.4);
+    transition: color 0.6s ease, text-shadow 0.6s ease;
+}
+.fly-letter-landed {
+    color: var(--gold-light) !important;
+    text-shadow: 0 0 20px rgba(212,175,55,0.6), 0 0 40px rgba(167,139,250,0.2);
+}
+[data-theme="light"] .fly-letter {
+    text-shadow: 0 0 14px rgba(90,50,10,0.6), 0 0 30px rgba(90,50,10,0.3);
+}
+[data-theme="light"] .fly-letter-landed {
+    color: var(--gold-light) !important;
+    text-shadow: 0 0 16px rgba(122,78,6,0.5), 0 0 30px rgba(122,78,6,0.2);
 }
 @keyframes titleBreathe {
     0%, 100% {
@@ -603,6 +625,7 @@ body {
     padding: 18px 22px; background: var(--seal-bg);
     border: 1px solid var(--seal-border); border-radius: 6px;
     transition: all 0.25s ease;
+    transform-style: preserve-3d;
 }
 .interest-card:hover {
     border-color: var(--gold); background: rgba(212,175,55,0.08);
@@ -762,6 +785,7 @@ body {
     background: var(--seal-bg); border: 1px solid var(--seal-border);
     border-radius: 6px; padding: 20px 24px;
     transition: all 0.28s ease; position: relative; overflow: hidden;
+    transform-style: preserve-3d;
 }
 .link-card::before {
     content: ''; position: absolute; inset: 0; opacity: 0;
