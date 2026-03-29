@@ -908,3 +908,13 @@ html.magic-cursor-active, html.magic-cursor-active * { cursor: none !important; 
     .magic-circle-frame { width: 160px; height: 160px; }
     .portrait-img-wrap  { width: 108px; height: 108px; }
 }
+
+/* ══════════════════════════════
+   EASTER EGG — Konami rune storm
+══════════════════════════════ */
+@keyframes eggRuneFall {
+    0%   { opacity: 0; transform: translateY(0) rotate(0deg); }
+    10%  { opacity: 0.9; }
+    80%  { opacity: 0.7; }
+    100% { opacity: 0; transform: translateY(110vh) rotate(360deg); }
+}
