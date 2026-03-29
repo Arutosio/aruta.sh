@@ -8,7 +8,7 @@
 ════════════════════════════ */
 let currentLang  = 'it';
 let currentTheme = 'dark';
-let bioTimeout   = null;
+// bioTimeout scoped inside typewriterBio
 
 /* ════════════════════════════
    INIT
@@ -21,15 +21,30 @@ document.addEventListener('DOMContentLoaded', () => {
     currentTheme = savedTheme || (window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark');
 
     document.documentElement.setAttribute('data-theme', currentTheme);
+    document.documentElement.setAttribute('lang', currentLang === 'fn' ? 'en' : currentLang);
     updateThemeIcon();
     setActiveLangBtn(currentLang);
+
+    const yearEl = document.getElementById('footer-year');
+    if (yearEl) yearEl.textContent = new Date().getFullYear();
 
     initRuneParticles();
     initMagicCursor();
     initParallax();
     initClickSpells();
-    initSummonCanvas();
-    runSummoning(() => showApp());
+
+    if (sessionStorage.getItem('aruta_summoned')) {
+        // Skip summoning on repeat visits in same session
+        const overlay = document.getElementById('summon-overlay');
+        if (overlay) overlay.remove();
+        showApp();
+    } else {
+        initSummonCanvas();
+        runSummoning(() => {
+            sessionStorage.setItem('aruta_summoned', '1');
+            showApp();
+        });
+    }
 
     document.getElementById('theme-btn').addEventListener('click', toggleTheme);
     document.getElementById('lang-select').addEventListener('change', e => switchLanguage(e.target.value));
@@ -41,7 +56,7 @@ document.addEventListener('DOMContentLoaded', () => {
 function detectLanguage() {
     const code = (navigator.language || 'en').split('-')[0].toLowerCase();
     if (i18n[code]) return code;
-    const map = { pt:'es', ca:'es', gl:'es', zh:'ja', ko:'ja' };
+    const map = { pt:'es', ca:'es', gl:'es' };
     return map[code] || 'en';
 }
 
@@ -274,6 +289,9 @@ function initRuneParticles() {
 function initMagicCursor() {
     const el = document.getElementById('magic-cursor');
     if (!el || window.matchMedia('(pointer: coarse)').matches) return;
+
+    // Only hide native cursor after magic cursor is ready
+    document.body.style.cursor = 'none';
 
     window.addEventListener('mousemove', e => {
         el.style.transform = `translate(${e.clientX}px,${e.clientY}px)`;
@@ -588,13 +606,13 @@ function runSummoning(onComplete) {
 ════════════════════════════ */
 function buildLinkCards() {
     document.getElementById('link-cards').innerHTML = SOCIALS.map(s =>
-        `<a href="${s.href}" class="link-card ${s.id}" target="_blank" rel="noopener">
+        `<a href="${s.href}" class="link-card ${s.id}" target="_blank" rel="noopener" aria-label="${s.platform} — ${s.handle}">
             ${s.icon}
             <div class="link-card-text">
                 <span class="link-card-platform">${s.platform}</span>
                 <span class="link-card-handle">${s.handle}</span>
             </div>
-            <i class="fas fa-arrow-right link-card-arrow"></i>
+            <i class="fas fa-arrow-right link-card-arrow" aria-hidden="true"></i>
         </a>`
     ).join('');
 }
@@ -719,7 +737,7 @@ function initSections() {
 function typewriterBio(text) {
     const el = document.getElementById('char-bio');
     if (!el) return;
-    if (bioTimeout) clearTimeout(bioTimeout);
+    if (typewriterBio._timeout) clearTimeout(typewriterBio._timeout);
     el.innerHTML = '';
     const cursor = document.createElement('span');
     cursor.className = 'cursor';
@@ -728,7 +746,7 @@ function typewriterBio(text) {
     function type() {
         if (i < text.length) {
             el.insertBefore(document.createTextNode(text.charAt(i++)), cursor);
-            bioTimeout = setTimeout(type, 22);
+            typewriterBio._timeout = setTimeout(type, 22);
         } else {
             setTimeout(() => cursor.remove(), 2500);
         }

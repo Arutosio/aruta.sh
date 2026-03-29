@@ -76,9 +76,7 @@ body {
 /* ══════════════════════════════
    MAGIC CURSOR (desktop only)
 ══════════════════════════════ */
-@media (pointer: fine) {
-    body { cursor: none; }
-}
+/* cursor:none applied by JS after magic cursor init — see initMagicCursor() */
 #magic-cursor {
     position: fixed; top: 0; left: 0;
     pointer-events: none; z-index: 9999;
@@ -218,6 +216,7 @@ body {
     background: radial-gradient(ellipse 80% 50% at center, rgba(167,139,250,0.10) 0%, rgba(167,139,250,0.04) 40%, transparent 70%);
     animation: fogDrift 28s ease-in-out infinite alternate;
     filter: blur(30px);
+    will-change: transform;
 }
 .fog-layer:nth-child(2) {
     width: 220%; height: 50%;
@@ -242,31 +241,9 @@ body {
 [data-theme="light"] .fog-layer:nth-child(3) {
     background: radial-gradient(ellipse 60% 40% at center, rgba(139,28,34,0.05) 0%, rgba(139,28,34,0.015) 35%, transparent 65%);
 }
-.fog-layer:nth-child(4) {
-    width: 180%; height: 40%;
-    bottom: 5%; left: -60%;
-    background: radial-gradient(ellipse 90% 55% at center, rgba(212,175,55,0.05) 0%, transparent 60%);
-    animation: fogDrift4 40s ease-in-out infinite alternate;
-    filter: blur(50px);
-}
-.fog-layer:nth-child(5) {
-    width: 160%; height: 35%;
-    top: 50%; left: 10%;
-    background: radial-gradient(ellipse 75% 50% at center, rgba(167,139,250,0.04) 0%, transparent 55%);
-    animation: fogDrift5 30s ease-in-out infinite alternate;
-    filter: blur(45px);
-}
-[data-theme="light"] .fog-layer:nth-child(4) {
-    background: radial-gradient(ellipse 90% 55% at center, rgba(122,78,6,0.04) 0%, transparent 60%);
-}
-[data-theme="light"] .fog-layer:nth-child(5) {
-    background: radial-gradient(ellipse 75% 50% at center, rgba(139,28,34,0.03) 0%, transparent 55%);
-}
 @keyframes fogDrift  { to { transform: translateX(18%) translateY(-12%); } }
 @keyframes fogDrift2 { to { transform: translateX(-14%) translateY(8%); } }
 @keyframes fogDrift3 { to { transform: translateX(22%) translateY(-15%) scale(1.1); } }
-@keyframes fogDrift4 { to { transform: translateX(25%) translateY(-6%); } }
-@keyframes fogDrift5 { to { transform: translateX(-18%) translateY(10%) scale(1.05); } }
 
 /* ══════════════════════════════
    CLICK SPELL BURST
@@ -554,19 +531,6 @@ body {
 }
 .interest-card:hover {
     border-color: var(--gold); background: rgba(212,175,55,0.08);
-    transform: translateY(-3px); box-shadow: 0 8px 24px var(--card-glow), 0 0 20px var(--card-glow);
-    animation: cardRuneGlow 1.5s ease-in-out infinite alternate;
-}
-@keyframes cardRuneGlow {
-    from { box-shadow: 0 8px 24px var(--card-glow), 0 0 15px var(--card-glow); }
-    to   { box-shadow: 0 8px 28px var(--card-glow), 0 0 30px var(--card-glow), 0 0 50px rgba(167,139,250,0.08); }
-}
-[data-theme="light"] .interest-card:hover {
-    animation: cardRuneGlowLight 1.5s ease-in-out infinite alternate;
-}
-@keyframes cardRuneGlowLight {
-    from { box-shadow: 0 8px 24px var(--card-glow), 0 0 15px var(--card-glow); }
-    to   { box-shadow: 0 8px 28px var(--card-glow), 0 0 30px var(--card-glow), 0 0 50px rgba(139,28,34,0.08); }
 }
 .interest-icon { font-size: 2rem; flex-shrink: 0; line-height: 1; }
 .interest-body { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
@@ -695,6 +659,8 @@ body {
 @media (max-width: 420px) {
     .sec-btn span { display: none; }
     .sec-btn    { font-size: 1rem; padding: 5px 10px; }
+    .sec-btn.active { background: var(--seal-bg); border-color: var(--gold);
+                      box-shadow: 0 0 8px var(--card-glow), 0 2px 0 var(--gold); }
     .char-name  { font-size: 2rem; }
     .hud-rune   { display: none; }         /* decorative rune gone last */
     .magic-circle-frame { width: 240px; height: 240px; }
