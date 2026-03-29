@@ -13,16 +13,16 @@
 :root {
     --bg:          #0c0a1a;
     --bg-grad:     radial-gradient(ellipse at 50% 40%, #1a1035 0%, #0c0a1a 65%);
-    --card-border: rgba(212, 175, 55, 0.30);
-    --card-glow:   rgba(212, 175, 55, 0.08);
-    --gold:        #d4af37;
-    --gold-light:  #f0d060;
+    --card-border: rgba(192, 200, 224, 0.25);
+    --card-glow:   rgba(192, 200, 224, 0.08);
+    --gold:        #c0c8e0;
+    --gold-light:  #dce0f0;
     --purple:      #a78bfa;
-    --text:        #f0e6c8;
-    --text-dim:    #8a7a60;
-    --text-faint:  #5a4d3c;
-    --seal-bg:     rgba(212, 175, 55, 0.07);
-    --seal-border: rgba(212, 175, 55, 0.22);
+    --text:        #e8e4f0;
+    --text-dim:    #8088a8;
+    --text-faint:  #505872;
+    --seal-bg:     rgba(192, 200, 224, 0.06);
+    --seal-border: rgba(192, 200, 224, 0.18);
     --hud-bg:      rgba(6, 4, 16, 0.85);
     --mc-color:    #a78bfa;
     --magic-orb:   rgba(167, 139, 250, 0.55);
@@ -129,7 +129,7 @@ html.magic-cursor-active, html.magic-cursor-active * { cursor: none !important; 
 .magic-bg::after {
     width: 60vmax; height: 60vmax;
     bottom: -22vmax; right: -18vmax;
-    background: radial-gradient(circle, rgba(212,175,55,0.11) 0%, transparent 65%);
+    background: radial-gradient(circle, rgba(192,200,224,0.11) 0%, transparent 65%);
     animation: orbB 22s ease-in-out infinite alternate;
     translate: calc(var(--px) * -0.7) calc(var(--py) * -0.7);
 }
@@ -177,8 +177,8 @@ html.magic-cursor-active, html.magic-cursor-active * { cursor: none !important; 
 }
 .summon-logo {
     font-size: clamp(2.2rem, 7vw, 4rem);
-    font-weight: 900; color: #d4af37; letter-spacing: 0.12em;
-    text-shadow: 0 0 20px rgba(212,175,55,0.8), 0 0 60px rgba(212,175,55,0.4), 0 0 100px rgba(167,139,250,0.3);
+    font-weight: 900; color: #c0c8e0; letter-spacing: 0.12em;
+    text-shadow: 0 0 20px rgba(192,200,224,0.8), 0 0 60px rgba(192,200,224,0.4), 0 0 100px rgba(167,139,250,0.3);
     animation: summonPulse 2s ease-in-out infinite alternate;
 }
 [data-theme="light"] .summon-logo {
@@ -187,8 +187,8 @@ html.magic-cursor-active, html.magic-cursor-active * { cursor: none !important; 
     animation: summonPulseLight 2s ease-in-out infinite alternate;
 }
 @keyframes summonPulse {
-    from { text-shadow: 0 0 20px rgba(212,175,55,0.7), 0 0 50px rgba(212,175,55,0.3); }
-    to   { text-shadow: 0 0 30px rgba(212,175,55,1),   0 0 80px rgba(212,175,55,0.5), 0 0 120px rgba(167,139,250,0.4); }
+    from { text-shadow: 0 0 20px rgba(192,200,224,0.7), 0 0 50px rgba(192,200,224,0.3); }
+    to   { text-shadow: 0 0 30px rgba(192,200,224,1),   0 0 80px rgba(192,200,224,0.5), 0 0 120px rgba(167,139,250,0.4); }
 }
 @keyframes summonPulseLight {
     from { text-shadow: 0 0 18px rgba(122,78,6,0.6), 0 0 45px rgba(122,78,6,0.25); }
@@ -196,7 +196,7 @@ html.magic-cursor-active, html.magic-cursor-active * { cursor: none !important; 
 }
 #summon-log {
     font-style: italic; font-size: clamp(1.1rem, 3vw, 1.4rem);
-    color: #c8a86a; text-align: center;
+    color: #a0a8c0; text-align: center;
     width: min(560px, 88vw); min-height: 120px; line-height: 2.2; opacity: 0.9;
 }
 [data-theme="light"] #summon-log { color: #6b3c18; }
@@ -225,7 +225,7 @@ html.magic-cursor-active, html.magic-cursor-active * { cursor: none !important; 
 .fog-layer:nth-child(2) {
     width: 220%; height: 50%;
     top: -10%; bottom: auto; left: -40%;
-    background: radial-gradient(ellipse 70% 45% at center, rgba(212,175,55,0.07) 0%, rgba(212,175,55,0.02) 40%, transparent 70%);
+    background: radial-gradient(ellipse 70% 45% at center, rgba(192,200,224,0.07) 0%, rgba(192,200,224,0.02) 40%, transparent 70%);
     animation: fogDrift2 35s ease-in-out infinite alternate;
     filter: blur(40px);
 }
@@ -342,8 +342,8 @@ html.magic-cursor-active, html.magic-cursor-active * { cursor: none !important; 
 }
 .sec-btn:hover {
     color: var(--gold);
-    text-shadow: 0 0 10px rgba(212,175,55,0.45);
-    background: rgba(212,175,55,0.06);
+    text-shadow: 0 0 10px rgba(192,200,224,0.45);
+    background: rgba(192,200,224,0.06);
 }
 /* Dark mode active: white pulsing text */
 .sec-btn.active {
@@ -396,8 +396,8 @@ html.magic-cursor-active, html.magic-cursor-active * { cursor: none !important; 
     transition: color 0.25s, background 0.25s, text-shadow 0.25s;
 }
 .lang-select:hover, .lang-select:focus {
-    color: var(--gold); background: rgba(212,175,55,0.06); outline: none;
-    text-shadow: 0 0 10px rgba(212,175,55,0.50), 0 0 20px rgba(212,175,55,0.20);
+    color: var(--gold); background: rgba(192,200,224,0.06); outline: none;
+    text-shadow: 0 0 10px rgba(192,200,224,0.50), 0 0 20px rgba(192,200,224,0.20);
 }
 .lang-select option { background: var(--bg); color: var(--text); }
 
@@ -410,14 +410,14 @@ html.magic-cursor-active, html.magic-cursor-active * { cursor: none !important; 
     transition: color 0.3s, background 0.3s;
 }
 .theme-btn:hover {
-    color: var(--gold); background: rgba(212,175,55,0.06);
+    color: var(--gold); background: rgba(192,200,224,0.06);
 }
 /* Click flash on theme toggle */
 .theme-btn:active { animation: themeClick 0.3s ease-out; }
 @keyframes themeClick {
     0%   { background: transparent; }
-    50%  { background: rgba(212,175,55,0.15); box-shadow: inset 0 0 20px rgba(212,175,55,0.30); }
-    100% { background: rgba(212,175,55,0.06); }
+    50%  { background: rgba(192,200,224,0.15); box-shadow: inset 0 0 20px rgba(192,200,224,0.30); }
+    100% { background: rgba(192,200,224,0.06); }
 }
 
 /* ══════════════════════════════
@@ -485,15 +485,15 @@ html.magic-cursor-active, html.magic-cursor-active * { cursor: none !important; 
 }
 @keyframes portraitPulse {
     from {
-        box-shadow: 0 0 0 4px rgba(212,175,55,0.15),
-                    0 0 18px rgba(212,175,55,0.40),
+        box-shadow: 0 0 0 4px rgba(192,200,224,0.15),
+                    0 0 18px rgba(192,200,224,0.40),
                     0 0 40px rgba(167,139,250,0.28),
                     0 0 70px rgba(167,139,250,0.12),
                     inset 0 0 24px rgba(0,0,0,0.5);
     }
     to {
-        box-shadow: 0 0 0 6px rgba(212,175,55,0.28),
-                    0 0 32px rgba(212,175,55,0.70),
+        box-shadow: 0 0 0 6px rgba(192,200,224,0.28),
+                    0 0 32px rgba(192,200,224,0.70),
                     0 0 65px rgba(167,139,250,0.50),
                     0 0 110px rgba(167,139,250,0.22),
                     inset 0 0 24px rgba(0,0,0,0.5);
@@ -528,7 +528,7 @@ html.magic-cursor-active, html.magic-cursor-active * { cursor: none !important; 
 .char-name {
     font-size: clamp(2.2rem, 5.5vw, 3.6rem); font-weight: 900;
     color: var(--gold-light); letter-spacing: 0.04em; line-height: 1.1; margin-bottom: 10px;
-    text-shadow: 0 0 28px rgba(212,175,55,0.45), 0 2px 6px rgba(0,0,0,0.6);
+    text-shadow: 0 0 28px rgba(192,200,224,0.45), 0 2px 6px rgba(0,0,0,0.6);
     transition: color 0.5s;
     animation: titleBreathe 6s ease-in-out infinite;
     min-height: 1.2em; /* prevent layout shift during flying letters */
@@ -541,7 +541,7 @@ html.magic-cursor-active, html.magic-cursor-active * { cursor: none !important; 
 }
 .fly-letter-landed {
     color: var(--gold-light) !important;
-    text-shadow: 0 0 20px rgba(212,175,55,0.6), 0 0 40px rgba(167,139,250,0.2);
+    text-shadow: 0 0 20px rgba(192,200,224,0.6), 0 0 40px rgba(167,139,250,0.2);
 }
 [data-theme="light"] .fly-letter {
     text-shadow: 0 0 14px rgba(90,50,10,0.6), 0 0 30px rgba(90,50,10,0.3);
@@ -552,13 +552,13 @@ html.magic-cursor-active, html.magic-cursor-active * { cursor: none !important; 
 }
 @keyframes titleBreathe {
     0%, 100% {
-        text-shadow: 0 0 20px rgba(212,175,55,0.35), 0 0 40px rgba(212,175,55,0.15), 0 2px 6px rgba(0,0,0,0.6);
+        text-shadow: 0 0 20px rgba(192,200,224,0.35), 0 0 40px rgba(192,200,224,0.15), 0 2px 6px rgba(0,0,0,0.6);
     }
     33% {
-        text-shadow: 0 0 30px rgba(212,175,55,0.65), 0 0 60px rgba(167,139,250,0.30), 0 0 90px rgba(167,139,250,0.12), 0 2px 6px rgba(0,0,0,0.6);
+        text-shadow: 0 0 30px rgba(192,200,224,0.65), 0 0 60px rgba(167,139,250,0.30), 0 0 90px rgba(167,139,250,0.12), 0 2px 6px rgba(0,0,0,0.6);
     }
     66% {
-        text-shadow: 0 0 25px rgba(167,139,250,0.40), 0 0 50px rgba(212,175,55,0.25), 0 0 80px rgba(212,175,55,0.08), 0 2px 6px rgba(0,0,0,0.6);
+        text-shadow: 0 0 25px rgba(167,139,250,0.40), 0 0 50px rgba(192,200,224,0.25), 0 0 80px rgba(192,200,224,0.08), 0 2px 6px rgba(0,0,0,0.6);
     }
 }
 [data-theme="light"] .char-name {
@@ -628,7 +628,7 @@ html.magic-cursor-active, html.magic-cursor-active * { cursor: none !important; 
     transform-style: preserve-3d;
 }
 .interest-card:hover {
-    border-color: var(--gold); background: rgba(212,175,55,0.08);
+    border-color: var(--gold); background: rgba(192,200,224,0.08);
 }
 .interest-icon { font-size: 2rem; flex-shrink: 0; line-height: 1; }
 .interest-body { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
@@ -645,7 +645,7 @@ html.magic-cursor-active, html.magic-cursor-active * { cursor: none !important; 
 .section-title {
     font-size: clamp(1.3rem, 3.5vw, 1.7rem); font-weight: 700;
     color: var(--gold); letter-spacing: 0.08em; margin-bottom: 18px;
-    text-shadow: 0 0 14px rgba(212,175,55,0.25);
+    text-shadow: 0 0 14px rgba(192,200,224,0.25);
     transition: color 0.5s;
 }
 
@@ -663,7 +663,7 @@ html.magic-cursor-active, html.magic-cursor-active * { cursor: none !important; 
     transition: all 0.28s ease; position: relative;
 }
 .project-card:hover {
-    border-color: var(--gold); background: rgba(212,175,55,0.08);
+    border-color: var(--gold); background: rgba(192,200,224,0.08);
     transform: translateY(-3px);
     box-shadow: 0 8px 24px var(--card-glow), 0 0 18px var(--card-glow);
 }
@@ -849,7 +849,7 @@ html.magic-cursor-active, html.magic-cursor-active * { cursor: none !important; 
 }
 .footer-socials a:hover {
     color: var(--gold); transform: translateY(-2px);
-    text-shadow: 0 0 10px rgba(212,175,55,0.45);
+    text-shadow: 0 0 10px rgba(192,200,224,0.45);
 }
 
 /* ══════════════════════════════

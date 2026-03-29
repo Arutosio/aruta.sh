@@ -522,7 +522,7 @@ function initSummonCanvas() {
         const pulse = 0.82 + 0.18 * Math.sin(t * 0.05);
 
         const light = document.documentElement.getAttribute('data-theme') === 'light';
-        const G = light ? 'rgba(90,50,8,'   : 'rgba(212,175,55,';  // ocra / oro
+        const G = light ? 'rgba(90,50,8,'   : 'rgba(192,200,224,';  // ocra / argento
         const P = light ? 'rgba(139,28,34,' : 'rgba(167,139,250,'; // cremisi / viola
         const E = light ? 'rgba(72,40,8,'   : 'rgba(52,211,153,';  // seppia / smeraldo
 
@@ -880,9 +880,9 @@ function flyingLettersInit() {
 
         letters.push({
             el: span,
-            // Scattered position (very far from center)
-            x: (Math.random() - 0.5) * 1200,
-            y: (Math.random() - 0.5) * 800,
+            // Scattered position — scaled to viewport so letters stay on screen
+            x: (Math.random() - 0.5) * Math.min(window.innerWidth * 0.85, 1200),
+            y: (Math.random() - 0.5) * Math.min(window.innerHeight * 0.7, 800),
             rot: (Math.random() - 0.5) * 300,
             // Slow drift velocity (like rune particles)
             vx: (Math.random() - 0.5) * 0.6,
