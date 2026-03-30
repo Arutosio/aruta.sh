@@ -437,7 +437,7 @@ html.magic-cursor-active, html.magic-cursor-active * { cursor: none !important; 
 .home-tagline { text-align: center; }
 
 .magic-circle-frame {
-    position: relative; width: 400px; height: 400px;
+    position: relative; width: min(500px, 90vw); height: min(500px, 90vw);
     display: flex; align-items: center; justify-content: center;
 }
 /* Ambient glow behind the whole circle */
@@ -455,31 +455,28 @@ html.magic-cursor-active, html.magic-cursor-active * { cursor: none !important; 
 [data-theme="light"] .magic-circle-frame::before { opacity: 0.2; }
 
 .mc-svg {
-    position: absolute; inset: 0; width: 100%; height: 100%;
+    position: absolute; top: 50%; left: 50%;
     color: var(--mc-color);
     filter: drop-shadow(0 0 6px var(--magic-orb)) drop-shadow(0 0 14px var(--magic-orb));
     transition: color 0.5s, filter 0.5s;
+    animation: mcGlowPulse 5s ease-in-out infinite;
+    cursor: grab;
 }
-/* Each ring pulses glow at different rates */
-.mc-outer {
-    animation: mcRotateCW 28s linear infinite, mcGlowPulse 6s ease-in-out infinite;
-}
-.mc-mid {
-    animation: mcRotateCCW 20s linear infinite, mcGlowPulse 4.5s ease-in-out infinite 1s;
-}
-.mc-inner {
-    animation: mcRotateCW 13s linear infinite, mcGlowPulse 3.5s ease-in-out infinite 2s;
-}
-@keyframes mcRotateCW  { to { transform: rotate( 360deg); } }
-@keyframes mcRotateCCW { to { transform: rotate(-360deg); } }
+.mc-svg.mc-dragging { cursor: grabbing; filter: drop-shadow(0 0 14px var(--magic-orb)) drop-shadow(0 0 30px var(--magic-orb)) !important; }
+/* Ring sizes — percentage of frame, so they scale with viewport */
+.mc-outer { width: 100%; height: 100%; margin: -50% 0 0 -50%; animation-delay: 0s; }
+.mc-mid   { width: 86%;  height: 86%;  margin: -43% 0 0 -43%; animation-delay: 1s; }
+.mc-rune  { width: 74%;  height: 74%;  margin: -37% 0 0 -37%; animation-delay: 2s; }
+.mc-inner { width: 64%;  height: 64%;  margin: -32% 0 0 -32%; animation-delay: 3s; }
+@keyframes spinCW { to { transform: rotate(360deg); } }
 @keyframes mcGlowPulse {
     0%, 100% { filter: drop-shadow(0 0 4px var(--magic-orb)) drop-shadow(0 0 10px var(--magic-orb)); opacity: 0.85; }
     50%      { filter: drop-shadow(0 0 10px var(--magic-orb)) drop-shadow(0 0 24px var(--magic-orb)) drop-shadow(0 0 40px var(--magic-orb)); opacity: 1; }
 }
 
 .portrait-img-wrap {
-    position: relative; z-index: 1;
-    width: 268px; height: 268px; border-radius: 50%; overflow: hidden;
+    position: relative; z-index: 5;
+    width: 53%; height: 53%; border-radius: 50%; overflow: hidden;
     border: 2.5px solid var(--gold);
     animation: portraitPulse 4s ease-in-out infinite alternate;
     transition: border-color 0.5s;
@@ -757,7 +754,7 @@ html.magic-cursor-active, html.magic-cursor-active * { cursor: none !important; 
 }
 .proj-loading-rune {
     font-size: 1.4rem; color: var(--gold);
-    animation: mcRotateCW 4s linear infinite;
+    animation: spinCW 4s linear infinite;
     display: inline-block;
 }
 
@@ -857,8 +854,7 @@ html.magic-cursor-active, html.magic-cursor-active * { cursor: none !important; 
    RESPONSIVE
 ══════════════════════════════ */
 @media (max-width: 860px) {
-    .magic-circle-frame { width: 320px; height: 320px; }
-    .portrait-img-wrap  { width: 215px; height: 215px; }
+    /* frame scales via min(500px, 90vw) — no override needed */
     .interest-grid { grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); }
 }
 
@@ -878,7 +874,7 @@ html.magic-cursor-active, html.magic-cursor-active * { cursor: none !important; 
     .hud-date      { display: none; }      /* date gone first */
     .hud-clock-sep { display: none; }
     .hud-time  { font-size: 1rem; }
-    .magic-circle-frame { width: 280px; height: 280px; }
+    /* frame auto-scales */
     .projects-grid { grid-template-columns: 1fr; }
     .proj-stat--date { margin-left: 0; }
     .portrait-img-wrap  { width: 188px; height: 188px; }
@@ -899,14 +895,13 @@ html.magic-cursor-active, html.magic-cursor-active * { cursor: none !important; 
     .sec-btn.active { text-shadow: 0 0 8px rgba(255,255,255,0.5); }
     .char-name  { font-size: 2rem; }
     .hud-rune   { display: none; }         /* decorative rune gone last */
-    .magic-circle-frame { width: 240px; height: 240px; }
+    /* frame auto-scales */
     .portrait-img-wrap  { width: 162px; height: 162px; }
 }
 
 @media (max-height: 500px) and (orientation: landscape) {
     #app { padding: 58px 20px 36px; }
-    .magic-circle-frame { width: 160px; height: 160px; }
-    .portrait-img-wrap  { width: 108px; height: 108px; }
+    .magic-circle-frame { width: min(300px, 80vw); height: min(300px, 80vw); }
 }
 
 /* ══════════════════════════════
