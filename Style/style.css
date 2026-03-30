@@ -446,11 +446,11 @@ html.magic-cursor-active, html.magic-cursor-active * { cursor: none !important; 
     border-radius: 50%;
     background: radial-gradient(circle, var(--magic-orb) 0%, transparent 65%);
     animation: mcAmbientPulse 5s ease-in-out infinite;
-    opacity: 0.35;
+    opacity: 0.20;
 }
 @keyframes mcAmbientPulse {
-    0%, 100% { transform: scale(0.85); opacity: 0.25; }
-    50%      { transform: scale(1.05); opacity: 0.45; }
+    0%, 100% { transform: scale(0.85); opacity: 0.15; }
+    50%      { transform: scale(1.05); opacity: 0.30; }
 }
 [data-theme="light"] .magic-circle-frame::before { opacity: 0.2; }
 
@@ -470,8 +470,8 @@ html.magic-cursor-active, html.magic-cursor-active * { cursor: none !important; 
 .mc-inner { width: 64%;  height: 64%;  margin: -32% 0 0 -32%; animation-delay: 3s; }
 @keyframes spinCW { to { transform: rotate(360deg); } }
 @keyframes mcGlowPulse {
-    0%, 100% { filter: drop-shadow(0 0 4px var(--magic-orb)) drop-shadow(0 0 10px var(--magic-orb)); opacity: 0.85; }
-    50%      { filter: drop-shadow(0 0 10px var(--magic-orb)) drop-shadow(0 0 24px var(--magic-orb)) drop-shadow(0 0 40px var(--magic-orb)); opacity: 1; }
+    0%, 100% { filter: drop-shadow(0 0 3px var(--magic-orb)) drop-shadow(0 0 8px var(--magic-orb)); opacity: 0.75; }
+    50%      { filter: drop-shadow(0 0 6px var(--magic-orb)) drop-shadow(0 0 16px var(--magic-orb)); opacity: 0.95; }
 }
 
 .portrait-img-wrap {
@@ -548,30 +548,13 @@ html.magic-cursor-active, html.magic-cursor-active * { cursor: none !important; 
     color: var(--gold-light) !important;
     text-shadow: 0 0 16px rgba(122,78,6,0.5), 0 0 30px rgba(122,78,6,0.2);
 }
+/* GPU-friendly: static text-shadow + opacity pulse instead of animated text-shadow */
 @keyframes titleBreathe {
-    0%, 100% {
-        text-shadow: 0 0 20px rgba(192,200,224,0.35), 0 0 40px rgba(192,200,224,0.15), 0 2px 6px rgba(0,0,0,0.6);
-    }
-    33% {
-        text-shadow: 0 0 30px rgba(192,200,224,0.65), 0 0 60px rgba(167,139,250,0.30), 0 0 90px rgba(167,139,250,0.12), 0 2px 6px rgba(0,0,0,0.6);
-    }
-    66% {
-        text-shadow: 0 0 25px rgba(167,139,250,0.40), 0 0 50px rgba(192,200,224,0.25), 0 0 80px rgba(192,200,224,0.08), 0 2px 6px rgba(0,0,0,0.6);
-    }
+    0%, 100% { opacity: 0.85; }
+    50%      { opacity: 1; }
 }
 [data-theme="light"] .char-name {
-    animation: titleBreatheLight 6s ease-in-out infinite;
-}
-@keyframes titleBreatheLight {
-    0%, 100% {
-        text-shadow: 0 0 18px rgba(122,78,6,0.30), 0 0 35px rgba(122,78,6,0.10), 0 2px 6px rgba(0,0,0,0.15);
-    }
-    33% {
-        text-shadow: 0 0 28px rgba(122,78,6,0.55), 0 0 55px rgba(139,28,34,0.25), 0 0 80px rgba(139,28,34,0.10), 0 2px 6px rgba(0,0,0,0.15);
-    }
-    66% {
-        text-shadow: 0 0 22px rgba(139,28,34,0.35), 0 0 45px rgba(122,78,6,0.20), 0 0 70px rgba(122,78,6,0.06), 0 2px 6px rgba(0,0,0,0.15);
-    }
+    animation: titleBreathe 6s ease-in-out infinite;
 }
 .char-class {
     font-size: 0.88rem; font-weight: 700; letter-spacing: 0.18em;
@@ -620,13 +603,15 @@ html.magic-cursor-active, html.magic-cursor-active * { cursor: none !important; 
 }
 .interest-card {
     display: flex; align-items: center; gap: 18px;
-    padding: 18px 22px; background: var(--seal-bg);
-    border: 1px solid var(--seal-border); border-radius: 6px;
-    transition: all 0.25s ease;
+    padding: 20px 24px; background: rgba(12,10,30,0.5);
+    border: 1.5px solid var(--seal-border); border-radius: 8px;
+    transition: all 0.28s ease;
     transform-style: preserve-3d;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.25), inset 0 1px 0 rgba(192,200,224,0.04);
 }
 .interest-card:hover {
-    border-color: var(--gold); background: rgba(192,200,224,0.08);
+    border-color: var(--gold); background: rgba(192,200,224,0.06);
+    box-shadow: 0 4px 20px rgba(0,0,0,0.3), 0 0 12px var(--card-glow), inset 0 1px 0 rgba(192,200,224,0.08);
 }
 .interest-icon { font-size: 2rem; flex-shrink: 0; line-height: 1; }
 .interest-body { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
@@ -655,15 +640,16 @@ html.magic-cursor-active, html.magic-cursor-active * { cursor: none !important; 
 
 .project-card {
     display: flex; flex-direction: column; gap: 12px;
-    padding: 22px 24px; background: var(--seal-bg);
-    border: 1px solid var(--seal-border); border-radius: 6px;
+    padding: 22px 24px; background: rgba(12,10,30,0.5);
+    border: 1.5px solid var(--seal-border); border-radius: 8px;
     text-decoration: none; color: var(--text);
     transition: all 0.28s ease; position: relative;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.25), inset 0 1px 0 rgba(192,200,224,0.04);
 }
 .project-card:hover {
-    border-color: var(--gold); background: rgba(192,200,224,0.08);
+    border-color: var(--gold); background: rgba(192,200,224,0.06);
     transform: translateY(-3px);
-    box-shadow: 0 8px 24px var(--card-glow), 0 0 18px var(--card-glow);
+    box-shadow: 0 6px 24px rgba(0,0,0,0.3), 0 0 14px var(--card-glow), inset 0 1px 0 rgba(192,200,224,0.08);
 }
 
 .project-header {
@@ -780,10 +766,11 @@ html.magic-cursor-active, html.magic-cursor-active * { cursor: none !important; 
 .link-card {
     display: flex; align-items: center; gap: 18px;
     text-decoration: none; color: var(--text);
-    background: var(--seal-bg); border: 1px solid var(--seal-border);
-    border-radius: 6px; padding: 20px 24px;
+    background: rgba(12,10,30,0.5); border: 1.5px solid var(--seal-border);
+    border-radius: 8px; padding: 20px 24px;
     transition: all 0.28s ease; position: relative; overflow: hidden;
     transform-style: preserve-3d;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.25), inset 0 1px 0 rgba(192,200,224,0.04);
 }
 .link-card::before {
     content: ''; position: absolute; inset: 0; opacity: 0;
@@ -793,8 +780,9 @@ html.magic-cursor-active, html.magic-cursor-active * { cursor: none !important; 
 .link-card:hover::before { opacity: 0.08; }
 .link-card:hover {
     border-color: var(--pc, var(--gold)); transform: translateY(-4px);
-    box-shadow: 0 10px 30px rgba(0,0,0,0.25), 0 0 18px color-mix(in srgb, var(--pc, var(--gold)) 18%, transparent),
-                0 0 40px color-mix(in srgb, var(--pc, var(--gold)) 8%, transparent);
+    background: rgba(192,200,224,0.05);
+    box-shadow: 0 8px 28px rgba(0,0,0,0.3), 0 0 14px color-mix(in srgb, var(--pc, var(--gold)) 15%, transparent),
+                inset 0 1px 0 rgba(192,200,224,0.08);
     animation: linkCardPulse 2s ease-in-out infinite alternate;
 }
 @keyframes linkCardPulse {

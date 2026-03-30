@@ -11,6 +11,16 @@ let currentTheme = 'dark';
 // bioTimeout scoped inside typewriterBio
 
 /* ════════════════════════════
+   PERFORMANCE: Cached globals (avoid DOM reads in loops)
+════════════════════════════ */
+let _isLight = false;          // cached theme check — updated in toggleTheme
+let _tabVisible = true;        // visibility state — pause animations when hidden
+
+document.addEventListener('visibilitychange', () => {
+    _tabVisible = !document.hidden;
+});
+
+/* ════════════════════════════
    INIT
 ════════════════════════════ */
 document.addEventListener('DOMContentLoaded', () => {
@@ -21,6 +31,7 @@ document.addEventListener('DOMContentLoaded', () => {
     currentTheme = savedTheme || (window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark');
 
     document.documentElement.setAttribute('data-theme', currentTheme);
+    _isLight = currentTheme === 'light';
     document.documentElement.setAttribute('lang', currentLang === 'fn' ? 'en' : currentLang);
     updateThemeIcon();
     setActiveLangBtn(currentLang);
@@ -82,7 +93,7 @@ function initRuneParticles() {
     const trail = [];
 
     function getTheme() {
-        return document.documentElement.getAttribute('data-theme') === 'light' ? THEMES.light : THEMES.dark;
+        return _isLight ? THEMES.light : THEMES.dark;
     }
     function runeColor(c, t) {
         return `rgb(${Math.round(c.br + t*(c.hr-c.br))},${Math.round(c.bg + t*(c.hg-c.bg))},${Math.round(c.bb + t*(c.hb-c.bb))})`;
@@ -145,6 +156,7 @@ function initRuneParticles() {
     const particles = Array.from({ length: 65 }, spawn);
 
     function tick() {
+        if (!_tabVisible) { requestAnimationFrame(tick); return; }
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         frame++;
 
@@ -324,7 +336,7 @@ function initParallax() {
     });
 
     function parallaxTick() {
-        // Smooth interpolation
+        if (!_tabVisible) { requestAnimationFrame(parallaxTick); return; }
         cx += (mx - cx) * 0.04;
         cy += (my - cy) * 0.04;
 
@@ -384,12 +396,15 @@ function initMagicCircleInteraction() {
     const frame = document.querySelector('.magic-circle-frame');
     if (!frame) return;
 
+    // Speeds start at 0 and ramp up to target over 2 seconds
+    const TARGET_SPEEDS = [0.3, 0.5, 0.7, 0.9];
     const rings = [
-        { el: frame.querySelector('.mc-outer'), angle: 0, speed:  0.3, dir:  1 },
-        { el: frame.querySelector('.mc-mid'),   angle: 0, speed:  0.5, dir: -1 },
-        { el: frame.querySelector('.mc-rune'),  angle: 0, speed:  0.7, dir: -1 },
-        { el: frame.querySelector('.mc-inner'), angle: 0, speed:  0.9, dir:  1 }
+        { el: frame.querySelector('.mc-outer'), angle: 0, speed: 0, targetSpeed: 0.3, dir:  1 },
+        { el: frame.querySelector('.mc-mid'),   angle: 0, speed: 0, targetSpeed: 0.5, dir: -1 },
+        { el: frame.querySelector('.mc-rune'),  angle: 0, speed: 0, targetSpeed: 0.7, dir: -1 },
+        { el: frame.querySelector('.mc-inner'), angle: 0, speed: 0, targetSpeed: 0.9, dir:  1 }
     ].filter(r => r.el);
+    const ringsStartTime = performance.now();
 
     let dragging = null;   // which ring index is being dragged
     let dragStart = 0;     // angle at drag start
@@ -540,13 +555,22 @@ function initMagicCircleInteraction() {
 
     // Animation loop — auto-rotate with friction + apply transform
     function tickRings() {
+        if (!_tabVisible) { requestAnimationFrame(tickRings); return; }
+        // Ramp up speed over first 2 seconds
+        const elapsed = performance.now() - ringsStartTime;
+        const rampUp = Math.min(1, elapsed / 2000);
+
         for (const r of rings) {
             if (dragging === null || rings[dragging] !== r) {
+                // During ramp-up, lerp speed toward target
+                if (rampUp < 1 && r.speed < r.targetSpeed) {
+                    r.speed = r.targetSpeed * rampUp;
+                }
                 r.angle += r.speed * r.dir;
                 // Gentle friction — speed decays toward a minimum idle speed
                 const minSpeed = 0.15;
-                if (r.speed > minSpeed) {
-                    r.speed *= 0.998; // very slow decay
+                if (rampUp >= 1 && r.speed > minSpeed) {
+                    r.speed *= 0.998;
                     if (r.speed < minSpeed) r.speed = minSpeed;
                 }
             }
@@ -605,8 +629,18 @@ function initFireflies() {
         pools.delete(btn);
     }
 
+    // Cache button dimensions (avoid reflow in loop)
+    const btnSizes = new Map();
+    function cacheBtnSizes() {
+        document.querySelectorAll('.sec-btn').forEach(btn => {
+            btnSizes.set(btn, { w: btn.offsetWidth, h: btn.offsetHeight });
+        });
+    }
+    window.addEventListener('resize', cacheBtnSizes);
+
     function activateBtn(btn) {
         if (pools.has(btn)) return;
+        cacheBtnSizes(); // cache once on activate
         const flies = [];
         for (let i = 0; i < COUNT; i++) {
             flies.push(spawnFirefly(btn));
@@ -614,42 +648,27 @@ function initFireflies() {
         pools.set(btn, flies);
     }
 
-    // Animation loop
+    // Animation loop — uses cached sizes, no boxShadow recalc
     function tick() {
+        if (!_tabVisible) { requestAnimationFrame(tick); return; }
         pools.forEach((flies, btn) => {
-            const w = btn.offsetWidth;
-            const h = btn.offsetHeight;
+            const size = btnSizes.get(btn) || { w: 80, h: 40 };
             for (const f of flies) {
                 f.angle += f.speed * f.dir;
                 f.wobble += f.wobbleSpeed;
 
-                // Elliptical orbit with wobble
                 const wobbleX = Math.sin(f.wobble) * 3;
                 const wobbleY = Math.cos(f.wobble * 0.7) * 2;
-                const x = f.cx * w + Math.cos(f.angle) * f.rx + wobbleX;
-                const y = f.cy * h + Math.sin(f.angle) * f.ry + wobbleY;
+                const x = f.cx * size.w + Math.cos(f.angle) * f.rx + wobbleX;
+                const y = f.cy * size.h + Math.sin(f.angle) * f.ry + wobbleY;
 
-                // Pulse opacity
+                // Only update position + opacity (GPU-friendly, no boxShadow recalc)
                 f.pulsePhase += 0.03;
                 const pulse = 0.5 + 0.5 * Math.sin(f.pulsePhase);
-                const glow = 2 + pulse * 6;
 
                 f.el.style.left = x + 'px';
                 f.el.style.top  = y + 'px';
                 f.el.style.opacity = 0.35 + pulse * 0.65;
-                // Theme-aware glow
-                const isLight = document.documentElement.getAttribute('data-theme') === 'light';
-                if (isLight) {
-                    f.el.style.boxShadow = `0 0 ${glow}px rgba(122,78,6,0.8), 0 0 ${glow * 2}px rgba(122,78,6,0.4)`;
-                } else {
-                    if (f.orbitDir > 0) { // ~half olive green
-                        f.el.style.background = '#8aaf30';
-                        f.el.style.boxShadow = `0 0 ${glow}px rgba(138,175,48,0.9), 0 0 ${glow * 2}px rgba(120,160,40,0.5), 0 0 ${glow * 3}px rgba(100,140,30,0.25)`;
-                    } else { // ~half pale yellow
-                        f.el.style.background = '#f0e880';
-                        f.el.style.boxShadow = `0 0 ${glow}px rgba(240,232,128,0.9), 0 0 ${glow * 2}px rgba(230,220,100,0.5), 0 0 ${glow * 3}px rgba(200,190,80,0.25)`;
-                    }
-                }
             }
         });
         requestAnimationFrame(tick);
@@ -709,7 +728,7 @@ function initSummonCanvas() {
         const grow  = Math.min(1, t / 90);
         const pulse = 0.82 + 0.18 * Math.sin(t * 0.05);
 
-        const light = document.documentElement.getAttribute('data-theme') === 'light';
+        const light = _isLight;
         const G = light ? 'rgba(90,50,8,'   : 'rgba(192,200,224,';  // ocra / argento
         const P = light ? 'rgba(139,28,34,' : 'rgba(167,139,250,'; // cremisi / viola
         const E = light ? 'rgba(72,40,8,'   : 'rgba(52,211,153,';  // seppia / smeraldo
@@ -1045,8 +1064,7 @@ function flyingLettersInit() {
     titleAnimated = true;
 
     const text = 'Aruta.sh';
-    const isLight = document.documentElement.getAttribute('data-theme') === 'light';
-    const runeColor = isLight ? 'rgb(90, 50, 10)' : 'rgb(110, 142, 251)';
+    const runeColor = _isLight ? 'rgb(90, 50, 10)' : 'rgb(110, 142, 251)';
 
     el.textContent = '';
     el.style.overflow = 'visible';
@@ -1383,6 +1401,7 @@ function setActiveLangBtn(lang) {
 ════════════════════════════ */
 function toggleTheme() {
     currentTheme = currentTheme === 'dark' ? 'light' : 'dark';
+    _isLight = currentTheme === 'light';
     document.documentElement.setAttribute('data-theme', currentTheme);
     localStorage.setItem('aruta_theme', currentTheme);
     updateThemeIcon();
