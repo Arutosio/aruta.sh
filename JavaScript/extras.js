@@ -151,7 +151,10 @@ function initAchievements() {
             document.querySelectorAll('.taskbar-tab').forEach(t => {
                 visited.add(t.dataset.tab);
             });
-            if (visited.size >= 4) unlockAchievement('all_sections');
+            if (visited.size >= 4) {
+                unlockAchievement('all_sections');
+                obs.disconnect();
+            }
         });
         obs.observe(tabsEl, { childList: true });
     }
@@ -176,14 +179,15 @@ function initShareButton() {
         };
 
         if (navigator.share) {
-            try { await navigator.share(shareData); } catch {}
+            try { await navigator.share(shareData); }
+            catch (err) { if (err?.name !== 'AbortError' && window.showToast) showToast('Share failed', 'warning'); }
         } else {
-            // Fallback: copy to clipboard
             try {
                 await navigator.clipboard.writeText(shareData.url);
                 btn.classList.add('share-copied');
                 setTimeout(() => btn.classList.remove('share-copied'), 2000);
-            } catch {}
+                if (window.showToast) showToast('Link copied to clipboard', 'success');
+            } catch { if (window.showToast) showToast('Copy failed', 'error'); }
         }
     });
 }

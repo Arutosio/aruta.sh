@@ -130,3 +130,47 @@ function updateThemeIcon() {
     if (!icon) return;
     icon.className = currentTheme === 'dark' ? 'fas fa-sun' : 'fas fa-moon';
 }
+
+/**
+ * Show a themed toast notification
+ * @param {string} msg — message text
+ * @param {string} [type='info'] — 'info' | 'success' | 'warning' | 'error'
+ * @param {number} [duration=3500] — ms before auto-dismiss
+ */
+const TOAST_ICONS = {
+    info:    'fa-circle-info',
+    success: 'fa-circle-check',
+    warning: 'fa-triangle-exclamation',
+    error:   'fa-circle-xmark',
+};
+function showToast(msg, type = 'info', duration = 3500) {
+    let container = document.getElementById('toast-container');
+    if (!container) {
+        container = document.createElement('div');
+        container.id = 'toast-container';
+        container.className = 'toast-container';
+        document.body.appendChild(container);
+    }
+    const toast = document.createElement('div');
+    toast.className = `toast toast-${type}`;
+    toast.style.setProperty('--toast-duration', `${duration}ms`);
+    toast.innerHTML = `
+        <i class="toast-icon fas ${TOAST_ICONS[type] || TOAST_ICONS.info}" aria-hidden="true"></i>
+        <span class="toast-msg"></span>
+        <button class="toast-close" aria-label="Close">✕</button>
+    `;
+    toast.querySelector('.toast-msg').textContent = msg;
+    container.appendChild(toast);
+    requestAnimationFrame(() => toast.classList.add('toast-show'));
+    const dismiss = () => {
+        if (toast._dismissed) return;
+        toast._dismissed = true;
+        toast.classList.remove('toast-show');
+        toast.classList.add('toast-hide');
+        setTimeout(() => toast.remove(), 400);
+    };
+    toast.querySelector('.toast-close').addEventListener('click', dismiss);
+    setTimeout(dismiss, duration);
+    return toast;
+}
+window.showToast = showToast;

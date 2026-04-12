@@ -424,7 +424,8 @@ function initFireflies() {
     }
     tick();
 
-    // Watch for active button changes
+    // Watch for active button changes (guarded against double init)
+    if (window._fireflyObserver) window._fireflyObserver.disconnect();
     const observer = new MutationObserver(() => {
         document.querySelectorAll('.sec-btn').forEach(btn => {
             if (btn.classList.contains('active')) {
@@ -439,6 +440,7 @@ function initFireflies() {
     document.querySelectorAll('.sec-btn').forEach(btn => {
         observer.observe(btn, { attributes: true, attributeFilter: ['class'] });
     });
+    window._fireflyObserver = observer;
 
     // Activate initial active button
     const initial = document.querySelector('.sec-btn.active');

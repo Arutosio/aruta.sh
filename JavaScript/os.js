@@ -674,9 +674,8 @@ function initSettings() {
             document.querySelectorAll('.settings-color-btn').forEach(b => b.classList.remove('active'));
             const goldBtn = document.querySelector('.settings-color-btn[data-accent="gold"]');
             if (goldBtn) goldBtn.classList.add('active');
-            // Visual feedback
-            resetBtn.textContent = '✓';
-            setTimeout(() => resetBtn.textContent = 'Reset', 1500);
+            const t = (typeof i18n !== 'undefined' && i18n[currentLang]) || {};
+            if (window.showToast) showToast(t.toast_reset_done || 'Settings restored to defaults', 'success');
         });
     }
 
@@ -684,12 +683,13 @@ function initSettings() {
     const wipeBtn = document.getElementById('settings-wipe');
     if (wipeBtn) {
         wipeBtn.addEventListener('click', () => {
-            const msg = (window.translations && window.translations.settings_wipe_confirm)
-                || 'Delete all locally stored data and reload the page?';
-            if (!confirm(msg)) return;
+            const t = (typeof i18n !== 'undefined' && i18n[currentLang]) || {};
+            const confirmMsg = t.settings_wipe_confirm || 'Delete all locally stored data and reload the page?';
+            if (!confirm(confirmMsg)) return;
             try { localStorage.clear(); } catch (e) {}
             try { sessionStorage.clear(); } catch (e) {}
-            location.reload();
+            if (window.showToast) showToast(t.toast_wipe_done || 'Local data wiped. Reloading…', 'warning', 1200);
+            setTimeout(() => location.reload(), 900);
         });
     }
 
@@ -782,6 +782,7 @@ function initSysInfo() {
             panel.style.animation = 'startMenuClose 0.2s ease forwards';
             setTimeout(() => { panel.style.display = 'none'; panel.style.animation = ''; }, 200);
             isOpen = false;
+            if (window._sysInfoInterval) { clearInterval(window._sysInfoInterval); window._sysInfoInterval = null; }
         } else {
             panel.style.display = 'block';
             panel.style.animation = 'startMenuOpen 0.25s cubic-bezier(0.34, 1.56, 0.64, 1) forwards';

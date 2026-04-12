@@ -105,9 +105,14 @@ let projectCache = null;
  * @param {string} slug — repo slug (owner/name)
  * @returns {Promise<number>} total commit count
  */
+function fetchWithTimeout(url, ms = 7000) {
+    const ctrl = new AbortController();
+    const t = setTimeout(() => ctrl.abort(), ms);
+    return fetch(url, { signal: ctrl.signal }).finally(() => clearTimeout(t));
+}
 async function fetchCommitCount(slug) {
     try {
-        const r = await fetch(`https://api.github.com/repos/${slug}/commits?per_page=1`);
+        const r = await fetchWithTimeout(`https://api.github.com/repos/${slug}/commits?per_page=1`);
         if (!r.ok) return 0;
         const link = r.headers.get('Link');
         if (!link) return 1;
@@ -126,7 +131,7 @@ async function fetchProjects() {
         const results = await Promise.allSettled(
             PROJECTS.map(async slug => {
                 const [repoRes, commits] = await Promise.all([
-                    fetch(`https://api.github.com/repos/${slug}`).then(r => r.ok ? r.json() : Promise.reject(r.status)),
+                    fetchWithTimeout(`https://api.github.com/repos/${slug}`).then(r => r.ok ? r.json() : Promise.reject(new Error('GitHub API ' + r.status))),
                     fetchCommitCount(slug)
                 ]);
                 repoRes._commits = commits;
