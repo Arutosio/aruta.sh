@@ -682,12 +682,14 @@ function initSettings() {
     // Wipe button — clears ALL localStorage + sessionStorage and reloads
     const wipeBtn = document.getElementById('settings-wipe');
     if (wipeBtn) {
-        wipeBtn.addEventListener('click', () => {
+        wipeBtn.addEventListener('click', async () => {
             const t = (typeof i18n !== 'undefined' && i18n[currentLang]) || {};
             const confirmMsg = t.settings_wipe_confirm || 'Delete all locally stored data and reload the page?';
-            if (!confirm(confirmMsg)) return;
-            try { localStorage.clear(); } catch (e) {}
-            try { sessionStorage.clear(); } catch (e) {}
+            const confirmFn = window.showConfirm || ((m) => Promise.resolve(confirm(m)));
+            const ok = await confirmFn(confirmMsg, { type: 'warning', okText: t.confirm_wipe || 'Wipe', cancelText: t.confirm_cancel || 'Cancel' });
+            if (!ok) return;
+            try { localStorage.clear(); } catch (e) { console.warn('localStorage.clear failed', e); }
+            try { sessionStorage.clear(); } catch (e) { console.warn('sessionStorage.clear failed', e); }
             if (window.showToast) showToast(t.toast_wipe_done || 'Local data wiped. Reloading…', 'warning', 1200);
             setTimeout(() => location.reload(), 900);
         });

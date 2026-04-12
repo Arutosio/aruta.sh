@@ -5,7 +5,7 @@
 
 /* ────────────────────────────────
  * § RUNE PARTICLES + CURSOR TRAIL (canvas)
- * 65 drifting rune glyphs on a full-screen canvas.
+ * 40 drifting rune glyphs on a full-screen canvas.
  * Features: mouse-proximity glow, magnetic orbit, constellation
  * lines, and a thin cursor trail — all GPU-friendly.
  * ──────────────────────────────── */
@@ -84,7 +84,7 @@ function initRuneParticles() {
         };
     }
 
-    const particles = Array.from({ length: 65 }, spawn);
+    const particles = Array.from({ length: 40 }, spawn);
 
     /** Main animation loop — runs every rAF, pauses when tab hidden */
     function tick() {

@@ -174,3 +174,49 @@ function showToast(msg, type = 'info', duration = 3500) {
     return toast;
 }
 window.showToast = showToast;
+
+/**
+ * Themed confirm dialog — returns a Promise<boolean>
+ * @param {string} msg — confirmation text
+ * @param {object} [opts] — { okText, cancelText, type }
+ */
+function showConfirm(msg, opts = {}) {
+    return new Promise(resolve => {
+        const ok = opts.okText || 'Confirm';
+        const cancel = opts.cancelText || 'Cancel';
+        const type = opts.type || 'warning';
+        const backdrop = document.createElement('div');
+        backdrop.className = 'confirm-backdrop';
+        const modal = document.createElement('div');
+        modal.className = `confirm-modal confirm-${type}`;
+        modal.innerHTML = `
+            <div class="confirm-msg"></div>
+            <div class="confirm-actions">
+                <button class="confirm-btn confirm-cancel"></button>
+                <button class="confirm-btn confirm-ok"></button>
+            </div>
+        `;
+        modal.querySelector('.confirm-msg').textContent = msg;
+        modal.querySelector('.confirm-cancel').textContent = cancel;
+        modal.querySelector('.confirm-ok').textContent = ok;
+        backdrop.appendChild(modal);
+        document.body.appendChild(backdrop);
+        requestAnimationFrame(() => backdrop.classList.add('confirm-show'));
+        const close = (result) => {
+            backdrop.classList.remove('confirm-show');
+            setTimeout(() => backdrop.remove(), 250);
+            document.removeEventListener('keydown', onKey);
+            resolve(result);
+        };
+        const onKey = (e) => {
+            if (e.key === 'Escape') close(false);
+            else if (e.key === 'Enter') close(true);
+        };
+        document.addEventListener('keydown', onKey);
+        modal.querySelector('.confirm-ok').addEventListener('click', () => close(true));
+        modal.querySelector('.confirm-cancel').addEventListener('click', () => close(false));
+        backdrop.addEventListener('click', (e) => { if (e.target === backdrop) close(false); });
+        modal.querySelector('.confirm-ok').focus();
+    });
+}
+window.showConfirm = showConfirm;

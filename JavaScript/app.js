@@ -146,5 +146,6 @@ window.addEventListener('load', () => {
     // Bind taskbar controls
     const themeBtn = document.getElementById('theme-btn');
     if (themeBtn) themeBtn.addEventListener('click', toggleTheme);
-    document.getElementById('lang-select').addEventListener('change', e => switchLanguage(e.target.value));
+    const langSelect = document.getElementById('lang-select');
+    if (langSelect) langSelect.addEventListener('change', e => switchLanguage(e.target.value));
 });
