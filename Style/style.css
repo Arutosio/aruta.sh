@@ -1606,3 +1606,20 @@ html.magic-cursor-active, html.magic-cursor-active * { cursor: none !important; 
     padding: 16px 0; font-size: 0.88rem; color: var(--text-dim);
 }
 .settings-about-logo { font-size: 1.8rem; color: var(--gold); }
+
+/* Reset button */
+.settings-reset-btn {
+    padding: 8px 18px;
+    background: rgba(255, 60, 60, 0.1);
+    border: 1px solid rgba(255, 60, 60, 0.25);
+    border-radius: 6px;
+    color: #ff6b6b;
+    font-family: inherit; font-size: 0.85rem; font-weight: 700;
+    cursor: pointer; letter-spacing: 0.04em;
+    transition: background 0.2s, border-color 0.2s, box-shadow 0.2s;
+}
+.settings-reset-btn:hover {
+    background: rgba(255, 60, 60, 0.2);
+    border-color: rgba(255, 60, 60, 0.4);
+    box-shadow: 0 0 8px rgba(255, 60, 60, 0.15);
+}

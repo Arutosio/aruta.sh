@@ -1713,6 +1713,37 @@ function initSettings() {
             }
         });
     }
+
+    // Reset button
+    const resetBtn = document.getElementById('settings-reset');
+    if (resetBtn) {
+        resetBtn.addEventListener('click', () => {
+            // Clear all settings from localStorage
+            localStorage.removeItem('aruta_theme');
+            localStorage.removeItem('aruta_fontsize');
+            localStorage.removeItem('aruta_accent');
+            localStorage.removeItem('aruta_showdate');
+            localStorage.removeItem('aruta_24h');
+            localStorage.removeItem('aruta_lang');
+            // Reset to defaults
+            document.documentElement.style.fontSize = '100%';
+            document.documentElement.style.setProperty('--gold', '#ffc857');
+            document.documentElement.style.setProperty('--gold-light', '#ffe4a0');
+            // Reset theme to dark
+            if (currentTheme !== 'dark') toggleTheme();
+            // Reset toggles UI
+            if (themeToggle) themeToggle.classList.remove('active');
+            if (fontRange) { fontRange.value = 100; if (fontLabel) fontLabel.textContent = '100%'; }
+            if (dateToggle) { dateToggle.classList.add('active'); if (dateEl) dateEl.style.display = ''; if (dateSep) dateSep.style.display = ''; }
+            if (h24Toggle) { h24Toggle.classList.add('active'); window._use24h = true; }
+            document.querySelectorAll('.settings-color-btn').forEach(b => b.classList.remove('active'));
+            const goldBtn = document.querySelector('.settings-color-btn[data-accent="gold"]');
+            if (goldBtn) goldBtn.classList.add('active');
+            // Visual feedback
+            resetBtn.textContent = '✓';
+            setTimeout(() => resetBtn.textContent = 'Reset', 1500);
+        });
+    }
 }
 
 /* ════════════════════════════
