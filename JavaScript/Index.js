@@ -558,6 +558,14 @@ function initMagicCircleInteraction() {
         }, 3000);
     }
 
+    // Fade in rings + ambient glow after a short delay so CSS doesn't flash on load
+    requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+            rings.forEach(r => r.el.classList.add('mc-ready'));
+            frame.classList.add('mc-frame-ready');
+        });
+    });
+
     // Animation loop — auto-rotate with friction + apply transform
     function tickRings() {
         if (!_tabVisible) { requestAnimationFrame(tickRings); return; }

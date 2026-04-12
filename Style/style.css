@@ -460,8 +460,12 @@ html.magic-cursor-active, html.magic-cursor-active * { cursor: none !important; 
     content: ''; position: absolute; inset: -20%; z-index: -1;
     border-radius: 50%;
     background: radial-gradient(circle, var(--magic-orb) 0%, transparent 65%);
-    animation: mcAmbientPulse 5s ease-in-out infinite;
+    animation: mcAmbientPulse 5s ease-in-out infinite 1.2s;
+    opacity: 0;
+}
+.magic-circle-frame.mc-frame-ready::before {
     opacity: 0.20;
+    transition: opacity 1.2s ease;
 }
 @keyframes mcAmbientPulse {
     0%, 100% { transform: scale(0.85); opacity: 0.15; }
@@ -473,9 +477,13 @@ html.magic-cursor-active, html.magic-cursor-active * { cursor: none !important; 
     position: absolute; top: 50%; left: 50%;
     color: var(--mc-color);
     filter: drop-shadow(0 0 6px var(--magic-orb)) drop-shadow(0 0 14px var(--magic-orb));
-    transition: color 0.5s, filter 0.5s;
+    transition: color 0.5s, filter 0.5s, opacity 1.2s ease;
     animation: mcGlowPulse 5s ease-in-out infinite;
     cursor: grab;
+    opacity: 0;
+}
+.mc-svg.mc-ready {
+    opacity: 1;
 }
 .mc-svg.mc-dragging { cursor: grabbing; filter: drop-shadow(0 0 14px var(--magic-orb)) drop-shadow(0 0 30px var(--magic-orb)) !important; }
 /* Ring sizes — percentage of frame, so they scale with viewport */
