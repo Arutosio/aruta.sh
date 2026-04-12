@@ -84,24 +84,27 @@ function animateSectionEntrance(sectionId) {
  * starts background effects, and either runs the summoning
  * sequence or skips it for repeat visits in the same session.
  * ──────────────────────────────── */
+// Restore theme/font ASAP (DOMContentLoaded) to prevent flash
 document.addEventListener('DOMContentLoaded', () => {
-    // Restore saved font size immediately to avoid flash
     const savedFontSize = localStorage.getItem('aruta_fontsize');
     if (savedFontSize) document.documentElement.style.fontSize = savedFontSize + '%';
 
-    const savedLang  = localStorage.getItem('aruta_lang');
     const savedTheme = localStorage.getItem('aruta_theme');
-
-    currentLang  = (savedLang && i18n[savedLang]) ? savedLang : detectLanguage();
     currentTheme = savedTheme || (window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark');
-
     document.documentElement.setAttribute('data-theme', currentTheme);
     _isLight = currentTheme === 'light';
+});
+
+// Wait for ALL resources (CSS, fonts, images) before initializing
+window.addEventListener('load', () => {
+    const savedLang  = localStorage.getItem('aruta_lang');
+
+    currentLang  = (savedLang && i18n[savedLang]) ? savedLang : detectLanguage();
     document.documentElement.setAttribute('lang', currentLang === 'fn' ? 'en' : currentLang);
     updateThemeIcon();
     setActiveLangBtn(currentLang);
 
-    // Start background effects immediately (visible behind summoning overlay)
+    // Start background effects — CSS is fully loaded now
     initRuneParticles();
     initMagicCursor();
     initParallax();
@@ -125,38 +128,19 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     if (sessionStorage.getItem('aruta_summoned')) {
-        // Repeat visit — wait for full load, then reveal instantly (no summoning)
-        const reveal = () => {
-            const overlay = document.getElementById('summon-overlay');
-            if (overlay) overlay.remove();
-            showApp();
-        };
-        if (document.readyState === 'complete') reveal();
-        else window.addEventListener('load', reveal);
+        // Repeat visit — everything loaded, reveal immediately
+        const overlay = document.getElementById('summon-overlay');
+        if (overlay) overlay.remove();
+        showApp();
     } else {
-        // First visit — summoning plays while resources load in background
+        // First visit — resources already loaded (we're inside window.load)
+        // Play summoning animation then reveal
         initSummonCanvas();
-        let summonDone = false;
-        let loadDone = document.readyState === 'complete';
-
-        const tryReveal = () => {
-            if (summonDone && loadDone) {
-                sessionStorage.setItem('aruta_summoned', '1');
-                fadeOverlayAndReveal();
-            }
-        };
 
         runSummoning(() => {
-            summonDone = true;
-            tryReveal();
+            sessionStorage.setItem('aruta_summoned', '1');
+            fadeOverlayAndReveal();
         });
-
-        if (!loadDone) {
-            window.addEventListener('load', () => {
-                loadDone = true;
-                tryReveal();
-            });
-        }
     }
 
     // Bind taskbar controls
