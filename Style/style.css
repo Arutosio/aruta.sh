@@ -1093,6 +1093,62 @@ html.magic-cursor-active, html.magic-cursor-active * { cursor: none !important; 
 [data-theme="light"] .live-schedule-item { background: rgba(240,232,216,0.4); }
 
 /* ══════════════════════════════
+   STREAM COUNTDOWN
+══════════════════════════════ */
+.live-countdown-wrap {
+    margin-top: 24px; display: flex; flex-direction: column;
+    align-items: center; gap: 6px;
+}
+.live-countdown-label {
+    font-size: 0.85rem; color: var(--text-dim); letter-spacing: 0.1em;
+    text-transform: uppercase;
+}
+.live-countdown {
+    font-size: 1.8rem; font-weight: 900; color: var(--gold);
+    letter-spacing: 0.15em; font-variant-numeric: tabular-nums;
+    text-shadow: 0 0 15px rgba(255,200,87,0.3);
+    animation: countdownPulse 2s ease-in-out infinite;
+}
+@keyframes countdownPulse {
+    0%, 100% { opacity: 0.9; }
+    50% { opacity: 1; text-shadow: 0 0 20px rgba(255,200,87,0.5); }
+}
+
+/* ══════════════════════════════
+   DISCORD WIDGET
+══════════════════════════════ */
+.discord-widget {
+    max-width: 400px; margin: 0 auto;
+    border: 1px solid var(--seal-border); border-radius: 10px;
+    overflow: hidden;
+    box-shadow: 0 4px 24px rgba(0,0,0,0.3);
+}
+.discord-widget iframe {
+    display: block; border: none;
+}
+[data-theme="light"] .discord-widget iframe {
+    filter: sepia(0.1) brightness(1.05);
+}
+
+/* ══════════════════════════════
+   SHARE BUTTON
+══════════════════════════════ */
+.footer-share {
+    color: var(--text-dim); font-size: 1rem;
+    padding: 4px 8px; border: none; background: none;
+    cursor: pointer;
+    transition: color 0.2s, transform 0.2s, text-shadow 0.2s;
+}
+.footer-share:hover {
+    color: var(--gold); transform: translateY(-2px);
+    text-shadow: 0 0 10px rgba(255,200,87,0.4);
+}
+.footer-share.share-copied {
+    color: #53fc18;
+    text-shadow: 0 0 10px rgba(83,252,24,0.4);
+}
+
+/* ══════════════════════════════
    EASTER EGG — Konami rune storm
 ══════════════════════════════ */
 

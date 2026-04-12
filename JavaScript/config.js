@@ -44,7 +44,9 @@ const i18n = {
         live_schedule_title: '✦ Prossimi Rituali ✦',
         live_day_tue: 'Martedì',
         live_day_thu: 'Giovedì',
-        live_day_sat: 'Sabato'
+        live_day_sat: 'Sabato',
+        live_countdown: 'Prossimo rituale tra',
+        discord_title: 'Gilda Arcana'
     },
     en: {
         char_class: 'Streamer · Programmer · Adventurer',
@@ -83,7 +85,9 @@ const i18n = {
         live_schedule_title: '✦ Upcoming Rituals ✦',
         live_day_tue: 'Tuesday',
         live_day_thu: 'Thursday',
-        live_day_sat: 'Saturday'
+        live_day_sat: 'Saturday',
+        live_countdown: 'Next ritual in',
+        discord_title: 'Arcane Guild'
     },
     es: {
         char_class: 'Streamer · Programador · Aventurero',
@@ -122,7 +126,9 @@ const i18n = {
         live_schedule_title: '✦ Próximos Rituales ✦',
         live_day_tue: 'Martes',
         live_day_thu: 'Jueves',
-        live_day_sat: 'Sábado'
+        live_day_sat: 'Sábado',
+        live_countdown: 'Próximo ritual en',
+        discord_title: 'Gremio Arcano'
     },
     ja: {
         char_class: 'ストリーマー · プログラマー · 冒険者',
@@ -161,7 +167,9 @@ const i18n = {
         live_schedule_title: '✦ 次の儀式 ✦',
         live_day_tue: '火曜日',
         live_day_thu: '木曜日',
-        live_day_sat: '土曜日'
+        live_day_sat: '土曜日',
+        live_countdown: '次の儀式まで',
+        discord_title: '秘術のギルド'
     },
     fn: {
         char_class: 'ᛊᛏᚱᛖᚨᛗᛖᚱ · ᛈᚱᛟᚷᚱᚨᛗᛗᛖᚱ · ᚨᛞᚹᛖᚾᛏᚢᚱᛖᚱ',
@@ -200,7 +208,9 @@ const i18n = {
         live_schedule_title: '✦ ᚢᛈᚲᛟᛗᛁᚾᚷ ᚱᛁᛏᚢᚨᛚᛊ ✦',
         live_day_tue: 'ᛏᚢᛖᛊᛞᚨᛃ',
         live_day_thu: 'ᚦᚢᚱᛊᛞᚨᛃ',
-        live_day_sat: 'ᛊᚨᛏᚢᚱᛞᚨᛃ'
+        live_day_sat: 'ᛊᚨᛏᚢᚱᛞᚨᛃ',
+        live_countdown: 'ᚾᛖᚲᛊᛏ ᚱᛁᛏᚢᚨᛚ ᛁᚾ',
+        discord_title: 'ᚨᚱᚲᚨᚾᛖ ᚷᚢᛁᛚᛞ'
     }
 };
 

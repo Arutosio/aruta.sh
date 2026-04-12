@@ -1,0 +1,16 @@
+{
+    "name": "Aruta.sh — Tome of the Wandering Mage",
+    "short_name": "Aruta.sh",
+    "description": "Streamer · Programmer · Adventurer",
+    "start_url": "/",
+    "display": "standalone",
+    "background_color": "#0c0a1a",
+    "theme_color": "#0c0a1a",
+    "icons": [
+        {
+            "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='45' fill='%230c0a1a' stroke='%23ffc857' stroke-width='3'/><text x='50' y='62' text-anchor='middle' font-size='42' fill='%23a78bfa' font-family='serif'>ᚨ</text></svg>",
+            "sizes": "any",
+            "type": "image/svg+xml"
+        }
+    ]
+}

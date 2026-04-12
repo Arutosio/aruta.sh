@@ -1022,6 +1022,94 @@ function initLiveSection() {
 }
 
 /* ════════════════════════════
+   STREAM COUNTDOWN
+════════════════════════════ */
+function initCountdown() {
+    const el = document.getElementById('live-countdown');
+    if (!el) return;
+
+    // Schedule: Tue 21:00, Thu 21:00, Sat 16:00 (CET = UTC+1, CEST = UTC+2)
+    const SCHEDULE = [
+        { day: 2, hour: 21, min: 0 },  // Tuesday
+        { day: 4, hour: 21, min: 0 },  // Thursday
+        { day: 6, hour: 16, min: 0 },  // Saturday
+    ];
+
+    function getNextStream() {
+        const now = new Date();
+        const candidates = [];
+        for (let weekOffset = 0; weekOffset < 2; weekOffset++) {
+            for (const s of SCHEDULE) {
+                const d = new Date(now);
+                d.setDate(d.getDate() + ((s.day - d.getDay() + 7) % 7) + weekOffset * 7);
+                d.setHours(s.hour, s.min, 0, 0);
+                if (d > now) candidates.push(d);
+            }
+        }
+        candidates.sort((a, b) => a - b);
+        return candidates[0] || null;
+    }
+
+    function update() {
+        const next = getNextStream();
+        if (!next) { el.textContent = ''; return; }
+        const diff = next - Date.now();
+        if (diff <= 0) { el.textContent = '\u2726 NOW \u2726'; return; }
+        const days = Math.floor(diff / 86400000);
+        const hrs  = Math.floor((diff % 86400000) / 3600000);
+        const mins = Math.floor((diff % 3600000) / 60000);
+        const secs = Math.floor((diff % 60000) / 1000);
+
+        let text = '';
+        if (days > 0) text += `${days}d `;
+        text += `${String(hrs).padStart(2,'0')}:${String(mins).padStart(2,'0')}:${String(secs).padStart(2,'0')}`;
+        el.textContent = text;
+    }
+
+    update();
+    setInterval(update, 1000);
+}
+
+/* ════════════════════════════
+   SHARE BUTTON
+════════════════════════════ */
+function initShareButton() {
+    const btn = document.getElementById('share-btn');
+    if (!btn) return;
+
+    btn.addEventListener('click', async () => {
+        const shareData = {
+            title: 'Aruta.sh \u2014 The Wandering Mage',
+            text: 'Streamer \u00b7 Programmer \u00b7 Adventurer',
+            url: 'https://aruta.sh'
+        };
+
+        if (navigator.share) {
+            try { await navigator.share(shareData); } catch {}
+        } else {
+            // Fallback: copy to clipboard
+            try {
+                await navigator.clipboard.writeText(shareData.url);
+                btn.classList.add('share-copied');
+                setTimeout(() => btn.classList.remove('share-copied'), 2000);
+            } catch {}
+        }
+    });
+}
+
+/* ════════════════════════════
+   TAB TITLE — LIVE INDICATOR
+════════════════════════════ */
+function updateTabTitle(sectionId) {
+    const base = 'Aruta.sh \u2014 Tome of the Wandering Mage';
+    if (sectionId === 'live') {
+        document.title = '\uD83D\uDD2E Live \u2014 Aruta.sh';
+    } else {
+        document.title = base;
+    }
+}
+
+/* ════════════════════════════
    PROJECT CARDS (GitHub API)
 ════════════════════════════ */
 const LANG_COLORS = {
@@ -1338,10 +1426,13 @@ function showApp() {
     buildLinkCards();
     buildInterestGrid(currentLang);
     initLiveSection();
+    initCountdown();
+    initShareButton();
     buildProjectCards(currentLang);
     applyTranslations(currentLang);
     startClock();
     initSections();
+    updateTabTitle('home');
     initFireflies();
     initMagicCircleInteraction();
 
@@ -1428,6 +1519,7 @@ function initSections() {
                         typewriterBio(i18n[currentLang].bio);
                     }
                     animateSectionEntrance(id);
+                    updateTabTitle(id);
                 }, { once: true });
             } else {
                 target.hidden = false;
@@ -1436,6 +1528,7 @@ function initSections() {
                     typewriterBio(i18n[currentLang].bio);
                 }
                 animateSectionEntrance(id);
+                updateTabTitle(id);
             }
         })
     );
