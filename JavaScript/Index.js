@@ -1933,13 +1933,20 @@ function initWindowManager() {
     const desktop = document.getElementById('desktop');
     if (!desktop) return;
 
-    // Window controls (minimize, close)
+    // Window controls (minimize, maximize, close)
     document.querySelectorAll('.os-window').forEach(win => {
         const id = win.dataset.window;
 
         // Titlebar drag
         const titlebar = win.querySelector('.win-titlebar');
-        if (titlebar) initDrag(win, titlebar);
+        if (titlebar) {
+            initDrag(win, titlebar);
+            // Double-click titlebar to maximize
+            titlebar.addEventListener('dblclick', (e) => {
+                if (e.target.closest('.win-btn')) return;
+                toggleMaximize(win);
+            });
+        }
 
         // Focus on click anywhere in window
         win.addEventListener('mousedown', () => focusWindow(win));
@@ -1949,6 +1956,13 @@ function initWindowManager() {
         if (minBtn) minBtn.addEventListener('click', (e) => {
             e.stopPropagation();
             minimizeWindow(id);
+        });
+
+        // Maximize button
+        const maxBtn = win.querySelector('.win-maximize');
+        if (maxBtn) maxBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            toggleMaximize(win);
         });
 
         // Close button
@@ -2026,11 +2040,17 @@ function openWindow(id) {
     if (!win) return;
 
     if (win.style.display === 'none' || !win.style.display) {
+        // Reset position to centered
+        win.style.position = 'absolute';
         win.style.display = 'flex';
-        // Center with slight random offset to prevent stacking
-        const offset = (Math.random() - 0.5) * 60;
-        win.style.left = '';
-        win.style.top = '';
+        win.style.left = '50%';
+        win.style.top = '50%';
+        win.style.width = '';
+        win.style.height = '';
+        win.style.margin = '';
+        win.style.borderRadius = '';
+        win.classList.remove('win-maximized');
+        const offset = Math.round((Math.random() - 0.5) * 40);
         win.style.transform = `translate(calc(-50% + ${offset}px), calc(-50% + ${offset}px))`;
         win.style.animation = 'windowOpen 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) forwards';
     }
@@ -2089,6 +2109,36 @@ function focusWindow(win) {
     updateActiveTab(win.dataset.window);
 }
 
+function toggleMaximize(win) {
+    if (win.classList.contains('win-maximized')) {
+        // Restore
+        win.classList.remove('win-maximized');
+        win.style.left = win._restoreRect?.left || '';
+        win.style.top = win._restoreRect?.top || '';
+        win.style.width = win._restoreRect?.width || '';
+        win.style.height = win._restoreRect?.height || '';
+        win.style.transform = win._restoreRect?.transform || '';
+        win.style.borderRadius = '';
+    } else {
+        // Save current position for restore
+        win._restoreRect = {
+            left: win.style.left,
+            top: win.style.top,
+            width: win.style.width,
+            height: win.style.height,
+            transform: win.style.transform,
+        };
+        // Maximize
+        win.classList.add('win-maximized');
+        win.style.transform = 'none';
+        win.style.left = '0';
+        win.style.top = '56px'; // below floating taskbar
+        win.style.width = '100vw';
+        win.style.height = 'calc(100vh - 56px)';
+        win.style.borderRadius = '0';
+    }
+}
+
 function initDrag(win, handle) {
     let startX, startY, origX, origY;
     let dragging = false;
@@ -2096,6 +2146,7 @@ function initDrag(win, handle) {
     function onDown(e) {
         // Don't drag if clicking a button
         if (e.target.closest('.win-btn')) return;
+        if (win.classList.contains('win-maximized')) return; // Don't drag maximized windows
 
         dragging = true;
         win.classList.add('win-dragging');
@@ -2105,15 +2156,17 @@ function initDrag(win, handle) {
         startX = touch.clientX;
         startY = touch.clientY;
 
-        // Get current position — if centered, compute actual pixel position first
+        // Get current rendered position
         const rect = win.getBoundingClientRect();
         origX = rect.left;
         origY = rect.top;
 
-        // Switch from centered to absolute positioning
+        // Switch from centered to absolute positioning — use fixed position to match viewport
+        win.style.position = 'fixed';
         win.style.transform = 'none';
         win.style.left = origX + 'px';
         win.style.top = origY + 'px';
+        win.style.margin = '0';
 
         e.preventDefault();
     }
@@ -2149,6 +2202,7 @@ function initDrag(win, handle) {
         if (!dragging) return;
         dragging = false;
         win.classList.remove('win-dragging');
+        // Keep the position as-is (don't reset to absolute centered)
     }
 
     handle.addEventListener('mousedown', onDown);
@@ -2225,12 +2279,31 @@ function switchLanguage(lang) {
     if (!i18n[lang] || lang === currentLang) return;
     currentLang = lang;
     localStorage.setItem('aruta_lang', lang);
-    document.documentElement.setAttribute('lang', lang);
+    document.documentElement.setAttribute('lang', lang === 'fn' ? 'en' : lang);
     setActiveLangBtn(lang);
     applyTranslations(lang);
     buildInterestGrid(lang);
-    if (projectCache) renderProjectCards(projectCache, lang);
+    buildProjectCards(lang);
     typewriterBio(i18n[lang].bio);
+    // Update taskbar tab labels
+    const t = i18n[currentLang];
+    document.querySelectorAll('.taskbar-tab').forEach(tab => {
+        const id = tab.dataset.tab;
+        const meta = WIN_META[id];
+        const labelKey = 'sec_' + id;
+        if (meta && t[labelKey]) {
+            const closeSpan = tab.querySelector('.taskbar-tab-close');
+            tab.innerHTML = `${meta.icon} ${t[labelKey]} `;
+            if (closeSpan) tab.appendChild(closeSpan);
+            else {
+                const cs = document.createElement('span');
+                cs.className = 'taskbar-tab-close';
+                cs.title = 'Close';
+                cs.textContent = '\u2715';
+                tab.appendChild(cs);
+            }
+        }
+    });
 }
 function setActiveLangBtn(lang) {
     const sel = document.getElementById('lang-select');

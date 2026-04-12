@@ -80,7 +80,10 @@
     <header class="taskbar">
         <!-- Left: start button only -->
         <div class="taskbar-left">
-            <button class="taskbar-brand" id="start-btn" title="© 2025 Stefano Aruta" aria-label="Start menu">⚜</button>
+            <button class="taskbar-start" id="start-btn" aria-label="Start menu">
+                <span class="start-icon">⚜</span>
+                <span class="start-text">Start</span>
+            </button>
         </div>
         <!-- Middle: open window tabs -->
         <div class="taskbar-tabs" id="taskbar-tabs">
@@ -255,6 +258,7 @@
                 <span class="win-title">📖 <span data-i18n="sec_about">About</span></span>
                 <div class="win-controls">
                     <button class="win-btn win-minimize" title="Minimize">▬</button>
+                    <button class="win-btn win-maximize" title="Maximize">☐</button>
                     <button class="win-btn win-close" title="Close">✕</button>
                 </div>
             </div>
@@ -275,6 +279,7 @@
                 <span class="win-title">🔮 <span data-i18n="sec_live">Live</span></span>
                 <div class="win-controls">
                     <button class="win-btn win-minimize" title="Minimize">▬</button>
+                    <button class="win-btn win-maximize" title="Maximize">☐</button>
                     <button class="win-btn win-close" title="Close">✕</button>
                 </div>
             </div>
@@ -337,6 +342,7 @@
                 <span class="win-title">🔗 <span data-i18n="sec_links">Links</span></span>
                 <div class="win-controls">
                     <button class="win-btn win-minimize" title="Minimize">▬</button>
+                    <button class="win-btn win-maximize" title="Maximize">☐</button>
                     <button class="win-btn win-close" title="Close">✕</button>
                 </div>
             </div>
@@ -368,6 +374,7 @@
                 <span class="win-title">⚙️ Settings</span>
                 <div class="win-controls">
                     <button class="win-btn win-minimize" title="Minimize">▬</button>
+                    <button class="win-btn win-maximize" title="Maximize">☐</button>
                     <button class="win-btn win-close" title="Close">✕</button>
                 </div>
             </div>
