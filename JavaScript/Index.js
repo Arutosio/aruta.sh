@@ -8,6 +8,7 @@
 ════════════════════════════ */
 let currentLang  = 'it';
 let currentTheme = 'dark';
+const RUNE_SET = 'ᚠᚢᚦᚨᚱᚲᚷᚹᚺᚾᛁᛃᛇᛈᛉᛊᛏᛒᛖᛗᛚᛜᛞᛟᛡᛣᛤᛥᛦ✦⊕⋆◈✧';
 // bioTimeout scoped inside typewriterBio
 
 /* ════════════════════════════
@@ -79,7 +80,7 @@ function initRuneParticles() {
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
 
-    const RUNES   = 'ᚠᚢᚦᚨᚱᚲᚷᚹᚺᚾᛁᛃᛇᛈᛉᛊᛏᛒᛖᛗᛚᛜᛞᛟᛡᛣᛤᛥᛦ✦⊕⋆◈✧';
+    const RUNES   = RUNE_SET;
     // dark:  base #6e8efb (blue) → hot #d0eaff (white-blue near cursor)
     // light: base #5a320a (sepia ink) → hot #bc6c14 (amber candlelight near cursor)
     const THEMES = {
@@ -347,11 +348,11 @@ function initParallax() {
         magicBg.style.setProperty('--px', `${offX * 0.6}px`);
         magicBg.style.setProperty('--py', `${offY * 0.6}px`);
 
-        // Shift rings subtly (they already rotate, we add translation)
-        ring1.style.marginLeft = `calc(min(95vmin, 900px) / -2 + ${offX * 0.3}px)`;
-        ring1.style.marginTop  = `calc(min(95vmin, 900px) / -2 + ${offY * 0.3}px)`;
-        ring2.style.marginLeft = `calc(min(65vmin, 600px) / -2 + ${offX * -0.2}px)`;
-        ring2.style.marginTop  = `calc(min(65vmin, 600px) / -2 + ${offY * -0.2}px)`;
+        // Shift rings subtly via CSS custom properties (avoids layout thrashing)
+        ring1.style.setProperty('--parallax-x', `${offX * 0.3}px`);
+        ring1.style.setProperty('--parallax-y', `${offY * 0.3}px`);
+        ring2.style.setProperty('--parallax-x', `${offX * -0.2}px`);
+        ring2.style.setProperty('--parallax-y', `${offY * -0.2}px`);
 
         requestAnimationFrame(parallaxTick);
     }
@@ -362,7 +363,7 @@ function initParallax() {
    CLICK SPELL BURST
 ════════════════════════════ */
 function initClickSpells() {
-    const RUNES = 'ᚠᚢᚦᚨᚱᚲᚷᚹᚺᚾᛁᛃᛇᛈᛉᛊᛏᛒᛖᛗᛚ✦⊕⋆◈✧';
+    const RUNES = RUNE_SET;
     const BURST_COUNT = 8;
 
     document.addEventListener('click', e => {
@@ -528,7 +529,7 @@ function initMagicCircleInteraction() {
         const rect = frame.getBoundingClientRect();
         const cx = rect.left + rect.width / 2;
         const cy = rect.top + rect.height / 2;
-        const RUNES = 'ᚠᚢᚦᚨᚱᚲᚷᚹᚺᚾᛁᛃᛇᛈᛉᛊᛏᛒᛖᛗᛚ✦⊕⋆◈';
+        const RUNES = RUNE_SET;
 
         for (let i = 0; i < 20; i++) {
             const el = document.createElement('div');
@@ -666,8 +667,7 @@ function initFireflies() {
                 f.pulsePhase += 0.03;
                 const pulse = 0.5 + 0.5 * Math.sin(f.pulsePhase);
 
-                f.el.style.left = x + 'px';
-                f.el.style.top  = y + 'px';
+                f.el.style.transform = `translate(${x}px, ${y}px)`;
                 f.el.style.opacity = 0.35 + pulse * 0.65;
             }
         });
@@ -1181,16 +1181,22 @@ function revealCards(selector, delay) {
     const els = document.querySelectorAll(selector);
     if (!els.length) return;
 
-    els.forEach((el, i) => {
+    // Set initial hidden state without forcing reflow
+    els.forEach(el => {
+        el.style.transition = 'none';
         el.style.opacity = '0';
         el.style.transform = 'translateY(24px) scale(0.97)';
-        el.style.transition = 'none';
+    });
 
-        // Force reflow then apply transition
-        el.offsetHeight;
-        el.style.transition = `opacity 0.5s cubic-bezier(0.22,1,0.36,1) ${delay + i * 60}ms, transform 0.5s cubic-bezier(0.22,1,0.36,1) ${delay + i * 60}ms`;
-        el.style.opacity = '1';
-        el.style.transform = 'translateY(0) scale(1)';
+    // Single rAF to batch the reflow, then apply transitions
+    requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+            els.forEach((el, i) => {
+                el.style.transition = `opacity 0.5s cubic-bezier(0.22,1,0.36,1) ${delay + i * 60}ms, transform 0.5s cubic-bezier(0.22,1,0.36,1) ${delay + i * 60}ms`;
+                el.style.opacity = '1';
+                el.style.transform = 'translateY(0) scale(1)';
+            });
+        });
     });
 
     // Clean inline styles after all animations done
@@ -1453,7 +1459,7 @@ function updateThemeIcon() {
 
     function triggerRuneStorm() {
         eggActive = true;
-        const RUNES = 'ᚠᚢᚦᚨᚱᚲᚷᚹᚺᚾᛁᛃᛇᛈᛉᛊᛏᛒᛖᛗᛚᛜᛞᛟ✦⊕⋆◈✧';
+        const RUNES = RUNE_SET;
         const COUNT = 80;
         const container = document.createElement('div');
         container.style.cssText = 'position:fixed;inset:0;z-index:9998;pointer-events:none;overflow:hidden;';

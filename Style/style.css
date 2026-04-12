@@ -146,11 +146,13 @@ html.magic-cursor-active, html.magic-cursor-active * { cursor: none !important; 
 .bg-ring-1 {
     width: min(95vmin, 900px); height: min(95vmin, 900px);
     margin: calc(min(95vmin, 900px) / -2) 0 0 calc(min(95vmin, 900px) / -2);
+    translate: var(--parallax-x, 0) var(--parallax-y, 0);
     animation: bgRing1 80s linear infinite;
 }
 .bg-ring-2 {
     width: min(65vmin, 600px); height: min(65vmin, 600px);
     margin: calc(min(65vmin, 600px) / -2) 0 0 calc(min(65vmin, 600px) / -2);
+    translate: var(--parallax-x, 0) var(--parallax-y, 0);
     animation: bgRing2 55s linear infinite reverse;
 }
 @keyframes bgRing1 { to { transform: rotate(360deg); } }
@@ -354,6 +356,9 @@ html.magic-cursor-active, html.magic-cursor-active * { cursor: none !important; 
     0%, 100% { text-shadow: 0 0 6px rgba(255,255,255,0.40), 0 0 14px rgba(138,175,48,0.25); }
     50%      { text-shadow: 0 0 12px rgba(255,255,255,0.80), 0 0 28px rgba(138,175,48,0.45), 0 0 50px rgba(200,190,80,0.15); }
 }
+/* Light mode: readable text color for section buttons */
+[data-theme="light"] .sec-btn { color: var(--text-dim); }
+[data-theme="light"] .sec-btn:hover { color: var(--gold); }
 /* Light mode active: gold pulsing */
 [data-theme="light"] .sec-btn.active {
     color: var(--gold);
@@ -366,13 +371,14 @@ html.magic-cursor-active, html.magic-cursor-active * { cursor: none !important; 
 
 /* Firefly particles — white/green in dark, gold in light */
 .firefly {
-    position: absolute; pointer-events: none; z-index: 1;
+    position: absolute; left: 0; top: 0; pointer-events: none; z-index: 1;
     width: 4px; height: 4px; border-radius: 50%;
     background: #8aaf30;
     box-shadow: 0 0 4px #8aaf30, 0 0 8px rgba(138,175,48,0.6), 0 0 14px rgba(120,160,40,0.3);
     /* JS overrides color per firefly: olive green (#8aaf30) or pale yellow (#f0e880) */
     opacity: 0;
     transition: opacity 0.4s;
+    will-change: transform, opacity;
 }
 .firefly.alive { opacity: 1; }
 .firefly.dying { opacity: 0; transition: opacity 0.6s; }
