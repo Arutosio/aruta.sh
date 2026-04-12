@@ -78,7 +78,7 @@
             <nav class="sec-nav" aria-label="Sections">
                 <button class="sec-btn active" data-sec="home">🏰 <span data-i18n="sec_home">Home</span></button>
                 <button class="sec-btn"        data-sec="about">📖 <span data-i18n="sec_about">About</span></button>
-                <button class="sec-btn"        data-sec="arsenal">⚔️ <span data-i18n="sec_arsenal">Arsenal</span></button>
+                <button class="sec-btn"        data-sec="live">🔮 <span data-i18n="sec_live">Live</span></button>
                 <button class="sec-btn"        data-sec="links">🔗 <span data-i18n="sec_links">Links</span></button>
             </nav>
         </div>
@@ -218,11 +218,39 @@
             <div class="projects-grid" id="projects-grid"></div>
         </section>
 
-        <!-- ── SECTION: Arsenal ── -->
-        <section class="page-section" id="sec-arsenal" hidden>
-            <h2 class="section-title" data-i18n="arsenal_title">Arsenale Arcano</h2>
-            <p class="arsenal-desc" data-i18n="arsenal_desc">Le arti magiche padroneggiate nel corso dei viaggi</p>
-            <div class="arsenal-grid" id="arsenal-grid"></div>
+        <!-- ── SECTION: Live ── -->
+        <section class="page-section" id="sec-live" hidden>
+            <h2 class="section-title" data-i18n="live_title">Reame Live</h2>
+            <p class="live-desc" data-i18n="live_desc">Osserva il mago in azione attraverso il portale</p>
+
+            <!-- Platform selector tabs -->
+            <div class="live-tabs">
+                <button class="live-tab active" data-platform="twitch">
+                    <i class="fab fa-twitch"></i> Twitch
+                </button>
+                <button class="live-tab" data-platform="kick">
+                    <i class="fas fa-broadcast-tower"></i> Kick
+                </button>
+                <button class="live-tab" data-platform="youtube">
+                    <i class="fab fa-youtube"></i> YouTube
+                </button>
+            </div>
+
+            <!-- Stream container: player + chat -->
+            <div class="live-container">
+                <div class="live-player" id="live-player">
+                    <!-- iframe injected by JS -->
+                </div>
+                <div class="live-chat" id="live-chat">
+                    <!-- iframe injected by JS -->
+                </div>
+            </div>
+
+            <!-- Offline message -->
+            <div class="live-offline" id="live-offline" style="display: none;">
+                <span class="live-offline-icon" aria-hidden="true">🔮</span>
+                <p class="live-offline-text" data-i18n="live_offline">Il mago non è nel reame... segui per essere avvisato del prossimo rituale.</p>
+            </div>
         </section>
 
         <!-- ── SECTION: Links ── -->

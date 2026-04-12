@@ -962,24 +962,63 @@ function buildInterestGrid(lang) {
     ).join('');
 }
 
-function buildArsenalGrid() {
-    const grid = document.getElementById('arsenal-grid');
-    if (!grid) return;
-    grid.innerHTML = '';
+/* ════════════════════════════
+   LIVE SECTION
+════════════════════════════ */
+const LIVE_PLATFORMS = {
+    twitch: {
+        player: (channel) => `https://player.twitch.tv/?channel=${channel}&parent=${location.hostname}&muted=true`,
+        chat: (channel) => `https://www.twitch.tv/embed/${channel}/chat?parent=${location.hostname}&darkpopout`,
+        channel: 'aruta.sh'
+    },
+    kick: {
+        player: (channel) => `https://player.kick.com/${channel}`,
+        chat: (channel) => `https://kick.com/${channel}/chatroom`,
+        channel: 'aruta_sh'
+    },
+    youtube: {
+        player: (channel) => `https://www.youtube.com/embed/live_stream?channel=${channel}&autoplay=1&mute=1`,
+        chat: (channel) => `https://www.youtube.com/live_chat?v=live_stream&embed_domain=${location.hostname}`,
+        channel: 'UC_CHANNEL_ID'
+    }
+};
 
-    ARSENAL.forEach(skill => {
-        const stars = '✦'.repeat(skill.level) + '✧'.repeat(5 - skill.level);
-        const card = document.createElement('div');
-        card.className = 'arsenal-card';
-        card.innerHTML = `
-            <span class="arsenal-icon">${skill.icon}</span>
-            <div class="arsenal-body">
-                <span class="arsenal-name">${skill.name}</span>
-                <span class="arsenal-level">${stars}</span>
-            </div>
-        `;
-        grid.appendChild(card);
+function initLiveSection() {
+    const tabs = document.querySelectorAll('.live-tab');
+    const playerEl = document.getElementById('live-player');
+    const chatEl = document.getElementById('live-chat');
+
+    if (!tabs.length || !playerEl || !chatEl) return;
+
+    function switchPlatform(platform) {
+        const config = LIVE_PLATFORMS[platform];
+        if (!config) return;
+
+        // Update tabs
+        tabs.forEach(t => t.classList.toggle('active', t.dataset.platform === platform));
+
+        // Update player iframe
+        playerEl.innerHTML = `<iframe
+            src="${config.player(config.channel)}"
+            allowfullscreen
+            allow="autoplay; encrypted-media"
+            title="${platform} player"
+        ></iframe>`;
+
+        // Update chat iframe
+        chatEl.innerHTML = `<iframe
+            src="${config.chat(config.channel)}"
+            title="${platform} chat"
+        ></iframe>`;
+    }
+
+    // Tab click handlers
+    tabs.forEach(tab => {
+        tab.addEventListener('click', () => switchPlatform(tab.dataset.platform));
     });
+
+    // Initialize with Twitch
+    switchPlatform('twitch');
 }
 
 /* ════════════════════════════
@@ -1278,9 +1317,8 @@ function animateSectionEntrance(sectionId) {
             setTimeout(initTilt, 800);
             break;
 
-        case 'arsenal':
-            revealCards('.arsenal-card', 100);
-            setTimeout(initTilt, 600);
+        case 'live':
+            // No special entrance animation needed
             break;
 
         case 'links':
@@ -1299,7 +1337,7 @@ function showApp() {
     app.classList.add('visible');
     buildLinkCards();
     buildInterestGrid(currentLang);
-    buildArsenalGrid();
+    initLiveSection();
     buildProjectCards(currentLang);
     applyTranslations(currentLang);
     startClock();

@@ -652,40 +652,114 @@ html.magic-cursor-active, html.magic-cursor-active * { cursor: none !important; 
 .interest-detail { font-style: italic; font-size: 0.88rem; color: var(--text-dim); transition: color 0.25s; }
 
 /* ══════════════════════════════
-   ARSENAL SECTION
+   LIVE SECTION
 ══════════════════════════════ */
-.arsenal-desc {
+.live-desc {
     font-style: italic; font-size: 1.05rem; color: var(--text-dim);
     letter-spacing: 0.04em; margin-bottom: 24px; transition: color 0.5s;
 }
-.arsenal-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-    gap: 12px;
+.live-tabs {
+    display: flex; gap: 8px; margin-bottom: 20px; flex-wrap: wrap;
 }
-.arsenal-card {
-    display: flex; align-items: center; gap: 14px;
-    padding: 14px 18px; background: rgba(12,10,30,0.5);
-    border: 1px solid var(--seal-border); border-left: 3px solid var(--purple);
-    border-radius: 8px;
+.live-tab {
+    display: flex; align-items: center; gap: 8px;
+    padding: 10px 20px; font-size: 0.9rem; font-weight: 700;
+    letter-spacing: 0.04em;
+    color: var(--text-dim); background: rgba(12,10,30,0.5);
+    border: 1px solid var(--seal-border); border-radius: 8px;
+    cursor: pointer;
     transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
-    transform-style: preserve-3d;
-    box-shadow: 0 2px 12px rgba(0,0,0,0.25), inset 0 1px 0 rgba(255,200,87,0.04);
 }
-.arsenal-card:hover {
-    border-color: var(--gold); background: rgba(255,200,87,0.04);
-    transform: translateY(-4px);
-    box-shadow: 0 8px 24px rgba(0,0,0,0.3), 0 0 12px var(--card-glow);
+.live-tab:hover {
+    color: var(--gold); border-color: var(--gold);
+    background: rgba(255,200,87,0.04);
 }
-.arsenal-icon { font-size: 1.6rem; flex-shrink: 0; line-height: 1; }
-.arsenal-body { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
-.arsenal-name {
-    font-size: 0.9rem; font-weight: 700; color: var(--text);
-    letter-spacing: 0.04em; transition: color 0.2s;
+.live-tab.active {
+    color: var(--gold); border-color: var(--gold);
+    background: rgba(255,200,87,0.08);
+    box-shadow: 0 0 12px rgba(255,200,87,0.1);
 }
-.arsenal-card:hover .arsenal-name { color: var(--gold); }
-.arsenal-level {
-    font-size: 0.75rem; letter-spacing: 0.12em; color: var(--gold); opacity: 0.7;
+.live-tab[data-platform="twitch"].active  { --tab-color: #9146ff; color: #9146ff; border-color: #9146ff; box-shadow: 0 0 12px rgba(145,70,255,0.15); }
+.live-tab[data-platform="kick"].active    { --tab-color: #53fc18; color: #53fc18; border-color: #53fc18; box-shadow: 0 0 12px rgba(83,252,24,0.15); }
+.live-tab[data-platform="youtube"].active { --tab-color: #ff4444; color: #ff4444; border-color: #ff4444; box-shadow: 0 0 12px rgba(255,68,68,0.15); }
+
+.live-container {
+    display: grid;
+    grid-template-columns: 1fr 340px;
+    gap: 16px;
+    min-height: 480px;
+}
+.live-player {
+    position: relative;
+    background: rgba(12,10,30,0.6);
+    border: 1px solid var(--seal-border); border-radius: 10px;
+    overflow: hidden;
+    aspect-ratio: 16 / 9;
+    box-shadow: 0 4px 24px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,200,87,0.04);
+}
+.live-player iframe {
+    position: absolute; inset: 0;
+    width: 100%; height: 100%;
+    border: none; border-radius: 9px;
+}
+.live-chat {
+    background: rgba(12,10,30,0.6);
+    border: 1px solid var(--seal-border); border-radius: 10px;
+    overflow: hidden;
+    min-height: 480px;
+    box-shadow: 0 4px 24px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,200,87,0.04);
+}
+.live-chat iframe {
+    width: 100%; height: 100%;
+    border: none; border-radius: 9px;
+}
+
+/* Offline state */
+.live-offline {
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    padding: 60px 24px; text-align: center;
+    background: rgba(12,10,30,0.4);
+    border: 1px solid var(--seal-border); border-radius: 10px;
+    box-shadow: 0 4px 24px rgba(0,0,0,0.2);
+}
+.live-offline-icon {
+    font-size: 3rem; margin-bottom: 16px;
+    animation: runeFloat 3s ease-in-out infinite alternate;
+}
+.live-offline-text {
+    font-style: italic; font-size: 1.05rem;
+    color: var(--text-dim); max-width: 400px; line-height: 1.7;
+}
+
+/* Light mode adjustments */
+[data-theme="light"] .live-player,
+[data-theme="light"] .live-chat {
+    background: rgba(240,232,216,0.6);
+}
+[data-theme="light"] .live-tab {
+    background: rgba(240,232,216,0.5);
+}
+[data-theme="light"] .live-offline {
+    background: rgba(240,232,216,0.4);
+}
+
+/* Responsive */
+@media (max-width: 860px) {
+    .live-container {
+        grid-template-columns: 1fr;
+    }
+    .live-chat {
+        min-height: 360px;
+    }
+}
+@media (max-width: 500px) {
+    .live-tabs {
+        flex-direction: column;
+    }
+    .live-tab {
+        justify-content: center;
+    }
 }
 
 /* ══════════════════════════════
