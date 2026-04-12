@@ -1,6 +1,26 @@
-/* ════════════════════════════
-   SHOW APP
-════════════════════════════ */
+/* ╔══════════════════════════════════════════════════════════╗
+ * ║  APP.JS — Application Entry Point                       ║
+ * ║  Bootstraps the Arcane OS: restores settings, inits all ║
+ * ║  modules, runs summoning sequence, then shows the app.  ║
+ * ╚══════════════════════════════════════════════════════════╝
+ *
+ * Load order (regular <script> tags, no modules):
+ *   1. config.js  — i18n translations, social links, project slugs
+ *   2. core.js    — state, i18n functions, theme toggle
+ *   3. effects.js — particles, cursor, parallax, spells, fireflies, flying letters
+ *   4. desktop.js — magic circle interaction, summoning canvas + sequence
+ *   5. content.js — link cards, interests, projects, clips, live, countdown, tilt
+ *   6. extras.js  — ambient sound, achievements, share, easter eggs
+ *   7. os.js      — window manager, taskbar, start menu, settings, sysinfo, clock
+ *   8. app.js     — this file (entry point)
+ */
+
+/* ────────────────────────────────
+ * § SHOW APP
+ * Called after summoning completes (or immediately on repeat
+ * visits). Reveals the main app container and initializes
+ * all interactive features.
+ * ──────────────────────────────── */
 function showApp() {
     const app = document.getElementById('app');
     app.classList.remove('hidden');
@@ -31,9 +51,11 @@ function showApp() {
     }, 200);
 }
 
-/* ════════════════════════════
-   SECTION ENTRANCE EFFECTS
-════════════════════════════ */
+/* ────────────────────────────────
+ * § SECTION ENTRANCE EFFECTS
+ * Triggers visual entrance animations when a section/window
+ * is opened. Each section has its own entrance pattern.
+ * ──────────────────────────────── */
 function animateSectionEntrance(sectionId) {
     switch (sectionId) {
         case 'home':
@@ -56,9 +78,12 @@ function animateSectionEntrance(sectionId) {
     }
 }
 
-/* ════════════════════════════
-   INIT
-════════════════════════════ */
+/* ────────────────────────────────
+ * § INIT — DOMContentLoaded
+ * Restores saved settings (font size, language, theme),
+ * starts background effects, and either runs the summoning
+ * sequence or skips it for repeat visits in the same session.
+ * ──────────────────────────────── */
 document.addEventListener('DOMContentLoaded', () => {
     // Restore saved font size immediately to avoid flash
     const savedFontSize = localStorage.getItem('aruta_fontsize');
@@ -76,6 +101,7 @@ document.addEventListener('DOMContentLoaded', () => {
     updateThemeIcon();
     setActiveLangBtn(currentLang);
 
+    // Start background effects immediately (visible behind summoning overlay)
     initRuneParticles();
     initMagicCursor();
     initParallax();
@@ -94,6 +120,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    // Bind taskbar controls
     const themeBtn = document.getElementById('theme-btn');
     if (themeBtn) themeBtn.addEventListener('click', toggleTheme);
     document.getElementById('lang-select').addEventListener('change', e => switchLanguage(e.target.value));

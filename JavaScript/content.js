@@ -1,6 +1,15 @@
-/* ════════════════════════════
-   BUILDERS
-════════════════════════════ */
+/* ╔══════════════════════════════════════════════════════════╗
+ * ║  CONTENT — Cards, Projects, Clips, Live, Countdown     ║
+ * ║  All dynamic content builders and the live section      ║
+ * ╚══════════════════════════════════════════════════════════╝ */
+
+/* ────────────────────────────────
+ * § LINK CARDS
+ * Renders social link cards from the SOCIALS array in config.js.
+ * Each card has an icon, platform name, handle, and hover arrow.
+ * ──────────────────────────────── */
+
+/** Build and inject social link cards into #link-cards */
 function buildLinkCards() {
     document.getElementById('link-cards').innerHTML = SOCIALS.map(s =>
         `<a href="${s.href}" class="link-card ${s.id}" target="_blank" rel="noopener" aria-label="${s.platform} — ${s.handle}">
@@ -14,6 +23,16 @@ function buildLinkCards() {
     ).join('');
 }
 
+/* ────────────────────────────────
+ * § INTEREST GRID
+ * Renders the interest cards (gaming, anime, coding, etc.)
+ * from the INTERESTS array with translated names.
+ * ──────────────────────────────── */
+
+/**
+ * Build and inject interest cards into #interest-grid
+ * @param {string} lang — current language code
+ */
 function buildInterestGrid(lang) {
     const t = i18n[lang];
     document.getElementById('interest-grid').innerHTML = INTERESTS.map(item =>
@@ -27,9 +46,14 @@ function buildInterestGrid(lang) {
     ).join('');
 }
 
-/* ════════════════════════════
-   CLIP GALLERY
-════════════════════════════ */
+/* ────────────────────────────────
+ * § CLIP GALLERY
+ * Lazy-loading clip embed gallery. Shows placeholder cards
+ * that load the actual iframe only on click (saves bandwidth).
+ * Supports Twitch clips and YouTube videos.
+ * ──────────────────────────────── */
+
+/** Build clip gallery cards with lazy iframe loading */
 function buildClipGallery() {
     const grid = document.getElementById('clips-grid');
     if (!grid || !CLIPS || !CLIPS.length) return;
@@ -41,7 +65,7 @@ function buildClipGallery() {
         card.innerHTML = `
             <div class="clip-embed">
                 <div class="clip-placeholder" data-clip-id="${clip.embedId}" data-platform="${clip.platform}">
-                    <span class="clip-play-icon">▶</span>
+                    <span class="clip-play-icon">\u25B6</span>
                     <span class="clip-title">${clip.title}</span>
                 </div>
             </div>
@@ -59,9 +83,14 @@ function buildClipGallery() {
     });
 }
 
-/* ════════════════════════════
-   PROJECT CARDS (GitHub API)
-════════════════════════════ */
+/* ────────────────────────────────
+ * § PROJECT CARDS (GitHub API)
+ * Fetches repo data from the GitHub API for each slug in the
+ * PROJECTS array (config.js). Shows stars, forks, commit count,
+ * language, topics, and dates. Caches results after first fetch.
+ * ──────────────────────────────── */
+
+/** Language → dot color mapping for project cards */
 const LANG_COLORS = {
     JavaScript: '#f1e05a', TypeScript: '#3178c6', 'C#': '#178600', Python: '#3572A5',
     Java: '#b07219', Go: '#00ADD8', Rust: '#dea584', Ruby: '#701516', PHP: '#4F5D95',
@@ -71,8 +100,12 @@ const LANG_COLORS = {
 
 let projectCache = null;
 
+/**
+ * Fetch total commit count for a repo using the Link header trick
+ * @param {string} slug — repo slug (owner/name)
+ * @returns {Promise<number>} total commit count
+ */
 async function fetchCommitCount(slug) {
-    // Use per_page=1 and parse Link header to get total commit count
     const r = await fetch(`https://api.github.com/repos/${slug}/commits?per_page=1`);
     if (!r.ok) return 0;
     const link = r.headers.get('Link');
@@ -81,6 +114,10 @@ async function fetchCommitCount(slug) {
     return match ? parseInt(match[1], 10) : 1;
 }
 
+/**
+ * Fetch all project data in parallel, caching results
+ * @returns {Promise<Array>} array of repo objects (or error markers)
+ */
 async function fetchProjects() {
     if (projectCache) return projectCache;
     const results = await Promise.allSettled(
@@ -97,11 +134,22 @@ async function fetchProjects() {
     return projectCache;
 }
 
+/**
+ * Format an ISO date string for display
+ * @param {string} iso — ISO date string
+ * @param {string} lang — language code for locale
+ * @returns {string} formatted date
+ */
 function fmtDate(iso, lang) {
     const loc = lang === 'fn' ? 'en' : lang;
     return new Date(iso).toLocaleDateString(loc, { year: 'numeric', month: 'short', day: 'numeric' });
 }
 
+/**
+ * Render project cards HTML into #projects-grid
+ * @param {Array} repos — array of repo data objects
+ * @param {string} lang — current language code
+ */
 function renderProjectCards(repos, lang) {
     const t = i18n[lang];
     const grid = document.getElementById('projects-grid');
@@ -110,7 +158,7 @@ function renderProjectCards(repos, lang) {
     grid.innerHTML = repos.map(repo => {
         if (repo._error) {
             return `<div class="project-card project-card--error">
-                <span class="project-error-icon">⚠</span>
+                <span class="project-error-icon">\u26A0</span>
                 <span class="project-error-text">${t.proj_error}: ${repo._slug}</span>
             </div>`;
         }
@@ -118,7 +166,7 @@ function renderProjectCards(repos, lang) {
         const langDot = repo.language && LANG_COLORS[repo.language]
             ? `<span class="proj-lang-dot" style="background:${LANG_COLORS[repo.language]}"></span>`
             : '';
-        const langName = repo.language || '—';
+        const langName = repo.language || '\u2014';
         const createdStr = fmtDate(repo.created_at, lang);
         const updatedStr = fmtDate(repo.pushed_at, lang);
         const topics = (repo.topics || []).slice(0, 4);
@@ -133,7 +181,7 @@ function renderProjectCards(repos, lang) {
                 ${repo.archived ? '<span class="proj-badge proj-badge--archived">archived</span>' : ''}
                 ${repo.private ? '<span class="proj-badge proj-badge--private"><i class="fas fa-lock"></i></span>' : ''}
             </div>
-            <p class="project-desc">${repo.description || '—'}</p>
+            <p class="project-desc">${repo.description || '\u2014'}</p>
             ${topicsHtml}
             <div class="project-stats">
                 <span class="proj-stat">${langDot} ${langName}</span>
@@ -150,18 +198,31 @@ function renderProjectCards(repos, lang) {
     }).join('');
 }
 
+/**
+ * Build project cards — shows loading state, fetches data, then renders
+ * @param {string} lang — current language code
+ */
 async function buildProjectCards(lang) {
     const grid = document.getElementById('projects-grid');
     if (!grid) return;
     const t = i18n[lang];
-    grid.innerHTML = `<div class="project-card project-card--loading"><span class="proj-loading-rune">◈</span> ${t.proj_loading}</div>`;
+    grid.innerHTML = `<div class="project-card project-card--loading"><span class="proj-loading-rune">\u25C8</span> ${t.proj_loading}</div>`;
     const repos = await fetchProjects();
     renderProjectCards(repos, lang);
 }
 
-/* ════════════════════════════
-   CARD ENTRANCE (CSS-based, smooth)
-════════════════════════════ */
+/* ────────────────────────────────
+ * § CARD ENTRANCE (CSS-based, smooth)
+ * Staggered fade-in + slide-up animation for card grids.
+ * Uses double-rAF to batch reflow, then applies CSS transitions.
+ * Cleans inline styles after animation completes.
+ * ──────────────────────────────── */
+
+/**
+ * Reveal cards with staggered entrance animation
+ * @param {string} selector — CSS selector for cards
+ * @param {number} delay — initial delay in ms
+ */
 function revealCards(selector, delay) {
     const els = document.querySelectorAll(selector);
     if (!els.length) return;
@@ -195,14 +256,18 @@ function revealCards(selector, delay) {
     }, totalTime);
 }
 
-/* ════════════════════════════
-   VANILLA TILT (3D hover on cards)
-════════════════════════════ */
+/* ────────────────────────────────
+ * § VANILLA TILT (3D hover on cards)
+ * Initializes VanillaTilt.js on interest cards, link cards,
+ * project cards, and the portrait image. Skipped on touch devices.
+ * ──────────────────────────────── */
+
+/** Initialize 3D tilt hover effect on card elements */
 function initTilt() {
     if (typeof VanillaTilt === 'undefined' || window.matchMedia('(pointer: coarse)').matches) return;
 
     document.querySelectorAll('.interest-card, .link-card').forEach(el => {
-        if (el.vanillaTilt) return; // already init
+        if (el.vanillaTilt) return;
         VanillaTilt.init(el, { max: 7, speed: 400, glare: true, 'max-glare': 0.10, scale: 1.02 });
     });
 
@@ -215,4 +280,118 @@ function initTilt() {
     if (portrait && !portrait.vanillaTilt) {
         VanillaTilt.init(portrait, { max: 8, speed: 600, glare: true, 'max-glare': 0.12, scale: 1.03 });
     }
+}
+
+/* ────────────────────────────────
+ * § LIVE SECTION
+ * Multi-platform live streaming embed with Twitch, Kick, and
+ * YouTube tabs. Switches player and chat iframes on tab click.
+ * ──────────────────────────────── */
+
+/** Platform configuration for live embeds */
+const LIVE_PLATFORMS = {
+    twitch: {
+        player: (channel) => `https://player.twitch.tv/?channel=${channel}&parent=${location.hostname}&muted=true`,
+        chat: (channel) => `https://www.twitch.tv/embed/${channel}/chat?parent=${location.hostname}&darkpopout`,
+        channel: 'aruta.sh'
+    },
+    kick: {
+        player: (channel) => `https://player.kick.com/${channel}`,
+        chat: (channel) => `https://kick.com/${channel}/chatroom`,
+        channel: 'aruta_sh'
+    },
+    youtube: {
+        player: (channel) => `https://www.youtube.com/embed/live_stream?channel=${channel}&autoplay=1&mute=1`,
+        chat: (channel) => `https://www.youtube.com/live_chat?v=live_stream&embed_domain=${location.hostname}`,
+        channel: 'UC_CHANNEL_ID'
+    }
+};
+
+/** Initialize live section platform tabs and iframe switching */
+function initLiveSection() {
+    const tabs = document.querySelectorAll('.live-tab');
+    const playerEl = document.getElementById('live-player');
+    const chatEl = document.getElementById('live-chat');
+
+    if (!tabs.length || !playerEl || !chatEl) return;
+
+    function switchPlatform(platform) {
+        const config = LIVE_PLATFORMS[platform];
+        if (!config) return;
+
+        tabs.forEach(t => t.classList.toggle('active', t.dataset.platform === platform));
+
+        playerEl.innerHTML = `<iframe
+            src="${config.player(config.channel)}"
+            allowfullscreen
+            allow="autoplay; encrypted-media"
+            title="${platform} player"
+        ></iframe>`;
+
+        chatEl.innerHTML = `<iframe
+            src="${config.chat(config.channel)}"
+            title="${platform} chat"
+        ></iframe>`;
+    }
+
+    tabs.forEach(tab => {
+        tab.addEventListener('click', () => switchPlatform(tab.dataset.platform));
+    });
+
+    switchPlatform('twitch');
+}
+
+/* ────────────────────────────────
+ * § STREAM COUNTDOWN
+ * Counts down to the next scheduled stream based on a weekly
+ * schedule (Tue 21:00, Thu 21:00, Sat 16:00 CET).
+ * Updates every second.
+ * ──────────────────────────────── */
+
+/** Initialize the stream countdown timer */
+function initCountdown() {
+    const el = document.getElementById('live-countdown');
+    if (!el) return;
+
+    // Schedule: Tue 21:00, Thu 21:00, Sat 16:00 (CET = UTC+1, CEST = UTC+2)
+    const SCHEDULE = [
+        { day: 2, hour: 21, min: 0 },  // Tuesday
+        { day: 4, hour: 21, min: 0 },  // Thursday
+        { day: 6, hour: 16, min: 0 },  // Saturday
+    ];
+
+    /** Find the next upcoming stream time */
+    function getNextStream() {
+        const now = new Date();
+        const candidates = [];
+        for (let weekOffset = 0; weekOffset < 2; weekOffset++) {
+            for (const s of SCHEDULE) {
+                const d = new Date(now);
+                d.setDate(d.getDate() + ((s.day - d.getDay() + 7) % 7) + weekOffset * 7);
+                d.setHours(s.hour, s.min, 0, 0);
+                if (d > now) candidates.push(d);
+            }
+        }
+        candidates.sort((a, b) => a - b);
+        return candidates[0] || null;
+    }
+
+    function update() {
+        const next = getNextStream();
+        if (!next) { el.textContent = ''; return; }
+        const diff = next - Date.now();
+        if (diff <= 0) { el.textContent = '\u2726 NOW \u2726'; return; }
+        const days = Math.floor(diff / 86400000);
+        const hrs  = Math.floor((diff % 86400000) / 3600000);
+        const mins = Math.floor((diff % 3600000) / 60000);
+        const secs = Math.floor((diff % 60000) / 1000);
+
+        let text = '';
+        if (days > 0) text += `${days}d `;
+        text += `${String(hrs).padStart(2,'0')}:${String(mins).padStart(2,'0')}:${String(secs).padStart(2,'0')}`;
+        el.textContent = text;
+    }
+
+    update();
+    setInterval(update, 1000);
 }

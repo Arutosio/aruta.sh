@@ -1,0 +1,10 @@
+/* ╔══════════════════════════════════════════════════════════╗
+ * ║  MAIN STYLESHEET — Imports all CSS modules              ║
+ * ║  Single entry point for all styles                      ║
+ * ╚══════════════════════════════════════════════════════════╝ */
+
+@import 'core.css';
+@import 'desktop.css';
+@import 'os.css';
+@import 'sections.css';
+@import 'responsive.css';
