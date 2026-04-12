@@ -82,23 +82,14 @@
         <div class="taskbar-left">
             <button class="taskbar-brand" id="start-btn" title="© 2025 Stefano Aruta" aria-label="Start menu">⚜</button>
         </div>
+        <!-- Middle: open window tabs -->
+        <div class="taskbar-tabs" id="taskbar-tabs">
+            <!-- Populated dynamically by JS -->
+        </div>
         <!-- Right: system tray -->
         <div class="taskbar-tray">
             <button class="tray-btn" id="share-btn" title="Share" aria-label="Share this site">
                 <i class="fas fa-share-alt"></i>
-            </button>
-            <button class="tray-btn" id="sound-btn" title="Toggle ambient sound" aria-label="Toggle ambient sound">
-                <i class="fas fa-volume-mute" id="sound-icon"></i>
-            </button>
-            <select id="lang-select" class="lang-select" aria-label="Language">
-                <option value="it">IT</option>
-                <option value="en">EN</option>
-                <option value="es">ES</option>
-                <option value="ja">JA</option>
-                <option value="fn">ᚠᚾ</option>
-            </select>
-            <button class="tray-btn" id="theme-btn" title="Toggle theme">
-                <i class="fas fa-moon" id="theme-icon"></i>
             </button>
             <div class="taskbar-sep" aria-hidden="true"></div>
             <div class="taskbar-clock">
@@ -107,6 +98,20 @@
                 <span class="hud-time" id="hud-time">--:--:--</span>
             </div>
         </div>
+        <!-- Hidden elements used by Settings -->
+        <button class="tray-btn" id="sound-btn" style="display:none;" title="Toggle ambient sound" aria-label="Toggle ambient sound">
+            <i class="fas fa-volume-mute" id="sound-icon"></i>
+        </button>
+        <button class="tray-btn" id="theme-btn" style="display:none;" title="Toggle theme">
+            <i class="fas fa-moon" id="theme-icon"></i>
+        </button>
+        <select id="lang-select" class="lang-select" style="display:none;" aria-label="Language">
+            <option value="it">IT</option>
+            <option value="en">EN</option>
+            <option value="es">ES</option>
+            <option value="ja">JA</option>
+            <option value="fn">ᚠᚾ</option>
+        </select>
         <!-- Start menu -->
         <div class="start-menu" id="start-menu" style="display: none;">
             <div class="start-header">
@@ -117,14 +122,13 @@
                 </div>
             </div>
             <div class="start-items">
-                <button class="start-item" data-window="home">🏰 <span data-i18n="sec_home">Home</span></button>
                 <button class="start-item" data-window="about">📖 <span data-i18n="sec_about">About</span></button>
                 <button class="start-item" data-window="live">🔮 <span data-i18n="sec_live">Live</span></button>
                 <button class="start-item" data-window="links">🔗 <span data-i18n="sec_links">Links</span></button>
+                <button class="start-item" data-window="settings">⚙️ <span>Settings</span></button>
             </div>
             <div class="start-divider"></div>
             <div class="start-actions">
-                <button class="start-action" id="start-theme">🌙 <span>Toggle Theme</span></button>
                 <button class="start-action" id="start-share">📤 <span>Share</span></button>
             </div>
             <div class="start-footer">
@@ -135,119 +139,107 @@
 
     <!-- ══ DESKTOP ══ -->
     <div class="desktop" id="desktop">
-        <!-- Windows -->
-        <div class="os-window" id="win-home" data-window="home">
-            <div class="win-titlebar">
-                <span class="win-title">🏰 <span data-i18n="sec_home">Home</span></span>
-                <div class="win-controls">
-                    <button class="win-btn win-minimize" title="Minimize">▬</button>
-                    <button class="win-btn win-close" title="Close">✕</button>
+        <!-- Desktop Hero (magic circle + portrait + title) -->
+        <div class="home-hero desktop-hero" id="sec-home">
+            <div class="magic-circle-frame">
+                <!-- Outer ring: triple rings + 12 rune nodes + text arc (CW, slow) -->
+                <svg class="mc-svg mc-outer" viewBox="0 0 200 200" aria-hidden="true">
+                    <defs>
+                        <path id="mc-text-ring" d="M 8,100 A 92,92 0 0,1 192,100 A 92,92 0 0,1 8,100"/>
+                    </defs>
+                    <!-- Triple outer rings -->
+                    <circle cx="100" cy="100" r="97"  fill="none" stroke="currentColor" stroke-width="0.5" opacity="0.25"/>
+                    <circle cx="100" cy="100" r="95"  fill="none" stroke="currentColor" stroke-width="1.0" stroke-dasharray="5 7" opacity="0.60"/>
+                    <circle cx="100" cy="100" r="92"  fill="none" stroke="currentColor" stroke-width="0.3" opacity="0.20"/>
+                    <circle cx="100" cy="100" r="88"  fill="none" stroke="currentColor" stroke-width="0.4" stroke-dasharray="1 4" opacity="0.30"/>
+                    <!-- 4 cardinal glowing nodes -->
+                    <circle cx="100" cy="3"   r="3.5" fill="currentColor" opacity="0.90"/>
+                    <circle cx="197" cy="100" r="3.5" fill="currentColor" opacity="0.90"/>
+                    <circle cx="3"   cy="100" r="3.5" fill="currentColor" opacity="0.90"/>
+                    <circle cx="100" cy="197" r="3.5" fill="currentColor" opacity="0.90"/>
+                    <!-- 8 intercardinal nodes -->
+                    <circle cx="167" cy="33"  r="2.2" fill="currentColor" opacity="0.55"/>
+                    <circle cx="167" cy="167" r="2.2" fill="currentColor" opacity="0.55"/>
+                    <circle cx="33"  cy="167" r="2.2" fill="currentColor" opacity="0.55"/>
+                    <circle cx="33"  cy="33"  r="2.2" fill="currentColor" opacity="0.55"/>
+                    <circle cx="134" cy="10"  r="1.5" fill="currentColor" opacity="0.35"/>
+                    <circle cx="190" cy="66"  r="1.5" fill="currentColor" opacity="0.35"/>
+                    <circle cx="10"  cy="134" r="1.5" fill="currentColor" opacity="0.35"/>
+                    <circle cx="66"  cy="190" r="1.5" fill="currentColor" opacity="0.35"/>
+                    <!-- Rune text arc -->
+                    <text font-family="serif" font-size="4.8" fill="currentColor" opacity="0.42" letter-spacing="2.4">
+                        <textPath href="#mc-text-ring">✦ ARCANUM ✦ IGNIS ✦ AQUA ✦ TERRA ✦ VENTUS ✦ LUX ✦ VIA ✦ SOMNIUM ✦</textPath>
+                    </text>
+                </svg>
+                <!-- Middle ring: hexagram + double ring + tick marks (CCW, medium) -->
+                <svg class="mc-svg mc-mid" viewBox="0 0 200 200" aria-hidden="true">
+                    <circle cx="100" cy="100" r="84" fill="none" stroke="currentColor" stroke-width="0.4" opacity="0.22"/>
+                    <circle cx="100" cy="100" r="82" fill="none" stroke="currentColor" stroke-width="0.9" stroke-dasharray="2 4" opacity="0.45"/>
+                    <circle cx="100" cy="100" r="80" fill="none" stroke="currentColor" stroke-width="0.3" opacity="0.18"/>
+                    <!-- Hexagram (Star of David) -->
+                    <polygon points="100,20 170,140 30,140" fill="none" stroke="currentColor" stroke-width="0.8" opacity="0.35"/>
+                    <polygon points="100,180 30,60 170,60"  fill="none" stroke="currentColor" stroke-width="0.8" opacity="0.35"/>
+                    <!-- 6 vertex nodes -->
+                    <circle cx="100" cy="20"  r="2.5" fill="currentColor" opacity="0.65"/>
+                    <circle cx="170" cy="140" r="2.5" fill="currentColor" opacity="0.65"/>
+                    <circle cx="30"  cy="140" r="2.5" fill="currentColor" opacity="0.65"/>
+                    <circle cx="100" cy="180" r="2.5" fill="currentColor" opacity="0.65"/>
+                    <circle cx="30"  cy="60"  r="2.5" fill="currentColor" opacity="0.65"/>
+                    <circle cx="170" cy="60"  r="2.5" fill="currentColor" opacity="0.65"/>
+                    <!-- 12 tick marks around the ring -->
+                    <line x1="100" y1="18" x2="100" y2="24" stroke="currentColor" stroke-width="0.6" opacity="0.30"/>
+                    <line x1="141" y1="29" x2="138" y2="34" stroke="currentColor" stroke-width="0.6" opacity="0.30"/>
+                    <line x1="171" y1="59" x2="165" y2="62" stroke="currentColor" stroke-width="0.6" opacity="0.30"/>
+                    <line x1="182" y1="100" x2="176" y2="100" stroke="currentColor" stroke-width="0.6" opacity="0.30"/>
+                    <line x1="171" y1="141" x2="165" y2="138" stroke="currentColor" stroke-width="0.6" opacity="0.30"/>
+                    <line x1="141" y1="171" x2="138" y2="166" stroke="currentColor" stroke-width="0.6" opacity="0.30"/>
+                    <line x1="100" y1="182" x2="100" y2="176" stroke="currentColor" stroke-width="0.6" opacity="0.30"/>
+                    <line x1="59"  y1="171" x2="62"  y2="166" stroke="currentColor" stroke-width="0.6" opacity="0.30"/>
+                    <line x1="29"  y1="141" x2="35"  y2="138" stroke="currentColor" stroke-width="0.6" opacity="0.30"/>
+                    <line x1="18"  y1="100" x2="24"  y2="100" stroke="currentColor" stroke-width="0.6" opacity="0.30"/>
+                    <line x1="29"  y1="59" x2="35"   y2="62" stroke="currentColor" stroke-width="0.6" opacity="0.30"/>
+                    <line x1="59"  y1="29" x2="62"   y2="34" stroke="currentColor" stroke-width="0.6" opacity="0.30"/>
+                </svg>
+                <!-- Rune compass ring (NEW — draggable, CCW fast) -->
+                <svg class="mc-svg mc-rune" viewBox="0 0 200 200" aria-hidden="true">
+                    <circle cx="100" cy="100" r="77" fill="none" stroke="currentColor" stroke-width="0.6" stroke-dasharray="1 3" opacity="0.30"/>
+                    <circle cx="100" cy="100" r="75" fill="none" stroke="currentColor" stroke-width="0.8" opacity="0.40"/>
+                    <!-- 8 rune symbols around the ring -->
+                    <text x="100" y="27"  text-anchor="middle" fill="currentColor" font-size="7" opacity="0.50" font-family="serif">ᚠ</text>
+                    <text x="153" y="53"  text-anchor="middle" fill="currentColor" font-size="7" opacity="0.50" font-family="serif">ᚢ</text>
+                    <text x="175" y="103" text-anchor="middle" fill="currentColor" font-size="7" opacity="0.50" font-family="serif">ᚦ</text>
+                    <text x="153" y="153" text-anchor="middle" fill="currentColor" font-size="7" opacity="0.50" font-family="serif">ᚨ</text>
+                    <text x="100" y="178" text-anchor="middle" fill="currentColor" font-size="7" opacity="0.50" font-family="serif">ᚱ</text>
+                    <text x="47"  y="153" text-anchor="middle" fill="currentColor" font-size="7" opacity="0.50" font-family="serif">ᚲ</text>
+                    <text x="25"  y="103" text-anchor="middle" fill="currentColor" font-size="7" opacity="0.50" font-family="serif">ᚷ</text>
+                    <text x="47"  y="53"  text-anchor="middle" fill="currentColor" font-size="7" opacity="0.50" font-family="serif">ᚹ</text>
+                </svg>
+                <!-- Inner ring: pentagon + triangle + triple rings (CW, fast) -->
+                <svg class="mc-svg mc-inner" viewBox="0 0 200 200" aria-hidden="true">
+                    <circle cx="100" cy="100" r="73" fill="none" stroke="currentColor" stroke-width="0.4" opacity="0.22"/>
+                    <circle cx="100" cy="100" r="71" fill="none" stroke="currentColor" stroke-width="1.1" opacity="0.70"/>
+                    <circle cx="100" cy="100" r="69" fill="none" stroke="currentColor" stroke-width="0.3" opacity="0.18"/>
+                    <circle cx="100" cy="100" r="65" fill="none" stroke="currentColor" stroke-width="0.5" stroke-dasharray="3 5" opacity="0.30"/>
+                    <!-- Inner triangle -->
+                    <polygon points="100,30 160,135 40,135" fill="none" stroke="currentColor" stroke-width="1.0" opacity="0.42"/>
+                    <!-- Inner pentagon (inverted) -->
+                    <polygon points="100,155 39,73 69,28 131,28 161,73" fill="none" stroke="currentColor" stroke-width="0.5" opacity="0.18"/>
+                    <!-- Triangle vertex nodes -->
+                    <circle cx="100" cy="30"  r="3" fill="currentColor" opacity="0.75"/>
+                    <circle cx="160" cy="135" r="3" fill="currentColor" opacity="0.75"/>
+                    <circle cx="40"  cy="135" r="3" fill="currentColor" opacity="0.75"/>
+                </svg>
+                <div class="portrait-img-wrap">
+                    <img src="./Images/aru2_meta.png" alt="Aruta" class="portrait-img">
                 </div>
             </div>
-            <div class="win-content">
-                <section class="page-section" id="sec-home">
-                    <div class="home-hero">
-                        <div class="magic-circle-frame">
-                            <!-- Outer ring: triple rings + 12 rune nodes + text arc (CW, slow) -->
-                            <svg class="mc-svg mc-outer" viewBox="0 0 200 200" aria-hidden="true">
-                                <defs>
-                                    <path id="mc-text-ring" d="M 8,100 A 92,92 0 0,1 192,100 A 92,92 0 0,1 8,100"/>
-                                </defs>
-                                <!-- Triple outer rings -->
-                                <circle cx="100" cy="100" r="97"  fill="none" stroke="currentColor" stroke-width="0.5" opacity="0.25"/>
-                                <circle cx="100" cy="100" r="95"  fill="none" stroke="currentColor" stroke-width="1.0" stroke-dasharray="5 7" opacity="0.60"/>
-                                <circle cx="100" cy="100" r="92"  fill="none" stroke="currentColor" stroke-width="0.3" opacity="0.20"/>
-                                <circle cx="100" cy="100" r="88"  fill="none" stroke="currentColor" stroke-width="0.4" stroke-dasharray="1 4" opacity="0.30"/>
-                                <!-- 4 cardinal glowing nodes -->
-                                <circle cx="100" cy="3"   r="3.5" fill="currentColor" opacity="0.90"/>
-                                <circle cx="197" cy="100" r="3.5" fill="currentColor" opacity="0.90"/>
-                                <circle cx="3"   cy="100" r="3.5" fill="currentColor" opacity="0.90"/>
-                                <circle cx="100" cy="197" r="3.5" fill="currentColor" opacity="0.90"/>
-                                <!-- 8 intercardinal nodes -->
-                                <circle cx="167" cy="33"  r="2.2" fill="currentColor" opacity="0.55"/>
-                                <circle cx="167" cy="167" r="2.2" fill="currentColor" opacity="0.55"/>
-                                <circle cx="33"  cy="167" r="2.2" fill="currentColor" opacity="0.55"/>
-                                <circle cx="33"  cy="33"  r="2.2" fill="currentColor" opacity="0.55"/>
-                                <circle cx="134" cy="10"  r="1.5" fill="currentColor" opacity="0.35"/>
-                                <circle cx="190" cy="66"  r="1.5" fill="currentColor" opacity="0.35"/>
-                                <circle cx="10"  cy="134" r="1.5" fill="currentColor" opacity="0.35"/>
-                                <circle cx="66"  cy="190" r="1.5" fill="currentColor" opacity="0.35"/>
-                                <!-- Rune text arc -->
-                                <text font-family="serif" font-size="4.8" fill="currentColor" opacity="0.42" letter-spacing="2.4">
-                                    <textPath href="#mc-text-ring">✦ ARCANUM ✦ IGNIS ✦ AQUA ✦ TERRA ✦ VENTUS ✦ LUX ✦ VIA ✦ SOMNIUM ✦</textPath>
-                                </text>
-                            </svg>
-                            <!-- Middle ring: hexagram + double ring + tick marks (CCW, medium) -->
-                            <svg class="mc-svg mc-mid" viewBox="0 0 200 200" aria-hidden="true">
-                                <circle cx="100" cy="100" r="84" fill="none" stroke="currentColor" stroke-width="0.4" opacity="0.22"/>
-                                <circle cx="100" cy="100" r="82" fill="none" stroke="currentColor" stroke-width="0.9" stroke-dasharray="2 4" opacity="0.45"/>
-                                <circle cx="100" cy="100" r="80" fill="none" stroke="currentColor" stroke-width="0.3" opacity="0.18"/>
-                                <!-- Hexagram (Star of David) -->
-                                <polygon points="100,20 170,140 30,140" fill="none" stroke="currentColor" stroke-width="0.8" opacity="0.35"/>
-                                <polygon points="100,180 30,60 170,60"  fill="none" stroke="currentColor" stroke-width="0.8" opacity="0.35"/>
-                                <!-- 6 vertex nodes -->
-                                <circle cx="100" cy="20"  r="2.5" fill="currentColor" opacity="0.65"/>
-                                <circle cx="170" cy="140" r="2.5" fill="currentColor" opacity="0.65"/>
-                                <circle cx="30"  cy="140" r="2.5" fill="currentColor" opacity="0.65"/>
-                                <circle cx="100" cy="180" r="2.5" fill="currentColor" opacity="0.65"/>
-                                <circle cx="30"  cy="60"  r="2.5" fill="currentColor" opacity="0.65"/>
-                                <circle cx="170" cy="60"  r="2.5" fill="currentColor" opacity="0.65"/>
-                                <!-- 12 tick marks around the ring -->
-                                <line x1="100" y1="18" x2="100" y2="24" stroke="currentColor" stroke-width="0.6" opacity="0.30"/>
-                                <line x1="141" y1="29" x2="138" y2="34" stroke="currentColor" stroke-width="0.6" opacity="0.30"/>
-                                <line x1="171" y1="59" x2="165" y2="62" stroke="currentColor" stroke-width="0.6" opacity="0.30"/>
-                                <line x1="182" y1="100" x2="176" y2="100" stroke="currentColor" stroke-width="0.6" opacity="0.30"/>
-                                <line x1="171" y1="141" x2="165" y2="138" stroke="currentColor" stroke-width="0.6" opacity="0.30"/>
-                                <line x1="141" y1="171" x2="138" y2="166" stroke="currentColor" stroke-width="0.6" opacity="0.30"/>
-                                <line x1="100" y1="182" x2="100" y2="176" stroke="currentColor" stroke-width="0.6" opacity="0.30"/>
-                                <line x1="59"  y1="171" x2="62"  y2="166" stroke="currentColor" stroke-width="0.6" opacity="0.30"/>
-                                <line x1="29"  y1="141" x2="35"  y2="138" stroke="currentColor" stroke-width="0.6" opacity="0.30"/>
-                                <line x1="18"  y1="100" x2="24"  y2="100" stroke="currentColor" stroke-width="0.6" opacity="0.30"/>
-                                <line x1="29"  y1="59" x2="35"   y2="62" stroke="currentColor" stroke-width="0.6" opacity="0.30"/>
-                                <line x1="59"  y1="29" x2="62"   y2="34" stroke="currentColor" stroke-width="0.6" opacity="0.30"/>
-                            </svg>
-                            <!-- Rune compass ring (NEW — draggable, CCW fast) -->
-                            <svg class="mc-svg mc-rune" viewBox="0 0 200 200" aria-hidden="true">
-                                <circle cx="100" cy="100" r="77" fill="none" stroke="currentColor" stroke-width="0.6" stroke-dasharray="1 3" opacity="0.30"/>
-                                <circle cx="100" cy="100" r="75" fill="none" stroke="currentColor" stroke-width="0.8" opacity="0.40"/>
-                                <!-- 8 rune symbols around the ring -->
-                                <text x="100" y="27"  text-anchor="middle" fill="currentColor" font-size="7" opacity="0.50" font-family="serif">ᚠ</text>
-                                <text x="153" y="53"  text-anchor="middle" fill="currentColor" font-size="7" opacity="0.50" font-family="serif">ᚢ</text>
-                                <text x="175" y="103" text-anchor="middle" fill="currentColor" font-size="7" opacity="0.50" font-family="serif">ᚦ</text>
-                                <text x="153" y="153" text-anchor="middle" fill="currentColor" font-size="7" opacity="0.50" font-family="serif">ᚨ</text>
-                                <text x="100" y="178" text-anchor="middle" fill="currentColor" font-size="7" opacity="0.50" font-family="serif">ᚱ</text>
-                                <text x="47"  y="153" text-anchor="middle" fill="currentColor" font-size="7" opacity="0.50" font-family="serif">ᚲ</text>
-                                <text x="25"  y="103" text-anchor="middle" fill="currentColor" font-size="7" opacity="0.50" font-family="serif">ᚷ</text>
-                                <text x="47"  y="53"  text-anchor="middle" fill="currentColor" font-size="7" opacity="0.50" font-family="serif">ᚹ</text>
-                            </svg>
-                            <!-- Inner ring: pentagon + triangle + triple rings (CW, fast) -->
-                            <svg class="mc-svg mc-inner" viewBox="0 0 200 200" aria-hidden="true">
-                                <circle cx="100" cy="100" r="73" fill="none" stroke="currentColor" stroke-width="0.4" opacity="0.22"/>
-                                <circle cx="100" cy="100" r="71" fill="none" stroke="currentColor" stroke-width="1.1" opacity="0.70"/>
-                                <circle cx="100" cy="100" r="69" fill="none" stroke="currentColor" stroke-width="0.3" opacity="0.18"/>
-                                <circle cx="100" cy="100" r="65" fill="none" stroke="currentColor" stroke-width="0.5" stroke-dasharray="3 5" opacity="0.30"/>
-                                <!-- Inner triangle -->
-                                <polygon points="100,30 160,135 40,135" fill="none" stroke="currentColor" stroke-width="1.0" opacity="0.42"/>
-                                <!-- Inner pentagon (inverted) -->
-                                <polygon points="100,155 39,73 69,28 131,28 161,73" fill="none" stroke="currentColor" stroke-width="0.5" opacity="0.18"/>
-                                <!-- Triangle vertex nodes -->
-                                <circle cx="100" cy="30"  r="3" fill="currentColor" opacity="0.75"/>
-                                <circle cx="160" cy="135" r="3" fill="currentColor" opacity="0.75"/>
-                                <circle cx="40"  cy="135" r="3" fill="currentColor" opacity="0.75"/>
-                            </svg>
-                            <div class="portrait-img-wrap">
-                                <img src="./Images/aru2_meta.png" alt="Aruta" class="portrait-img">
-                            </div>
-                        </div>
-                        <div class="home-tagline">
-                            <h1 class="char-name">Aruta.sh</h1>
-                            <div class="char-class" data-i18n="char_class">Streamer · Programmer · Adventurer</div>
-                        </div>
-                    </div>
-                </section>
+            <div class="home-tagline">
+                <h1 class="char-name">Aruta.sh</h1>
+                <div class="char-class" data-i18n="char_class">Streamer · Programmer · Adventurer</div>
             </div>
         </div>
 
+        <!-- Windows -->
         <div class="os-window" id="win-about" data-window="about" style="display:none;">
             <div class="win-titlebar">
                 <span class="win-title">📖 <span data-i18n="sec_about">About</span></span>
@@ -359,6 +351,114 @@
                     </div>
 
                 </section>
+            </div>
+        </div>
+        <div class="os-window" id="win-settings" data-window="settings" style="display:none;">
+            <div class="win-titlebar">
+                <span class="win-title">⚙️ Settings</span>
+                <div class="win-controls">
+                    <button class="win-btn win-minimize" title="Minimize">▬</button>
+                    <button class="win-btn win-close" title="Close">✕</button>
+                </div>
+            </div>
+            <div class="win-content">
+                <div class="settings-panel">
+                    <h2 class="settings-section-title">Appearance</h2>
+
+                    <div class="settings-row">
+                        <div class="settings-label">
+                            <span class="settings-icon">🌓</span>
+                            <div><strong>Theme</strong><br><small>Switch between dark and light mode</small></div>
+                        </div>
+                        <button class="settings-toggle" id="settings-theme-toggle">
+                            <span class="toggle-track"><span class="toggle-thumb"></span></span>
+                        </button>
+                    </div>
+
+                    <div class="settings-row">
+                        <div class="settings-label">
+                            <span class="settings-icon">🔤</span>
+                            <div><strong>Font Size</strong><br><small>Adjust text size</small></div>
+                        </div>
+                        <div class="settings-range-wrap">
+                            <input type="range" id="settings-font-size" class="settings-range" min="80" max="130" value="100" step="5">
+                            <span class="settings-range-value" id="font-size-label">100%</span>
+                        </div>
+                    </div>
+
+                    <div class="settings-row">
+                        <div class="settings-label">
+                            <span class="settings-icon">🎨</span>
+                            <div><strong>Accent Color</strong><br><small>Choose your accent color</small></div>
+                        </div>
+                        <div class="settings-colors" id="settings-accent">
+                            <button class="settings-color-btn active" data-accent="gold" style="background: #ffc857;" title="Gold"></button>
+                            <button class="settings-color-btn" data-accent="purple" style="background: #a78bfa;" title="Purple"></button>
+                            <button class="settings-color-btn" data-accent="cyan" style="background: #22d3ee;" title="Cyan"></button>
+                            <button class="settings-color-btn" data-accent="rose" style="background: #fb7185;" title="Rose"></button>
+                            <button class="settings-color-btn" data-accent="emerald" style="background: #34d399;" title="Emerald"></button>
+                        </div>
+                    </div>
+
+                    <h2 class="settings-section-title">Clock</h2>
+
+                    <div class="settings-row">
+                        <div class="settings-label">
+                            <span class="settings-icon">📅</span>
+                            <div><strong>Show Date</strong><br><small>Display date in taskbar</small></div>
+                        </div>
+                        <button class="settings-toggle active" id="settings-show-date">
+                            <span class="toggle-track"><span class="toggle-thumb"></span></span>
+                        </button>
+                    </div>
+
+                    <div class="settings-row">
+                        <div class="settings-label">
+                            <span class="settings-icon">🕐</span>
+                            <div><strong>24h Format</strong><br><small>Use 24-hour time format</small></div>
+                        </div>
+                        <button class="settings-toggle active" id="settings-24h">
+                            <span class="toggle-track"><span class="toggle-thumb"></span></span>
+                        </button>
+                    </div>
+
+                    <h2 class="settings-section-title">Sound</h2>
+
+                    <div class="settings-row">
+                        <div class="settings-label">
+                            <span class="settings-icon">🔊</span>
+                            <div><strong>Ambient Sound</strong><br><small>Mystical background drone</small></div>
+                        </div>
+                        <button class="settings-toggle" id="settings-sound-toggle">
+                            <span class="toggle-track"><span class="toggle-thumb"></span></span>
+                        </button>
+                    </div>
+
+                    <h2 class="settings-section-title">Language</h2>
+
+                    <div class="settings-row">
+                        <div class="settings-label">
+                            <span class="settings-icon">🌐</span>
+                            <div><strong>Language</strong><br><small>Select your language</small></div>
+                        </div>
+                        <select id="settings-lang" class="settings-select">
+                            <option value="it">Italiano</option>
+                            <option value="en">English</option>
+                            <option value="es">Español</option>
+                            <option value="ja">日本語</option>
+                            <option value="fn">ᚠᚢᚦᚨᚱᚲ</option>
+                        </select>
+                    </div>
+
+                    <h2 class="settings-section-title">About</h2>
+                    <div class="settings-about">
+                        <span class="settings-about-logo">⚜</span>
+                        <div>
+                            <strong>Arcane OS</strong> v1.0<br>
+                            <small>© 2025 Stefano Aruta</small>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     </div><!-- .desktop -->

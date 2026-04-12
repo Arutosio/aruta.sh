@@ -1469,3 +1469,141 @@ html.magic-cursor-active, html.magic-cursor-active * { cursor: none !important; 
     color: var(--gold);
     text-shadow: 0 0 12px rgba(255,200,87,0.4);
 }
+
+/* ══════════════════════════════
+   DESKTOP HERO (magic circle on desktop)
+══════════════════════════════ */
+.desktop-hero {
+    position: absolute;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 2;
+    display: flex; flex-direction: column;
+    align-items: center; gap: 28px;
+    pointer-events: auto;
+}
+
+/* ══════════════════════════════
+   TASKBAR TABS (dynamic window tabs)
+══════════════════════════════ */
+.taskbar-tabs {
+    display: flex; align-items: stretch; gap: 2px;
+    flex: 1; min-width: 0;
+    padding: 0 8px;
+    overflow-x: auto;
+}
+.taskbar-tabs::-webkit-scrollbar { display: none; }
+.taskbar-tab {
+    display: flex; align-items: center; gap: 6px;
+    padding: 0 14px; height: 100%;
+    font-size: 0.8rem; font-weight: 700;
+    color: var(--text-dim);
+    background: transparent;
+    border: none; border-bottom: 2px solid transparent;
+    cursor: pointer; white-space: nowrap;
+    transition: color 0.2s, border-color 0.2s, background 0.2s;
+    font-family: inherit; letter-spacing: 0.04em;
+}
+.taskbar-tab:hover {
+    color: var(--text);
+    background: rgba(255,200,87,0.04);
+}
+.taskbar-tab.tab-active {
+    color: var(--gold);
+    border-bottom-color: var(--gold);
+}
+.taskbar-tab-close {
+    font-size: 0.65rem; color: var(--text-faint);
+    margin-left: 4px; cursor: pointer;
+    opacity: 0; transition: opacity 0.15s;
+    background: none; border: none; padding: 2px;
+    font-family: inherit;
+}
+.taskbar-tab:hover .taskbar-tab-close { opacity: 1; }
+.taskbar-tab-close:hover { color: #ff6b6b; }
+
+/* ══════════════════════════════
+   SETTINGS PANEL
+══════════════════════════════ */
+.settings-panel {
+    padding: 24px; max-width: 500px; margin: 0 auto;
+}
+.settings-section-title {
+    font-size: 0.8rem; font-weight: 700; color: var(--gold);
+    letter-spacing: 0.12em; text-transform: uppercase;
+    margin: 24px 0 12px; padding-bottom: 6px;
+    border-bottom: 1px solid var(--card-border);
+}
+.settings-section-title:first-child { margin-top: 0; }
+.settings-row {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 12px 0; gap: 16px;
+}
+.settings-label {
+    display: flex; align-items: center; gap: 12px;
+    font-size: 0.88rem; color: var(--text); flex: 1;
+}
+.settings-label small { color: var(--text-dim); font-size: 0.75rem; }
+.settings-icon { font-size: 1.3rem; flex-shrink: 0; width: 28px; text-align: center; }
+
+/* Toggle switch */
+.settings-toggle {
+    background: none; border: none; cursor: pointer; padding: 0;
+}
+.toggle-track {
+    display: block; width: 44px; height: 24px;
+    background: var(--text-faint); border-radius: 12px;
+    position: relative; transition: background 0.2s;
+}
+.toggle-thumb {
+    display: block; width: 20px; height: 20px;
+    background: #fff; border-radius: 50%;
+    position: absolute; top: 2px; left: 2px;
+    transition: transform 0.2s;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+}
+.settings-toggle.active .toggle-track { background: var(--gold); }
+.settings-toggle.active .toggle-thumb { transform: translateX(20px); }
+
+/* Range slider */
+.settings-range-wrap { display: flex; align-items: center; gap: 8px; }
+.settings-range {
+    width: 100px; height: 4px; -webkit-appearance: none;
+    background: var(--text-faint); border-radius: 2px; outline: none;
+}
+.settings-range::-webkit-slider-thumb {
+    -webkit-appearance: none; width: 16px; height: 16px;
+    background: var(--gold); border-radius: 50%; cursor: pointer;
+    box-shadow: 0 0 6px rgba(255,200,87,0.3);
+}
+.settings-range-value {
+    font-size: 0.8rem; color: var(--gold); font-weight: 700;
+    min-width: 3.5em; text-align: right;
+}
+
+/* Color accent buttons */
+.settings-colors { display: flex; gap: 6px; }
+.settings-color-btn {
+    width: 28px; height: 28px; border-radius: 50%;
+    border: 2px solid transparent; cursor: pointer;
+    transition: border-color 0.2s, transform 0.15s;
+}
+.settings-color-btn:hover { transform: scale(1.15); }
+.settings-color-btn.active { border-color: var(--text); box-shadow: 0 0 8px currentColor; }
+
+/* Language select in settings */
+.settings-select {
+    padding: 6px 12px; background: rgba(12,10,30,0.5);
+    border: 1px solid var(--seal-border); border-radius: 6px;
+    color: var(--text); font-family: inherit; font-size: 0.88rem;
+    cursor: pointer;
+}
+.settings-select option { background: var(--bg); }
+[data-theme="light"] .settings-select { background: rgba(240,232,216,0.5); }
+
+/* About section */
+.settings-about {
+    display: flex; align-items: center; gap: 12px;
+    padding: 16px 0; font-size: 0.88rem; color: var(--text-dim);
+}
+.settings-about-logo { font-size: 1.8rem; color: var(--gold); }

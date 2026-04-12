@@ -75,22 +75,36 @@ function initAchievements() {
     // Night owl (after midnight)
     if (new Date().getHours() < 5) unlockAchievement('night_owl');
 
-    // Track sections visited
+    // Track sections visited via window opens
     const visited = new Set(['home']);
-    const origSwitchCheck = () => {
-        const activeBtn = document.querySelector('.sec-btn.active');
-        if (activeBtn) visited.add(activeBtn.dataset.sec);
+    const _origOpenWindow = openWindow;
+    // We patch indirectly: check on tab additions
+    const origAddTab = addWindowTab;
+    window._achAddTab = function(id, icon, label) {
+        visited.add(id);
         if (visited.size >= 4) unlockAchievement('all_sections');
     };
-    document.querySelectorAll('.sec-btn').forEach(btn =>
-        btn.addEventListener('click', origSwitchCheck)
-    );
+    // Hook into openWindow via a MutationObserver on taskbar-tabs
+    const tabsEl = document.getElementById('taskbar-tabs');
+    if (tabsEl) {
+        const obs = new MutationObserver(() => {
+            document.querySelectorAll('.taskbar-tab').forEach(t => {
+                visited.add(t.dataset.tab);
+            });
+            if (visited.size >= 4) unlockAchievement('all_sections');
+        });
+        obs.observe(tabsEl, { childList: true });
+    }
 }
 
 /* ════════════════════════════
    INIT
 ════════════════════════════ */
 document.addEventListener('DOMContentLoaded', () => {
+    // Restore saved font size immediately to avoid flash
+    const savedFontSize = localStorage.getItem('aruta_fontsize');
+    if (savedFontSize) document.documentElement.style.fontSize = savedFontSize + '%';
+
     const savedLang  = localStorage.getItem('aruta_lang');
     const savedTheme = localStorage.getItem('aruta_theme');
 
@@ -121,7 +135,8 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    document.getElementById('theme-btn').addEventListener('click', toggleTheme);
+    const themeBtn = document.getElementById('theme-btn');
+    if (themeBtn) themeBtn.addEventListener('click', toggleTheme);
     document.getElementById('lang-select').addEventListener('change', e => switchLanguage(e.target.value));
 });
 
@@ -168,15 +183,11 @@ function initRuneParticles() {
     function getMCCenter() {
         if (!mcDirty) return mcCache;
         mcDirty = false;
-        const sec = document.getElementById('sec-home');
-        if (!sec || sec.hidden) return (mcCache = null);
-        const el = sec.querySelector('.magic-circle-frame');
+        const el = document.querySelector('.magic-circle-frame');
         if (!el) return (mcCache = null);
         const r = el.getBoundingClientRect();
         return (mcCache = { x: r.left + r.width / 2, y: r.top + r.height / 2 });
     }
-    // Invalidate cache on resize and section switches
-    document.addEventListener('click', e => { if (e.target.closest('.sec-btn')) mcDirty = true; });
 
     function resize() {
         canvas.width  = window.innerWidth;
@@ -1593,6 +1604,118 @@ function initAmbientSound() {
 }
 
 /* ════════════════════════════
+   SETTINGS APP
+════════════════════════════ */
+function initSettings() {
+    // Theme toggle
+    const themeToggle = document.getElementById('settings-theme-toggle');
+    if (themeToggle) {
+        if (currentTheme === 'dark') themeToggle.classList.remove('active');
+        else themeToggle.classList.add('active');
+        themeToggle.addEventListener('click', () => {
+            toggleTheme();
+            themeToggle.classList.toggle('active');
+        });
+    }
+
+    // Font size
+    const fontRange = document.getElementById('settings-font-size');
+    const fontLabel = document.getElementById('font-size-label');
+    if (fontRange) {
+        const saved = localStorage.getItem('aruta_fontsize') || '100';
+        fontRange.value = saved;
+        if (fontLabel) fontLabel.textContent = saved + '%';
+        document.documentElement.style.fontSize = saved + '%';
+        fontRange.addEventListener('input', () => {
+            const val = fontRange.value;
+            document.documentElement.style.fontSize = val + '%';
+            if (fontLabel) fontLabel.textContent = val + '%';
+            localStorage.setItem('aruta_fontsize', val);
+        });
+    }
+
+    // Accent color
+    document.querySelectorAll('.settings-color-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            document.querySelectorAll('.settings-color-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            const accent = btn.dataset.accent;
+            const ACCENTS = {
+                gold:    { gold: '#ffc857', goldLight: '#ffe4a0' },
+                purple:  { gold: '#a78bfa', goldLight: '#c4b5fd' },
+                cyan:    { gold: '#22d3ee', goldLight: '#67e8f9' },
+                rose:    { gold: '#fb7185', goldLight: '#fda4af' },
+                emerald: { gold: '#34d399', goldLight: '#6ee7b7' },
+            };
+            const colors = ACCENTS[accent];
+            if (colors) {
+                document.documentElement.style.setProperty('--gold', colors.gold);
+                document.documentElement.style.setProperty('--gold-light', colors.goldLight);
+                localStorage.setItem('aruta_accent', accent);
+            }
+        });
+    });
+    // Restore saved accent
+    const savedAccent = localStorage.getItem('aruta_accent');
+    if (savedAccent) {
+        const btn = document.querySelector(`.settings-color-btn[data-accent="${savedAccent}"]`);
+        if (btn) btn.click();
+    }
+
+    // Show/hide date
+    const dateToggle = document.getElementById('settings-show-date');
+    const dateEl = document.getElementById('hud-date');
+    const dateSep = document.querySelector('.hud-clock-sep');
+    if (dateToggle) {
+        const showDate = localStorage.getItem('aruta_showdate') !== 'false';
+        dateToggle.classList.toggle('active', showDate);
+        if (!showDate && dateEl) { dateEl.style.display = 'none'; if (dateSep) dateSep.style.display = 'none'; }
+        dateToggle.addEventListener('click', () => {
+            dateToggle.classList.toggle('active');
+            const show = dateToggle.classList.contains('active');
+            if (dateEl) dateEl.style.display = show ? '' : 'none';
+            if (dateSep) dateSep.style.display = show ? '' : 'none';
+            localStorage.setItem('aruta_showdate', show);
+        });
+    }
+
+    // 24h format
+    const h24Toggle = document.getElementById('settings-24h');
+    if (h24Toggle) {
+        const use24 = localStorage.getItem('aruta_24h') !== 'false';
+        h24Toggle.classList.toggle('active', use24);
+        window._use24h = use24;
+        h24Toggle.addEventListener('click', () => {
+            h24Toggle.classList.toggle('active');
+            window._use24h = h24Toggle.classList.contains('active');
+            localStorage.setItem('aruta_24h', window._use24h);
+        });
+    }
+
+    // Sound toggle
+    const soundToggle = document.getElementById('settings-sound-toggle');
+    if (soundToggle) {
+        soundToggle.addEventListener('click', () => {
+            soundToggle.classList.toggle('active');
+            document.getElementById('sound-btn')?.click();
+        });
+    }
+
+    // Language
+    const langSelect = document.getElementById('settings-lang');
+    if (langSelect) {
+        langSelect.value = currentLang;
+        langSelect.addEventListener('change', () => {
+            const mainSelect = document.getElementById('lang-select');
+            if (mainSelect) {
+                mainSelect.value = langSelect.value;
+                mainSelect.dispatchEvent(new Event('change'));
+            }
+        });
+    }
+}
+
+/* ════════════════════════════
    SHOW APP
 ════════════════════════════ */
 function showApp() {
@@ -1617,11 +1740,7 @@ function showApp() {
     initAmbientSound();
     initAchievements();
 
-    // Focus home window on load
-    const homeWin = document.getElementById('win-home');
-    if (homeWin) focusWindow(homeWin);
-
-    // Entrance animation for home section
+    // Entrance animation for home hero on desktop
     setTimeout(() => {
         animateSectionEntrance('home');
         initTilt();
@@ -1648,7 +1767,11 @@ function startClock() {
 }
 function tickClock() {
     const now = new Date();
-    const h  = String(now.getHours()).padStart(2, '0');
+    let hrs = now.getHours();
+    if (window._use24h === false) {
+        hrs = hrs % 12 || 12;
+    }
+    const h  = String(hrs).padStart(2, '0');
     const m  = String(now.getMinutes()).padStart(2, '0');
     const s  = String(now.getSeconds()).padStart(2, '0');
     const y  = now.getFullYear();
@@ -1661,6 +1784,45 @@ function tickClock() {
 }
 
 /* ════════════════════════════
+   WINDOW TABS (taskbar)
+════════════════════════════ */
+const WIN_META = {
+    about:    { icon: '📖', label: 'About' },
+    live:     { icon: '🔮', label: 'Live' },
+    links:    { icon: '🔗', label: 'Links' },
+    settings: { icon: '⚙️', label: 'Settings' },
+};
+
+function addWindowTab(id, icon, label) {
+    const tabs = document.getElementById('taskbar-tabs');
+    if (!tabs || tabs.querySelector(`[data-tab="${id}"]`)) return;
+    const tab = document.createElement('button');
+    tab.className = 'taskbar-tab';
+    tab.dataset.tab = id;
+    tab.innerHTML = `${icon} ${label} <span class="taskbar-tab-close" title="Close">\u2715</span>`;
+    tab.addEventListener('click', (e) => {
+        if (e.target.closest('.taskbar-tab-close')) {
+            closeWindow(id);
+            return;
+        }
+        const win = document.getElementById(`win-${id}`);
+        if (win) focusWindow(win);
+    });
+    tabs.appendChild(tab);
+}
+
+function removeWindowTab(id) {
+    const tab = document.querySelector(`.taskbar-tab[data-tab="${id}"]`);
+    if (tab) tab.remove();
+}
+
+function updateActiveTab(id) {
+    document.querySelectorAll('.taskbar-tab').forEach(t =>
+        t.classList.toggle('tab-active', t.dataset.tab === id)
+    );
+}
+
+/* ════════════════════════════
    WINDOW MANAGER (Arcane OS)
 ════════════════════════════ */
 let topZ = 10;
@@ -1668,20 +1830,6 @@ let topZ = 10;
 function initWindowManager() {
     const desktop = document.getElementById('desktop');
     if (!desktop) return;
-
-    // Desktop icon double-click → open window
-    desktop.querySelectorAll('.desktop-icon').forEach(icon => {
-        icon.addEventListener('dblclick', () => {
-            const winId = icon.dataset.window;
-            openWindow(winId);
-        });
-        // Single click on mobile
-        icon.addEventListener('click', (e) => {
-            if (window.innerWidth <= 640) {
-                openWindow(icon.dataset.window);
-            }
-        });
-    });
 
     // Window controls (minimize, close)
     document.querySelectorAll('.os-window').forEach(win => {
@@ -1749,15 +1897,6 @@ function initStartMenu() {
         });
     });
 
-    // Theme toggle in start menu
-    const themeBtn = document.getElementById('start-theme');
-    if (themeBtn) {
-        themeBtn.addEventListener('click', () => {
-            toggleTheme();
-            closeMenu();
-        });
-    }
-
     // Share in start menu
     const shareBtn = document.getElementById('start-share');
     if (shareBtn) {
@@ -1787,12 +1926,21 @@ function openWindow(id) {
     if (win.style.display === 'none' || !win.style.display) {
         win.style.display = 'flex';
         win.style.animation = 'windowOpen 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) forwards';
+
+        // Slight random offset if multiple windows are open
+        const openCount = document.querySelectorAll('.os-window[style*="display: flex"], .os-window:not([style*="display:none"]):not([style*="display: none"])').length;
+        if (openCount > 1) {
+            const offsetX = (Math.random() - 0.5) * 60;
+            const offsetY = (Math.random() - 0.5) * 40;
+            win.style.transform = `translate(calc(-50% + ${offsetX}px), calc(-50% + ${offsetY}px))`;
+        }
     }
     focusWindow(win);
 
-    // Update taskbar button
-    const btn = document.querySelector(`.sec-btn[data-sec="${id}"]`);
-    if (btn) btn.classList.add('active');
+    // Add taskbar tab
+    const meta = WIN_META[id];
+    if (meta) addWindowTab(id, meta.icon, meta.label);
+    updateActiveTab(id);
 
     // Trigger section entrance effects
     animateSectionEntrance(id);
@@ -1802,8 +1950,15 @@ function openWindow(id) {
         openWindow._bioTyped = true;
         typewriterBio(i18n[currentLang].bio);
     }
+
+    // Init settings on first open
+    if (id === 'settings' && !openWindow._settingsInit) {
+        openWindow._settingsInit = true;
+        initSettings();
+    }
 }
 openWindow._bioTyped = false;
+openWindow._settingsInit = false;
 
 function closeWindow(id) {
     const win = document.getElementById(`win-${id}`);
@@ -1813,11 +1968,11 @@ function closeWindow(id) {
     setTimeout(() => {
         win.style.display = 'none';
         win.style.animation = '';
+        win.style.transform = '';
     }, 250);
 
-    // Update taskbar button
-    const btn = document.querySelector(`.sec-btn[data-sec="${id}"]`);
-    if (btn) btn.classList.remove('active');
+    // Remove taskbar tab
+    removeWindowTab(id);
 }
 
 function minimizeWindow(id) {
@@ -1831,6 +1986,8 @@ function focusWindow(win) {
     topZ++;
     win.style.zIndex = topZ;
     win.classList.add('win-focused');
+    // Update active tab
+    updateActiveTab(win.dataset.window);
 }
 
 function initDrag(win, handle) {
@@ -1907,23 +2064,8 @@ function initDrag(win, handle) {
    SECTION SWITCHING
 ════════════════════════════ */
 function initSections() {
-    // Taskbar buttons open/focus windows
-    document.querySelectorAll('.sec-btn').forEach(btn =>
-        btn.addEventListener('click', () => {
-            const id = btn.dataset.sec;
-            const win = document.getElementById(`win-${id}`);
-            if (!win) return;
-
-            if (win.style.display === 'none') {
-                openWindow(id);
-            } else {
-                // Already open — focus it
-                focusWindow(win);
-            }
-        })
-    );
-
-    // Mobile swipe between sections
+    // Windows are now opened via Start menu and taskbar tabs only.
+    // Mobile swipe between open windows
     let touchStartX = 0;
     let touchStartY = 0;
     const SWIPE_THRESHOLD = 60;
@@ -1938,19 +2080,18 @@ function initSections() {
         const dy = e.changedTouches[0].clientY - touchStartY;
         if (Math.abs(dx) < SWIPE_THRESHOLD || Math.abs(dy) > Math.abs(dx)) return;
 
-        const sections = ['home', 'about', 'live', 'links'];
-        const currentBtn = document.querySelector('.sec-btn.active');
-        if (!currentBtn) return;
-        const currentIdx = sections.indexOf(currentBtn.dataset.sec);
+        const openWindows = Array.from(document.querySelectorAll('.os-window')).filter(w => w.style.display !== 'none');
+        if (openWindows.length < 2) return;
+
+        const focused = document.querySelector('.os-window.win-focused');
+        if (!focused) return;
+        const currentIdx = openWindows.indexOf(focused);
         if (currentIdx < 0) return;
 
         const nextIdx = dx < 0 ? currentIdx + 1 : currentIdx - 1;
-        if (nextIdx < 0 || nextIdx >= sections.length) return;
+        if (nextIdx < 0 || nextIdx >= openWindows.length) return;
 
-        const nextId = sections[nextIdx];
-        // Close current, open next
-        closeWindow(currentBtn.dataset.sec);
-        openWindow(nextId);
+        focusWindow(openWindows[nextIdx]);
     }, { passive: true });
 }
 
@@ -2005,9 +2146,15 @@ function toggleTheme() {
     // Ripple transition effect
     const ripple = document.createElement('div');
     ripple.className = 'theme-ripple';
-    const btnRect = document.getElementById('theme-btn').getBoundingClientRect();
-    ripple.style.left = btnRect.left + btnRect.width / 2 + 'px';
-    ripple.style.top = btnRect.top + btnRect.height / 2 + 'px';
+    const themeEl = document.getElementById('theme-btn') || document.getElementById('settings-theme-toggle');
+    if (themeEl) {
+        const btnRect = themeEl.getBoundingClientRect();
+        ripple.style.left = btnRect.left + btnRect.width / 2 + 'px';
+        ripple.style.top = btnRect.top + btnRect.height / 2 + 'px';
+    } else {
+        ripple.style.left = '50%';
+        ripple.style.top = '50%';
+    }
     document.body.appendChild(ripple);
     setTimeout(() => ripple.remove(), 800);
 
