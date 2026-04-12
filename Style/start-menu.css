@@ -1,0 +1,80 @@
+/* ══════════════════════════════
+   START MENU
+══════════════════════════════ */
+.start-menu {
+    position: fixed;
+    top: 58px; left: 12px;
+    width: 300px;
+    background: var(--hud-bg);
+    backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px);
+    border: 1px solid var(--card-border);
+    border-radius: 12px;
+    box-shadow: 0 8px 40px rgba(0,0,0,0.5), 0 0 1px rgba(255,255,255,0.05);
+    z-index: 200;
+    animation: startMenuOpen 0.25s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+    overflow: hidden;
+}
+@keyframes startMenuOpen {
+    from { opacity: 0; transform: translateY(-20px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes startMenuClose {
+    from { opacity: 1; transform: translateY(0); }
+    to   { opacity: 0; transform: translateY(-20px); }
+}
+.start-header {
+    display: flex; align-items: center; gap: 14px;
+    padding: 20px 20px 16px;
+    border-bottom: 1px solid var(--card-border);
+}
+.start-logo {
+    font-family: var(--font-display);
+    font-size: 2rem; color: var(--gold);
+    text-shadow: 0 0 15px rgba(255,200,87,0.3);
+}
+.start-header-text {
+    display: flex; flex-direction: column; gap: 2px;
+}
+.start-title {
+    font-family: var(--font-display);
+    font-size: 1.1rem; font-weight: 700; color: var(--gold);
+    letter-spacing: 0.12em;
+}
+.start-subtitle {
+    font-size: 0.7rem; color: var(--text-faint);
+    letter-spacing: 0.08em;
+}
+.start-items, .start-actions {
+    display: flex; flex-direction: column;
+    padding: 6px 0;
+}
+.start-item, .start-action {
+    display: flex; align-items: center; gap: 12px;
+    padding: 12px 20px;
+    font-size: 0.92rem; font-weight: 700;
+    color: var(--text); background: transparent;
+    border: none; cursor: pointer; text-align: left;
+    transition: background 0.15s, color 0.15s;
+    letter-spacing: 0.04em;
+    font-family: inherit;
+    width: 100%;
+}
+.start-item:hover, .start-action:hover {
+    background: rgba(255, 200, 87, 0.08);
+    color: var(--gold);
+}
+.start-divider {
+    height: 1px;
+    background: var(--card-border);
+    margin: 0 12px;
+}
+.start-footer {
+    padding: 10px 18px;
+    font-size: 0.7rem;
+    color: var(--text-faint);
+    border-top: 1px solid var(--card-border);
+}
+
+[data-theme="light"] .start-menu {
+    background: rgba(240, 232, 216, 0.95);
+}

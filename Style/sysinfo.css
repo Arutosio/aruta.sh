@@ -1,0 +1,32 @@
+/* ══════════════════════════════
+   SYSTEM INFO PANEL
+══════════════════════════════ */
+.sysinfo-panel {
+    position: fixed; top: 58px; right: 12px;
+    width: 320px;
+    background: var(--hud-bg);
+    backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px);
+    border: 1px solid var(--card-border);
+    border-radius: 10px;
+    box-shadow: 0 8px 40px rgba(0,0,0,0.4);
+    z-index: 200;
+    animation: startMenuOpen 0.25s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+    overflow: hidden;
+}
+.sysinfo-header {
+    font-family: var(--font-display);
+    padding: 12px 16px; font-size: 0.75rem; font-weight: 700;
+    color: var(--gold); letter-spacing: 0.12em; text-transform: uppercase;
+    border-bottom: 1px solid var(--card-border);
+}
+.sysinfo-rows { padding: 8px 0; }
+.sysinfo-row {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 5px 16px; font-size: 0.78rem; font-family: var(--font-mono, monospace);
+}
+.sysinfo-label { color: var(--text-dim); }
+.sysinfo-value { color: var(--text); font-weight: 700; text-align: right; }
+.sysinfo-value.green { color: #34d399; }
+.sysinfo-value.gold { color: var(--gold); }
+.sysinfo-value.red { color: #fb7185; }
+[data-theme="light"] .sysinfo-panel { background: rgba(240,232,216,0.95); }

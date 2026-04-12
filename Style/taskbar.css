@@ -1,0 +1,173 @@
+/* ══════════════════════════════
+   HUD BAR
+══════════════════════════════ */
+.taskbar {
+    position: fixed; top: 12px; left: 12px; right: 12px; z-index: 100;
+    display: flex; align-items: stretch; justify-content: space-between;
+    padding: 0 12px; height: 44px;
+    background: var(--hud-bg);
+    backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px);
+    border: 1px solid var(--card-border);
+    border-radius: 12px;
+    box-shadow: 0 4px 24px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.04);
+    transition: background 0.5s, border-color 0.5s;
+}
+.taskbar-left  { display: flex; align-items: stretch; gap: 0; flex-shrink: 0; }
+.taskbar-tray  { display: flex; align-items: stretch; gap: 0; flex-shrink: 0; }
+
+.taskbar-start {
+    display: flex; align-items: center; gap: 8px;
+    padding: 4px 14px; margin: 5px 0;
+    background: rgba(255, 200, 87, 0.06);
+    border: 1px solid rgba(255, 200, 87, 0.15);
+    color: var(--gold); cursor: pointer;
+    font-family: var(--font-display); font-size: 0.88rem; font-weight: 700;
+    letter-spacing: 0.06em;
+    transition: background 0.2s, color 0.2s, border-color 0.2s, box-shadow 0.2s;
+    border-radius: 8px;
+}
+.taskbar-start:hover {
+    background: rgba(255, 200, 87, 0.12);
+    border-color: rgba(255, 200, 87, 0.3);
+    box-shadow: 0 0 8px rgba(255, 200, 87, 0.1);
+}
+.taskbar-start.start-open {
+    background: rgba(255, 200, 87, 0.15);
+    border-color: var(--gold);
+    box-shadow: 0 0 12px rgba(255, 200, 87, 0.15);
+}
+.start-icon {
+    font-size: 1.2rem;
+}
+.taskbar-sep {
+    width: 1px; margin: 10px 4px;
+    background: var(--card-border);
+}
+/* System tray buttons */
+.tray-btn {
+    width: 34px; height: 28px; margin: auto 1px;
+    display: flex; align-items: center; justify-content: center;
+    color: var(--text-dim); font-size: 0.85rem;
+    background: rgba(255, 200, 87, 0.03);
+    border: 1px solid rgba(255, 200, 87, 0.08);
+    border-radius: 6px; cursor: pointer;
+    transition: color 0.2s, background 0.2s, border-color 0.2s, box-shadow 0.2s;
+}
+.tray-btn:hover {
+    color: var(--gold);
+    background: rgba(255, 200, 87, 0.1);
+    border-color: rgba(255, 200, 87, 0.25);
+    box-shadow: 0 0 6px rgba(255,200,87,0.1);
+}
+
+/* Taskbar clock (system tray) */
+.taskbar-clock {
+    display: flex; align-items: center; gap: 3px; padding: 0 8px;
+}
+
+/* Firefly particles — white/green in dark, gold in light */
+.firefly {
+    position: absolute; left: 0; top: 0; pointer-events: none; z-index: 1;
+    width: 4px; height: 4px; border-radius: 50%;
+    background: #8aaf30;
+    box-shadow: 0 0 4px #8aaf30, 0 0 8px rgba(138,175,48,0.6), 0 0 14px rgba(120,160,40,0.3);
+    opacity: 0;
+    transition: opacity 0.4s;
+    will-change: transform, opacity;
+}
+.firefly.alive { opacity: 1; }
+.firefly.dying { opacity: 0; transition: opacity 0.6s; }
+[data-theme="light"] .firefly {
+    background: var(--gold);
+    box-shadow: 0 0 4px var(--gold), 0 0 8px rgba(122,78,6,0.6), 0 0 14px rgba(139,28,34,0.3);
+}
+
+/* Clock — fills center space */
+.hud-time  { font-size: clamp(1rem, 2.5vw, 1.35rem); font-weight: 900; letter-spacing: 0.04em; line-height: 1; color: var(--gold); transition: color 0.5s; font-variant-numeric: tabular-nums; }
+.hud-date  { font-size: clamp(1rem, 2.5vw, 1.35rem); font-weight: 700; letter-spacing: 0.04em; line-height: 1; color: var(--text-dim); transition: color 0.5s; font-variant-numeric: tabular-nums; }
+.hud-clock-sep { color: var(--text-faint); font-size: 0.8rem; opacity: 0.4; }
+
+/* Lang select — with glow */
+.lang-select {
+    font-size: clamp(0.78rem, 1.8vw, 1rem); font-weight: 700; letter-spacing: 0.06em;
+    color: var(--text-dim); background: transparent;
+    border: none; border-radius: 0; padding: 0 10px;
+    cursor: pointer; -webkit-appearance: none; appearance: none;
+    align-self: stretch; display: flex; align-items: center;
+    transition: color 0.25s, background 0.25s, text-shadow 0.25s;
+}
+.lang-select:hover, .lang-select:focus {
+    color: var(--gold); background: rgba(192,200,224,0.06); outline: none;
+    text-shadow: 0 0 10px rgba(192,200,224,0.50), 0 0 20px rgba(192,200,224,0.20);
+}
+.lang-select option { background: var(--bg); color: var(--text); }
+
+/* Theme button — full height */
+.theme-btn {
+    background: transparent; border: none;
+    color: #f0e8b0; width: 52px; border-radius: 0;
+    cursor: pointer; display: flex; align-items: center; justify-content: center;
+    font-size: clamp(0.95rem, 2.2vw, 1.25rem); align-self: stretch;
+    transition: color 0.3s, background 0.3s;
+}
+.theme-btn:hover {
+    color: var(--gold); background: rgba(192,200,224,0.06);
+}
+/* Click flash on theme toggle */
+.theme-btn:active { animation: themeClick 0.3s ease-out; }
+@keyframes themeClick {
+    0%   { background: transparent; }
+    50%  { background: rgba(192,200,224,0.15); box-shadow: inset 0 0 20px rgba(192,200,224,0.30); }
+    100% { background: rgba(192,200,224,0.06); }
+}
+/* ── Theme transition ripple ── */
+.theme-ripple {
+    position: fixed; z-index: 9990; pointer-events: none;
+    width: 20px; height: 20px; border-radius: 50%;
+    background: var(--bg);
+    transform: translate(-50%, -50%) scale(0);
+    animation: themeRipple 0.6s ease-out forwards;
+}
+@keyframes themeRipple {
+    0% { transform: translate(-50%, -50%) scale(0); opacity: 0.8; }
+    100% { transform: translate(-50%, -50%) scale(300); opacity: 0; }
+}
+
+/* ══════════════════════════════
+   TASKBAR TABS (dynamic window tabs)
+══════════════════════════════ */
+.taskbar-tabs {
+    display: flex; align-items: stretch; gap: 2px;
+    flex: 1; min-width: 0;
+    padding: 0 8px;
+    overflow-x: auto;
+}
+.taskbar-tabs::-webkit-scrollbar { display: none; }
+.taskbar-tab {
+    display: flex; align-items: center; gap: 6px;
+    padding: 0 14px; height: 100%;
+    font-size: 0.8rem; font-weight: 700;
+    color: var(--text-dim);
+    background: transparent;
+    border: none; border-bottom: 2px solid transparent;
+    cursor: pointer; white-space: nowrap;
+    transition: color 0.2s, border-color 0.2s, background 0.2s;
+    font-family: inherit; letter-spacing: 0.04em;
+}
+.taskbar-tab:hover {
+    color: var(--text);
+    background: rgba(255,200,87,0.04);
+}
+.taskbar-tab.tab-active {
+    color: var(--gold);
+    border-bottom-color: var(--gold);
+}
+.taskbar-tab-close {
+    font-size: 0.65rem; color: var(--text-faint);
+    margin-left: 4px; cursor: pointer;
+    opacity: 0; transition: opacity 0.15s;
+    background: none; border: none; padding: 2px;
+    font-family: inherit;
+}
+.taskbar-tab:hover .taskbar-tab-close { opacity: 1; }
+.taskbar-tab-close:hover { color: #ff6b6b; }

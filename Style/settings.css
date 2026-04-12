@@ -1,0 +1,140 @@
+/* ══════════════════════════════
+   SETTINGS PANEL
+══════════════════════════════ */
+/* Settings sidebar layout */
+.settings-layout {
+    display: flex; height: 100%;
+}
+.settings-sidebar {
+    display: flex; flex-direction: column; gap: 2px;
+    width: 180px; min-width: 180px; padding: 8px;
+    border-right: 1px solid var(--card-border);
+    background: rgba(0,0,0,0.15);
+    overflow-y: auto;
+}
+.settings-cat {
+    display: flex; align-items: center; gap: 10px;
+    padding: 10px 14px;
+    font-size: 0.82rem; font-weight: 700;
+    color: var(--text-dim); background: transparent;
+    border: none; border-radius: 6px;
+    cursor: pointer; text-align: left;
+    font-family: inherit; letter-spacing: 0.03em;
+    transition: background 0.15s, color 0.15s;
+    white-space: nowrap;
+}
+.settings-cat:hover {
+    background: rgba(255,200,87,0.06);
+    color: var(--text);
+}
+.settings-cat.active {
+    background: rgba(255,200,87,0.1);
+    color: var(--gold);
+    border-left: 2px solid var(--gold);
+}
+[data-theme="light"] .settings-sidebar { background: rgba(0,0,0,0.04); }
+
+.settings-content {
+    flex: 1; padding: 24px; overflow-y: auto;
+}
+.settings-page { display: none; }
+.settings-page.active { display: block; }
+.settings-page-title {
+    font-family: var(--font-display);
+    font-size: 1.1rem; font-weight: 700; color: var(--gold);
+    letter-spacing: 0.1em; margin: 0 0 20px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--card-border);
+}
+
+.settings-row {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 12px 0; gap: 16px;
+    break-inside: avoid;
+}
+.settings-label {
+    display: flex; align-items: center; gap: 12px;
+    font-size: 0.88rem; color: var(--text); flex: 1;
+}
+.settings-label small { color: var(--text-dim); font-size: 0.75rem; }
+.settings-icon { font-size: 1.3rem; flex-shrink: 0; width: 28px; text-align: center; }
+
+/* Toggle switch */
+.settings-toggle {
+    background: none; border: none; cursor: pointer; padding: 0;
+}
+.toggle-track {
+    display: block; width: 44px; height: 24px;
+    background: var(--text-faint); border-radius: 12px;
+    position: relative; transition: background 0.2s;
+}
+.toggle-thumb {
+    display: block; width: 20px; height: 20px;
+    background: #fff; border-radius: 50%;
+    position: absolute; top: 2px; left: 2px;
+    transition: transform 0.2s;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+}
+.settings-toggle.active .toggle-track { background: var(--gold); }
+.settings-toggle.active .toggle-thumb { transform: translateX(20px); }
+
+/* Range slider */
+.settings-range-wrap { display: flex; align-items: center; gap: 8px; }
+.settings-range {
+    width: 100px; height: 4px; -webkit-appearance: none;
+    background: var(--text-faint); border-radius: 2px; outline: none;
+}
+.settings-range::-webkit-slider-thumb {
+    -webkit-appearance: none; width: 16px; height: 16px;
+    background: var(--gold); border-radius: 50%; cursor: pointer;
+    box-shadow: 0 0 6px rgba(255,200,87,0.3);
+}
+.settings-range-value {
+    font-size: 0.8rem; color: var(--gold); font-weight: 700;
+    min-width: 3.5em; text-align: right;
+}
+
+/* Color accent buttons */
+.settings-colors { display: flex; gap: 6px; }
+.settings-color-btn {
+    width: 28px; height: 28px; border-radius: 50%;
+    border: 2px solid transparent; cursor: pointer;
+    transition: border-color 0.2s, transform 0.15s;
+}
+.settings-color-btn:hover { transform: scale(1.15); }
+.settings-color-btn.active { border-color: var(--text); box-shadow: 0 0 8px currentColor; }
+
+/* Language select in settings */
+.settings-select {
+    padding: 6px 12px; background: rgba(12,10,30,0.5);
+    border: 1px solid var(--seal-border); border-radius: 6px;
+    color: var(--text); font-family: inherit; font-size: 0.88rem;
+    cursor: pointer;
+}
+.settings-select option { background: var(--bg); }
+[data-theme="light"] .settings-select { background: rgba(240,232,216,0.5); }
+
+/* About section */
+.settings-about {
+    display: flex; align-items: center; gap: 12px;
+    padding: 16px 0; font-size: 0.88rem; color: var(--text-dim);
+    break-inside: avoid;
+}
+.settings-about-logo { font-size: 1.8rem; color: var(--gold); }
+
+/* Reset button */
+.settings-reset-btn {
+    padding: 8px 18px;
+    background: rgba(255, 60, 60, 0.1);
+    border: 1px solid rgba(255, 60, 60, 0.25);
+    border-radius: 6px;
+    color: #ff6b6b;
+    font-family: inherit; font-size: 0.85rem; font-weight: 700;
+    cursor: pointer; letter-spacing: 0.04em;
+    transition: background 0.2s, border-color 0.2s, box-shadow 0.2s;
+}
+.settings-reset-btn:hover {
+    background: rgba(255, 60, 60, 0.2);
+    border-color: rgba(255, 60, 60, 0.4);
+    box-shadow: 0 0 8px rgba(255, 60, 60, 0.15);
+}

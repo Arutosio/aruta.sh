@@ -1,0 +1,76 @@
+/* ══════════════════════════════
+   RESPONSIVE
+══════════════════════════════ */
+@media (max-width: 860px) {
+    /* frame scales via min(500px, 90vw) — no override needed */
+    .interest-grid { grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); }
+    .live-container {
+        grid-template-columns: 1fr;
+    }
+    .live-chat {
+        min-height: 360px;
+    }
+}
+
+@media (max-width: 640px) {
+    .taskbar { top: 0; left: 0; right: 0; height: 40px; border-radius: 0; border: none; border-bottom: 1px solid var(--card-border); }
+    .start-text { display: none; }
+    .taskbar-start { padding: 0 10px; }
+    .taskbar-tabs { padding: 0 4px; }
+    .taskbar-tab { padding: 0 8px; font-size: 0.75rem; }
+    .os-window {
+        position: fixed !important;
+        top: 40px !important; left: 0 !important; right: 0 !important;
+        bottom: 0 !important;
+        width: 100% !important;
+        max-height: none !important;
+        border-radius: 0 !important;
+        transform: none !important;
+        border: none !important;
+        animation: none !important;
+        margin: 0 !important;
+    }
+    .win-titlebar { border-radius: 0; cursor: default; }
+    .win-maximize { display: none; } /* already fullscreen on mobile */
+    .desktop-hero { transform: translate(-50%, -55%); } /* adjust for no margin */
+    .start-menu { top: 40px; left: 0; width: 100%; border-radius: 0; border: none; border-bottom: 1px solid var(--card-border); }
+    .sysinfo-panel { top: 40px; right: 0; width: 100%; border-radius: 0; }
+    .taskbar-sep { display: none; }
+    #app { padding: 40px 0 0; }
+    .desktop-hero .magic-circle-frame { width: min(300px, 80vw); height: min(300px, 80vw); }
+    .hud-date      { display: none; }
+    .hud-clock-sep { display: none; }
+    .hud-time  { font-size: 0.9rem; }
+    .projects-grid { grid-template-columns: 1fr; }
+    .portrait-img-wrap  { width: 188px; height: 188px; }
+    .interest-grid { grid-template-columns: 1fr; }
+    .link-cards { grid-template-columns: 1fr; }
+    .link-card  { padding: 16px 18px; }
+    .settings-sidebar {
+        width: 50px; min-width: 50px; padding: 4px;
+    }
+    .settings-cat span { display: none; }
+    .settings-cat { justify-content: center; padding: 10px; }
+    .sysinfo-panel { right: 6px; top: 48px; width: calc(100vw - 12px); }
+}
+
+@media (max-width: 500px) {
+    .live-tabs {
+        flex-direction: column;
+    }
+    .live-tab {
+        justify-content: center;
+    }
+}
+
+@media (max-width: 420px) {
+    .taskbar-tab span:not(.taskbar-tab-close) { display: none; }
+    .taskbar-clock { display: none; }
+    .char-name  { font-size: 2rem; }
+    .portrait-img-wrap  { width: 162px; height: 162px; }
+}
+
+@media (max-height: 500px) and (orientation: landscape) {
+    #app { padding: 16px 20px 56px; }
+    .magic-circle-frame { width: min(300px, 80vw); height: min(300px, 80vw); }
+}
