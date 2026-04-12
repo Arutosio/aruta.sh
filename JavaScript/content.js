@@ -263,29 +263,46 @@ function revealCards(selector, delay) {
 }
 
 /* ────────────────────────────────
- * § VANILLA TILT (3D hover on cards)
- * Initializes VanillaTilt.js on interest cards, link cards,
- * project cards, and the portrait image. Skipped on touch devices.
+ * § 3D TILT (pure JS/CSS — no library)
+ * Lightweight 3D perspective tilt on hover for cards and portrait.
+ * Uses CSS transform: perspective + rotateX/Y. Skipped on touch.
  * ──────────────────────────────── */
+
+/** Apply 3D tilt effect to an element */
+function applyTilt(el, maxDeg, scale) {
+    if (el._tiltBound) return;
+    el._tiltBound = true;
+    el.style.transformStyle = 'preserve-3d';
+    el.style.transition = 'transform 0.2s ease';
+
+    el.addEventListener('mousemove', (e) => {
+        const rect = el.getBoundingClientRect();
+        const x = (e.clientX - rect.left) / rect.width;
+        const y = (e.clientY - rect.top) / rect.height;
+        const rotY = (x - 0.5) * maxDeg * 2;
+        const rotX = (0.5 - y) * maxDeg * 2;
+        el.style.transform = `perspective(600px) rotateX(${rotX}deg) rotateY(${rotY}deg) scale(${scale})`;
+    });
+
+    el.addEventListener('mouseleave', () => {
+        el.style.transform = 'perspective(600px) rotateX(0) rotateY(0) scale(1)';
+    });
+}
 
 /** Initialize 3D tilt hover effect on card elements */
 function initTilt() {
-    if (typeof VanillaTilt === 'undefined' || window.matchMedia('(pointer: coarse)').matches) return;
+    if (window.matchMedia('(pointer: coarse)').matches) return;
 
     document.querySelectorAll('.interest-card, .link-card').forEach(el => {
-        if (el.vanillaTilt) return;
-        VanillaTilt.init(el, { max: 7, speed: 400, glare: true, 'max-glare': 0.10, scale: 1.02 });
+        applyTilt(el, 5, 1.02);
     });
 
     document.querySelectorAll('.project-card:not(.project-card--loading):not(.project-card--error)').forEach(el => {
-        if (el.vanillaTilt) return;
-        VanillaTilt.init(el, { max: 5, speed: 400, glare: true, 'max-glare': 0.08 });
+        applyTilt(el, 3, 1.01);
     });
 
     const portrait = document.querySelector('.portrait-img-wrap');
-    if (portrait && !portrait.vanillaTilt) {
-        VanillaTilt.init(portrait, { max: 8, speed: 600, glare: true, 'max-glare': 0.12, scale: 1.03 });
-    }
+    if (portrait) applyTilt(portrait, 6, 1.03);
 }
 
 /* ────────────────────────────────
