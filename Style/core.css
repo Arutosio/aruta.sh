@@ -125,7 +125,7 @@ html.magic-cursor-active, html.magic-cursor-active * { cursor: none !important; 
 #summon-overlay {
     position: fixed; inset: 0; background: #050310;
     z-index: 999; display: flex; align-items: center; justify-content: center;
-    transition: opacity 0.8s ease;
+    transition: opacity 1.2s cubic-bezier(0.22, 1, 0.36, 1);
 }
 #summon-overlay.fade-out { opacity: 0; pointer-events: none; }
 

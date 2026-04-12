@@ -456,6 +456,11 @@ function drawStar(ctx, cx, cy, r, points, color) {
  * Run the summoning boot sequence
  * @param {Function} onComplete — called when summoning finishes
  */
+/**
+ * Runs the summoning boot sequence (text lines + canvas animation).
+ * Calls onComplete when ALL lines have been shown + a short pause.
+ * The fade-out transition is handled separately by the caller.
+ */
 function runSummoning(onComplete) {
     const logEl = document.getElementById('summon-log');
     const lines  = i18n[currentLang].boot;
@@ -469,11 +474,11 @@ function runSummoning(onComplete) {
             logEl.appendChild(span);
             setTimeout(addLine, 380);
         } else {
+            // Lines done — short pause then signal complete
             setTimeout(() => {
                 if (window._cancelSummon) window._cancelSummon();
-                document.getElementById('summon-overlay').classList.add('fade-out');
-                setTimeout(onComplete, 850);
-            }, 500);
+                onComplete();
+            }, 600);
         }
     }
     addLine();

@@ -107,8 +107,25 @@ document.addEventListener('DOMContentLoaded', () => {
     initParallax();
     initClickSpells();
 
+    /**
+     * Smooth fade transition from overlay to desktop.
+     * Prepares the app behind the overlay, then fades out.
+     */
+    function fadeOverlayAndReveal() {
+        // Prepare app behind the overlay (invisible, ready to go)
+        showApp();
+        // Smooth fade-out of the overlay
+        const overlay = document.getElementById('summon-overlay');
+        if (overlay) {
+            overlay.classList.add('fade-out');
+            overlay.addEventListener('transitionend', () => overlay.remove(), { once: true });
+            // Fallback removal if transitionend doesn't fire
+            setTimeout(() => { if (overlay.parentNode) overlay.remove(); }, 1200);
+        }
+    }
+
     if (sessionStorage.getItem('aruta_summoned')) {
-        // Repeat visit — wait for full load then show immediately
+        // Repeat visit — wait for full load, then reveal instantly (no summoning)
         const reveal = () => {
             const overlay = document.getElementById('summon-overlay');
             if (overlay) overlay.remove();
@@ -117,7 +134,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (document.readyState === 'complete') reveal();
         else window.addEventListener('load', reveal);
     } else {
-        // First visit — start summoning animation, but wait for full load before finishing
+        // First visit — summoning plays while resources load in background
         initSummonCanvas();
         let summonDone = false;
         let loadDone = document.readyState === 'complete';
@@ -125,7 +142,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const tryReveal = () => {
             if (summonDone && loadDone) {
                 sessionStorage.setItem('aruta_summoned', '1');
-                showApp();
+                fadeOverlayAndReveal();
             }
         };
 
