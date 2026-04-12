@@ -76,11 +76,12 @@
 <!-- ░░ APP ░░ -->
 <main id="app" class="hidden">
 
-    <!-- ══ HUD BAR ══ -->
-    <header class="hud-bar">
-        <!-- Left: brand + section nav -->
-        <div class="hud-left">
-            <span class="hud-rune" aria-hidden="true">⚜</span>
+    <!-- ══ TASKBAR ══ -->
+    <header class="taskbar">
+        <!-- Left: brand + app launchers -->
+        <div class="taskbar-left">
+            <span class="taskbar-brand" title="© 2025 Stefano Aruta" aria-hidden="true">⚜</span>
+            <div class="taskbar-sep" aria-hidden="true"></div>
             <nav class="sec-nav" aria-label="Sections">
                 <button class="sec-btn active" data-sec="home">🏰 <span data-i18n="sec_home">Home</span></button>
                 <button class="sec-btn"        data-sec="about">📖 <span data-i18n="sec_about">About</span></button>
@@ -88,14 +89,14 @@
                 <button class="sec-btn"        data-sec="links">🔗 <span data-i18n="sec_links">Links</span></button>
             </nav>
         </div>
-        <!-- Center: clock -->
-        <div class="hud-clock">
-            <span class="hud-date" id="hud-date">----/--/--</span>
-            <span class="hud-clock-sep" aria-hidden="true">·</span>
-            <span class="hud-time" id="hud-time">--:--:--</span>
-        </div>
-        <!-- Right: lang + theme -->
-        <div class="hud-right">
+        <!-- Right: system tray -->
+        <div class="taskbar-tray">
+            <button class="tray-btn" id="share-btn" title="Share" aria-label="Share this site">
+                <i class="fas fa-share-alt"></i>
+            </button>
+            <button class="tray-btn" id="sound-btn" title="Toggle ambient sound" aria-label="Toggle ambient sound">
+                <i class="fas fa-volume-mute" id="sound-icon"></i>
+            </button>
             <select id="lang-select" class="lang-select" aria-label="Language">
                 <option value="it">IT</option>
                 <option value="en">EN</option>
@@ -103,12 +104,15 @@
                 <option value="ja">JA</option>
                 <option value="fn">ᚠᚾ</option>
             </select>
-            <button class="theme-btn" id="theme-btn" title="Toggle theme">
+            <button class="tray-btn" id="theme-btn" title="Toggle theme">
                 <i class="fas fa-moon" id="theme-icon"></i>
             </button>
-            <button class="sound-btn" id="sound-btn" title="Toggle ambient sound" aria-label="Toggle ambient sound">
-                <i class="fas fa-volume-mute" id="sound-icon"></i>
-            </button>
+            <div class="taskbar-sep" aria-hidden="true"></div>
+            <div class="taskbar-clock">
+                <span class="hud-date" id="hud-date">----/--/--</span>
+                <span class="hud-clock-sep" aria-hidden="true">·</span>
+                <span class="hud-time" id="hud-time">--:--:--</span>
+            </div>
         </div>
     </header>
 
@@ -303,21 +307,6 @@
 
     </div><!-- .content-wrap -->
 
-    <footer class="footer-bar">
-        <span class="footer-copy">© <span id="footer-year">2025</span> Stefano Aruta. Tutti i diritti riservati.</span>
-        <span class="footer-brand">aruta.sh</span>
-        <div class="footer-socials">
-            <a href="https://twitch.tv/aruta.sh"     target="_blank" rel="noopener" title="Twitch"><i class="fab fa-twitch"></i></a>
-            <a href="https://kick.com/aruta_sh"      target="_blank" rel="noopener" title="Kick"><i class="fas fa-broadcast-tower"></i></a>
-            <a href="https://youtube.com/@aruta.sh"  target="_blank" rel="noopener" title="YouTube"><i class="fab fa-youtube"></i></a>
-            <a href="https://twitter.com/aruta.sh"   target="_blank" rel="noopener" title="Twitter/X"><i class="fab fa-twitter"></i></a>
-            <a href="https://instagram.com/aruta_sr" target="_blank" rel="noopener" title="Instagram"><i class="fab fa-instagram"></i></a>
-            <a href="https://github.com/Arutosio"    target="_blank" rel="noopener" title="GitHub"><i class="fab fa-github"></i></a>
-        </div>
-        <button class="footer-share" id="share-btn" title="Share" aria-label="Share this site">
-            <i class="fas fa-share-alt"></i>
-        </button>
-    </footer>
 </main>
 
 <script src="JavaScript/config.js"></script>

@@ -296,7 +296,7 @@ html.magic-cursor-active, html.magic-cursor-active * { cursor: none !important; 
 #app {
     position: relative; z-index: 2; min-height: 100vh;
     display: flex; flex-direction: column; align-items: center;
-    padding: 76px 24px 70px; transition: opacity 0.5s;
+    padding: 24px 24px 60px; transition: opacity 0.5s;
 }
 #app.hidden  { opacity: 0; pointer-events: none; }
 #app.visible { animation: pageReveal 1s cubic-bezier(0.22,1,0.36,1) forwards; }
@@ -308,29 +308,50 @@ html.magic-cursor-active, html.magic-cursor-active * { cursor: none !important; 
 /* ══════════════════════════════
    HUD BAR
 ══════════════════════════════ */
-.hud-bar {
-    position: fixed; top: 12px; left: 50%; transform: translateX(-50%); z-index: 100;
-    display: flex; align-items: stretch;
-    padding: 0 8px; height: 46px;
-    width: auto; max-width: calc(100vw - 32px);
+.taskbar {
+    position: fixed; bottom: 0; left: 0; right: 0; z-index: 100;
+    display: flex; align-items: stretch; justify-content: space-between;
+    padding: 0 12px; height: 48px;
     background: var(--hud-bg);
     backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px);
-    border: 1px solid var(--card-border);
-    border-radius: 14px;
-    box-shadow: 0 4px 24px rgba(0, 0, 0, 0.3), 0 0 1px rgba(255, 255, 255, 0.05), inset 0 1px 0 rgba(255, 255, 255, 0.04);
-    transition: background 0.5s, border-color 0.5s, box-shadow 0.5s;
+    border-top: 1px solid var(--card-border);
+    box-shadow: 0 -4px 24px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.04);
+    transition: background 0.5s, border-color 0.5s;
 }
-.hud-left  { display: flex; align-items: stretch; gap: 0; flex-shrink: 0; }
-.hud-right { display: flex; align-items: stretch; gap: 0; flex-shrink: 0; }
+.taskbar-left  { display: flex; align-items: stretch; gap: 0; flex-shrink: 0; }
+.taskbar-tray  { display: flex; align-items: stretch; gap: 0; flex-shrink: 0; }
 
-.hud-rune {
-    font-size: clamp(1rem, 2.2vw, 1.3rem); color: var(--gold); opacity: 0.75;
-    display: flex; align-items: center; padding: 0 6px;
+.taskbar-brand {
+    font-size: 1.3rem; color: var(--gold);
+    display: flex; align-items: center; padding: 0 10px;
+    cursor: default;
     animation: runeFloat 3s ease-in-out infinite alternate;
+}
+.taskbar-sep {
+    width: 1px; margin: 10px 4px;
+    background: var(--card-border);
 }
 @keyframes runeFloat {
     from { transform: translateY(0);   opacity: 0.75; }
     to   { transform: translateY(-2px); opacity: 1; }
+}
+
+/* System tray buttons */
+.tray-btn {
+    width: 40px; height: 100%;
+    display: flex; align-items: center; justify-content: center;
+    color: var(--text-dim); font-size: 0.9rem;
+    background: transparent; border: none; cursor: pointer;
+    transition: color 0.2s, text-shadow 0.2s;
+}
+.tray-btn:hover {
+    color: var(--gold);
+    text-shadow: 0 0 8px rgba(255,200,87,0.3);
+}
+
+/* Taskbar clock (system tray) */
+.taskbar-clock {
+    display: flex; align-items: center; gap: 3px; padding: 0 8px;
 }
 
 /* Section nav — firefly buttons */
@@ -397,7 +418,7 @@ html.magic-cursor-active, html.magic-cursor-active * { cursor: none !important; 
 }
 
 /* Clock — fills center space */
-.hud-clock { display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 3px; flex: 1; min-width: 0; }
+/* Clock is now inside .taskbar-clock */
 .hud-time  { font-size: clamp(1rem, 2.5vw, 1.35rem); font-weight: 900; letter-spacing: 0.04em; line-height: 1; color: var(--gold); transition: color 0.5s; font-variant-numeric: tabular-nums; }
 .hud-date  { font-size: clamp(1rem, 2.5vw, 1.35rem); font-weight: 700; letter-spacing: 0.04em; line-height: 1; color: var(--text-dim); transition: color 0.5s; font-variant-numeric: tabular-nums; }
 .hud-clock-sep { color: var(--text-faint); font-size: 0.8rem; opacity: 0.4; }
@@ -966,35 +987,7 @@ html.magic-cursor-active, html.magic-cursor-active * { cursor: none !important; 
 .link-card.instagram { --pc: #E1306C; }
 .link-card.github    { --pc: #c0c0c0; }
 
-/* ══════════════════════════════
-   FOOTER BAR
-══════════════════════════════ */
-.footer-bar {
-    position: fixed; bottom: 0; left: 0; right: 0; z-index: 100;
-    display: flex; align-items: center; justify-content: space-between;
-    gap: 10px; padding: 0 18px; height: 44px;
-    background: var(--hud-bg);
-    backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px);
-    border-top: 1px solid var(--card-border);
-    transition: background 0.5s, border-color 0.5s;
-}
-.footer-copy  { font-size: 0.82rem; font-weight: 700; color: var(--text-dim); letter-spacing: 0.06em; white-space: nowrap; transition: color 0.5s; }
-.footer-brand { font-size: 0.90rem; font-weight: 700; color: var(--gold); opacity: 1; letter-spacing: 0.10em; transition: color 0.5s, opacity 0.5s; text-shadow: 0 0 10px rgba(255, 200, 87, 0.2); }
-.footer-socials { display: flex; align-items: center; gap: 12px; }
-.footer-socials a {
-    color: var(--text-dim); font-size: 1.05rem; text-decoration: none;
-    transition: color 0.25s, transform 0.25s, text-shadow 0.25s;
-}
-.footer-socials a:hover {
-    transform: translateY(-2px);
-    text-shadow: 0 0 10px currentColor;
-}
-.footer-socials a[title="Twitch"]:hover    { color: #9146ff; }
-.footer-socials a[title="Kick"]:hover      { color: #53fc18; }
-.footer-socials a[title="YouTube"]:hover   { color: #ff4444; }
-.footer-socials a[title="Twitter/X"]:hover { color: #1da1f2; }
-.footer-socials a[title="Instagram"]:hover { color: #e1306c; }
-.footer-socials a[title="GitHub"]:hover    { color: #ffc857; }
+/* Footer removed — content merged into taskbar */
 
 .interest-card:focus-visible,
 .project-card:focus-visible,
@@ -1023,32 +1016,29 @@ html.magic-cursor-active, html.magic-cursor-active * { cursor: none !important; 
 /* ── Responsive HUD priority (highest → lowest): sec-nav, theme, lang, date, time, rune ── */
 
 @media (max-width: 720px) {
-    .hud-clock { gap: 4px; }
+    .taskbar-clock { gap: 4px; }
     .hud-time  { font-size: 1.05rem; }
     .hud-date  { font-size: 1.05rem; }
 }
 
 @media (max-width: 640px) {
-    #app { padding: 68px 16px 52px; }
-    .hud-bar   { height: 40px; top: 8px; padding: 0 6px; border-radius: 12px; }
-    .sec-btn   { font-size: 0.82rem; padding: 0 10px; }
-    .theme-btn { width: 40px; }
-    .hud-date      { display: none; }      /* date gone first */
+    #app { padding: 16px 16px 56px; }
+    .taskbar { height: 44px; padding: 0 6px; }
+    .sec-btn { font-size: 0.82rem; padding: 0 10px; }
+    .hud-date      { display: none; }
     .hud-clock-sep { display: none; }
-    .hud-time  { font-size: 1rem; }
-    /* frame auto-scales */
+    .hud-time  { font-size: 0.9rem; }
     .projects-grid { grid-template-columns: 1fr; }
     .proj-stat--date { margin-left: 0; }
     .portrait-img-wrap  { width: 188px; height: 188px; }
     .interest-grid { grid-template-columns: 1fr; }
     .link-cards { grid-template-columns: 1fr; }
     .link-card  { padding: 16px 18px; }
-    .footer-copy { display: none; }
-    .footer-socials a { font-size: 1rem; }
+    .taskbar-sep { display: none; }
 }
 
 @media (max-width: 500px) {
-    .hud-clock { display: none; }          /* time gone next */
+    .taskbar-clock { display: none; }
 }
 
 @media (max-width: 420px) {
@@ -1056,13 +1046,12 @@ html.magic-cursor-active, html.magic-cursor-active * { cursor: none !important; 
     .sec-btn    { font-size: 1rem; padding: 0 8px; }
     .sec-btn.active { text-shadow: 0 0 8px rgba(255,255,255,0.5); }
     .char-name  { font-size: 2rem; }
-    .hud-rune   { display: none; }         /* decorative rune gone last */
-    /* frame auto-scales */
+    .taskbar-brand { display: none; }
     .portrait-img-wrap  { width: 162px; height: 162px; }
 }
 
 @media (max-height: 500px) and (orientation: landscape) {
-    #app { padding: 58px 20px 36px; }
+    #app { padding: 16px 20px 56px; }
     .magic-circle-frame { width: min(300px, 80vw); height: min(300px, 80vw); }
 }
 
@@ -1133,19 +1122,10 @@ html.magic-cursor-active, html.magic-cursor-active * { cursor: none !important; 
 /* ══════════════════════════════
    SHARE BUTTON
 ══════════════════════════════ */
-.footer-share {
-    color: var(--text-dim); font-size: 1rem;
-    padding: 4px 8px; border: none; background: none;
-    cursor: pointer;
-    transition: color 0.2s, transform 0.2s, text-shadow 0.2s;
-}
-.footer-share:hover {
-    color: var(--gold); transform: translateY(-2px);
-    text-shadow: 0 0 10px rgba(255,200,87,0.4);
-}
-.footer-share.share-copied {
-    color: #53fc18;
-    text-shadow: 0 0 10px rgba(83,252,24,0.4);
+/* Share copied feedback (used on #share-btn .tray-btn) */
+.share-copied {
+    color: #53fc18 !important;
+    text-shadow: 0 0 10px rgba(83,252,24,0.4) !important;
 }
 
 /* ══════════════════════════════
@@ -1234,17 +1214,7 @@ html.magic-cursor-active, html.magic-cursor-active * { cursor: none !important; 
 /* ══════════════════════════════
    SOUND BUTTON
 ══════════════════════════════ */
-.sound-btn {
-    width: 40px; height: 100%;
-    display: flex; align-items: center; justify-content: center;
-    color: var(--text-dim); font-size: 0.9rem;
-    background: transparent; border: none; cursor: pointer;
-    transition: color 0.2s, text-shadow 0.2s;
-}
-.sound-btn:hover {
-    color: var(--gold);
-    text-shadow: 0 0 8px rgba(255,200,87,0.3);
-}
+/* Sound button now uses .tray-btn class */
 
 /* ══════════════════════════════
    SEASONAL PARTICLES

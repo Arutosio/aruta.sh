@@ -146,9 +146,6 @@ document.addEventListener('DOMContentLoaded', () => {
     updateThemeIcon();
     setActiveLangBtn(currentLang);
 
-    const yearEl = document.getElementById('footer-year');
-    if (yearEl) yearEl.textContent = new Date().getFullYear();
-
     initRuneParticles();
     initMagicCursor();
     initParallax();
