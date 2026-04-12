@@ -40,7 +40,11 @@ const i18n = {
         proj_created: 'Creato',
         proj_updated: 'Aggiornato',
         proj_loading: 'Consultando gli archivi...',
-        proj_error: 'Pergamena non trovata'
+        proj_error: 'Pergamena non trovata',
+        live_schedule_title: '✦ Prossimi Rituali ✦',
+        live_day_tue: 'Martedì',
+        live_day_thu: 'Giovedì',
+        live_day_sat: 'Sabato'
     },
     en: {
         char_class: 'Streamer · Programmer · Adventurer',
@@ -75,7 +79,11 @@ const i18n = {
         proj_created: 'Created',
         proj_updated: 'Updated',
         proj_loading: 'Consulting the archives...',
-        proj_error: 'Scroll not found'
+        proj_error: 'Scroll not found',
+        live_schedule_title: '✦ Upcoming Rituals ✦',
+        live_day_tue: 'Tuesday',
+        live_day_thu: 'Thursday',
+        live_day_sat: 'Saturday'
     },
     es: {
         char_class: 'Streamer · Programador · Aventurero',
@@ -110,7 +118,11 @@ const i18n = {
         proj_created: 'Creado',
         proj_updated: 'Actualizado',
         proj_loading: 'Consultando los archivos...',
-        proj_error: 'Pergamino no encontrado'
+        proj_error: 'Pergamino no encontrado',
+        live_schedule_title: '✦ Próximos Rituales ✦',
+        live_day_tue: 'Martes',
+        live_day_thu: 'Jueves',
+        live_day_sat: 'Sábado'
     },
     ja: {
         char_class: 'ストリーマー · プログラマー · 冒険者',
@@ -145,7 +157,11 @@ const i18n = {
         proj_created: '作成日',
         proj_updated: '更新日',
         proj_loading: '古文書を調べています...',
-        proj_error: '巻物が見つかりません'
+        proj_error: '巻物が見つかりません',
+        live_schedule_title: '✦ 次の儀式 ✦',
+        live_day_tue: '火曜日',
+        live_day_thu: '木曜日',
+        live_day_sat: '土曜日'
     },
     fn: {
         char_class: 'ᛊᛏᚱᛖᚨᛗᛖᚱ · ᛈᚱᛟᚷᚱᚨᛗᛗᛖᚱ · ᚨᛞᚹᛖᚾᛏᚢᚱᛖᚱ',
@@ -180,7 +196,11 @@ const i18n = {
         proj_created: 'ᚲᚱᛖᚨᛏᛖᛞ',
         proj_updated: 'ᚢᛈᛞᚨᛏᛖᛞ',
         proj_loading: 'ᚲᛟᚾᛊᚢᛚᛏᛁᚾᚷ...',
-        proj_error: 'ᛊᚲᚱᛟᛚᛚ ᚾᛟᛏ ᚠᛟᚢᚾᛞ'
+        proj_error: 'ᛊᚲᚱᛟᛚᛚ ᚾᛟᛏ ᚠᛟᚢᚾᛞ',
+        live_schedule_title: '✦ ᚢᛈᚲᛟᛗᛁᚾᚷ ᚱᛁᛏᚢᚨᛚᛊ ✦',
+        live_day_tue: 'ᛏᚢᛖᛊᛞᚨᛃ',
+        live_day_thu: 'ᚦᚢᚱᛊᛞᚨᛃ',
+        live_day_sat: 'ᛊᚨᛏᚢᚱᛞᚨᛃ'
     }
 };
 

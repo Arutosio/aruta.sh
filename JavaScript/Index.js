@@ -1439,6 +1439,35 @@ function initSections() {
             }
         })
     );
+
+    // Mobile swipe between sections
+    let touchStartX = 0;
+    let touchStartY = 0;
+    const SWIPE_THRESHOLD = 60;
+
+    document.addEventListener('touchstart', e => {
+        touchStartX = e.touches[0].clientX;
+        touchStartY = e.touches[0].clientY;
+    }, { passive: true });
+
+    document.addEventListener('touchend', e => {
+        const dx = e.changedTouches[0].clientX - touchStartX;
+        const dy = e.changedTouches[0].clientY - touchStartY;
+        // Only horizontal swipes (not vertical scrolling)
+        if (Math.abs(dx) < SWIPE_THRESHOLD || Math.abs(dy) > Math.abs(dx)) return;
+
+        const sections = ['home', 'about', 'live', 'links'];
+        const currentBtn = document.querySelector('.sec-btn.active');
+        if (!currentBtn) return;
+        const currentIdx = sections.indexOf(currentBtn.dataset.sec);
+        if (currentIdx < 0) return;
+
+        const nextIdx = dx < 0 ? currentIdx + 1 : currentIdx - 1;
+        if (nextIdx < 0 || nextIdx >= sections.length) return;
+
+        const nextBtn = document.querySelector(`.sec-btn[data-sec="${sections[nextIdx]}"]`);
+        if (nextBtn) nextBtn.click();
+    }, { passive: true });
 }
 
 /* ════════════════════════════
@@ -1487,6 +1516,15 @@ function setActiveLangBtn(lang) {
    THEME TOGGLE
 ════════════════════════════ */
 function toggleTheme() {
+    // Ripple transition effect
+    const ripple = document.createElement('div');
+    ripple.className = 'theme-ripple';
+    const btnRect = document.getElementById('theme-btn').getBoundingClientRect();
+    ripple.style.left = btnRect.left + btnRect.width / 2 + 'px';
+    ripple.style.top = btnRect.top + btnRect.height / 2 + 'px';
+    document.body.appendChild(ripple);
+    setTimeout(() => ripple.remove(), 800);
+
     currentTheme = currentTheme === 'dark' ? 'light' : 'dark';
     _isLight = currentTheme === 'light';
     document.documentElement.setAttribute('data-theme', currentTheme);
@@ -1541,14 +1579,21 @@ function updateThemeIcon() {
     function triggerRuneStorm() {
         eggActive = true;
         const RUNES = RUNE_SET;
-        const COUNT = 80;
+        const COUNT = 120;
         const container = document.createElement('div');
         container.style.cssText = 'position:fixed;inset:0;z-index:9998;pointer-events:none;overflow:hidden;';
         document.body.appendChild(container);
 
         // Secret message
         const msg = document.createElement('div');
-        msg.textContent = '✦ You found the secret spell ✦';
+        const eggMessages = {
+            it: '✦ Hai trovato l\'incantesimo segreto ✦',
+            en: '✦ You found the secret spell ✦',
+            es: '✦ Encontraste el hechizo secreto ✦',
+            ja: '✦ 秘密の呪文を見つけた ✦',
+            fn: '✦ ᛃᛟᚢ ᚠᛟᚢᚾᛞ ᚦᛖ ᛊᛖᚲᚱᛖᛏ ᛊᛈᛖᛚᛚ ✦'
+        };
+        msg.textContent = eggMessages[currentLang] || eggMessages.en;
         msg.style.cssText = `
             position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:9999;
             font-family:'IM Fell English',serif;font-size:clamp(1.5rem,4vw,2.5rem);
@@ -1561,7 +1606,7 @@ function updateThemeIcon() {
 
         // Screen flash
         const flash = document.createElement('div');
-        flash.style.cssText = 'position:fixed;inset:0;z-index:9997;background:rgba(167,139,250,0.15);pointer-events:none;transition:opacity 1.5s;';
+        flash.style.cssText = 'position:fixed;inset:0;z-index:9997;background:radial-gradient(circle at 50% 50%, rgba(255,200,87,0.15), rgba(167,139,250,0.1));pointer-events:none;transition:opacity 1.5s;';
         document.body.appendChild(flash);
 
         // Spawn rune rain
@@ -1572,9 +1617,9 @@ function updateThemeIcon() {
             const size = 14 + Math.random() * 24;
             const dur = 2 + Math.random() * 3;
             const delay = Math.random() * 2;
-            const isGold = Math.random() > 0.5;
-            const color = isGold ? '#f0e880' : '#8aaf30';
-            const glow = isGold ? 'rgba(255,200,87,0.6)' : 'rgba(255,200,87,0.4)';
+            const rand = Math.random();
+            const color = rand > 0.6 ? '#ffc857' : rand > 0.3 ? '#a78bfa' : '#e8c84a';
+            const glow = rand > 0.5 ? 'rgba(255,200,87,0.6)' : 'rgba(167,139,250,0.5)';
 
             rune.textContent = char;
             rune.style.cssText = `

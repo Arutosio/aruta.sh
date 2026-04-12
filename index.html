@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Aruta.sh — Tome of the Wandering Mage</title>
     <meta name="description" content="Stefano Aruta — Streamer, Programmer, Adventurer.">
-    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🧙</text></svg>">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='45' fill='%230c0a1a' stroke='%23ffc857' stroke-width='3'/><text x='50' y='62' text-anchor='middle' font-size='42' fill='%23a78bfa' font-family='serif'>ᚨ</text></svg>">
     <meta name="theme-color" id="meta-theme-color" content="#0c0a1a">
     <meta property="og:type"        content="website">
     <meta property="og:url"         content="https://aruta.sh">
@@ -18,6 +18,9 @@
     <meta name="twitter:site"       content="@arutash">
     <meta name="twitter:title"      content="Aruta.sh — The Wandering Mage">
     <meta name="twitter:image"      content="https://aruta.sh/Images/aru2_meta.png">
+    <meta name="twitter:description" content="Streamer · Programmer · Adventurer. Watch live on Twitch, Kick & YouTube.">
+    <meta name="robots" content="index, follow">
+    <meta name="author" content="Stefano Aruta">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=IM+Fell+English:ital@0;1&display=swap" rel="stylesheet">
@@ -246,10 +249,18 @@
                 </div>
             </div>
 
-            <!-- Offline message -->
+            <!-- Offline message with schedule -->
             <div class="live-offline" id="live-offline" style="display: none;">
                 <span class="live-offline-icon" aria-hidden="true">🔮</span>
                 <p class="live-offline-text" data-i18n="live_offline">Il mago non è nel reame... segui per essere avvisato del prossimo rituale.</p>
+                <div class="live-schedule">
+                    <h3 class="live-schedule-title" data-i18n="live_schedule_title">✦ Prossimi Rituali ✦</h3>
+                    <div class="live-schedule-items">
+                        <div class="live-schedule-item"><span class="live-schedule-day" data-i18n="live_day_tue">Martedì</span><span class="live-schedule-time">21:00 CET</span></div>
+                        <div class="live-schedule-item"><span class="live-schedule-day" data-i18n="live_day_thu">Giovedì</span><span class="live-schedule-time">21:00 CET</span></div>
+                        <div class="live-schedule-item"><span class="live-schedule-day" data-i18n="live_day_sat">Sabato</span><span class="live-schedule-time">16:00 CET</span></div>
+                    </div>
+                </div>
             </div>
         </section>
 
