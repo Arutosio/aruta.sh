@@ -151,6 +151,13 @@ function openWindow(id) {
     // Trigger section entrance effects
     animateSectionEntrance(id);
 
+    // Lazy-load live iframes on first open
+    if (id === 'live' && !window._liveLoaded) {
+        window._liveLoaded = true;
+        const firstTab = document.querySelector('.live-tab.active');
+        if (firstTab) firstTab.click();
+    }
+
     // Special: bio typewriter on first about open
     if (id === 'about' && !openWindow._bioTyped) {
         openWindow._bioTyped = true;

@@ -77,7 +77,7 @@ function buildClipGallery() {
             let src = '';
             if (p === 'twitch') src = `https://clips.twitch.tv/embed?clip=${id}&parent=${location.hostname}`;
             else if (p === 'youtube') src = `https://www.youtube.com/embed/${id}?autoplay=1`;
-            this.outerHTML = `<iframe src="${src}" allowfullscreen allow="autoplay; encrypted-media" title="${clip.title}"></iframe>`;
+            this.outerHTML = `<iframe src="${src}" allowfullscreen allow="autoplay" title="${clip.title}"></iframe>`;
         });
         grid.appendChild(card);
     });
@@ -106,12 +106,14 @@ let projectCache = null;
  * @returns {Promise<number>} total commit count
  */
 async function fetchCommitCount(slug) {
-    const r = await fetch(`https://api.github.com/repos/${slug}/commits?per_page=1`);
-    if (!r.ok) return 0;
-    const link = r.headers.get('Link');
-    if (!link) return 1;
-    const match = link.match(/page=(\d+)>;\s*rel="last"/);
-    return match ? parseInt(match[1], 10) : 1;
+    try {
+        const r = await fetch(`https://api.github.com/repos/${slug}/commits?per_page=1`);
+        if (!r.ok) return 0;
+        const link = r.headers.get('Link');
+        if (!link) return 1;
+        const match = link.match(/page=(\d+)>;\s*rel="last"/);
+        return match ? parseInt(match[1], 10) : 1;
+    } catch { return 0; }
 }
 
 /**
@@ -120,17 +122,21 @@ async function fetchCommitCount(slug) {
  */
 async function fetchProjects() {
     if (projectCache) return projectCache;
-    const results = await Promise.allSettled(
-        PROJECTS.map(async slug => {
-            const [repoRes, commits] = await Promise.all([
-                fetch(`https://api.github.com/repos/${slug}`).then(r => r.ok ? r.json() : Promise.reject(r.status)),
-                fetchCommitCount(slug)
-            ]);
-            repoRes._commits = commits;
-            return repoRes;
-        })
-    );
-    projectCache = results.map((r, i) => r.status === 'fulfilled' ? r.value : { _error: true, _slug: PROJECTS[i] });
+    try {
+        const results = await Promise.allSettled(
+            PROJECTS.map(async slug => {
+                const [repoRes, commits] = await Promise.all([
+                    fetch(`https://api.github.com/repos/${slug}`).then(r => r.ok ? r.json() : Promise.reject(r.status)),
+                    fetchCommitCount(slug)
+                ]);
+                repoRes._commits = commits;
+                return repoRes;
+            })
+        );
+        projectCache = results.map((r, i) => r.status === 'fulfilled' ? r.value : { _error: true, _slug: PROJECTS[i] });
+    } catch {
+        projectCache = PROJECTS.map(slug => ({ _error: true, _slug: slug }));
+    }
     return projectCache;
 }
 
@@ -324,7 +330,7 @@ function initLiveSection() {
         playerEl.innerHTML = `<iframe
             src="${config.player(config.channel)}"
             allowfullscreen
-            allow="autoplay; encrypted-media"
+            allow="autoplay"
             title="${platform} player"
         ></iframe>`;
 
@@ -338,7 +344,10 @@ function initLiveSection() {
         tab.addEventListener('click', () => switchPlatform(tab.dataset.platform));
     });
 
-    switchPlatform('twitch');
+    // Placeholder — iframes load lazily when Live window opens (see os.js openWindow)
+    if (playerEl) playerEl.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:var(--text-dim);font-style:italic;font-family:inherit;">Select a platform above</div>';
+    if (chatEl) chatEl.innerHTML = '';
+    window._liveLoaded = false;
 }
 
 /* ────────────────────────────────
