@@ -371,13 +371,10 @@ function initStartMenu() {
         });
     });
 
-    // Share in start menu
+    // Share in start menu — close menu on click (share logic in extras.js)
     const shareBtn = document.getElementById('start-share');
     if (shareBtn) {
-        shareBtn.addEventListener('click', async () => {
-            closeMenu();
-            document.getElementById('share-btn')?.click();
-        });
+        shareBtn.addEventListener('click', () => closeMenu());
     }
 
     // Close menu when clicking outside

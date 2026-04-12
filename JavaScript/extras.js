@@ -165,7 +165,7 @@ function initAchievements() {
 
 /** Initialize the share button with Web Share API or clipboard fallback */
 function initShareButton() {
-    const btn = document.getElementById('share-btn');
+    const btn = document.getElementById('start-share');
     if (!btn) return;
 
     btn.addEventListener('click', async () => {
