@@ -310,13 +310,16 @@ html.magic-cursor-active, html.magic-cursor-active * { cursor: none !important; 
    HUD BAR
 ══════════════════════════════ */
 .hud-bar {
-    position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+    position: fixed; top: 12px; left: 50%; transform: translateX(-50%); z-index: 100;
     display: flex; align-items: stretch;
-    padding: 0; height: 52px;
+    padding: 0 8px; height: 46px;
+    width: auto; max-width: calc(100vw - 32px);
     background: var(--hud-bg);
     backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px);
-    border-bottom: 1px solid var(--card-border);
-    transition: background 0.5s, border-color 0.5s;
+    border: 1px solid var(--card-border);
+    border-radius: 14px;
+    box-shadow: 0 4px 24px rgba(0, 0, 0, 0.3), 0 0 1px rgba(255, 255, 255, 0.05);
+    transition: background 0.5s, border-color 0.5s, box-shadow 0.5s;
 }
 .hud-left  { display: flex; align-items: stretch; gap: 0; flex-shrink: 0; }
 .hud-right { display: flex; align-items: stretch; gap: 0; flex-shrink: 0; }
@@ -862,7 +865,7 @@ html.magic-cursor-active, html.magic-cursor-active * { cursor: none !important; 
 
 @media (max-width: 640px) {
     #app { padding: 68px 16px 52px; }
-    .hud-bar   { height: 44px; }
+    .hud-bar   { height: 40px; top: 8px; padding: 0 6px; border-radius: 12px; }
     .sec-btn   { font-size: 0.82rem; padding: 0 10px; }
     .theme-btn { width: 40px; }
     .hud-date      { display: none; }      /* date gone first */
