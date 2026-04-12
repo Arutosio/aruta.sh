@@ -296,7 +296,7 @@ html.magic-cursor-active, html.magic-cursor-active * { cursor: none !important; 
 #app {
     position: relative; z-index: 2; min-height: 100vh;
     display: block;
-    padding: 0 0 48px; transition: opacity 0.5s;
+    padding: 48px 0 0; transition: opacity 0.5s;
 }
 #app.hidden  { opacity: 0; pointer-events: none; }
 #app.visible { animation: pageReveal 1s cubic-bezier(0.22,1,0.36,1) forwards; }
@@ -309,13 +309,13 @@ html.magic-cursor-active, html.magic-cursor-active * { cursor: none !important; 
    HUD BAR
 ══════════════════════════════ */
 .taskbar {
-    position: fixed; bottom: 0; left: 0; right: 0; z-index: 100;
+    position: fixed; top: 0; left: 0; right: 0; z-index: 100;
     display: flex; align-items: stretch; justify-content: space-between;
     padding: 0 12px; height: 48px;
     background: var(--hud-bg);
     backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px);
-    border-top: 1px solid var(--card-border);
-    box-shadow: 0 -4px 24px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.04);
+    border-bottom: 1px solid var(--card-border);
+    box-shadow: 0 4px 24px rgba(0, 0, 0, 0.3), inset 0 -1px 0 rgba(255, 255, 255, 0.04);
     transition: background 0.5s, border-color 0.5s;
 }
 .taskbar-left  { display: flex; align-items: stretch; gap: 0; flex-shrink: 0; }
@@ -1167,12 +1167,12 @@ html.magic-cursor-active, html.magic-cursor-active * { cursor: none !important; 
 }
 
 @media (max-width: 640px) {
-    #app { padding: 0 0 44px; }
+    #app { padding: 44px 0 0; }
     .desktop-icons { display: none; }
     .os-window {
         position: fixed !important;
-        top: 0 !important; left: 0 !important; right: 0 !important;
-        bottom: 48px !important;
+        top: 44px !important; left: 0 !important; right: 0 !important;
+        bottom: 0 !important;
         width: 100% !important;
         max-height: none !important;
         border-radius: 0 !important;
@@ -1182,7 +1182,7 @@ html.magic-cursor-active, html.magic-cursor-active * { cursor: none !important; 
     }
     .win-titlebar {
         border-radius: 0;
-        cursor: default; /* No drag on mobile */
+        cursor: default;
     }
     .win-content { border-radius: 0; }
     .taskbar { height: 44px; padding: 0 6px; }
@@ -1199,7 +1199,7 @@ html.magic-cursor-active, html.magic-cursor-active * { cursor: none !important; 
     .taskbar-sep { display: none; }
     .start-menu {
         width: 100%;
-        border-radius: 12px 12px 0 0;
+        border-radius: 0 0 12px 12px;
     }
 }
 
@@ -1356,7 +1356,7 @@ html.magic-cursor-active, html.magic-cursor-active * { cursor: none !important; 
    ACHIEVEMENT TOASTS
 ══════════════════════════════ */
 .achievement-toast {
-    position: fixed; bottom: 60px; right: 20px; z-index: 9990;
+    position: fixed; bottom: 20px; right: 20px; z-index: 9990;
     display: flex; align-items: center; gap: 12px;
     padding: 14px 20px;
     background: var(--hud-bg);
@@ -1382,61 +1382,33 @@ html.magic-cursor-active, html.magic-cursor-active * { cursor: none !important; 
 ══════════════════════════════ */
 /* Sound button now uses .tray-btn class */
 
-/* ══════════════════════════════
-   SEASONAL PARTICLES
-══════════════════════════════ */
-.seasonal-particles {
-    position: fixed; inset: 0; z-index: 1;
-    pointer-events: none; overflow: hidden;
-}
-.seasonal-particle {
-    position: absolute; top: -5%;
-    animation: seasonalFall linear infinite;
-    opacity: 0.6;
-}
-@keyframes seasonalFall {
-    0%   { transform: translateY(-10vh) rotate(0deg); opacity: 0; }
-    10%  { opacity: 0.6; }
-    90%  { opacity: 0.4; }
-    100% { transform: translateY(110vh) rotate(360deg); opacity: 0; }
-}
-.seasonal-halloween { filter: drop-shadow(0 0 4px rgba(255,140,0,0.4)); }
-.seasonal-winter    { color: #aaddff; filter: drop-shadow(0 0 3px rgba(170,220,255,0.4)); }
-.seasonal-spring    { filter: drop-shadow(0 0 3px rgba(255,180,200,0.4)); }
-
-/* Respect reduced motion */
-@media (prefers-reduced-motion: reduce) {
-    .seasonal-particles { display: none; }
-}
-
-/* Lite mode: no seasonal */
-html.lite-mode .seasonal-particles { display: none; }
+/* Seasonal particles removed */
 
 /* ══════════════════════════════
    START MENU
 ══════════════════════════════ */
 .start-menu {
     position: fixed;
-    bottom: 48px;
+    top: 48px;
     left: 0;
     width: 280px;
     background: var(--hud-bg);
     backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px);
     border: 1px solid var(--card-border);
-    border-bottom: none;
-    border-radius: 10px 10px 0 0;
-    box-shadow: 0 -8px 40px rgba(0,0,0,0.4), 0 0 1px rgba(255,255,255,0.05);
+    border-top: none;
+    border-radius: 0 0 10px 10px;
+    box-shadow: 0 8px 40px rgba(0,0,0,0.4), 0 0 1px rgba(255,255,255,0.05);
     z-index: 200;
     animation: startMenuOpen 0.25s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
     overflow: hidden;
 }
 @keyframes startMenuOpen {
-    from { opacity: 0; transform: translateY(20px); }
+    from { opacity: 0; transform: translateY(-20px); }
     to   { opacity: 1; transform: translateY(0); }
 }
 @keyframes startMenuClose {
     from { opacity: 1; transform: translateY(0); }
-    to   { opacity: 0; transform: translateY(20px); }
+    to   { opacity: 0; transform: translateY(-20px); }
 }
 .start-header {
     display: flex; align-items: center; gap: 12px;

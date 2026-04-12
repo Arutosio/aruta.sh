@@ -21,50 +21,7 @@ document.addEventListener('visibilitychange', () => {
     _tabVisible = !document.hidden;
 });
 
-/* ════════════════════════════
-   SEASONAL EFFECTS
-════════════════════════════ */
-function getSeasonalEffect() {
-    const m = new Date().getMonth(); // 0-11
-    const d = new Date().getDate();
-    // Halloween: Oct 25 - Nov 2
-    if ((m === 9 && d >= 25) || (m === 10 && d <= 2)) return 'halloween';
-    // Christmas: Dec 15 - Jan 5
-    if ((m === 11 && d >= 15) || (m === 0 && d <= 5)) return 'winter';
-    // Cherry blossom: Mar 20 - Apr 15
-    if ((m === 2 && d >= 20) || (m === 3 && d <= 15)) return 'spring';
-    return null;
-}
-
-function initSeasonalParticles() {
-    const effect = getSeasonalEffect();
-    if (!effect) return;
-
-    const container = document.createElement('div');
-    container.className = 'seasonal-particles';
-    container.setAttribute('aria-hidden', 'true');
-    document.body.appendChild(container);
-
-    const CONFIG = {
-        halloween: { chars: ['🎃', '🦇', '👻', '🕸️'], count: 15, speed: 'slow' },
-        winter:    { chars: ['❄', '✦', '❅', '✧'], count: 25, speed: 'slow' },
-        spring:    { chars: ['🌸', '✿', '❀', '🎐'], count: 20, speed: 'medium' },
-    };
-
-    const cfg = CONFIG[effect];
-    if (!cfg) return;
-
-    for (let i = 0; i < cfg.count; i++) {
-        const p = document.createElement('span');
-        p.className = `seasonal-particle seasonal-${effect}`;
-        p.textContent = cfg.chars[Math.floor(Math.random() * cfg.chars.length)];
-        p.style.left = Math.random() * 100 + '%';
-        p.style.animationDelay = Math.random() * 10 + 's';
-        p.style.animationDuration = (8 + Math.random() * 12) + 's';
-        p.style.fontSize = (0.8 + Math.random() * 1.2) + 'rem';
-        container.appendChild(p);
-    }
-}
+/* Seasonal particles removed */
 
 /* ════════════════════════════
    VISITOR ACHIEVEMENTS
@@ -1659,7 +1616,6 @@ function showApp() {
     initMagicCircleInteraction();
     initAmbientSound();
     initAchievements();
-    initSeasonalParticles();
 
     // Focus home window on load
     const homeWin = document.getElementById('win-home');
@@ -1911,8 +1867,26 @@ function initDrag(win, handle) {
         const touch = e.touches ? e.touches[0] : e;
         const dx = touch.clientX - startX;
         const dy = touch.clientY - startY;
-        win.style.left = (origX + dx) + 'px';
-        win.style.top = (origY + dy) + 'px';
+
+        // Clamp within viewport — keep titlebar always reachable
+        const winW = win.offsetWidth;
+        const winH = win.offsetHeight;
+        const taskbarH = 48;
+        const minVisible = 40; // pixels of window that must stay on screen
+
+        let newX = origX + dx;
+        let newY = origY + dy;
+
+        // Don't go above taskbar
+        newY = Math.max(taskbarH, newY);
+        // Don't go below screen (keep at least titlebar visible)
+        newY = Math.min(window.innerHeight - minVisible, newY);
+        // Don't go too far left/right (keep some of window visible)
+        newX = Math.max(-winW + minVisible, newX);
+        newX = Math.min(window.innerWidth - minVisible, newX);
+
+        win.style.left = newX + 'px';
+        win.style.top = newY + 'px';
     }
 
     function onUp() {
