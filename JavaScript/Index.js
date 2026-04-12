@@ -412,6 +412,7 @@ function initMagicCircleInteraction() {
     let dragAngleStart = 0;
     let lastDragAngle = 0;
     let lastDragTime = 0;
+    let alignmentGrace = true; // block alignment check for first 5s (rings start at 0 = "aligned")
     let alignTriggered = false;
 
     function getAngle(e, rect) {
@@ -501,9 +502,12 @@ function initMagicCircleInteraction() {
     window.addEventListener('mouseup', onUp);
     window.addEventListener('touchend', onUp);
 
+    // Disable alignment grace period after 5s (rings need time to diverge from 0°)
+    setTimeout(() => { alignmentGrace = false; }, 5000);
+
     // Check alignment easter egg: all rings within ±15° of 0
     function checkAlignment() {
-        if (alignTriggered) return;
+        if (alignTriggered || alignmentGrace) return;
         const aligned = rings.every(r => {
             const norm = ((r.angle % 360) + 360) % 360;
             return norm < 15 || norm > 345;
