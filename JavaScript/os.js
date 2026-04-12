@@ -660,6 +660,19 @@ function initSettings() {
         });
     }
 
+    // Wipe button — clears ALL localStorage + sessionStorage and reloads
+    const wipeBtn = document.getElementById('settings-wipe');
+    if (wipeBtn) {
+        wipeBtn.addEventListener('click', () => {
+            const msg = (window.translations && window.translations.settings_wipe_confirm)
+                || 'Delete all locally stored data and reload the page?';
+            if (!confirm(msg)) return;
+            try { localStorage.clear(); } catch (e) {}
+            try { sessionStorage.clear(); } catch (e) {}
+            location.reload();
+        });
+    }
+
     // Performance toggles — enable/disable visual effects
     const perfToggles = {
         'settings-particles': { selector: '#rune-bg', prop: 'display' },

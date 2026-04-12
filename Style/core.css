@@ -8,7 +8,7 @@
 :root {
     --bg:          #0c0a1a;
     --bg-grad:     radial-gradient(ellipse at 50% 40%, #1a1035 0%, #0c0a1a 65%);
-    --card-border: rgba(255, 200, 87, 0.12);
+    --card-border: rgba(255, 200, 87, 0.28);
     --card-glow:   rgba(255, 200, 87, 0.06);
     --gold:        #ffc857;
     --gold-light:  #ffe4a0;
@@ -28,7 +28,7 @@
 [data-theme="light"] {
     --bg:          #f0e8d8;
     --bg-grad:     radial-gradient(ellipse at 50% 30%, #f8f0e0 0%, #ece4d0 50%, #e0d4b8 100%);
-    --card-border: rgba(139, 90, 43, 0.22);
+    --card-border: rgba(139, 90, 43, 0.42);
     --card-glow:   rgba(139, 90, 43, 0.06);
     --gold:        #8b6914;
     --gold-light:  #a07a20;

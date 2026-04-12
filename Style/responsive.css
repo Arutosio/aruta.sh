@@ -13,30 +13,24 @@
 }
 
 @media (max-width: 640px) {
-    .taskbar { top: 0; left: 0; right: 0; height: 40px; border-radius: 0; border: none; border-bottom: 1px solid var(--card-border); }
+    .taskbar { height: 40px; padding: 0 8px; }
     .start-text { display: none; }
-    .taskbar-start { padding: 0 10px; }
+    .taskbar-start { width: 32px; height: 28px; margin: auto 0; padding: 0; }
+    .taskbar-start .start-icon { font-size: 1.1rem; }
+    .tray-btn { width: 30px; height: 26px; }
     .taskbar-tabs { padding: 0 4px; }
     .taskbar-tab { padding: 0 8px; font-size: 0.75rem; }
-    .os-window {
-        position: fixed !important;
-        top: 40px !important; left: 0 !important; right: 0 !important;
-        bottom: 0 !important;
-        width: 100% !important;
-        max-height: none !important;
-        border-radius: 0 !important;
+    .os-window:not(.win-maximized) {
+        width: calc(100vw - 24px) !important;
+        max-height: calc(100vh - 80px) !important;
+        top: 66px !important;
+        left: 12px !important;
         transform: none !important;
-        border: none !important;
-        animation: none !important;
-        margin: 0 !important;
     }
-    .win-titlebar { border-radius: 0; cursor: default; }
-    .win-maximize { display: none; } /* already fullscreen on mobile */
-    .desktop-hero { transform: translate(-50%, -55%); } /* adjust for no margin */
-    .start-menu { top: 40px; left: 0; width: 100%; border-radius: 0; border: none; border-bottom: 1px solid var(--card-border); }
-    .sysinfo-panel { top: 40px; right: 0; width: 100%; border-radius: 0; }
+    .start-menu { top: 60px; left: 12px; right: 12px; width: auto; }
+    .sysinfo-panel { top: 60px; right: 12px; }
     .taskbar-sep { display: none; }
-    #app { padding: 40px 0 0; }
+    #app { padding: 60px 0 0; }
     .desktop-hero .magic-circle-frame { width: min(300px, 80vw); height: min(300px, 80vw); }
     .hud-date      { display: none; }
     .hud-clock-sep { display: none; }
@@ -51,7 +45,7 @@
     }
     .settings-cat span { display: none; }
     .settings-cat { justify-content: center; padding: 10px; }
-    .sysinfo-panel { right: 6px; top: 48px; width: calc(100vw - 12px); }
+    .sysinfo-panel { right: 12px; top: 60px; width: calc(100vw - 24px); }
 }
 
 @media (max-width: 500px) {

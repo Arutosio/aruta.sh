@@ -90,6 +90,7 @@
         </div>
         <!-- Right: system tray -->
         <div class="taskbar-tray">
+            <div class="taskbar-sep" aria-hidden="true"></div>
             <button class="tray-btn" id="sysinfo-btn" title="System Info" aria-label="System info">
                 <i class="fas fa-circle-info"></i>
             </button>
@@ -478,6 +479,10 @@
                             <div class="settings-row">
                                 <div class="settings-label"><span class="settings-icon">🔄</span><div><strong data-i18n="settings_reset">Reset to Defaults</strong><br><small data-i18n="settings_reset_desc">Reset all settings to default values</small></div></div>
                                 <button class="settings-reset-btn" id="settings-reset">Reset</button>
+                            </div>
+                            <div class="settings-row">
+                                <div class="settings-label"><span class="settings-icon">🗑️</span><div><strong data-i18n="settings_wipe">Wipe Local Data</strong><br><small data-i18n="settings_wipe_desc">Delete all locally stored data and reload the page</small></div></div>
+                                <button class="settings-reset-btn settings-wipe-btn" id="settings-wipe">Wipe</button>
                             </div>
                         </div>
                         <!-- About -->

@@ -13,9 +13,9 @@
     padding: 0 12px; height: 44px;
     background: var(--hud-bg);
     backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px);
-    border: 1px solid var(--card-border);
+    border: 1.5px solid var(--card-border);
     border-radius: 12px;
-    box-shadow: 0 4px 24px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.04);
+    box-shadow: 0 4px 24px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.04), inset 0 -1px 0 rgba(255, 200, 87, 0.06);
     transition: background 0.5s, border-color 0.5s;
 }
 .taskbar-left  { display: flex; align-items: stretch; gap: 0; flex-shrink: 0; }
