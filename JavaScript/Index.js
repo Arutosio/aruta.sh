@@ -84,8 +84,8 @@ function initRuneParticles() {
     // dark:  base #6e8efb (blue) → hot #d0eaff (white-blue near cursor)
     // light: base #5a320a (sepia ink) → hot #bc6c14 (amber candlelight near cursor)
     const THEMES = {
-        dark:  { br: 110, bg: 142, bb: 251, hr: 210, hg: 234, hb: 255, trail: '#eef5ff',  tShadow: '#ddeeff' },
-        light: { br:  90, bg:  50, bb:  10, hr: 188, hg: 108, hb:  20, trail: '#7a4e06',  tShadow: 'rgba(122,78,6,0.55)' }
+        dark:  { br: 110, bg: 142, bb: 251, hr: 255, hg: 200, hb: 87, trail: '#ffc857',  tShadow: 'rgba(255,200,87,0.55)' },
+        light: { br:  90, bg:  50, bb:  10, hr: 139, hg: 105, hb:  20, trail: '#8b6914',  tShadow: 'rgba(139,105,20,0.55)' }
     };
     const MOUSE_R = 170;
     const MC_R    = 190;
@@ -527,7 +527,7 @@ function initMagicCircleInteraction() {
 
         // Bright flash
         frame.style.transition = 'filter 0.3s';
-        frame.style.filter = 'drop-shadow(0 0 40px rgba(167,139,250,0.9)) drop-shadow(0 0 80px rgba(192,200,224,0.6)) brightness(1.8)';
+        frame.style.filter = 'drop-shadow(0 0 40px rgba(167,139,250,0.9)) drop-shadow(0 0 80px rgba(255,200,87,0.6)) brightness(1.8)';
 
         // Burst particles from center
         const rect = frame.getBoundingClientRect();
@@ -733,7 +733,7 @@ function initSummonCanvas() {
         const pulse = 0.82 + 0.18 * Math.sin(t * 0.05);
 
         const light = _isLight;
-        const G = light ? 'rgba(90,50,8,'   : 'rgba(192,200,224,';  // ocra / argento
+        const G = light ? 'rgba(90,50,8,'   : 'rgba(255,200,87,';   // ocra / gold
         const P = light ? 'rgba(139,28,34,' : 'rgba(167,139,250,'; // cremisi / viola
         const E = light ? 'rgba(72,40,8,'   : 'rgba(52,211,153,';  // seppia / smeraldo
 
@@ -1476,7 +1476,7 @@ function updateThemeIcon() {
             position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:9999;
             font-family:'IM Fell English',serif;font-size:clamp(1.5rem,4vw,2.5rem);
             color:#fff;text-align:center;pointer-events:none;
-            text-shadow:0 0 20px rgba(167,139,250,0.8),0 0 50px rgba(167,139,250,0.4),0 0 80px rgba(138,175,48,0.3);
+            text-shadow:0 0 20px rgba(167,139,250,0.8),0 0 50px rgba(167,139,250,0.4),0 0 80px rgba(255,200,87,0.3);
             opacity:0;transition:opacity 0.8s;letter-spacing:0.1em;
         `;
         document.body.appendChild(msg);
@@ -1497,7 +1497,7 @@ function updateThemeIcon() {
             const delay = Math.random() * 2;
             const isGold = Math.random() > 0.5;
             const color = isGold ? '#f0e880' : '#8aaf30';
-            const glow = isGold ? 'rgba(240,232,128,0.6)' : 'rgba(138,175,48,0.6)';
+            const glow = isGold ? 'rgba(255,200,87,0.6)' : 'rgba(255,200,87,0.4)';
 
             rune.textContent = char;
             rune.style.cssText = `
