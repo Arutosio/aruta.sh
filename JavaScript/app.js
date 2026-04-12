@@ -108,16 +108,38 @@ document.addEventListener('DOMContentLoaded', () => {
     initClickSpells();
 
     if (sessionStorage.getItem('aruta_summoned')) {
-        // Skip summoning on repeat visits in same session
-        const overlay = document.getElementById('summon-overlay');
-        if (overlay) overlay.remove();
-        showApp();
-    } else {
-        initSummonCanvas();
-        runSummoning(() => {
-            sessionStorage.setItem('aruta_summoned', '1');
+        // Repeat visit — wait for full load then show immediately
+        const reveal = () => {
+            const overlay = document.getElementById('summon-overlay');
+            if (overlay) overlay.remove();
             showApp();
+        };
+        if (document.readyState === 'complete') reveal();
+        else window.addEventListener('load', reveal);
+    } else {
+        // First visit — start summoning animation, but wait for full load before finishing
+        initSummonCanvas();
+        let summonDone = false;
+        let loadDone = document.readyState === 'complete';
+
+        const tryReveal = () => {
+            if (summonDone && loadDone) {
+                sessionStorage.setItem('aruta_summoned', '1');
+                showApp();
+            }
+        };
+
+        runSummoning(() => {
+            summonDone = true;
+            tryReveal();
         });
+
+        if (!loadDone) {
+            window.addEventListener('load', () => {
+                loadDone = true;
+                tryReveal();
+            });
+        }
     }
 
     // Bind taskbar controls
