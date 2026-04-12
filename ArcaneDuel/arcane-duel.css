@@ -3,7 +3,7 @@
    Portable mini-game styles. Import this + arcane-duel.js to
    use Arcane Duel on any page.
 
-   Required: Google Font "IM Fell English" (or change font-family)
+   Required: Google Font "Cinzel" (or change font-family)
    Usage:
      <link rel="stylesheet" href="ArcaneDuel/arcane-duel.css">
      <script src="ArcaneDuel/arcane-duel.js"></script>
@@ -15,7 +15,7 @@
     --ad-gold:   #c0c8e0;
     --ad-purple: #a78bfa;
     --ad-text:   #e0daf0;
-    --ad-font:   'IM Fell English', Georgia, serif;
+    --ad-font:   'Cinzel', Georgia, serif;
 }
 
 /* ══════════════════════════════

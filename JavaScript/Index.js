@@ -80,7 +80,7 @@ function initAchievements() {
     const _origOpenWindow = openWindow;
     // We patch indirectly: check on tab additions
     const origAddTab = addWindowTab;
-    window._achAddTab = function(id, icon, label) {
+    window._achAddTab = function(id) {
         visited.add(id);
         if (visited.size >= 4) unlockAchievement('all_sections');
     };
@@ -1926,13 +1926,18 @@ const WIN_META = {
     settings: { icon: '⚙️', label: 'Settings' },
 };
 
-function addWindowTab(id, icon, label) {
+function addWindowTab(id) {
     const tabs = document.getElementById('taskbar-tabs');
     if (!tabs || tabs.querySelector(`[data-tab="${id}"]`)) return;
+    const meta = WIN_META[id];
+    if (!meta) return;
+    const t = i18n[currentLang];
+    const labelKey = id === 'settings' ? 'sec_settings' : 'sec_' + id;
+    const label = t[labelKey] || meta.label;
     const tab = document.createElement('button');
     tab.className = 'taskbar-tab';
     tab.dataset.tab = id;
-    tab.innerHTML = `${icon} ${label} <span class="taskbar-tab-close" title="Close">\u2715</span>`;
+    tab.innerHTML = `${meta.icon} <span class="tab-label">${label}</span> <span class="taskbar-tab-close" title="Close">\u2715</span>`;
     tab.addEventListener('click', (e) => {
         if (e.target.closest('.taskbar-tab-close')) {
             closeWindow(id);
@@ -2089,7 +2094,7 @@ function openWindow(id) {
 
     // Add taskbar tab
     const meta = WIN_META[id];
-    if (meta) addWindowTab(id, meta.icon, meta.label);
+    if (meta) addWindowTab(id);
     updateActiveTab(id);
 
     // Trigger section entrance effects
@@ -2326,23 +2331,14 @@ function switchLanguage(lang) {
     buildProjectCards(lang);
     typewriterBio(i18n[lang].bio);
     // Update taskbar tab labels
-    const t = i18n[currentLang];
     document.querySelectorAll('.taskbar-tab').forEach(tab => {
         const id = tab.dataset.tab;
         const meta = WIN_META[id];
-        const labelKey = 'sec_' + id;
-        if (meta && t[labelKey]) {
-            const closeSpan = tab.querySelector('.taskbar-tab-close');
-            tab.innerHTML = `${meta.icon} ${t[labelKey]} `;
-            if (closeSpan) tab.appendChild(closeSpan);
-            else {
-                const cs = document.createElement('span');
-                cs.className = 'taskbar-tab-close';
-                cs.title = 'Close';
-                cs.textContent = '\u2715';
-                tab.appendChild(cs);
-            }
-        }
+        if (!meta) return;
+        const labelKey = id === 'settings' ? 'sec_settings' : 'sec_' + id;
+        const newLabel = i18n[currentLang][labelKey] || meta.label;
+        const labelSpan = tab.querySelector('.tab-label');
+        if (labelSpan) labelSpan.textContent = newLabel;
     });
 }
 function setActiveLangBtn(lang) {
@@ -2444,7 +2440,7 @@ function updateThemeIcon() {
         msg.textContent = eggMessages[currentLang] || eggMessages.en;
         msg.style.cssText = `
             position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:9999;
-            font-family:'IM Fell English',serif;font-size:clamp(1.5rem,4vw,2.5rem);
+            font-family:'Cinzel',Georgia,serif;font-size:clamp(1.5rem,4vw,2.5rem);
             color:#fff;text-align:center;pointer-events:none;
             text-shadow:0 0 20px rgba(167,139,250,0.8),0 0 50px rgba(167,139,250,0.4),0 0 80px rgba(255,200,87,0.3);
             opacity:0;transition:opacity 0.8s;letter-spacing:0.1em;
