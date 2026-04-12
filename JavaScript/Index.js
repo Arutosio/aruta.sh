@@ -1651,6 +1651,7 @@ function showApp() {
     buildClipGallery();
     applyTranslations(currentLang);
     startClock();
+    initWindowManager();
     initSections();
     updateTabTitle('home');
     initFireflies();
@@ -1658,6 +1659,10 @@ function showApp() {
     initAmbientSound();
     initAchievements();
     initSeasonalParticles();
+
+    // Focus home window on load
+    const homeWin = document.getElementById('win-home');
+    if (homeWin) focusWindow(homeWin);
 
     // Entrance animation for home section
     setTimeout(() => {
@@ -1699,59 +1704,176 @@ function tickClock() {
 }
 
 /* ════════════════════════════
+   WINDOW MANAGER (Arcane OS)
+════════════════════════════ */
+let topZ = 10;
+
+function initWindowManager() {
+    const desktop = document.getElementById('desktop');
+    if (!desktop) return;
+
+    // Desktop icon double-click → open window
+    desktop.querySelectorAll('.desktop-icon').forEach(icon => {
+        icon.addEventListener('dblclick', () => {
+            const winId = icon.dataset.window;
+            openWindow(winId);
+        });
+        // Single click on mobile
+        icon.addEventListener('click', (e) => {
+            if (window.innerWidth <= 640) {
+                openWindow(icon.dataset.window);
+            }
+        });
+    });
+
+    // Window controls (minimize, close)
+    document.querySelectorAll('.os-window').forEach(win => {
+        const id = win.dataset.window;
+
+        // Titlebar drag
+        const titlebar = win.querySelector('.win-titlebar');
+        if (titlebar) initDrag(win, titlebar);
+
+        // Focus on click anywhere in window
+        win.addEventListener('mousedown', () => focusWindow(win));
+
+        // Minimize button
+        const minBtn = win.querySelector('.win-minimize');
+        if (minBtn) minBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            minimizeWindow(id);
+        });
+
+        // Close button
+        const closeBtn = win.querySelector('.win-close');
+        if (closeBtn) closeBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            closeWindow(id);
+        });
+    });
+}
+
+function openWindow(id) {
+    const win = document.getElementById(`win-${id}`);
+    if (!win) return;
+
+    if (win.style.display === 'none' || !win.style.display) {
+        win.style.display = 'flex';
+        win.style.animation = 'windowOpen 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) forwards';
+    }
+    focusWindow(win);
+
+    // Update taskbar button
+    const btn = document.querySelector(`.sec-btn[data-sec="${id}"]`);
+    if (btn) btn.classList.add('active');
+
+    // Trigger section entrance effects
+    animateSectionEntrance(id);
+
+    // Special: bio typewriter on first about open
+    if (id === 'about' && !openWindow._bioTyped) {
+        openWindow._bioTyped = true;
+        typewriterBio(i18n[currentLang].bio);
+    }
+}
+openWindow._bioTyped = false;
+
+function closeWindow(id) {
+    const win = document.getElementById(`win-${id}`);
+    if (!win) return;
+
+    win.style.animation = 'windowClose 0.25s ease forwards';
+    setTimeout(() => {
+        win.style.display = 'none';
+        win.style.animation = '';
+    }, 250);
+
+    // Update taskbar button
+    const btn = document.querySelector(`.sec-btn[data-sec="${id}"]`);
+    if (btn) btn.classList.remove('active');
+}
+
+function minimizeWindow(id) {
+    closeWindow(id); // For now, minimize = close (can enhance later)
+}
+
+function focusWindow(win) {
+    // Remove focus from all windows
+    document.querySelectorAll('.os-window').forEach(w => w.classList.remove('win-focused'));
+    // Focus this one
+    topZ++;
+    win.style.zIndex = topZ;
+    win.classList.add('win-focused');
+}
+
+function initDrag(win, handle) {
+    let startX, startY, origX, origY;
+    let dragging = false;
+
+    function onDown(e) {
+        // Don't drag if clicking a button
+        if (e.target.closest('.win-btn')) return;
+
+        dragging = true;
+        win.classList.add('win-dragging');
+        focusWindow(win);
+
+        const touch = e.touches ? e.touches[0] : e;
+        startX = touch.clientX;
+        startY = touch.clientY;
+
+        // Get current position — if centered, compute actual pixel position first
+        const rect = win.getBoundingClientRect();
+        origX = rect.left;
+        origY = rect.top;
+
+        // Switch from centered to absolute positioning
+        win.style.transform = 'none';
+        win.style.left = origX + 'px';
+        win.style.top = origY + 'px';
+
+        e.preventDefault();
+    }
+
+    function onMove(e) {
+        if (!dragging) return;
+        const touch = e.touches ? e.touches[0] : e;
+        const dx = touch.clientX - startX;
+        const dy = touch.clientY - startY;
+        win.style.left = (origX + dx) + 'px';
+        win.style.top = (origY + dy) + 'px';
+    }
+
+    function onUp() {
+        if (!dragging) return;
+        dragging = false;
+        win.classList.remove('win-dragging');
+    }
+
+    handle.addEventListener('mousedown', onDown);
+    handle.addEventListener('touchstart', onDown, { passive: false });
+    window.addEventListener('mousemove', onMove);
+    window.addEventListener('touchmove', onMove, { passive: true });
+    window.addEventListener('mouseup', onUp);
+    window.addEventListener('touchend', onUp);
+}
+
+/* ════════════════════════════
    SECTION SWITCHING
 ════════════════════════════ */
 function initSections() {
-    let bioTyped = false;
-    let transitioning = false;
-
+    // Taskbar buttons open/focus windows
     document.querySelectorAll('.sec-btn').forEach(btn =>
         btn.addEventListener('click', () => {
-            if (transitioning) return;
             const id = btn.dataset.sec;
-            const target = document.getElementById(`sec-${id}`);
+            const win = document.getElementById(`win-${id}`);
+            if (!win) return;
 
-            // Find currently visible section
-            const current = document.querySelector('.page-section:not([hidden])');
-            if (current === target) return;
-
-            // Update nav buttons immediately
-            document.querySelectorAll('.sec-btn').forEach(b =>
-                b.classList.toggle('active', b === btn)
-            );
-
-            // Animate out current section, then animate in new one
-            if (current) {
-                transitioning = true;
-                current.classList.add('sec-exit');
-                current.addEventListener('animationend', function handler() {
-                    current.removeEventListener('animationend', handler);
-                    current.classList.remove('sec-exit');
-                    current.hidden = true;
-
-                    // Show new section with fade-in
-                    target.hidden = false;
-                    target.style.animation = 'none';
-                    target.offsetHeight; // force reflow
-                    target.style.animation = '';
-
-                    transitioning = false;
-
-                    if (id === 'about' && !bioTyped) {
-                        bioTyped = true;
-                        typewriterBio(i18n[currentLang].bio);
-                    }
-                    animateSectionEntrance(id);
-                    updateTabTitle(id);
-                }, { once: true });
+            if (win.style.display === 'none') {
+                openWindow(id);
             } else {
-                target.hidden = false;
-                if (id === 'about' && !bioTyped) {
-                    bioTyped = true;
-                    typewriterBio(i18n[currentLang].bio);
-                }
-                animateSectionEntrance(id);
-                updateTabTitle(id);
+                // Already open — focus it
+                focusWindow(win);
             }
         })
     );
@@ -1769,7 +1891,6 @@ function initSections() {
     document.addEventListener('touchend', e => {
         const dx = e.changedTouches[0].clientX - touchStartX;
         const dy = e.changedTouches[0].clientY - touchStartY;
-        // Only horizontal swipes (not vertical scrolling)
         if (Math.abs(dx) < SWIPE_THRESHOLD || Math.abs(dy) > Math.abs(dx)) return;
 
         const sections = ['home', 'about', 'live', 'links'];
@@ -1781,8 +1902,10 @@ function initSections() {
         const nextIdx = dx < 0 ? currentIdx + 1 : currentIdx - 1;
         if (nextIdx < 0 || nextIdx >= sections.length) return;
 
-        const nextBtn = document.querySelector(`.sec-btn[data-sec="${sections[nextIdx]}"]`);
-        if (nextBtn) nextBtn.click();
+        const nextId = sections[nextIdx];
+        // Close current, open next
+        closeWindow(currentBtn.dataset.sec);
+        openWindow(nextId);
     }, { passive: true });
 }
 
