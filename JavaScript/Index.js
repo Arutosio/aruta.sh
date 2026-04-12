@@ -2144,29 +2144,38 @@ function toggleMaximize(win) {
     if (win.classList.contains('win-maximized')) {
         // Restore
         win.classList.remove('win-maximized');
+        win.style.position = win._restoreRect?.position || 'absolute';
         win.style.left = win._restoreRect?.left || '';
         win.style.top = win._restoreRect?.top || '';
+        win.style.right = '';
+        win.style.bottom = '';
         win.style.width = win._restoreRect?.width || '';
         win.style.height = win._restoreRect?.height || '';
         win.style.transform = win._restoreRect?.transform || '';
         win.style.borderRadius = '';
+        win.style.margin = '';
     } else {
         // Save current position for restore
         win._restoreRect = {
+            position: win.style.position,
             left: win.style.left,
             top: win.style.top,
             width: win.style.width,
             height: win.style.height,
             transform: win.style.transform,
         };
-        // Maximize
+        // Maximize — fill screen below taskbar
         win.classList.add('win-maximized');
+        win.style.position = 'fixed';
         win.style.transform = 'none';
         win.style.left = '0';
-        win.style.top = '56px'; // below floating taskbar
-        win.style.width = '100vw';
-        win.style.height = 'calc(100vh - 56px)';
+        win.style.top = '68px';
+        win.style.right = '0';
+        win.style.bottom = '0';
+        win.style.width = 'auto';
+        win.style.height = 'auto';
         win.style.borderRadius = '0';
+        win.style.margin = '0';
     }
 }
 
