@@ -1652,6 +1652,7 @@ function showApp() {
     applyTranslations(currentLang);
     startClock();
     initWindowManager();
+    initStartMenu();
     initSections();
     updateTabTitle('home');
     initFireflies();
@@ -1750,6 +1751,76 @@ function initWindowManager() {
             e.stopPropagation();
             closeWindow(id);
         });
+    });
+}
+
+/* ════════════════════════════
+   START MENU
+════════════════════════════ */
+function initStartMenu() {
+    const btn = document.getElementById('start-btn');
+    const menu = document.getElementById('start-menu');
+    if (!btn || !menu) return;
+
+    let isOpen = false;
+
+    function toggleMenu() {
+        if (isOpen) {
+            menu.style.animation = 'startMenuClose 0.2s ease forwards';
+            btn.classList.remove('start-open');
+            setTimeout(() => { menu.style.display = 'none'; menu.style.animation = ''; }, 200);
+            isOpen = false;
+        } else {
+            menu.style.display = 'block';
+            menu.style.animation = 'startMenuOpen 0.25s cubic-bezier(0.34, 1.56, 0.64, 1) forwards';
+            btn.classList.add('start-open');
+            isOpen = true;
+        }
+    }
+
+    function closeMenu() {
+        if (!isOpen) return;
+        toggleMenu();
+    }
+
+    btn.addEventListener('click', toggleMenu);
+
+    // Start menu items → open window + close menu
+    menu.querySelectorAll('.start-item').forEach(item => {
+        item.addEventListener('click', () => {
+            openWindow(item.dataset.window);
+            closeMenu();
+        });
+    });
+
+    // Theme toggle in start menu
+    const themeBtn = document.getElementById('start-theme');
+    if (themeBtn) {
+        themeBtn.addEventListener('click', () => {
+            toggleTheme();
+            closeMenu();
+        });
+    }
+
+    // Share in start menu
+    const shareBtn = document.getElementById('start-share');
+    if (shareBtn) {
+        shareBtn.addEventListener('click', async () => {
+            closeMenu();
+            document.getElementById('share-btn')?.click();
+        });
+    }
+
+    // Close menu when clicking outside
+    document.addEventListener('click', (e) => {
+        if (isOpen && !menu.contains(e.target) && !btn.contains(e.target)) {
+            closeMenu();
+        }
+    });
+
+    // Close menu on Escape
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && isOpen) closeMenu();
     });
 }
 

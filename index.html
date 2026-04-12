@@ -80,7 +80,7 @@
     <header class="taskbar">
         <!-- Left: brand + app launchers -->
         <div class="taskbar-left">
-            <span class="taskbar-brand" title="© 2025 Stefano Aruta" aria-hidden="true">⚜</span>
+            <button class="taskbar-brand" id="start-btn" title="© 2025 Stefano Aruta" aria-label="Start menu">⚜</button>
             <div class="taskbar-sep" aria-hidden="true"></div>
             <nav class="sec-nav" aria-label="Sections">
                 <button class="sec-btn active" data-sec="home">🏰 <span data-i18n="sec_home">Home</span></button>
@@ -112,6 +112,30 @@
                 <span class="hud-date" id="hud-date">----/--/--</span>
                 <span class="hud-clock-sep" aria-hidden="true">·</span>
                 <span class="hud-time" id="hud-time">--:--:--</span>
+            </div>
+        </div>
+        <!-- Start menu -->
+        <div class="start-menu" id="start-menu" style="display: none;">
+            <div class="start-header">
+                <span class="start-logo">⚜</span>
+                <div class="start-header-text">
+                    <span class="start-title">Aruta.sh</span>
+                    <span class="start-subtitle">Arcane OS v1.0</span>
+                </div>
+            </div>
+            <div class="start-items">
+                <button class="start-item" data-window="home">🏰 <span data-i18n="sec_home">Home</span></button>
+                <button class="start-item" data-window="about">📖 <span data-i18n="sec_about">About</span></button>
+                <button class="start-item" data-window="live">🔮 <span data-i18n="sec_live">Live</span></button>
+                <button class="start-item" data-window="links">🔗 <span data-i18n="sec_links">Links</span></button>
+            </div>
+            <div class="start-divider"></div>
+            <div class="start-actions">
+                <button class="start-action" id="start-theme">🌙 <span>Toggle Theme</span></button>
+                <button class="start-action" id="start-share">📤 <span>Share</span></button>
+            </div>
+            <div class="start-footer">
+                <span>© 2025 Stefano Aruta</span>
             </div>
         </div>
     </header>
