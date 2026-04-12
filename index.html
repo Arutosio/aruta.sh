@@ -78,16 +78,9 @@
 
     <!-- ══ TASKBAR ══ -->
     <header class="taskbar">
-        <!-- Left: brand + app launchers -->
+        <!-- Left: start button only -->
         <div class="taskbar-left">
             <button class="taskbar-brand" id="start-btn" title="© 2025 Stefano Aruta" aria-label="Start menu">⚜</button>
-            <div class="taskbar-sep" aria-hidden="true"></div>
-            <nav class="sec-nav" aria-label="Sections">
-                <button class="sec-btn active" data-sec="home">🏰 <span data-i18n="sec_home">Home</span></button>
-                <button class="sec-btn"        data-sec="about">📖 <span data-i18n="sec_about">About</span></button>
-                <button class="sec-btn"        data-sec="live">🔮 <span data-i18n="sec_live">Live</span></button>
-                <button class="sec-btn"        data-sec="links">🔗 <span data-i18n="sec_links">Links</span></button>
-            </nav>
         </div>
         <!-- Right: system tray -->
         <div class="taskbar-tray">
@@ -142,26 +135,6 @@
 
     <!-- ══ DESKTOP ══ -->
     <div class="desktop" id="desktop">
-        <!-- Desktop icons -->
-        <div class="desktop-icons">
-            <div class="desktop-icon" data-window="home">
-                <span class="desktop-icon-emoji">🏰</span>
-                <span class="desktop-icon-label" data-i18n="sec_home">Home</span>
-            </div>
-            <div class="desktop-icon" data-window="about">
-                <span class="desktop-icon-emoji">📖</span>
-                <span class="desktop-icon-label" data-i18n="sec_about">About</span>
-            </div>
-            <div class="desktop-icon" data-window="live">
-                <span class="desktop-icon-emoji">🔮</span>
-                <span class="desktop-icon-label" data-i18n="sec_live">Live</span>
-            </div>
-            <div class="desktop-icon" data-window="links">
-                <span class="desktop-icon-emoji">🔗</span>
-                <span class="desktop-icon-label" data-i18n="sec_links">Links</span>
-            </div>
-        </div>
-
         <!-- Windows -->
         <div class="os-window" id="win-home" data-window="home">
             <div class="win-titlebar">
