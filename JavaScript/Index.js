@@ -364,7 +364,7 @@ function initParallax() {
 ════════════════════════════ */
 function initClickSpells() {
     const RUNES = RUNE_SET;
-    const BURST_COUNT = 8;
+    const BURST_COUNT = 12;
 
     document.addEventListener('click', e => {
         // Don't burst on interactive elements
@@ -962,6 +962,26 @@ function buildInterestGrid(lang) {
     ).join('');
 }
 
+function buildArsenalGrid() {
+    const grid = document.getElementById('arsenal-grid');
+    if (!grid) return;
+    grid.innerHTML = '';
+
+    ARSENAL.forEach(skill => {
+        const stars = '✦'.repeat(skill.level) + '✧'.repeat(5 - skill.level);
+        const card = document.createElement('div');
+        card.className = 'arsenal-card';
+        card.innerHTML = `
+            <span class="arsenal-icon">${skill.icon}</span>
+            <div class="arsenal-body">
+                <span class="arsenal-name">${skill.name}</span>
+                <span class="arsenal-level">${stars}</span>
+            </div>
+        `;
+        grid.appendChild(card);
+    });
+}
+
 /* ════════════════════════════
    PROJECT CARDS (GitHub API)
 ════════════════════════════ */
@@ -1076,7 +1096,7 @@ function flyingLettersInit() {
     titleAnimated = true;
 
     const text = 'Aruta.sh';
-    const runeColor = _isLight ? 'rgb(90, 50, 10)' : 'rgb(110, 142, 251)';
+    const runeColor = _isLight ? 'rgb(139, 105, 20)' : 'rgb(167, 139, 250)';
 
     el.textContent = '';
     el.style.overflow = 'visible';
@@ -1237,6 +1257,11 @@ function initTilt() {
         if (el.vanillaTilt) return;
         VanillaTilt.init(el, { max: 5, speed: 400, glare: true, 'max-glare': 0.08 });
     });
+
+    const portrait = document.querySelector('.portrait-img-wrap');
+    if (portrait && !portrait.vanillaTilt) {
+        VanillaTilt.init(portrait, { max: 8, speed: 600, glare: true, 'max-glare': 0.12, scale: 1.03 });
+    }
 }
 
 /* ════════════════════════════
@@ -1251,6 +1276,11 @@ function animateSectionEntrance(sectionId) {
         case 'about':
             revealCards('.interest-card', 200);
             setTimeout(initTilt, 800);
+            break;
+
+        case 'arsenal':
+            revealCards('.arsenal-card', 100);
+            setTimeout(initTilt, 600);
             break;
 
         case 'links':
@@ -1269,6 +1299,7 @@ function showApp() {
     app.classList.add('visible');
     buildLinkCards();
     buildInterestGrid(currentLang);
+    buildArsenalGrid();
     buildProjectCards(currentLang);
     applyTranslations(currentLang);
     startClock();

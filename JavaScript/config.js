@@ -11,7 +11,10 @@ const i18n = {
         char_class: 'Streamer · Programmatore · Avventuriero',
         sec_home:   'Home',
         sec_about:  'About',
+        sec_arsenal: 'Arsenale',
         sec_links:  'Link',
+        arsenal_title: 'Arsenale Arcano',
+        arsenal_desc: 'Le arti magiche padroneggiate nel corso dei viaggi',
         links_desc: 'Trovami su queste piattaforme',
         bio: 'Mi chiamo Stefano Aruta. Programmatore appassionato con un amore profondo per anime, manga, Ultima Online, Minecraft e D&D. Come i protagonisti delle storie isekai, mi lancio ora in un nuovo viaggio: lo streaming. Cercando mondi senza confini dove libertà e creatività non hanno limite.',
         boot: [
@@ -42,7 +45,10 @@ const i18n = {
         char_class: 'Streamer · Programmer · Adventurer',
         sec_home:   'Home',
         sec_about:  'About',
+        sec_arsenal: 'Arsenal',
         sec_links:  'Links',
+        arsenal_title: 'Arcane Arsenal',
+        arsenal_desc: 'Magical arts mastered throughout the journeys',
         links_desc: 'Find me on these platforms',
         bio: 'My name is Stefano Aruta. A passionate programmer with a deep love for anime, manga, Ultima Online, Minecraft and D&D. Like the heroes of isekai tales, I now embark on a new journey: streaming. Seeking worlds without boundaries, where freedom and creativity know no limits.',
         boot: [
@@ -73,7 +79,10 @@ const i18n = {
         char_class: 'Streamer · Programador · Aventurero',
         sec_home:   'Inicio',
         sec_about:  'Sobre mí',
+        sec_arsenal: 'Arsenal',
         sec_links:  'Enlaces',
+        arsenal_title: 'Arsenal Arcano',
+        arsenal_desc: 'Las artes mágicas dominadas a lo largo de los viajes',
         links_desc: 'Encuéntrame en estas plataformas',
         bio: 'Me llamo Stefano Aruta. Programador apasionado con un profundo amor por el anime, manga, Ultima Online, Minecraft y D&D. Como los protagonistas de las historias isekai, me lanzo ahora a un nuevo viaje: el streaming. Buscando mundos sin límites donde la libertad y la creatividad no tienen fronteras.',
         boot: [
@@ -104,7 +113,10 @@ const i18n = {
         char_class: 'ストリーマー · プログラマー · 冒険者',
         sec_home:   'ホーム',
         sec_about:  'について',
+        sec_arsenal: 'アーセナル',
         sec_links:  'リンク',
+        arsenal_title: '秘術の武器庫',
+        arsenal_desc: '旅路で習得した魔法の技',
         links_desc: 'これらのプラットフォームで見つけてください',
         bio: '私はStefano Arutaです。アニメ、マンガ、ウルティマオンライン、マインクラフト、D&Dへの深い愛を持つ情熱的なプログラマーです。異世界転生の主人公のように、今私は新たな旅へ踏み出します——ストリーミングの世界へ。自由と創造性に限界のない世界を求めて。',
         boot: [
@@ -135,7 +147,10 @@ const i18n = {
         char_class: 'ᛊᛏᚱᛖᚨᛗᛖᚱ · ᛈᚱᛟᚷᚱᚨᛗᛗᛖᚱ · ᚨᛞᚹᛖᚾᛏᚢᚱᛖᚱ',
         sec_home:   'ᚺᛟᛗᛖ',
         sec_about:  'ᚨᛒᛟᚢᛏ',
+        sec_arsenal: 'ᚨᚱᛊᛖᚾᚨᛚ',
         sec_links:  'ᛚᛁᚾᚲᛊ',
+        arsenal_title: 'ᚨᚱᚲᚨᚾᛖ ᚨᚱᛊᛖᚾᚨᛚ',
+        arsenal_desc: 'ᛗᚨᚷᛁᚲᚨᛚ ᚨᚱᛏᛊ ᛗᚨᛊᛏᛖᚱᛖᛞ',
         links_desc: 'ᚠᛁᚾᛞ ᛗᛖ ᛟᚾ ᚦᛖᛊᛖ ᛈᛚᚨᛏᚠᛟᚱᛗᛊ',
         bio: 'ᛁ ᚨᛗ ᛊᛏᛖᚠᚨᚾᛟ ᚨᚱᚢᛏᚨ · ᚨ ᛈᚨᛊᛊᛁᛟᚾᚨᛏᛖ ᛈᚱᛟᚷᚱᚨᛗᛗᛖᚱ ᚹᛁᛏᚺ ᚨ ᛞᛖᛖᛈ ᛚᛟᚹᛖ ᚠᛟᚱ ᚨᚾᛁᛗᛖ · ᛗᚨᚾᚷᚨ · ᚢᛚᛏᛁᛗᚨ ᛟᚾᛚᛁᚾᛖ · ᛗᛁᚾᛖᚲᚱᚨᚠᛏ ᚨᚾᛞ ᛞᚨᚾᛞ · ᛚᛁᚲᛖ ᚦᛖ ᚺᛖᚱᛟᛖᛊ ᛟᚠ ᛁᛊᛖᚲᚨᛁ ᛏᚨᛚᛖᛊ · ᛁ ᚾᛟᚹ ᛖᛗᛒᚨᚱᚲ ᛟᚾ ᚨ ᚾᛖᚹ ᛃᛟᚢᚱᚾᛖᛃ · ᛊᛏᚱᛖᚨᛗᛁᚾᚷ · ᛊᛖᛖᚲᛁᚾᚷ ᚹᛟᚱᛚᛞᛊ ᚹᛁᛏᚺᛟᚢᛏ ᛒᛟᚢᚾᛞᚨᚱᛁᛖᛊ',
         boot: [
@@ -194,4 +209,22 @@ const INTERESTS = [
     { icon: '📺', key: 'int_streaming', detail: 'Twitch · Kick · YouTube' },
     { icon: '⚔️', key: 'int_fantasy',   detail: 'Dungeons & Dragons · Roleplay' },
     { icon: '🌍', key: 'int_openworld', detail: 'Exploration · Sandbox · Adventure' }
+];
+
+/* ════════════════════════════
+   ARSENAL (Skills / Tools)
+════════════════════════════ */
+const ARSENAL = [
+    { id: 'js',       icon: '⚡', name: 'JavaScript',  level: 5, category: 'language' },
+    { id: 'ts',       icon: '🔷', name: 'TypeScript',  level: 4, category: 'language' },
+    { id: 'html',     icon: '📜', name: 'HTML / CSS',  level: 5, category: 'language' },
+    { id: 'csharp',   icon: '💎', name: 'C#',          level: 4, category: 'language' },
+    { id: 'java',     icon: '☕', name: 'Java',        level: 3, category: 'language' },
+    { id: 'python',   icon: '🐍', name: 'Python',      level: 3, category: 'language' },
+    { id: 'react',    icon: '⚛️', name: 'React',       level: 4, category: 'framework' },
+    { id: 'node',     icon: '🟢', name: 'Node.js',     level: 4, category: 'framework' },
+    { id: 'astro',    icon: '🚀', name: 'Astro',       level: 3, category: 'framework' },
+    { id: 'git',      icon: '🔀', name: 'Git',         level: 5, category: 'tool' },
+    { id: 'docker',   icon: '🐳', name: 'Docker',      level: 3, category: 'tool' },
+    { id: 'obs',      icon: '🎬', name: 'OBS Studio',  level: 4, category: 'tool' },
 ];
