@@ -398,8 +398,8 @@ html.magic-cursor-active, html.magic-cursor-active * { cursor: none !important; 
 
 /* Clock — fills center space */
 .hud-clock { display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 3px; flex: 1; min-width: 0; }
-.hud-time  { font-size: clamp(1rem, 2.5vw, 1.35rem); font-weight: 900; letter-spacing: 0.04em; line-height: 1; color: var(--gold); transition: color 0.5s; }
-.hud-date  { font-size: clamp(1rem, 2.5vw, 1.35rem); font-weight: 700; letter-spacing: 0.04em; line-height: 1; color: var(--text-dim); transition: color 0.5s; }
+.hud-time  { font-size: clamp(1rem, 2.5vw, 1.35rem); font-weight: 900; letter-spacing: 0.04em; line-height: 1; color: var(--gold); transition: color 0.5s; min-width: 6.5em; text-align: center; }
+.hud-date  { font-size: clamp(1rem, 2.5vw, 1.35rem); font-weight: 700; letter-spacing: 0.04em; line-height: 1; color: var(--text-dim); transition: color 0.5s; min-width: 8em; text-align: center; }
 .hud-clock-sep { color: var(--text-faint); font-size: 0.8rem; opacity: 0.4; }
 
 /* Lang select — with glow */
