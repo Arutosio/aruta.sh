@@ -379,109 +379,89 @@
                 </div>
             </div>
             <div class="win-content">
-                <div class="settings-panel">
-                    <h2 class="settings-section-title" data-i18n="settings_appearance">Appearance</h2>
-
-                    <div class="settings-row">
-                        <div class="settings-label">
-                            <span class="settings-icon">🌓</span>
-                            <div><strong data-i18n="settings_theme">Theme</strong><br><small data-i18n="settings_theme_desc">Switch between dark and light mode</small></div>
+                <div class="settings-layout">
+                    <!-- Sidebar categories -->
+                    <nav class="settings-sidebar">
+                        <button class="settings-cat active" data-cat="appearance">🌓 <span data-i18n="settings_appearance">Appearance</span></button>
+                        <button class="settings-cat" data-cat="clock">🕐 <span data-i18n="settings_clock">Clock</span></button>
+                        <button class="settings-cat" data-cat="language">🌐 <span data-i18n="settings_language">Language</span></button>
+                        <button class="settings-cat" data-cat="sound">🔊 <span data-i18n="settings_sound">Sound</span></button>
+                        <button class="settings-cat" data-cat="reset">🔄 <span data-i18n="settings_reset">Reset</span></button>
+                        <button class="settings-cat" data-cat="about">⚜ <span data-i18n="settings_about">About</span></button>
+                    </nav>
+                    <!-- Content panels -->
+                    <div class="settings-content">
+                        <!-- Appearance -->
+                        <div class="settings-page active" data-page="appearance">
+                            <h2 class="settings-page-title" data-i18n="settings_appearance">Appearance</h2>
+                            <div class="settings-row">
+                                <div class="settings-label"><span class="settings-icon">🌓</span><div><strong data-i18n="settings_theme">Theme</strong><br><small data-i18n="settings_theme_desc">Switch between dark and light mode</small></div></div>
+                                <button class="settings-toggle" id="settings-theme-toggle"><span class="toggle-track"><span class="toggle-thumb"></span></span></button>
+                            </div>
+                            <div class="settings-row">
+                                <div class="settings-label"><span class="settings-icon">🔤</span><div><strong data-i18n="settings_fontsize">Font Size</strong><br><small data-i18n="settings_fontsize_desc">Adjust text size</small></div></div>
+                                <div class="settings-range-wrap"><input type="range" id="settings-font-size" class="settings-range" min="80" max="130" value="100" step="5"><span class="settings-range-value" id="font-size-label">100%</span></div>
+                            </div>
+                            <div class="settings-row">
+                                <div class="settings-label"><span class="settings-icon">🎨</span><div><strong data-i18n="settings_accent">Accent Color</strong><br><small data-i18n="settings_accent_desc">Choose your accent color</small></div></div>
+                                <div class="settings-colors" id="settings-accent">
+                                    <button class="settings-color-btn active" data-accent="gold" style="background:#ffc857;" title="Gold"></button>
+                                    <button class="settings-color-btn" data-accent="purple" style="background:#a78bfa;" title="Purple"></button>
+                                    <button class="settings-color-btn" data-accent="cyan" style="background:#22d3ee;" title="Cyan"></button>
+                                    <button class="settings-color-btn" data-accent="rose" style="background:#fb7185;" title="Rose"></button>
+                                    <button class="settings-color-btn" data-accent="emerald" style="background:#34d399;" title="Emerald"></button>
+                                </div>
+                            </div>
                         </div>
-                        <button class="settings-toggle" id="settings-theme-toggle">
-                            <span class="toggle-track"><span class="toggle-thumb"></span></span>
-                        </button>
-                    </div>
-
-                    <div class="settings-row">
-                        <div class="settings-label">
-                            <span class="settings-icon">🔤</span>
-                            <div><strong data-i18n="settings_fontsize">Font Size</strong><br><small data-i18n="settings_fontsize_desc">Adjust text size</small></div>
+                        <!-- Clock -->
+                        <div class="settings-page" data-page="clock">
+                            <h2 class="settings-page-title" data-i18n="settings_clock">Clock</h2>
+                            <div class="settings-row">
+                                <div class="settings-label"><span class="settings-icon">📅</span><div><strong data-i18n="settings_showdate">Show Date</strong><br><small data-i18n="settings_showdate_desc">Display date in taskbar</small></div></div>
+                                <button class="settings-toggle active" id="settings-show-date"><span class="toggle-track"><span class="toggle-thumb"></span></span></button>
+                            </div>
+                            <div class="settings-row">
+                                <div class="settings-label"><span class="settings-icon">🕐</span><div><strong data-i18n="settings_24h">24h Format</strong><br><small data-i18n="settings_24h_desc">Use 24-hour time format</small></div></div>
+                                <button class="settings-toggle active" id="settings-24h"><span class="toggle-track"><span class="toggle-thumb"></span></span></button>
+                            </div>
                         </div>
-                        <div class="settings-range-wrap">
-                            <input type="range" id="settings-font-size" class="settings-range" min="80" max="130" value="100" step="5">
-                            <span class="settings-range-value" id="font-size-label">100%</span>
+                        <!-- Language -->
+                        <div class="settings-page" data-page="language">
+                            <h2 class="settings-page-title" data-i18n="settings_language">Language</h2>
+                            <div class="settings-row">
+                                <div class="settings-label"><span class="settings-icon">🌐</span><div><strong data-i18n="settings_lang">Language</strong><br><small data-i18n="settings_lang_desc">Select your language</small></div></div>
+                                <select id="settings-lang" class="settings-select">
+                                    <option value="it">Italiano</option>
+                                    <option value="en">English</option>
+                                    <option value="es">Español</option>
+                                    <option value="ja">日本語</option>
+                                    <option value="fn">ᚠᚢᚦᚨᚱᚲ</option>
+                                </select>
+                            </div>
                         </div>
-                    </div>
-
-                    <div class="settings-row">
-                        <div class="settings-label">
-                            <span class="settings-icon">🎨</span>
-                            <div><strong data-i18n="settings_accent">Accent Color</strong><br><small data-i18n="settings_accent_desc">Choose your accent color</small></div>
+                        <!-- Sound -->
+                        <div class="settings-page" data-page="sound">
+                            <h2 class="settings-page-title" data-i18n="settings_sound">Sound</h2>
+                            <div class="settings-row">
+                                <div class="settings-label"><span class="settings-icon">🔊</span><div><strong data-i18n="settings_ambient">Ambient Sound</strong><br><small data-i18n="settings_ambient_desc">Mystical background drone</small></div></div>
+                                <button class="settings-toggle" id="settings-sound-toggle"><span class="toggle-track"><span class="toggle-thumb"></span></span></button>
+                            </div>
                         </div>
-                        <div class="settings-colors" id="settings-accent">
-                            <button class="settings-color-btn active" data-accent="gold" style="background: #ffc857;" title="Gold"></button>
-                            <button class="settings-color-btn" data-accent="purple" style="background: #a78bfa;" title="Purple"></button>
-                            <button class="settings-color-btn" data-accent="cyan" style="background: #22d3ee;" title="Cyan"></button>
-                            <button class="settings-color-btn" data-accent="rose" style="background: #fb7185;" title="Rose"></button>
-                            <button class="settings-color-btn" data-accent="emerald" style="background: #34d399;" title="Emerald"></button>
+                        <!-- Reset -->
+                        <div class="settings-page" data-page="reset">
+                            <h2 class="settings-page-title" data-i18n="settings_reset">Reset to Defaults</h2>
+                            <div class="settings-row">
+                                <div class="settings-label"><span class="settings-icon">🔄</span><div><strong data-i18n="settings_reset">Reset to Defaults</strong><br><small data-i18n="settings_reset_desc">Reset all settings to default values</small></div></div>
+                                <button class="settings-reset-btn" id="settings-reset">Reset</button>
+                            </div>
                         </div>
-                    </div>
-
-                    <h2 class="settings-section-title" data-i18n="settings_clock">Clock</h2>
-
-                    <div class="settings-row">
-                        <div class="settings-label">
-                            <span class="settings-icon">📅</span>
-                            <div><strong data-i18n="settings_showdate">Show Date</strong><br><small data-i18n="settings_showdate_desc">Display date in taskbar</small></div>
-                        </div>
-                        <button class="settings-toggle active" id="settings-show-date">
-                            <span class="toggle-track"><span class="toggle-thumb"></span></span>
-                        </button>
-                    </div>
-
-                    <div class="settings-row">
-                        <div class="settings-label">
-                            <span class="settings-icon">🕐</span>
-                            <div><strong data-i18n="settings_24h">24h Format</strong><br><small data-i18n="settings_24h_desc">Use 24-hour time format</small></div>
-                        </div>
-                        <button class="settings-toggle active" id="settings-24h">
-                            <span class="toggle-track"><span class="toggle-thumb"></span></span>
-                        </button>
-                    </div>
-
-                    <h2 class="settings-section-title" data-i18n="settings_sound">Sound</h2>
-
-                    <div class="settings-row">
-                        <div class="settings-label">
-                            <span class="settings-icon">🔊</span>
-                            <div><strong data-i18n="settings_ambient">Ambient Sound</strong><br><small data-i18n="settings_ambient_desc">Mystical background drone</small></div>
-                        </div>
-                        <button class="settings-toggle" id="settings-sound-toggle">
-                            <span class="toggle-track"><span class="toggle-thumb"></span></span>
-                        </button>
-                    </div>
-
-                    <h2 class="settings-section-title" data-i18n="settings_language">Language</h2>
-
-                    <div class="settings-row">
-                        <div class="settings-label">
-                            <span class="settings-icon">🌐</span>
-                            <div><strong data-i18n="settings_lang">Language</strong><br><small data-i18n="settings_lang_desc">Select your language</small></div>
-                        </div>
-                        <select id="settings-lang" class="settings-select">
-                            <option value="it">Italiano</option>
-                            <option value="en">English</option>
-                            <option value="es">Español</option>
-                            <option value="ja">日本語</option>
-                            <option value="fn">ᚠᚢᚦᚨᚱᚲ</option>
-                        </select>
-                    </div>
-
-                    <h2 class="settings-section-title" data-i18n="settings_reset">Reset to Defaults</h2>
-                    <div class="settings-row">
-                        <div class="settings-label">
-                            <span class="settings-icon">🔄</span>
-                            <div><strong data-i18n="settings_reset">Reset to Defaults</strong><br><small data-i18n="settings_reset_desc">Reset all settings to default values</small></div>
-                        </div>
-                        <button class="settings-reset-btn" id="settings-reset">Reset</button>
-                    </div>
-
-                    <h2 class="settings-section-title" data-i18n="settings_about">About</h2>
-                    <div class="settings-about">
-                        <span class="settings-about-logo">⚜</span>
-                        <div>
-                            <strong>Arcane OS</strong> v1.0<br>
-                            <small>© 2025 Stefano Aruta</small>
+                        <!-- About -->
+                        <div class="settings-page" data-page="about">
+                            <h2 class="settings-page-title" data-i18n="settings_about">About</h2>
+                            <div class="settings-about">
+                                <span class="settings-about-logo">⚜</span>
+                                <div><strong>Arcane OS</strong> v1.0<br><small>© 2025 Stefano Aruta</small></div>
+                            </div>
                         </div>
                     </div>
                 </div>

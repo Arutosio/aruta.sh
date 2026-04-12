@@ -1607,6 +1607,18 @@ function initAmbientSound() {
    SETTINGS APP
 ════════════════════════════ */
 function initSettings() {
+    // Sidebar category navigation
+    document.querySelectorAll('.settings-cat').forEach(cat => {
+        cat.addEventListener('click', () => {
+            document.querySelectorAll('.settings-cat').forEach(c => c.classList.remove('active'));
+            cat.classList.add('active');
+            const page = cat.dataset.cat;
+            document.querySelectorAll('.settings-page').forEach(p => p.classList.remove('active'));
+            const target = document.querySelector(`.settings-page[data-page="${page}"]`);
+            if (target) target.classList.add('active');
+        });
+    });
+
     // Theme toggle
     const themeToggle = document.getElementById('settings-theme-toggle');
     if (themeToggle) {

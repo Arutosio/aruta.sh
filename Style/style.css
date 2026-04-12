@@ -1532,20 +1532,59 @@ html.magic-cursor-active, html.magic-cursor-active * { cursor: none !important; 
 /* ══════════════════════════════
    SETTINGS PANEL
 ══════════════════════════════ */
-.settings-panel {
-    padding: 24px;
-    max-width: none;
-    columns: 2 400px;
-    column-gap: 32px;
+/* Settings sidebar layout */
+.settings-layout {
+    display: flex; height: 100%;
 }
-.settings-section-title {
+.settings-sidebar {
+    display: flex; flex-direction: column; gap: 2px;
+    width: 180px; min-width: 180px; padding: 8px;
+    border-right: 1px solid var(--card-border);
+    background: rgba(0,0,0,0.15);
+    overflow-y: auto;
+}
+.settings-cat {
+    display: flex; align-items: center; gap: 10px;
+    padding: 10px 14px;
+    font-size: 0.82rem; font-weight: 700;
+    color: var(--text-dim); background: transparent;
+    border: none; border-radius: 6px;
+    cursor: pointer; text-align: left;
+    font-family: inherit; letter-spacing: 0.03em;
+    transition: background 0.15s, color 0.15s;
+    white-space: nowrap;
+}
+.settings-cat:hover {
+    background: rgba(255,200,87,0.06);
+    color: var(--text);
+}
+.settings-cat.active {
+    background: rgba(255,200,87,0.1);
+    color: var(--gold);
+    border-left: 2px solid var(--gold);
+}
+[data-theme="light"] .settings-sidebar { background: rgba(0,0,0,0.04); }
+
+.settings-content {
+    flex: 1; padding: 24px; overflow-y: auto;
+}
+.settings-page { display: none; }
+.settings-page.active { display: block; }
+.settings-page-title {
     font-family: var(--font-display);
-    font-size: 0.8rem; font-weight: 700; color: var(--gold);
-    letter-spacing: 0.12em; text-transform: uppercase;
-    margin: 24px 0 12px; padding-bottom: 6px;
+    font-size: 1.1rem; font-weight: 700; color: var(--gold);
+    letter-spacing: 0.1em; margin: 0 0 20px;
+    padding-bottom: 8px;
     border-bottom: 1px solid var(--card-border);
 }
-.settings-section-title:first-child { margin-top: 0; }
+
+@media (max-width: 640px) {
+    .settings-sidebar {
+        width: 50px; min-width: 50px; padding: 4px;
+    }
+    .settings-cat span { display: none; }
+    .settings-cat { justify-content: center; padding: 10px; }
+}
 .settings-row {
     display: flex; align-items: center; justify-content: space-between;
     padding: 12px 0; gap: 16px;
