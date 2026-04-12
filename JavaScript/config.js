@@ -46,7 +46,8 @@ const i18n = {
         live_day_thu: 'Giovedì',
         live_day_sat: 'Sabato',
         live_countdown: 'Prossimo rituale tra',
-        discord_title: 'Gilda Arcana'
+        discord_title: 'Gilda Arcana',
+        clips_title: 'Momenti Epici'
     },
     en: {
         char_class: 'Streamer · Programmer · Adventurer',
@@ -87,7 +88,8 @@ const i18n = {
         live_day_thu: 'Thursday',
         live_day_sat: 'Saturday',
         live_countdown: 'Next ritual in',
-        discord_title: 'Arcane Guild'
+        discord_title: 'Arcane Guild',
+        clips_title: 'Epic Moments'
     },
     es: {
         char_class: 'Streamer · Programador · Aventurero',
@@ -128,7 +130,8 @@ const i18n = {
         live_day_thu: 'Jueves',
         live_day_sat: 'Sábado',
         live_countdown: 'Próximo ritual en',
-        discord_title: 'Gremio Arcano'
+        discord_title: 'Gremio Arcano',
+        clips_title: 'Momentos Épicos'
     },
     ja: {
         char_class: 'ストリーマー · プログラマー · 冒険者',
@@ -169,7 +172,8 @@ const i18n = {
         live_day_thu: '木曜日',
         live_day_sat: '土曜日',
         live_countdown: '次の儀式まで',
-        discord_title: '秘術のギルド'
+        discord_title: '秘術のギルド',
+        clips_title: '名場面'
     },
     fn: {
         char_class: 'ᛊᛏᚱᛖᚨᛗᛖᚱ · ᛈᚱᛟᚷᚱᚨᛗᛗᛖᚱ · ᚨᛞᚹᛖᚾᛏᚢᚱᛖᚱ',
@@ -210,7 +214,8 @@ const i18n = {
         live_day_thu: 'ᚦᚢᚱᛊᛞᚨᛃ',
         live_day_sat: 'ᛊᚨᛏᚢᚱᛞᚨᛃ',
         live_countdown: 'ᚾᛖᚲᛊᛏ ᚱᛁᛏᚢᚨᛚ ᛁᚾ',
-        discord_title: 'ᚨᚱᚲᚨᚾᛖ ᚷᚢᛁᛚᛞ'
+        discord_title: 'ᚨᚱᚲᚨᚾᛖ ᚷᚢᛁᛚᛞ',
+        clips_title: 'ᛖᛈᛁᚲ ᛗᛟᛗᛖᚾᛏᛊ'
     }
 };
 
@@ -244,5 +249,14 @@ const INTERESTS = [
     { icon: '📺', key: 'int_streaming', detail: 'Twitch · Kick · YouTube' },
     { icon: '⚔️', key: 'int_fantasy',   detail: 'Dungeons & Dragons · Roleplay' },
     { icon: '🌍', key: 'int_openworld', detail: 'Exploration · Sandbox · Adventure' }
+];
+
+/* ════════════════════════════
+   CLIPS
+════════════════════════════ */
+const CLIPS = [
+    { id: 'clip1', title: 'First Victory', platform: 'twitch', embedId: 'CLIP_ID_1', thumbnail: '' },
+    { id: 'clip2', title: 'Epic Boss Fight', platform: 'twitch', embedId: 'CLIP_ID_2', thumbnail: '' },
+    { id: 'clip3', title: 'Funny Moment', platform: 'youtube', embedId: 'VIDEO_ID_1', thumbnail: '' },
 ];
 

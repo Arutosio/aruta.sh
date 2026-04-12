@@ -1158,3 +1158,120 @@ html.magic-cursor-active, html.magic-cursor-active * { cursor: none !important; 
     80%  { opacity: 0.7; }
     100% { opacity: 0; transform: translateY(110vh) rotate(360deg); }
 }
+
+/* ══════════════════════════════
+   CLIP GALLERY
+══════════════════════════════ */
+.clips-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 16px;
+}
+.clip-card {
+    border: 1px solid var(--seal-border); border-radius: 10px;
+    overflow: hidden; background: rgba(12,10,30,0.5);
+    box-shadow: 0 2px 12px rgba(0,0,0,0.25);
+    transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.clip-card:hover {
+    border-color: var(--gold);
+    transform: translateY(-4px);
+    box-shadow: 0 8px 24px rgba(0,0,0,0.3), 0 0 12px var(--card-glow);
+}
+.clip-embed {
+    position: relative; aspect-ratio: 16 / 9;
+}
+.clip-embed iframe {
+    width: 100%; height: 100%; border: none;
+}
+.clip-placeholder {
+    width: 100%; height: 100%;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    gap: 8px; cursor: pointer;
+    background: rgba(12,10,30,0.8);
+    transition: background 0.2s;
+}
+.clip-placeholder:hover { background: rgba(255,200,87,0.06); }
+.clip-play-icon {
+    font-size: 2.5rem; color: var(--gold);
+    text-shadow: 0 0 15px rgba(255,200,87,0.4);
+    transition: transform 0.2s;
+}
+.clip-placeholder:hover .clip-play-icon { transform: scale(1.2); }
+.clip-title {
+    font-size: 0.85rem; color: var(--text-dim);
+    letter-spacing: 0.06em;
+}
+[data-theme="light"] .clip-card { background: rgba(240,232,216,0.5); }
+[data-theme="light"] .clip-placeholder { background: rgba(240,232,216,0.8); }
+
+/* ══════════════════════════════
+   ACHIEVEMENT TOASTS
+══════════════════════════════ */
+.achievement-toast {
+    position: fixed; bottom: 60px; right: 20px; z-index: 9990;
+    display: flex; align-items: center; gap: 12px;
+    padding: 14px 20px;
+    background: var(--hud-bg);
+    backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px);
+    border: 1px solid var(--gold);
+    border-radius: 10px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.4), 0 0 20px rgba(255,200,87,0.1);
+    transform: translateX(120%);
+    transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+    pointer-events: none;
+}
+.achievement-toast.ach-show { transform: translateX(0); }
+.ach-icon { font-size: 1.6rem; flex-shrink: 0; }
+.ach-body { display: flex; flex-direction: column; gap: 2px; }
+.ach-name {
+    font-size: 0.85rem; font-weight: 700; color: var(--gold);
+    letter-spacing: 0.06em;
+}
+.ach-desc { font-size: 0.75rem; color: var(--text-dim); }
+
+/* ══════════════════════════════
+   SOUND BUTTON
+══════════════════════════════ */
+.sound-btn {
+    width: 40px; height: 100%;
+    display: flex; align-items: center; justify-content: center;
+    color: var(--text-dim); font-size: 0.9rem;
+    background: transparent; border: none; cursor: pointer;
+    transition: color 0.2s, text-shadow 0.2s;
+}
+.sound-btn:hover {
+    color: var(--gold);
+    text-shadow: 0 0 8px rgba(255,200,87,0.3);
+}
+
+/* ══════════════════════════════
+   SEASONAL PARTICLES
+══════════════════════════════ */
+.seasonal-particles {
+    position: fixed; inset: 0; z-index: 1;
+    pointer-events: none; overflow: hidden;
+}
+.seasonal-particle {
+    position: absolute; top: -5%;
+    animation: seasonalFall linear infinite;
+    opacity: 0.6;
+}
+@keyframes seasonalFall {
+    0%   { transform: translateY(-10vh) rotate(0deg); opacity: 0; }
+    10%  { opacity: 0.6; }
+    90%  { opacity: 0.4; }
+    100% { transform: translateY(110vh) rotate(360deg); opacity: 0; }
+}
+.seasonal-halloween { filter: drop-shadow(0 0 4px rgba(255,140,0,0.4)); }
+.seasonal-winter    { color: #aaddff; filter: drop-shadow(0 0 3px rgba(170,220,255,0.4)); }
+.seasonal-spring    { filter: drop-shadow(0 0 3px rgba(255,180,200,0.4)); }
+
+/* Respect reduced motion */
+@media (prefers-reduced-motion: reduce) {
+    .seasonal-particles { display: none; }
+}
+
+/* Lite mode: no seasonal */
+html.lite-mode .seasonal-particles { display: none; }

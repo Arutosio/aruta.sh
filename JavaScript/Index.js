@@ -22,6 +22,115 @@ document.addEventListener('visibilitychange', () => {
 });
 
 /* ════════════════════════════
+   SEASONAL EFFECTS
+════════════════════════════ */
+function getSeasonalEffect() {
+    const m = new Date().getMonth(); // 0-11
+    const d = new Date().getDate();
+    // Halloween: Oct 25 - Nov 2
+    if ((m === 9 && d >= 25) || (m === 10 && d <= 2)) return 'halloween';
+    // Christmas: Dec 15 - Jan 5
+    if ((m === 11 && d >= 15) || (m === 0 && d <= 5)) return 'winter';
+    // Cherry blossom: Mar 20 - Apr 15
+    if ((m === 2 && d >= 20) || (m === 3 && d <= 15)) return 'spring';
+    return null;
+}
+
+function initSeasonalParticles() {
+    const effect = getSeasonalEffect();
+    if (!effect) return;
+
+    const container = document.createElement('div');
+    container.className = 'seasonal-particles';
+    container.setAttribute('aria-hidden', 'true');
+    document.body.appendChild(container);
+
+    const CONFIG = {
+        halloween: { chars: ['🎃', '🦇', '👻', '🕸️'], count: 15, speed: 'slow' },
+        winter:    { chars: ['❄', '✦', '❅', '✧'], count: 25, speed: 'slow' },
+        spring:    { chars: ['🌸', '✿', '❀', '🎐'], count: 20, speed: 'medium' },
+    };
+
+    const cfg = CONFIG[effect];
+    if (!cfg) return;
+
+    for (let i = 0; i < cfg.count; i++) {
+        const p = document.createElement('span');
+        p.className = `seasonal-particle seasonal-${effect}`;
+        p.textContent = cfg.chars[Math.floor(Math.random() * cfg.chars.length)];
+        p.style.left = Math.random() * 100 + '%';
+        p.style.animationDelay = Math.random() * 10 + 's';
+        p.style.animationDuration = (8 + Math.random() * 12) + 's';
+        p.style.fontSize = (0.8 + Math.random() * 1.2) + 'rem';
+        container.appendChild(p);
+    }
+}
+
+/* ════════════════════════════
+   VISITOR ACHIEVEMENTS
+════════════════════════════ */
+const ACHIEVEMENTS = {
+    first_visit:   { icon: '🏰', name: 'First Steps', desc: 'Visited the realm' },
+    theme_switch:  { icon: '🌓', name: 'Duality', desc: 'Toggled the theme' },
+    all_sections:  { icon: '🗺️', name: 'Explorer', desc: 'Visited all sections' },
+    konami:        { icon: '✦', name: 'Secret Spell', desc: 'Found the Konami code' },
+    night_owl:     { icon: '🦉', name: 'Night Owl', desc: 'Visited after midnight' },
+    speed_reader:  { icon: '📖', name: 'Speed Reader', desc: 'Read the full bio' },
+};
+
+function getUnlockedAchievements() {
+    try {
+        return JSON.parse(localStorage.getItem('aruta_achievements') || '[]');
+    } catch { return []; }
+}
+
+function unlockAchievement(id) {
+    const unlocked = getUnlockedAchievements();
+    if (unlocked.includes(id)) return;
+    unlocked.push(id);
+    try { localStorage.setItem('aruta_achievements', JSON.stringify(unlocked)); } catch {}
+
+    const ach = ACHIEVEMENTS[id];
+    if (!ach) return;
+
+    // Show toast notification
+    const toast = document.createElement('div');
+    toast.className = 'achievement-toast';
+    toast.innerHTML = `
+        <span class="ach-icon">${ach.icon}</span>
+        <div class="ach-body">
+            <span class="ach-name">${ach.name}</span>
+            <span class="ach-desc">${ach.desc}</span>
+        </div>
+    `;
+    document.body.appendChild(toast);
+    requestAnimationFrame(() => toast.classList.add('ach-show'));
+    setTimeout(() => {
+        toast.classList.remove('ach-show');
+        setTimeout(() => toast.remove(), 500);
+    }, 3500);
+}
+
+function initAchievements() {
+    // First visit
+    unlockAchievement('first_visit');
+
+    // Night owl (after midnight)
+    if (new Date().getHours() < 5) unlockAchievement('night_owl');
+
+    // Track sections visited
+    const visited = new Set(['home']);
+    const origSwitchCheck = () => {
+        const activeBtn = document.querySelector('.sec-btn.active');
+        if (activeBtn) visited.add(activeBtn.dataset.sec);
+        if (visited.size >= 4) unlockAchievement('all_sections');
+    };
+    document.querySelectorAll('.sec-btn').forEach(btn =>
+        btn.addEventListener('click', origSwitchCheck)
+    );
+}
+
+/* ════════════════════════════
    INIT
 ════════════════════════════ */
 document.addEventListener('DOMContentLoaded', () => {
@@ -724,6 +833,15 @@ function initSummonCanvas() {
     resize();
     window.addEventListener('resize', resize);
 
+    // Random summoning variant
+    const SUMMON_VARIANTS = [
+        { hue: 250, name: 'arcane' },    // purple (default)
+        { hue: 45,  name: 'golden' },    // gold
+        { hue: 180, name: 'frost' },     // cyan/ice
+        { hue: 320, name: 'blood' },     // crimson
+    ];
+    const summonVariant = SUMMON_VARIANTS[Math.floor(Math.random() * SUMMON_VARIANTS.length)];
+
     // Limit summoning canvas to ~30 fps to cut GPU load during page load
     const SUMMON_INTERVAL = 1000 / 30;
     let lastSummonTime = 0;
@@ -741,9 +859,10 @@ function initSummonCanvas() {
         const pulse = 0.82 + 0.18 * Math.sin(t * 0.05);
 
         const light = _isLight;
-        const G = light ? 'rgba(90,50,8,'   : 'rgba(255,200,87,';   // ocra / gold
-        const P = light ? 'rgba(139,28,34,' : 'rgba(167,139,250,'; // cremisi / viola
-        const E = light ? 'rgba(72,40,8,'   : 'rgba(52,211,153,';  // seppia / smeraldo
+        const svH = summonVariant.hue;
+        const G = light ? 'rgba(90,50,8,'   : `hsla(${svH},80%,67%,`;   // primary glow
+        const P = light ? 'rgba(139,28,34,' : `hsla(${(svH + 60) % 360},60%,70%,`; // secondary
+        const E = light ? 'rgba(72,40,8,'   : `hsla(${(svH + 150) % 360},55%,55%,`;  // accent
 
         ctx.save();
         ctx.translate(cx, cy);
@@ -1417,6 +1536,109 @@ function animateSectionEntrance(sectionId) {
 }
 
 /* ════════════════════════════
+   CLIP GALLERY
+════════════════════════════ */
+function buildClipGallery() {
+    const grid = document.getElementById('clips-grid');
+    if (!grid || !CLIPS || !CLIPS.length) return;
+    grid.innerHTML = '';
+
+    CLIPS.forEach(clip => {
+        const card = document.createElement('div');
+        card.className = 'clip-card';
+        card.innerHTML = `
+            <div class="clip-embed">
+                <div class="clip-placeholder" data-clip-id="${clip.embedId}" data-platform="${clip.platform}">
+                    <span class="clip-play-icon">▶</span>
+                    <span class="clip-title">${clip.title}</span>
+                </div>
+            </div>
+        `;
+        // Click to load iframe (lazy — don't load all iframes at once)
+        card.querySelector('.clip-placeholder').addEventListener('click', function() {
+            const p = this.dataset.platform;
+            const id = this.dataset.clipId;
+            let src = '';
+            if (p === 'twitch') src = `https://clips.twitch.tv/embed?clip=${id}&parent=${location.hostname}`;
+            else if (p === 'youtube') src = `https://www.youtube.com/embed/${id}?autoplay=1`;
+            this.outerHTML = `<iframe src="${src}" allowfullscreen allow="autoplay; encrypted-media" title="${clip.title}"></iframe>`;
+        });
+        grid.appendChild(card);
+    });
+}
+
+/* ════════════════════════════
+   AMBIENT SOUND (Web Audio API)
+════════════════════════════ */
+function initAmbientSound() {
+    const btn = document.getElementById('sound-btn');
+    const icon = document.getElementById('sound-icon');
+    if (!btn || !icon) return;
+
+    let audioCtx = null;
+    let playing = false;
+    let nodes = [];
+
+    function createDrone() {
+        if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+        // Deep drone — mystical hum
+        const osc1 = audioCtx.createOscillator();
+        const gain1 = audioCtx.createGain();
+        osc1.type = 'sine';
+        osc1.frequency.value = 55; // A1 — deep bass
+        gain1.gain.value = 0.04;
+        osc1.connect(gain1).connect(audioCtx.destination);
+
+        // Higher harmonic
+        const osc2 = audioCtx.createOscillator();
+        const gain2 = audioCtx.createGain();
+        osc2.type = 'sine';
+        osc2.frequency.value = 165; // E3
+        gain2.gain.value = 0.015;
+        osc2.connect(gain2).connect(audioCtx.destination);
+
+        // Very subtle shimmer
+        const osc3 = audioCtx.createOscillator();
+        const gain3 = audioCtx.createGain();
+        osc3.type = 'triangle';
+        osc3.frequency.value = 440; // A4
+        gain3.gain.value = 0.005;
+        // LFO for shimmer
+        const lfo = audioCtx.createOscillator();
+        const lfoGain = audioCtx.createGain();
+        lfo.frequency.value = 0.3;
+        lfoGain.gain.value = 0.003;
+        lfo.connect(lfoGain).connect(gain3.gain);
+        lfo.start();
+        osc3.connect(gain3).connect(audioCtx.destination);
+
+        osc1.start();
+        osc2.start();
+        osc3.start();
+
+        nodes = [osc1, osc2, osc3, lfo, gain1, gain2, gain3, lfoGain];
+    }
+
+    function stopDrone() {
+        nodes.forEach(n => { try { n.stop?.(); n.disconnect(); } catch {} });
+        nodes = [];
+    }
+
+    btn.addEventListener('click', () => {
+        if (playing) {
+            stopDrone();
+            icon.className = 'fas fa-volume-mute';
+            playing = false;
+        } else {
+            createDrone();
+            icon.className = 'fas fa-volume-up';
+            playing = true;
+        }
+    });
+}
+
+/* ════════════════════════════
    SHOW APP
 ════════════════════════════ */
 function showApp() {
@@ -1429,12 +1651,16 @@ function showApp() {
     initCountdown();
     initShareButton();
     buildProjectCards(currentLang);
+    buildClipGallery();
     applyTranslations(currentLang);
     startClock();
     initSections();
     updateTabTitle('home');
     initFireflies();
     initMagicCircleInteraction();
+    initAmbientSound();
+    initAchievements();
+    initSeasonalParticles();
 
     // Entrance animation for home section
     setTimeout(() => {
@@ -1580,6 +1806,7 @@ function typewriterBio(text) {
             el.insertBefore(document.createTextNode(text.charAt(i++)), cursor);
             typewriterBio._timeout = setTimeout(type, 22);
         } else {
+            unlockAchievement('speed_reader');
             setTimeout(() => cursor.remove(), 2500);
         }
     }
@@ -1609,6 +1836,7 @@ function setActiveLangBtn(lang) {
    THEME TOGGLE
 ════════════════════════════ */
 function toggleTheme() {
+    unlockAchievement('theme_switch');
     // Ripple transition effect
     const ripple = document.createElement('div');
     ripple.className = 'theme-ripple';
@@ -1670,6 +1898,7 @@ function updateThemeIcon() {
     });
 
     function triggerRuneStorm() {
+        unlockAchievement('konami');
         eggActive = true;
         const RUNES = RUNE_SET;
         const COUNT = 120;
