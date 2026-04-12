@@ -2216,7 +2216,16 @@ function closeWindow(id) {
 }
 
 function minimizeWindow(id) {
-    closeWindow(id); // For now, minimize = close (can enhance later)
+    const win = document.getElementById(`win-${id}`);
+    if (!win) return;
+    win.style.animation = 'windowClose 0.25s ease forwards';
+    setTimeout(() => {
+        win.style.display = 'none';
+        win.style.animation = '';
+    }, 250);
+    win.classList.remove('win-focused');
+    // Keep the taskbar tab — clicking it restores the window via openWindow()
+    updateActiveTab('');
 }
 
 function focusWindow(win) {

@@ -1437,6 +1437,7 @@ html.magic-cursor-active, html.magic-cursor-active * { cursor: none !important; 
 .os-window.win-maximized {
     border-radius: 0 !important;
     box-shadow: none;
+    max-height: none !important;
 }
 .os-window.win-maximized .win-titlebar {
     border-radius: 0;
