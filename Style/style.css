@@ -703,7 +703,7 @@ html.magic-cursor-active, html.magic-cursor-active * { cursor: none !important; 
 .portrait-img-wrap:hover .portrait-img { transform: scale(1.06); }
 
 .char-name {
-    font-family: var(--font-display);
+    font-family: 'IM Fell English', Georgia, serif;
     font-size: clamp(2.2rem, 5.5vw, 3.6rem); font-weight: 900;
     color: var(--gold-light); letter-spacing: 0.04em; line-height: 1.1; margin-bottom: 10px;
     text-shadow: 0 0 28px rgba(192,200,224,0.45), 0 2px 6px rgba(0,0,0,0.6);
@@ -737,6 +737,7 @@ html.magic-cursor-active, html.magic-cursor-active * { cursor: none !important; 
     animation: titleBreathe 6s ease-in-out infinite;
 }
 .char-class {
+    font-family: 'IM Fell English', Georgia, serif;
     font-size: 0.88rem; font-weight: 700; letter-spacing: 0.18em;
     color: var(--purple); margin-bottom: 22px; transition: color 0.5s;
     animation: classFlicker 4s ease-in-out infinite;

@@ -26,7 +26,7 @@
     <meta name="author" content="Stefano Aruta">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&family=Cinzel:wght@500;700;900&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=IM+Fell+English:ital@0;1&family=Inter:wght@400;600;700;900&family=Cinzel:wght@500;700;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="preload" as="image" href="./Images/aru2_meta.png">
     <link rel="stylesheet" href="Style/style.css">
@@ -383,6 +383,7 @@
                     <!-- Sidebar categories -->
                     <nav class="settings-sidebar">
                         <button class="settings-cat active" data-cat="appearance">🌓 <span data-i18n="settings_appearance">Appearance</span></button>
+                        <button class="settings-cat" data-cat="performance">⚡ <span data-i18n="settings_performance">Performance</span></button>
                         <button class="settings-cat" data-cat="clock">🕐 <span data-i18n="settings_clock">Clock</span></button>
                         <button class="settings-cat" data-cat="language">🌐 <span data-i18n="settings_language">Language</span></button>
                         <button class="settings-cat" data-cat="sound">🔊 <span data-i18n="settings_sound">Sound</span></button>
@@ -411,6 +412,34 @@
                                     <button class="settings-color-btn" data-accent="rose" style="background:#fb7185;" title="Rose"></button>
                                     <button class="settings-color-btn" data-accent="emerald" style="background:#34d399;" title="Emerald"></button>
                                 </div>
+                            </div>
+                        </div>
+                        <!-- Performance -->
+                        <div class="settings-page" data-page="performance">
+                            <h2 class="settings-page-title" data-i18n="settings_performance">Performance</h2>
+                            <div class="settings-row">
+                                <div class="settings-label"><span class="settings-icon">✨</span><div><strong data-i18n="settings_particles">Particles</strong><br><small data-i18n="settings_particles_desc">Rune particle effects</small></div></div>
+                                <button class="settings-toggle active" id="settings-particles"><span class="toggle-track"><span class="toggle-thumb"></span></span></button>
+                            </div>
+                            <div class="settings-row">
+                                <div class="settings-label"><span class="settings-icon">🌫️</span><div><strong data-i18n="settings_fog">Fog</strong><br><small data-i18n="settings_fog_desc">Ambient fog layers</small></div></div>
+                                <button class="settings-toggle active" id="settings-fog"><span class="toggle-track"><span class="toggle-thumb"></span></span></button>
+                            </div>
+                            <div class="settings-row">
+                                <div class="settings-label"><span class="settings-icon">💫</span><div><strong data-i18n="settings_parallax">Parallax</strong><br><small data-i18n="settings_parallax_desc">Mouse parallax effect</small></div></div>
+                                <button class="settings-toggle active" id="settings-parallax"><span class="toggle-track"><span class="toggle-thumb"></span></span></button>
+                            </div>
+                            <div class="settings-row">
+                                <div class="settings-label"><span class="settings-icon">🖱️</span><div><strong data-i18n="settings_cursor">Magic Cursor</strong><br><small data-i18n="settings_cursor_desc">Custom cursor effect</small></div></div>
+                                <button class="settings-toggle active" id="settings-cursor"><span class="toggle-track"><span class="toggle-thumb"></span></span></button>
+                            </div>
+                            <div class="settings-row">
+                                <div class="settings-label"><span class="settings-icon">✦</span><div><strong data-i18n="settings_clickspells">Click Spells</strong><br><small data-i18n="settings_clickspells_desc">Rune burst on click</small></div></div>
+                                <button class="settings-toggle active" id="settings-clickspells"><span class="toggle-track"><span class="toggle-thumb"></span></span></button>
+                            </div>
+                            <div class="settings-row">
+                                <div class="settings-label"><span class="settings-icon">🔮</span><div><strong data-i18n="settings_circles">Magic Circles</strong><br><small data-i18n="settings_circles_desc">Rotating ring animations</small></div></div>
+                                <button class="settings-toggle active" id="settings-circles"><span class="toggle-track"><span class="toggle-thumb"></span></span></button>
                             </div>
                         </div>
                         <!-- Clock -->

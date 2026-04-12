@@ -70,7 +70,20 @@ const i18n = {
         settings_about: 'Informazioni',
         settings_reset: 'Ripristina predefiniti',
         settings_reset_desc: 'Reimposta tutte le impostazioni ai valori predefiniti',
-        start_share: 'Condividi'
+        start_share: 'Condividi',
+        settings_performance: 'Prestazioni',
+        settings_particles: 'Particelle',
+        settings_particles_desc: 'Effetti particellari runici',
+        settings_fog: 'Nebbia',
+        settings_fog_desc: 'Strati di nebbia ambientale',
+        settings_parallax: 'Parallasse',
+        settings_parallax_desc: 'Effetto parallasse del mouse',
+        settings_cursor: 'Cursore magico',
+        settings_cursor_desc: 'Cursore personalizzato',
+        settings_clickspells: 'Incantesimi click',
+        settings_clickspells_desc: 'Esplosione runica al click',
+        settings_circles: 'Cerchi magici',
+        settings_circles_desc: 'Animazioni degli anelli rotanti'
     },
     en: {
         char_class: 'Streamer · Programmer · Adventurer',
@@ -135,7 +148,20 @@ const i18n = {
         settings_about: 'About',
         settings_reset: 'Reset to Defaults',
         settings_reset_desc: 'Reset all settings to default values',
-        start_share: 'Share'
+        start_share: 'Share',
+        settings_performance: 'Performance',
+        settings_particles: 'Particles',
+        settings_particles_desc: 'Rune particle effects',
+        settings_fog: 'Fog',
+        settings_fog_desc: 'Ambient fog layers',
+        settings_parallax: 'Parallax',
+        settings_parallax_desc: 'Mouse parallax effect',
+        settings_cursor: 'Magic Cursor',
+        settings_cursor_desc: 'Custom cursor effect',
+        settings_clickspells: 'Click Spells',
+        settings_clickspells_desc: 'Rune burst on click',
+        settings_circles: 'Magic Circles',
+        settings_circles_desc: 'Rotating ring animations'
     },
     es: {
         char_class: 'Streamer · Programador · Aventurero',
@@ -200,7 +226,20 @@ const i18n = {
         settings_about: 'Acerca de',
         settings_reset: 'Restablecer predeterminados',
         settings_reset_desc: 'Restablecer toda la configuración',
-        start_share: 'Compartir'
+        start_share: 'Compartir',
+        settings_performance: 'Rendimiento',
+        settings_particles: 'Partículas',
+        settings_particles_desc: 'Efectos de partículas rúnicas',
+        settings_fog: 'Niebla',
+        settings_fog_desc: 'Capas de niebla ambiental',
+        settings_parallax: 'Paralaje',
+        settings_parallax_desc: 'Efecto paralaje del ratón',
+        settings_cursor: 'Cursor mágico',
+        settings_cursor_desc: 'Cursor personalizado',
+        settings_clickspells: 'Hechizos de clic',
+        settings_clickspells_desc: 'Explosión rúnica al hacer clic',
+        settings_circles: 'Círculos mágicos',
+        settings_circles_desc: 'Animaciones de anillos giratorios'
     },
     ja: {
         char_class: 'ストリーマー · プログラマー · 冒険者',
@@ -265,7 +304,20 @@ const i18n = {
         settings_about: '情報',
         settings_reset: 'デフォルトに戻す',
         settings_reset_desc: 'すべての設定をリセット',
-        start_share: '共有'
+        start_share: '共有',
+        settings_performance: 'パフォーマンス',
+        settings_particles: 'パーティクル',
+        settings_particles_desc: 'ルーン粒子エフェクト',
+        settings_fog: 'フォグ',
+        settings_fog_desc: '環境フォグレイヤー',
+        settings_parallax: 'パララックス',
+        settings_parallax_desc: 'マウスパララックス効果',
+        settings_cursor: 'マジックカーソル',
+        settings_cursor_desc: 'カスタムカーソル',
+        settings_clickspells: 'クリック魔法',
+        settings_clickspells_desc: 'クリック時ルーン爆発',
+        settings_circles: '魔法陣',
+        settings_circles_desc: '回転リングアニメーション'
     },
     fn: {
         char_class: 'ᛊᛏᚱᛖᚨᛗᛖᚱ · ᛈᚱᛟᚷᚱᚨᛗᛗᛖᚱ · ᚨᛞᚹᛖᚾᛏᚢᚱᛖᚱ',
@@ -330,7 +382,20 @@ const i18n = {
         settings_about: 'ᚨᛒᛟᚢᛏ',
         settings_reset: 'ᚱᛖᛊᛖᛏ',
         settings_reset_desc: 'ᛞᛖᚠᚨᚢᛚᛏᛊ',
-        start_share: 'ᛊᚺᚨᚱᛖ'
+        start_share: 'ᛊᚺᚨᚱᛖ',
+        settings_performance: 'ᛈᛖᚱᚠ',
+        settings_particles: 'ᛈᚨᚱᛏᛁᚲᛚᛖᛊ',
+        settings_particles_desc: 'ᚱᚢᚾᛖᛊ',
+        settings_fog: 'ᚠᛟᚷ',
+        settings_fog_desc: 'ᚠᛟᚷ',
+        settings_parallax: 'ᛈᚨᚱᚨᛚᛚᚨᚲᛊ',
+        settings_parallax_desc: 'ᛗᛟᚢᛊᛖ',
+        settings_cursor: 'ᚲᚢᚱᛊᛟᚱ',
+        settings_cursor_desc: 'ᚲᚢᛊᛏᛟᛗ',
+        settings_clickspells: 'ᛊᛈᛖᛚᛚᛊ',
+        settings_clickspells_desc: 'ᚲᛚᛁᚲᚲ',
+        settings_circles: 'ᚲᛁᚱᚲᛚᛖᛊ',
+        settings_circles_desc: 'ᚱᛁᚾᚷᛊ'
     }
 };
 

@@ -16,6 +16,8 @@ const RUNE_SET = 'ᚠᚢᚦᚨᚱᚲᚷᚹᚺᚾᛁᛃᛇᛈᛉᛊᛏᛒᛖᛗ�
 ════════════════════════════ */
 let _isLight = false;          // cached theme check — updated in toggleTheme
 let _tabVisible = true;        // visibility state — pause animations when hidden
+window._parallaxEnabled = true;
+window._clickSpellsEnabled = true;
 
 document.addEventListener('visibilitychange', () => {
     _tabVisible = !document.hidden;
@@ -411,6 +413,7 @@ function initParallax() {
     });
 
     function parallaxTick() {
+        if (window._parallaxEnabled === false) { requestAnimationFrame(parallaxTick); return; }
         if (!_tabVisible) { requestAnimationFrame(parallaxTick); return; }
         cx += (mx - cx) * 0.04;
         cy += (my - cy) * 0.04;
@@ -441,6 +444,7 @@ function initClickSpells() {
     const BURST_COUNT = 12;
 
     document.addEventListener('click', e => {
+        if (window._clickSpellsEnabled === false) return;
         // Don't burst on interactive elements
         if (e.target.closest('a, button, select, input')) return;
 
@@ -1756,6 +1760,53 @@ function initSettings() {
             setTimeout(() => resetBtn.textContent = 'Reset', 1500);
         });
     }
+
+    // Performance toggles
+    const perfToggles = {
+        'settings-particles': { selector: '#rune-bg', prop: 'display' },
+        'settings-fog': { selector: '.fog-layer', prop: 'display', all: true },
+        'settings-parallax': { key: '_parallaxEnabled' },
+        'settings-cursor': { selector: '#magic-cursor', prop: 'display', cursorClass: true },
+        'settings-clickspells': { key: '_clickSpellsEnabled' },
+        'settings-circles': { selector: '.mc-svg', prop: 'animation', all: true, value: 'none' },
+    };
+
+    for (const [id, config] of Object.entries(perfToggles)) {
+        const toggle = document.getElementById(id);
+        if (!toggle) continue;
+
+        // Restore from localStorage
+        const saved = localStorage.getItem('aruta_' + id);
+        if (saved === 'false') {
+            toggle.classList.remove('active');
+            applyPerfToggle(config, false);
+        }
+
+        toggle.addEventListener('click', () => {
+            toggle.classList.toggle('active');
+            const enabled = toggle.classList.contains('active');
+            localStorage.setItem('aruta_' + id, enabled);
+            applyPerfToggle(config, enabled);
+        });
+    }
+
+    function applyPerfToggle(config, enabled) {
+        if (config.selector) {
+            const els = config.all
+                ? document.querySelectorAll(config.selector)
+                : [document.querySelector(config.selector)];
+            els.forEach(el => {
+                if (!el) return;
+                if (config.prop === 'display') el.style.display = enabled ? '' : 'none';
+                else if (config.prop === 'animation') el.style.animation = enabled ? '' : 'none';
+            });
+        }
+        if (config.key) window[config.key] = enabled;
+        if (config.cursorClass) {
+            if (enabled) document.documentElement.classList.add('magic-cursor-active');
+            else document.documentElement.classList.remove('magic-cursor-active');
+        }
+    }
 }
 
 /* ════════════════════════════
@@ -1765,6 +1816,21 @@ function initSysInfo() {
     const btn = document.getElementById('sysinfo-btn');
     const panel = document.getElementById('sysinfo-panel');
     if (!btn || !panel) return;
+
+    let fps = 0;
+    let fpsFrames = 0;
+    let fpsLast = performance.now();
+    function trackFPS() {
+        fpsFrames++;
+        const now = performance.now();
+        if (now - fpsLast >= 1000) {
+            fps = fpsFrames;
+            fpsFrames = 0;
+            fpsLast = now;
+        }
+        requestAnimationFrame(trackFPS);
+    }
+    trackFPS();
 
     let isOpen = false;
     let ipData = null;
@@ -1780,6 +1846,12 @@ function initSysInfo() {
             panel.style.animation = 'startMenuOpen 0.25s cubic-bezier(0.34, 1.56, 0.64, 1) forwards';
             isOpen = true;
             refreshInfo();
+            // Auto-refresh every 1s while open
+            if (window._sysInfoInterval) clearInterval(window._sysInfoInterval);
+            window._sysInfoInterval = setInterval(() => {
+                if (isOpen) refreshInfo();
+                else clearInterval(window._sysInfoInterval);
+            }, 1000);
         }
     }
 
@@ -1851,6 +1923,7 @@ function initSysInfo() {
             { label: 'Timezone', value: tz, cls: '' },
             { label: 'Network', value: conn.effectiveType ? conn.effectiveType.toUpperCase() + ' (' + (conn.downlink || '?') + ' Mbps)' : '\u2014', cls: '' },
             { label: 'Uptime', value: uptime, cls: 'gold' },
+            { label: 'FPS', value: fps + ' fps', cls: fps >= 50 ? 'green' : fps >= 30 ? 'gold' : 'red' },
         ];
 
         rows.innerHTML = data.map(d =>
