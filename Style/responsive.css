@@ -21,14 +21,13 @@
     .taskbar-tabs { padding: 0 4px; }
     .taskbar-tab { padding: 0 8px; font-size: 0.75rem; }
     .os-window:not(.win-maximized) {
-        width: calc(100vw - 24px) !important;
-        max-height: calc(100vh - 80px) !important;
-        top: 66px !important;
-        left: 12px !important;
-        transform: none !important;
+        width: calc(100vw - 24px);
+        max-height: calc(100vh - 80px);
+        top: 66px;
+        left: 12px;
+        transform: none;
     }
     .start-menu { top: 60px; left: 12px; right: 12px; width: auto; }
-    .sysinfo-panel { top: 60px; left: 12px; right: 12px; width: auto; }
     .taskbar-sep { display: none; }
     #app { padding: 60px 0 0; }
     .desktop-hero .magic-circle-frame { width: min(300px, 80vw); height: min(300px, 80vw); }

@@ -39,8 +39,7 @@ function addWindowTab(id) {
             closeWindow(id);
             return;
         }
-        const win = document.getElementById(`win-${id}`);
-        if (win) focusWindow(win);
+        openWindow(id);
     });
     tabs.appendChild(tab);
 }
@@ -115,6 +114,17 @@ function initWindowManager() {
             closeWindow(id);
         });
     });
+
+    // Runtime breakpoint transition: maximize visible windows when entering mobile
+    const mobileMQ = window.matchMedia('(max-width: 640px)');
+    mobileMQ.addEventListener('change', (e) => {
+        if (!e.matches) return;
+        document.querySelectorAll('.os-window').forEach(win => {
+            if (win.style.display !== 'none' && !win.classList.contains('win-maximized')) {
+                toggleMaximize(win);
+            }
+        });
+    });
 }
 
 /**
@@ -127,23 +137,29 @@ function openWindow(id) {
     if (!win) return;
 
     if (win.style.display === 'none' || !win.style.display) {
-        // Reset position to centered
-        win.style.position = 'absolute';
+        const isMobile = window.matchMedia('(max-width: 640px)').matches;
         win.style.display = 'flex';
-        win.style.left = '50%';
-        win.style.top = '50%';
         win.style.width = '';
         win.style.height = '';
         win.style.margin = '';
         win.style.borderRadius = '';
         win.classList.remove('win-maximized');
-        const offset = Math.round((Math.random() - 0.5) * 40);
-        win.style.transform = `translate(calc(-50% + ${offset}px), calc(-50% + ${offset}px))`;
-        win.style.animation = 'windowOpen 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) forwards';
-        // Auto-maximize on mobile
-        if (window.matchMedia('(max-width: 640px)').matches) {
-            toggleMaximize(win);
+        if (!isMobile) {
+            // Desktop: cascade-centered placement via inline styles
+            win.style.position = 'absolute';
+            win.style.left = '50%';
+            win.style.top = '50%';
+            const offset = Math.round((Math.random() - 0.5) * 40);
+            win.style.transform = `translate(calc(-50% + ${offset}px), calc(-50% + ${offset}px))`;
+        } else {
+            // Mobile: clear inline overrides so responsive.css takes effect
+            win.style.position = '';
+            win.style.left = '';
+            win.style.top = '';
+            win.style.transform = '';
         }
+        win.style.animation = 'windowOpen 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) forwards';
+        if (isMobile) toggleMaximize(win);
     }
     focusWindow(win);
 
