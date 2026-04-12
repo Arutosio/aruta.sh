@@ -400,3 +400,9 @@ FodyWeavers.xsd
 # JetBrains Rider
 *.sln.iml
 .claude/settings.local.json
+
+# Claude Code plugins
+.omc/
+
+# Windows crash dumps
+*.stackdump
