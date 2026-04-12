@@ -18,6 +18,7 @@ let _isLight = false;          // cached theme check — updated in toggleTheme
 let _tabVisible = true;        // visibility state — pause animations when hidden
 window._parallaxEnabled = true;
 window._clickSpellsEnabled = true;
+window._circleRotationEnabled = true;
 
 document.addEventListener('visibilitychange', () => {
     _tabVisible = !document.hidden;
@@ -647,6 +648,7 @@ function initMagicCircleInteraction() {
     // Animation loop — auto-rotate with friction + apply transform
     function tickRings() {
         if (!_tabVisible) { requestAnimationFrame(tickRings); return; }
+        if (window._circleRotationEnabled === false) { requestAnimationFrame(tickRings); return; }
         // Ramp up speed over first 2 seconds
         const elapsed = performance.now() - ringsStartTime;
         const rampUp = Math.min(1, elapsed / 2000);
@@ -1768,7 +1770,7 @@ function initSettings() {
         'settings-parallax': { key: '_parallaxEnabled' },
         'settings-cursor': { selector: '#magic-cursor', prop: 'display', cursorClass: true },
         'settings-clickspells': { key: '_clickSpellsEnabled' },
-        'settings-circles': { selector: '.mc-svg', prop: 'animation', all: true, value: 'none' },
+        'settings-circles': { key: '_circleRotationEnabled' },
     };
 
     for (const [id, config] of Object.entries(perfToggles)) {
