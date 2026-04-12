@@ -28,7 +28,7 @@
         transform: none !important;
     }
     .start-menu { top: 60px; left: 12px; right: 12px; width: auto; }
-    .sysinfo-panel { top: 60px; right: 12px; }
+    .sysinfo-panel { top: 60px; left: 12px; right: 12px; width: auto; }
     .taskbar-sep { display: none; }
     #app { padding: 60px 0 0; }
     .desktop-hero .magic-circle-frame { width: min(300px, 80vw); height: min(300px, 80vw); }
@@ -45,7 +45,7 @@
     }
     .settings-cat span { display: none; }
     .settings-cat { justify-content: center; padding: 10px; }
-    .sysinfo-panel { right: 12px; top: 60px; width: calc(100vw - 24px); }
+    .sysinfo-panel { top: 60px; left: 12px; right: 12px; width: auto; }
 }
 
 @media (max-width: 500px) {

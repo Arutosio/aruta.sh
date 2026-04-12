@@ -140,6 +140,10 @@ function openWindow(id) {
         const offset = Math.round((Math.random() - 0.5) * 40);
         win.style.transform = `translate(calc(-50% + ${offset}px), calc(-50% + ${offset}px))`;
         win.style.animation = 'windowOpen 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) forwards';
+        // Auto-maximize on mobile
+        if (window.matchMedia('(max-width: 640px)').matches) {
+            toggleMaximize(win);
+        }
     }
     focusWindow(win);
 
