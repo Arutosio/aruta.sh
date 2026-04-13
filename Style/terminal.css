@@ -42,18 +42,18 @@
     padding: 0;
     min-height: 1.2em;
 }
-.term-output       { color: #e8e8f0; }                      /* default output: neutral light */
-.term-info         { color: #22d3ee; }                       /* cyan — headers / info */
-.term-success      { color: #34d399; }                       /* green */
-.term-error        { color: #fb7185; }                       /* red */
+.term-output       { color: #e8e8f0; }
+.term-info         { color: var(--cyan); }
+.term-success      { color: var(--green); }
+.term-error        { color: var(--red); }
 .term-dim          { color: rgba(232, 232, 240, 0.45); font-style: italic; }
-.term-prompt       { color: var(--gold, #ffc857); font-weight: 700; }
-.term-cmd          { color: #c4b5fd; }                       /* purple — typed command echo */
-.term-key          { color: var(--gold, #ffc857); font-weight: 700; }  /* command name in help */
-.term-value        { color: #c4b5fd; }                       /* values (id, paths) */
-.term-num          { color: #fb923c; }                       /* numbers */
-.term-str          { color: #34d399; }                       /* strings */
-.term-muted        { color: rgba(232, 232, 240, 0.6); }      /* descriptions */
+.term-prompt       { color: var(--gold); font-weight: 700; }
+.term-cmd          { color: var(--purple); }
+.term-key          { color: var(--gold); font-weight: 700; }
+.term-value        { color: var(--purple); }
+.term-num          { color: #fb923c; }
+.term-str          { color: var(--green); }
+.term-muted        { color: rgba(232, 232, 240, 0.6); }
 
 .term-inputline {
     display: flex;
@@ -119,7 +119,7 @@
     color: var(--text, #ffe4a0);
 }
 .perm-actions { gap: 0.5rem; flex-wrap: wrap; }
-.perm-always { background: linear-gradient(135deg, #34d399, #059669) !important; color: #062014 !important; }
+.perm-always { background: linear-gradient(135deg, var(--green), #059669) !important; color: #062014 !important; }
 
 /* ── Settings → Permessi page ───────────────────────────── */
 #settings-perms-list { display: flex; flex-direction: column; gap: 0.8rem; }
@@ -146,8 +146,8 @@
 .perm-uninstall {
     background: transparent;
     border: 1px solid rgba(251, 113, 133, 0.4);
-    color: #fb7185;
-    border-radius: 6px;
+    color: var(--red);
+    border-radius: var(--radius-sm);
     padding: 0.25rem 0.5rem;
     cursor: pointer;
     font-size: 0.95rem;
@@ -172,8 +172,8 @@
     border-radius: 4px;
     opacity: 0.85;
 }
-.perm-state-granted { background: rgba(52, 211, 153, 0.18); color: #34d399; }
-.perm-state-denied  { background: rgba(251, 113, 133, 0.18); color: #fb7185; }
+.perm-state-granted { background: rgba(52, 211, 153, 0.18); color: var(--green); }
+.perm-state-denied  { background: rgba(251, 113, 133, 0.18); color: var(--red); }
 .perm-state-ask     { background: rgba(167, 139, 250, 0.18); color: #c4b5fd; }
 .perm-toggle {
     background: transparent;
