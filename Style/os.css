@@ -23,17 +23,18 @@
 
 .taskbar-start {
     display: flex; align-items: center; justify-content: center;
-    width: 38px; height: 34px; margin: 5px 0;
+    width: 34px; height: 28px; margin: auto 0; padding: 0;
     background: rgba(255, 200, 87, 0.12);
     border: 1px solid rgba(255, 200, 87, 0.35);
     color: var(--gold); cursor: pointer;
     font-family: var(--font-display);
     transition: background 0.2s, color 0.2s, border-color 0.2s, box-shadow 0.2s;
-    border-radius: 8px;
+    border-radius: var(--radius-md);
 }
 .taskbar-start .start-icon {
-    font-size: 1.3rem;
+    font-size: 1.1rem;
     text-shadow: 0 0 8px rgba(255, 200, 87, 0.4);
+    line-height: 1;
 }
 .taskbar-start:hover {
     background: rgba(255, 200, 87, 0.12);
