@@ -44,6 +44,10 @@ function showApp() {
     initAchievements();
     initSysInfo();
 
+    // Initialize package registry (loads installed apps + commands from IndexedDB)
+    if (window.registry) window.registry.bootstrap();
+    if (window.installer) window.installer.initDragDrop();
+
     // Entrance animation for home hero on desktop
     setTimeout(() => {
         animateSectionEntrance('home');

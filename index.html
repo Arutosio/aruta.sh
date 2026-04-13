@@ -30,6 +30,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
     <link rel="preload" as="image" href="./Images/aru2_meta.png">
     <link rel="stylesheet" href="Style/main.css">
+    <link rel="stylesheet" href="Style/terminal.css">
     <!-- VanillaTilt removed — replaced with pure CSS/JS tilt -->
 </head>
 <body>
@@ -135,6 +136,7 @@
                 <button class="start-item" data-window="about">📖 <span data-i18n="sec_about">About</span></button>
                 <button class="start-item" data-window="live">🔮 <span data-i18n="sec_live">Live</span></button>
                 <button class="start-item" data-window="links">🔗 <span data-i18n="sec_links">Links</span></button>
+                <button class="start-item" data-window="terminal">⌨️ <span data-i18n="sec_terminal">Terminal</span></button>
                 <button class="start-item" data-window="settings">⚙️ <span data-i18n="sec_settings">Settings</span></button>
             </div>
             <div class="start-divider"></div>
@@ -384,6 +386,7 @@
                         <button class="settings-cat" data-cat="clock">🕐 <span data-i18n="settings_clock">Clock</span></button>
                         <button class="settings-cat" data-cat="language">🌐 <span data-i18n="settings_language">Language</span></button>
                         <button class="settings-cat" data-cat="sound">🔊 <span data-i18n="settings_sound">Sound</span></button>
+                        <button class="settings-cat" data-cat="permissions">🔐 <span data-i18n="settings_permissions">Permissions</span></button>
                         <button class="settings-cat" data-cat="reset">🔄 <span data-i18n="settings_reset">Reset</span></button>
                         <button class="settings-cat" data-cat="about">⚜ <span data-i18n="settings_about">About</span></button>
                     </nav>
@@ -473,6 +476,15 @@
                                 <button class="settings-toggle" id="settings-sound-toggle"><span class="toggle-track"><span class="toggle-thumb"></span></span></button>
                             </div>
                         </div>
+                        <!-- Permissions / Installed packages -->
+                        <div class="settings-page" data-page="permissions">
+                            <h2 class="settings-page-title" data-i18n="settings_permissions">Permissions</h2>
+                            <div class="settings-row">
+                                <div class="settings-label"><span class="settings-icon">📦</span><div><strong data-i18n="settings_install_pkg">Install package</strong><br><small data-i18n="settings_install_pkg_desc">Import an .zip with manifest.json + index.js</small></div></div>
+                                <button class="settings-reset-btn" id="settings-install-pkg" data-i18n="install_install">Install</button>
+                            </div>
+                            <div id="settings-perms-list"></div>
+                        </div>
                         <!-- Reset -->
                         <div class="settings-page" data-page="reset">
                             <h2 class="settings-page-title" data-i18n="settings_reset">Reset to Defaults</h2>
@@ -481,8 +493,12 @@
                                 <button class="settings-reset-btn" id="settings-reset">Reset</button>
                             </div>
                             <div class="settings-row">
-                                <div class="settings-label"><span class="settings-icon">🗑️</span><div><strong data-i18n="settings_wipe">Wipe Local Data</strong><br><small data-i18n="settings_wipe_desc">Delete all locally stored data and reload the page</small></div></div>
-                                <button class="settings-reset-btn settings-wipe-btn" id="settings-wipe">Wipe</button>
+                                <div class="settings-label"><span class="settings-icon">🧹</span><div><strong data-i18n="settings_wipe_settings">Wipe Settings Only</strong><br><small data-i18n="settings_wipe_settings_desc">Reset preferences but keep installed apps, commands and permissions</small></div></div>
+                                <button class="settings-reset-btn" id="settings-wipe-settings">Wipe</button>
+                            </div>
+                            <div class="settings-row">
+                                <div class="settings-label"><span class="settings-icon">🗑️</span><div><strong data-i18n="settings_wipe">Wipe Local Data</strong><br><small data-i18n="settings_wipe_desc">Delete all locally stored data, apps and commands, then reload</small></div></div>
+                                <button class="settings-reset-btn settings-wipe-btn" id="settings-wipe">Wipe All</button>
                             </div>
                         </div>
                         <!-- About -->
@@ -497,6 +513,18 @@
                 </div>
             </div>
         </div>
+        <!-- ── Terminal Window ── -->
+        <div class="os-window" id="win-terminal" data-window="terminal" style="display:none;">
+            <div class="win-titlebar">
+                <span class="win-title">⌨️ <span data-i18n="sec_terminal">Terminal</span></span>
+                <div class="win-controls">
+                    <button class="win-btn win-minimize" title="Minimize">▬</button>
+                    <button class="win-btn win-maximize" title="Maximize">☐</button>
+                    <button class="win-btn win-close" title="Close">✕</button>
+                </div>
+            </div>
+            <div class="win-content"></div>
+        </div>
     </div><!-- .desktop -->
 
 </main>
@@ -508,6 +536,11 @@
 <script src="JavaScript/content.js"></script>
 <script src="JavaScript/extras.js"></script>
 <script src="JavaScript/os.js"></script>
+<script src="JavaScript/permissions.js"></script>
+<script src="JavaScript/registry.js"></script>
+<script src="JavaScript/sandbox.js"></script>
+<script src="JavaScript/installer.js"></script>
+<script src="JavaScript/terminal.js"></script>
 <script src="JavaScript/app.js"></script>
 <link rel="stylesheet" href="ArcaneDuel/arcane-duel.css">
 <script src="ArcaneDuel/arcane-duel.js"></script>

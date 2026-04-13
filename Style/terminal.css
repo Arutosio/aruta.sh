@@ -1,0 +1,223 @@
+/* ╔══════════════════════════════════════════════════════════╗
+ * ║  TERMINAL · PERMISSIONS · INSTALLER  styling             ║
+ * ╚══════════════════════════════════════════════════════════╝ */
+
+/* ── Terminal window ────────────────────────────────────── */
+#win-terminal .win-content {
+    padding: 0;
+    background: rgba(8, 6, 18, 0.92);
+}
+.term-screen {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    min-height: 320px;
+    font-family: 'IM Fell English', 'Cinzel', 'Courier New', monospace;
+    font-size: 1rem;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    color: var(--gold-light, #ffe4a0);
+}
+.term-line { font-family: inherit; }
+/* Keep monospaced alignment for command tables (help, apps, commands) */
+.term-output pre, .term-output code { font-family: 'Courier New', monospace; font-weight: 700; }
+.term-output {
+    flex: 1 1 auto;
+    overflow-y: auto;
+    padding: 1rem 1rem 0.5rem;
+    line-height: 1.45;
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+.term-line {
+    margin: 0;
+    padding: 0;
+    min-height: 1.2em;
+}
+.term-output       { color: #e8e8f0; }                      /* default output: neutral light */
+.term-info         { color: #22d3ee; }                       /* cyan — headers / info */
+.term-success      { color: #34d399; }                       /* green */
+.term-error        { color: #fb7185; }                       /* red */
+.term-dim          { color: rgba(232, 232, 240, 0.45); font-style: italic; }
+.term-prompt       { color: var(--gold, #ffc857); font-weight: 700; }
+.term-cmd          { color: #c4b5fd; }                       /* purple — typed command echo */
+.term-key          { color: var(--gold, #ffc857); font-weight: 700; }  /* command name in help */
+.term-value        { color: #c4b5fd; }                       /* values (id, paths) */
+.term-num          { color: #fb923c; }                       /* numbers */
+.term-str          { color: #34d399; }                       /* strings */
+.term-muted        { color: rgba(232, 232, 240, 0.6); }      /* descriptions */
+
+.term-inputline {
+    display: flex;
+    align-items: center;
+    padding: 0.5rem 1rem 0.9rem;
+    border-top: 1px solid rgba(255, 200, 87, 0.18);
+    background: rgba(0, 0, 0, 0.3);
+}
+.term-input {
+    flex: 1;
+    background: transparent;
+    border: none;
+    outline: none;
+    color: var(--gold-light, #ffe4a0);
+    font-family: inherit;
+    font-size: inherit;
+    caret-color: var(--gold, #ffc857);
+    margin-left: 0.4rem;
+}
+.term-input::placeholder { color: rgba(255, 228, 160, 0.4); }
+
+/* Custom-app windows: full-bleed iframe content */
+.os-window-custom .win-content { padding: 0; overflow: hidden; }
+.custom-app-content { width: 100%; height: 100%; min-height: 320px; }
+.sandbox-iframe { display: block; }
+
+/* ── Permission modal ───────────────────────────────────── */
+.perm-modal { max-width: 460px; }
+.perm-header {
+    display: flex; align-items: center; gap: 0.8rem; margin-bottom: 0.8rem;
+}
+.perm-icon { font-size: 2rem; }
+.perm-title { font-weight: 700; font-size: 1.05rem; color: var(--gold, #ffc857); }
+.perm-body {
+    background: rgba(0,0,0,0.25);
+    padding: 0.8rem 1rem;
+    border-radius: 8px;
+    margin-bottom: 1rem;
+    line-height: 1.4;
+    color: var(--text, #ffe4a0);
+}
+.perm-actions { gap: 0.5rem; flex-wrap: wrap; }
+.perm-always { background: linear-gradient(135deg, #34d399, #059669) !important; color: #062014 !important; }
+
+/* ── Settings → Permessi page ───────────────────────────── */
+#settings-perms-list { display: flex; flex-direction: column; gap: 0.8rem; }
+.perm-app {
+    border: 1px solid rgba(255, 200, 87, 0.22);
+    border-radius: 12px;
+    padding: 0.85rem 1rem;
+    background: rgba(255, 255, 255, 0.025);
+}
+.perm-app-head {
+    display: flex; align-items: center; gap: 0.6rem; margin-bottom: 0.6rem;
+}
+.perm-app-icon { font-size: 1.4rem; }
+.perm-app-name { color: var(--gold, #ffc857); }
+.perm-app-type {
+    margin-left: auto;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    opacity: 0.6;
+    padding: 0.15rem 0.5rem;
+    border: 1px solid rgba(255, 200, 87, 0.3);
+    border-radius: 6px;
+}
+.perm-uninstall {
+    background: transparent;
+    border: 1px solid rgba(251, 113, 133, 0.4);
+    color: #fb7185;
+    border-radius: 6px;
+    padding: 0.25rem 0.5rem;
+    cursor: pointer;
+    font-size: 0.95rem;
+}
+.perm-uninstall:hover { background: rgba(251, 113, 133, 0.15); }
+
+.perm-app-perms { display: flex; flex-direction: column; gap: 0.35rem; }
+.perm-item {
+    display: grid;
+    grid-template-columns: 1fr auto auto;
+    align-items: center;
+    gap: 0.6rem;
+    padding: 0.3rem 0.5rem;
+    border-radius: 6px;
+}
+.perm-item:hover { background: rgba(255, 255, 255, 0.04); }
+.perm-name { font-weight: 500; }
+.perm-state {
+    font-size: 0.78rem;
+    text-transform: uppercase;
+    padding: 0.15rem 0.5rem;
+    border-radius: 4px;
+    opacity: 0.85;
+}
+.perm-state-granted { background: rgba(52, 211, 153, 0.18); color: #34d399; }
+.perm-state-denied  { background: rgba(251, 113, 133, 0.18); color: #fb7185; }
+.perm-state-ask     { background: rgba(167, 139, 250, 0.18); color: #c4b5fd; }
+.perm-toggle {
+    background: transparent;
+    border: 1px solid rgba(255, 200, 87, 0.4);
+    color: var(--gold, #ffc857);
+    border-radius: 6px;
+    padding: 0.25rem 0.6rem;
+    cursor: pointer;
+    font-size: 0.8rem;
+}
+.perm-toggle:hover { background: rgba(255, 200, 87, 0.12); }
+.perm-empty, .perm-empty-small {
+    text-align: center;
+    padding: 1rem;
+    opacity: 0.5;
+    font-style: italic;
+}
+
+/* ── Install confirm modal ──────────────────────────────── */
+.install-modal { max-width: 520px; }
+.install-body {
+    background: rgba(0,0,0,0.3);
+    padding: 0.8rem 1rem;
+    border-radius: 8px;
+    margin-bottom: 1rem;
+    font-family: 'Courier New', monospace;
+    font-size: 0.85rem;
+    line-height: 1.5;
+    white-space: pre-wrap;
+    color: var(--gold-light, #ffe4a0);
+    max-height: 280px;
+    overflow-y: auto;
+}
+
+/* ── Install dropzone overlay ───────────────────────────── */
+.install-dropzone {
+    position: fixed;
+    inset: 0;
+    z-index: 9999;
+    background: rgba(12, 10, 26, 0.78);
+    backdrop-filter: blur(6px);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    pointer-events: none;
+}
+.install-dropzone.show { display: flex; }
+.install-dropzone-inner {
+    border: 3px dashed var(--gold, #ffc857);
+    border-radius: 24px;
+    padding: 3rem 4rem;
+    font-size: 1.5rem;
+    color: var(--gold-light, #ffe4a0);
+    background: rgba(255, 200, 87, 0.06);
+    text-align: center;
+    animation: dropPulse 1.4s ease-in-out infinite;
+}
+.install-dropzone-inner > span { display: block; margin-top: 0.6rem; font-size: 1.1rem; }
+@keyframes dropPulse {
+    0%, 100% { transform: scale(1); opacity: 0.95; }
+    50%      { transform: scale(1.03); opacity: 1; }
+}
+
+/* Light theme overrides */
+[data-theme="light"] #win-terminal .win-content { background: rgba(245, 240, 225, 0.95); }
+[data-theme="light"] .term-screen { color: #2a1a08; }
+[data-theme="light"] .term-prompt { color: #8a5a00; }
+[data-theme="light"] .term-cmd    { color: #6d28d9; }
+[data-theme="light"] .term-input  { color: #2a1a08; caret-color: #8a5a00; }
+[data-theme="light"] .term-inputline { background: rgba(0,0,0,0.04); }
+
+/* Mobile */
+@media (max-width: 640px) {
+    .install-dropzone-inner { padding: 2rem; font-size: 1.1rem; }
+    .perm-item { grid-template-columns: 1fr auto; }
+    .perm-state { grid-column: 2; }
+    .perm-toggle { grid-column: 1 / -1; justify-self: end; }
+}

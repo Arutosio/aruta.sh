@@ -16,6 +16,7 @@ const WIN_META = {
     live:     { icon: '🔮', label: 'Live' },
     links:    { icon: '🔗', label: 'Links' },
     settings: { icon: '⚙️', label: 'Settings' },
+    terminal: { icon: '⌨️', label: 'Terminal' },
 };
 
 /**
@@ -188,6 +189,18 @@ function openWindow(id) {
     if (id === 'settings' && !openWindow._settingsInit) {
         openWindow._settingsInit = true;
         initSettings();
+    }
+
+    // Init terminal on first open
+    if (id === 'terminal' && window.terminal) {
+        window.terminal.init();
+        setTimeout(() => document.getElementById('term-input')?.focus(), 50);
+    }
+
+    // Mount custom app via sandbox iframe (lazy)
+    const customMeta = WIN_META[id];
+    if (customMeta && customMeta.custom && window.sandbox) {
+        window.sandbox.mount(id);
     }
 }
 openWindow._bioTyped = false;
@@ -541,8 +554,18 @@ function initSettings() {
             document.querySelectorAll('.settings-page').forEach(p => p.classList.remove('active'));
             const target = document.querySelector(`.settings-page[data-page="${page}"]`);
             if (target) target.classList.add('active');
+            if (page === 'permissions' && window.permissions) window.permissions.renderSettings();
         });
     });
+
+    // Install button on permissions tab
+    const installBtn = document.getElementById('settings-install-pkg');
+    if (installBtn) {
+        installBtn.addEventListener('click', async () => {
+            await window.installer?.installPrompt();
+            window.permissions?.renderSettings();
+        });
+    }
 
     // Theme toggle
     const themeToggle = document.getElementById('settings-theme-toggle');
@@ -688,9 +711,46 @@ function initSettings() {
             const confirmFn = window.showConfirm || ((m) => Promise.resolve(confirm(m)));
             const ok = await confirmFn(confirmMsg, { type: 'warning', okText: t.confirm_wipe || 'Wipe', cancelText: t.confirm_cancel || 'Cancel' });
             if (!ok) return;
+            // Collect installed app ids BEFORE clearing storage so we can delete their per-app DBs
+            let appIds = [];
+            try { appIds = (window.registry?.list() || []).map(a => a.id); } catch {}
             try { localStorage.clear(); } catch (e) { console.warn('localStorage.clear failed', e); }
             try { sessionStorage.clear(); } catch (e) { console.warn('sessionStorage.clear failed', e); }
+            // Delete IndexedDB: package registry + each app's private storage DB
+            try {
+                indexedDB.deleteDatabase('aruta_packages');
+                for (const id of appIds) indexedDB.deleteDatabase('aruta_app_' + id);
+            } catch (e) { console.warn('indexedDB wipe failed', e); }
             if (window.showToast) showToast(t.toast_wipe_done || 'Local data wiped. Reloading…', 'warning', 1200);
+            setTimeout(() => location.reload(), 900);
+        });
+    }
+
+    // Wipe settings only — keeps installed packages + permissions
+    const wipeSettingsBtn = document.getElementById('settings-wipe-settings');
+    if (wipeSettingsBtn) {
+        wipeSettingsBtn.addEventListener('click', async () => {
+            const t = (typeof i18n !== 'undefined' && i18n[currentLang]) || {};
+            const confirmMsg = t.settings_wipe_settings_confirm || 'Reset preferences? Installed apps, commands and their permissions will be kept.';
+            const confirmFn = window.showConfirm || ((m) => Promise.resolve(confirm(m)));
+            const ok = await confirmFn(confirmMsg, { type: 'warning', okText: t.confirm_wipe || 'Wipe', cancelText: t.confirm_cancel || 'Cancel' });
+            if (!ok) return;
+            try {
+                const preserve = new Set();
+                preserve.add('aruta_installed_apps');
+                for (let i = 0; i < localStorage.length; i++) {
+                    const k = localStorage.key(i);
+                    if (k && k.startsWith('aruta_perms_')) preserve.add(k);
+                }
+                const toRemove = [];
+                for (let i = 0; i < localStorage.length; i++) {
+                    const k = localStorage.key(i);
+                    if (k && k.startsWith('aruta_') && !preserve.has(k)) toRemove.push(k);
+                }
+                toRemove.forEach(k => localStorage.removeItem(k));
+            } catch (e) { console.warn('wipe settings failed', e); }
+            try { sessionStorage.clear(); } catch {}
+            if (window.showToast) showToast(t.toast_wipe_settings_done || 'Settings wiped. Reloading…', 'warning', 1200);
             setTimeout(() => location.reload(), 900);
         });
     }
