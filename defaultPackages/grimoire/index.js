@@ -1,6 +1,47 @@
 const HLJS_SCRIPT = 'https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js';
 const HLJS_THEME  = 'https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css';
 
+const EXT_TO_LANG = {
+    js: 'javascript', mjs: 'javascript', cjs: 'javascript',
+    ts: 'typescript', tsx: 'typescript', jsx: 'javascript',
+    py: 'python', pyw: 'python',
+    cs: 'csharp',
+    cpp: 'cpp', cc: 'cpp', cxx: 'cpp', h: 'cpp', hpp: 'cpp', c: 'cpp',
+    rs: 'rust',
+    go: 'go',
+    java: 'java',
+    kt: 'kotlin', kts: 'kotlin',
+    swift: 'swift',
+    php: 'php', phtml: 'php',
+    rb: 'ruby',
+    sql: 'sql',
+    sh: 'bash', bash: 'bash', zsh: 'bash',
+    ps1: 'powershell', psm1: 'powershell',
+    html: 'html', htm: 'html',
+    css: 'css', scss: 'css', sass: 'css',
+    json: 'json',
+    yaml: 'yaml', yml: 'yaml',
+    xml: 'xml', svg: 'xml',
+    md: 'markdown', markdown: 'markdown', mdown: 'markdown',
+    txt: 'plaintext', log: 'plaintext',
+};
+
+const LANG_TO_EXT = {
+    javascript: 'js', typescript: 'ts', python: 'py', csharp: 'cs',
+    cpp: 'cpp', rust: 'rs', go: 'go', java: 'java', kotlin: 'kt',
+    swift: 'swift', php: 'php', ruby: 'rb', sql: 'sql', bash: 'sh',
+    powershell: 'ps1', html: 'html', css: 'css', json: 'json',
+    yaml: 'yaml', xml: 'xml', markdown: 'md', plaintext: 'txt',
+};
+
+function langFromFilename(name) {
+    const m = /\.([a-zA-Z0-9]+)$/.exec(name || '');
+    if (!m) return 'plaintext';
+    return EXT_TO_LANG[m[1].toLowerCase()] || 'plaintext';
+}
+
+function extForLang(lang) { return LANG_TO_EXT[lang] || 'txt'; }
+
 const LANGS = [
     { id: 'plaintext', label: 'Plain' },
     { id: 'javascript', label: 'JavaScript' },
@@ -65,7 +106,11 @@ export default {
         root.innerHTML = `
             <div class="wrap">
                 <aside class="sidebar">
-                    <div class="sidebar-head"><button class="new-btn">＋ New</button></div>
+                    <div class="sidebar-head">
+                        <button class="new-btn" title="New scroll">＋</button>
+                        <button class="import-btn" title="Load a file from disk">⬆</button>
+                        <button class="export-btn" title="Save the current scroll to disk">⬇</button>
+                    </div>
                     <ul class="doclist"></ul>
                 </aside>
                 <section class="main">
@@ -384,6 +429,58 @@ export default {
             await renderBody();
             scheduleSave();
             await persistActive();
+        });
+
+        // Import: read a text file from disk into a new scroll.
+        root.querySelector('.import-btn').addEventListener('click', () => {
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = '.txt,.md,.markdown,.js,.mjs,.cjs,.ts,.tsx,.jsx,.py,.cs,.cpp,.cc,.cxx,.h,.hpp,.c,.rs,.go,.java,.kt,.kts,.swift,.php,.phtml,.rb,.sql,.sh,.bash,.zsh,.ps1,.psm1,.html,.htm,.css,.scss,.sass,.json,.yaml,.yml,.xml,.svg,.log,text/*';
+            input.addEventListener('change', async () => {
+                const file = input.files?.[0];
+                if (!file) return;
+                if (file.size > 5 * 1024 * 1024) {
+                    alert('File too large (>5 MB). Grimoire is meant for scrolls, not tomes.');
+                    return;
+                }
+                const text = await file.text();
+                const title = file.name.replace(/\.[^.]+$/, '');
+                const lang = langFromFilename(file.name);
+                const d = {
+                    id: uuid(),
+                    title: title || 'Imported',
+                    lang,
+                    content: text,
+                    updatedAt: Date.now(),
+                };
+                docs.unshift(d);
+                activeId = d.id;
+                view = 'edit';
+                $tabs.forEach(x => x.classList.toggle('active', x.dataset.view === 'edit'));
+                renderSidebar();
+                await renderBody();
+                scheduleSave();
+                await persistActive();
+            });
+            input.click();
+        });
+
+        // Export: download the active scroll as a text file named after the
+        // document title with an extension picked from the chosen language.
+        root.querySelector('.export-btn').addEventListener('click', () => {
+            const d = active();
+            if (!d) return;
+            const ext = extForLang(d.lang || 'plaintext');
+            const safeName = (d.title || 'scroll').replace(/[\\/:*?"<>|]+/g, '_').trim() || 'scroll';
+            const blob = new Blob([d.content || ''], { type: 'text/plain;charset=utf-8' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = safeName + '.' + ext;
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+            setTimeout(() => URL.revokeObjectURL(url), 1000);
         });
 
         $doclist.addEventListener('click', async (e) => {
