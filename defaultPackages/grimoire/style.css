@@ -151,6 +151,31 @@ body {
     font-style: italic;
     font-size: 0.78rem;
 }
+/* Per-directory inline actions (new file / new folder) */
+.ftree-act {
+    margin-left: auto;
+    flex-shrink: 0;
+    background: transparent;
+    border: 1px solid rgba(255, 200, 87, 0.2);
+    color: var(--g);
+    border-radius: 4px;
+    padding: 0 0.25rem;
+    font-size: 0.65rem;
+    font-family: inherit;
+    cursor: pointer;
+    opacity: 0;
+    transition: opacity 0.12s, background 0.12s;
+}
+.ftree-item:hover .ftree-act { opacity: 1; }
+.ftree-act:hover { background: rgba(255, 200, 87, 0.12); }
+
+/* Drag state */
+.ftree-item.ftree-dragging { opacity: 0.4; }
+.ftree-item.ftree-dragover {
+    background: rgba(52, 211, 153, 0.18);
+    outline: 1px dashed #34d399;
+    outline-offset: -2px;
+}
 
 /* ── Main ──────────────────────── */
 .main { flex: 1; display: flex; flex-direction: column; min-width: 0; }

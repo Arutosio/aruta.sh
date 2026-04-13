@@ -114,6 +114,8 @@ export default {
                     <div class="folder-section">
                         <div class="folder-head">
                             <button class="folder-open-btn" title="Open a folder to browse/edit its files">📁 Open folder</button>
+                            <button class="folder-new-file" style="display:none" title="New file in root">📄＋</button>
+                            <button class="folder-new-dir" style="display:none" title="New folder in root">📁＋</button>
                             <button class="folder-close" style="display:none" title="Close folder">✕</button>
                         </div>
                         <div class="folder-tree"></div>
@@ -558,9 +560,20 @@ export default {
         });
 
         // ── Folder tree ────────────────────────────
-        const $folderOpen  = root.querySelector('.folder-open-btn');
-        const $folderClose = root.querySelector('.folder-close');
-        const $folderTree  = root.querySelector('.folder-tree');
+        const $folderOpen    = root.querySelector('.folder-open-btn');
+        const $folderClose   = root.querySelector('.folder-close');
+        const $folderNewFile = root.querySelector('.folder-new-file');
+        const $folderNewDir  = root.querySelector('.folder-new-dir');
+        const $folderTree    = root.querySelector('.folder-tree');
+
+        function folderHeaderControls(show) {
+            const disp = show ? '' : 'none';
+            $folderClose.style.display = disp;
+            // Writable-only actions — require a DirectoryHandle from the FS Access API.
+            const writable = show && !!_folder.root;
+            $folderNewFile.style.display = writable ? '' : 'none';
+            $folderNewDir.style.display  = writable ? '' : 'none';
+        }
 
         // Skipped entries that would clutter the tree for no real gain.
         const SKIP_DIRS = new Set(['node_modules', '.git', '.svn', '.hg', '.DS_Store', 'dist', 'build', '.next', '.cache', '.idea', '.vscode']);
@@ -646,15 +659,21 @@ export default {
             wireTreeInteractions();
         }
         function renderNode(node, depth, isRoot) {
+            const canWrite = !!_folder.root;  // FS Access API mode only
             if (node.isDir) {
                 const collapsed = !isRoot && !_folder.expanded.has(node.path);
                 const kids = (node.children || []).map(c => renderNode(c, depth + 1, false)).join('');
+                const actions = canWrite ? `
+                    <button class="ftree-act" data-action="new-file" data-path="${escapeHTML(node.path)}" title="New file here">📄＋</button>
+                    <button class="ftree-act" data-action="new-dir"  data-path="${escapeHTML(node.path)}" title="New folder here">📁＋</button>
+                ` : '';
                 return `
                     <div class="ftree-dir ${collapsed ? 'is-collapsed' : ''}" data-path="${escapeHTML(node.path)}">
-                        <div class="ftree-item" data-kind="dir" data-path="${escapeHTML(node.path)}">
+                        <div class="ftree-item ftree-drop" data-kind="dir" data-path="${escapeHTML(node.path)}">
                             <span class="ftree-chev">▾</span>
                             <span class="ftree-icon">${isRoot ? '📂' : '📁'}</span>
                             <span class="ftree-name">${escapeHTML(node.name)}</span>
+                            ${actions}
                         </div>
                         <div class="ftree-children">${kids || '<div class="ftree-empty">empty</div>'}</div>
                     </div>
@@ -663,7 +682,7 @@ export default {
                 const isActive = activeId === 'file:' + node.path;
                 return `
                     <div class="ftree-file" data-path="${escapeHTML(node.path)}">
-                        <div class="ftree-item ${isActive ? 'ftree-active' : ''}" data-kind="file" data-path="${escapeHTML(node.path)}">
+                        <div class="ftree-item ${isActive ? 'ftree-active' : ''}" data-kind="file" data-path="${escapeHTML(node.path)}" ${canWrite ? 'draggable="true"' : ''}>
                             <span class="ftree-chev"></span>
                             <span class="ftree-icon">📄</span>
                             <span class="ftree-name">${escapeHTML(node.name)}</span>
@@ -674,7 +693,19 @@ export default {
         }
         function wireTreeInteractions() {
             $folderTree.querySelectorAll('.ftree-item').forEach(el => {
-                el.addEventListener('click', async () => {
+                el.addEventListener('click', async (e) => {
+                    // Per-directory action buttons
+                    const act = e.target.closest('.ftree-act');
+                    if (act) {
+                        e.stopPropagation();
+                        const action = act.dataset.action;
+                        const path = act.dataset.path;
+                        const dir = findDirNode(path);
+                        if (!dir) return;
+                        if (action === 'new-file') await promptAndCreateFile(dir);
+                        else if (action === 'new-dir') await promptAndCreateDir(dir);
+                        return;
+                    }
                     const path = el.dataset.path;
                     if (el.dataset.kind === 'dir') {
                         const dir = el.closest('.ftree-dir');
@@ -687,7 +718,121 @@ export default {
                         await openFileFromTree(path);
                     }
                 });
+                // Drag source (files only)
+                if (el.getAttribute('draggable') === 'true') {
+                    el.addEventListener('dragstart', (e) => {
+                        e.dataTransfer.setData('text/grimoire-path', el.dataset.path);
+                        e.dataTransfer.effectAllowed = 'move';
+                        el.classList.add('ftree-dragging');
+                    });
+                    el.addEventListener('dragend', () => el.classList.remove('ftree-dragging'));
+                }
+                // Drop target (dirs only)
+                if (el.classList.contains('ftree-drop')) {
+                    el.addEventListener('dragover', (e) => {
+                        if (!e.dataTransfer.types.includes('text/grimoire-path')) return;
+                        e.preventDefault();
+                        e.dataTransfer.dropEffect = 'move';
+                        el.classList.add('ftree-dragover');
+                    });
+                    el.addEventListener('dragleave', () => el.classList.remove('ftree-dragover'));
+                    el.addEventListener('drop', async (e) => {
+                        el.classList.remove('ftree-dragover');
+                        const srcPath = e.dataTransfer.getData('text/grimoire-path');
+                        if (!srcPath) return;
+                        e.preventDefault();
+                        await moveFile(srcPath, el.dataset.path);
+                    });
+                }
             });
+        }
+
+        function findDirNode(path, node = _folder.tree) {
+            if (!node) return null;
+            if (node.path === path && node.isDir) return node;
+            if (node.children) {
+                for (const c of node.children) {
+                    const r = findDirNode(path, c);
+                    if (r) return r;
+                }
+            }
+            return null;
+        }
+
+        async function refreshTree() {
+            if (!_folder.root) return;
+            _folder.tree = await buildTreeFromHandle(_folder.root);
+            renderFolderTree();
+        }
+
+        async function promptAndCreateFile(dirNode) {
+            const name = window.prompt('New file name (e.g. notes.md)');
+            if (!name || !name.trim()) return;
+            await createFileIn(dirNode, name.trim());
+        }
+        async function promptAndCreateDir(dirNode) {
+            const name = window.prompt('New folder name');
+            if (!name || !name.trim()) return;
+            await createDirIn(dirNode, name.trim());
+        }
+
+        async function createFileIn(dirNode, name) {
+            try {
+                const h = await dirNode.handle.getFileHandle(name, { create: true });
+                const w = await h.createWritable();
+                await w.write('');
+                await w.close();
+                _folder.expanded.add(dirNode.path);
+                await refreshTree();
+                const newPath = dirNode.path ? dirNode.path + '/' + name : name;
+                await openFileFromTree(newPath);
+            } catch (e) {
+                console.warn('[grimoire] createFileIn failed', e);
+                alert('Could not create file: ' + (e.message || e));
+            }
+        }
+        async function createDirIn(parentNode, name) {
+            try {
+                await parentNode.handle.getDirectoryHandle(name, { create: true });
+                _folder.expanded.add(parentNode.path);
+                const newPath = parentNode.path ? parentNode.path + '/' + name : name;
+                _folder.expanded.add(newPath);
+                await refreshTree();
+            } catch (e) {
+                console.warn('[grimoire] createDirIn failed', e);
+                alert('Could not create folder: ' + (e.message || e));
+            }
+        }
+
+        async function moveFile(srcPath, destDirPath) {
+            if (srcPath === destDirPath) return;
+            const src = findNode(srcPath);
+            const destDir = findDirNode(destDirPath);
+            if (!src || !destDir) return;
+            const srcParentPath = srcPath.split('/').slice(0, -1).join('/');
+            if (srcParentPath === destDirPath) return; // same dir, nothing to do
+            // Prefer the native move() (Chrome) when it's available.
+            if (src.handle && typeof src.handle.move === 'function') {
+                try {
+                    await src.handle.move(destDir.handle, src.name);
+                    await refreshTree();
+                    return;
+                } catch (e) { console.warn('[grimoire] native move failed, falling back', e); }
+            }
+            // Fallback: copy content → remove original.
+            try {
+                const file = await src.handle.getFile();
+                const newH = await destDir.handle.getFileHandle(src.name, { create: true });
+                const w = await newH.createWritable();
+                await w.write(file);
+                await w.close();
+                const srcParent = findDirNode(srcParentPath);
+                if (srcParent) await srcParent.handle.removeEntry(src.name);
+                await refreshTree();
+            } catch (e) {
+                console.warn('[grimoire] move fallback failed', e);
+                alert('Could not move file: ' + (e.message || e));
+            }
         }
         function findNode(path, node = _folder.tree) {
             if (!node) return null;
@@ -747,7 +892,7 @@ export default {
                 _folder.expanded.clear();
                 showTreeMessage('Reading folder…');
                 _folder.tree = await buildTreeFromHandle(handle);
-                $folderClose.style.display = '';
+                folderHeaderControls(true);
                 $folderOpen.textContent = '📂 ' + handle.name;
                 renderFolderTree();
                 return true;
@@ -772,7 +917,7 @@ export default {
                 _folder.fallback = true;
                 _folder.expanded.clear();
                 _folder.tree = buildTreeFromFiles(files, _folder.name);
-                $folderClose.style.display = '';
+                folderHeaderControls(true);
                 $folderOpen.textContent = '📂 ' + _folder.name;
                 renderFolderTree();
             });
@@ -795,9 +940,16 @@ export default {
         $folderClose.addEventListener('click', () => {
             _folder.root = null; _folder.tree = null; _folder.name = '';
             _folder.expanded.clear();
-            $folderClose.style.display = 'none';
+            folderHeaderControls(false);
             $folderOpen.textContent = '📁 Open folder';
             $folderTree.innerHTML = '';
+        });
+
+        $folderNewFile.addEventListener('click', () => {
+            if (_folder.tree) promptAndCreateFile(_folder.tree);
+        });
+        $folderNewDir.addEventListener('click', () => {
+            if (_folder.tree) promptAndCreateDir(_folder.tree);
         });
 
         $doclist.addEventListener('click', async (e) => {
