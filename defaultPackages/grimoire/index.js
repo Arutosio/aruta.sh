@@ -89,6 +89,139 @@ function escapeHTML(s) {
     return String(s).replace(/[&<>"']/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
 }
 
+// ── CRC32 (precomputed table) ────────────────────
+const _CRC32_TABLE = (() => {
+    const t = new Uint32Array(256);
+    for (let n = 0; n < 256; n++) {
+        let c = n;
+        for (let k = 0; k < 8; k++) c = (c & 1) ? (0xEDB88320 ^ (c >>> 1)) : (c >>> 1);
+        t[n] = c >>> 0;
+    }
+    return t;
+})();
+function crc32(bytes) {
+    let c = 0xFFFFFFFF;
+    for (let i = 0; i < bytes.length; i++) c = _CRC32_TABLE[(c ^ bytes[i]) & 0xFF] ^ (c >>> 8);
+    return (c ^ 0xFFFFFFFF) >>> 0;
+}
+
+// ── ZIP encoder (STORE only, method 0) ───────────
+// Minimal spec: PKZIP APPNOTE. One local file header + data per entry,
+// then a central directory + end-of-central-directory record at the tail.
+function encodeZip(entries) {
+    // entries: [{ path, content }] — content is a string.
+    const te = new TextEncoder();
+    const files = entries.map(e => {
+        const nameBytes = te.encode(e.path);
+        const data = te.encode(e.content || '');
+        return { nameBytes, data, crc: crc32(data), size: data.length };
+    });
+    // Compute sizes.
+    let localSize = 0;
+    for (const f of files) localSize += 30 + f.nameBytes.length + f.size;
+    let centralSize = 0;
+    for (const f of files) centralSize += 46 + f.nameBytes.length;
+    const total = localSize + centralSize + 22;
+
+    const out = new Uint8Array(total);
+    const dv = new DataView(out.buffer);
+    let off = 0;
+    const offsets = new Array(files.length);
+
+    for (let i = 0; i < files.length; i++) {
+        const f = files[i];
+        offsets[i] = off;
+        dv.setUint32(off, 0x04034b50, true); off += 4;      // local header sig
+        dv.setUint16(off, 20, true);         off += 2;      // version
+        dv.setUint16(off, 0x0800, true);     off += 2;      // flags (UTF-8)
+        dv.setUint16(off, 0, true);          off += 2;      // method STORE
+        dv.setUint16(off, 0, true);          off += 2;      // modtime
+        dv.setUint16(off, 0x21, true);       off += 2;      // moddate (1980-01-01)
+        dv.setUint32(off, f.crc, true);      off += 4;
+        dv.setUint32(off, f.size, true);     off += 4;      // compressed size
+        dv.setUint32(off, f.size, true);     off += 4;      // uncompressed size
+        dv.setUint16(off, f.nameBytes.length, true); off += 2;
+        dv.setUint16(off, 0, true);          off += 2;      // extra len
+        out.set(f.nameBytes, off);           off += f.nameBytes.length;
+        out.set(f.data, off);                off += f.size;
+    }
+
+    const centralStart = off;
+    for (let i = 0; i < files.length; i++) {
+        const f = files[i];
+        dv.setUint32(off, 0x02014b50, true); off += 4;      // central dir sig
+        dv.setUint16(off, 20, true);         off += 2;      // version made by
+        dv.setUint16(off, 20, true);         off += 2;      // version needed
+        dv.setUint16(off, 0x0800, true);     off += 2;      // flags
+        dv.setUint16(off, 0, true);          off += 2;      // method
+        dv.setUint16(off, 0, true);          off += 2;      // modtime
+        dv.setUint16(off, 0x21, true);       off += 2;      // moddate
+        dv.setUint32(off, f.crc, true);      off += 4;
+        dv.setUint32(off, f.size, true);     off += 4;
+        dv.setUint32(off, f.size, true);     off += 4;
+        dv.setUint16(off, f.nameBytes.length, true); off += 2;
+        dv.setUint16(off, 0, true);          off += 2;      // extra
+        dv.setUint16(off, 0, true);          off += 2;      // comment
+        dv.setUint16(off, 0, true);          off += 2;      // disk number
+        dv.setUint16(off, 0, true);          off += 2;      // internal attrs
+        dv.setUint32(off, 0, true);          off += 4;      // external attrs
+        dv.setUint32(off, offsets[i], true); off += 4;      // local header offset
+        out.set(f.nameBytes, off);           off += f.nameBytes.length;
+    }
+
+    // End-of-central-directory record.
+    dv.setUint32(off, 0x06054b50, true); off += 4;
+    dv.setUint16(off, 0, true);          off += 2;          // disk
+    dv.setUint16(off, 0, true);          off += 2;          // cd disk
+    dv.setUint16(off, files.length, true); off += 2;
+    dv.setUint16(off, files.length, true); off += 2;
+    dv.setUint32(off, centralSize, true); off += 4;
+    dv.setUint32(off, centralStart, true); off += 4;
+    dv.setUint16(off, 0, true);          off += 2;          // comment len
+    return out;
+}
+
+// ── ZIP decoder (STORE only) ─────────────────────
+// Scans the end-of-central-directory record, then iterates central entries
+// to pull out STORE-method files. Compressed (deflate, method 8) entries
+// are skipped and reported to the caller.
+function decodeZip(bytes) {
+    const dv = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+    // Find EOCD — scan backwards up to 64KiB from the end for signature.
+    let eocd = -1;
+    const maxScan = Math.min(bytes.length, 65557);
+    for (let i = bytes.length - 22; i >= bytes.length - maxScan && i >= 0; i--) {
+        if (dv.getUint32(i, true) === 0x06054b50) { eocd = i; break; }
+    }
+    if (eocd < 0) throw new Error('not a zip file');
+    const cdOffset = dv.getUint32(eocd + 16, true);
+    const cdCount  = dv.getUint16(eocd + 10, true);
+    const td = new TextDecoder('utf-8');
+    let off = cdOffset;
+    const entries = [];
+    let skippedCompressed = 0;
+    for (let i = 0; i < cdCount; i++) {
+        if (dv.getUint32(off, true) !== 0x02014b50) break;
+        const method     = dv.getUint16(off + 10, true);
+        const compSize   = dv.getUint32(off + 20, true);
+        const nameLen    = dv.getUint16(off + 28, true);
+        const extraLen   = dv.getUint16(off + 30, true);
+        const commentLen = dv.getUint16(off + 32, true);
+        const localOff   = dv.getUint32(off + 42, true);
+        const name = td.decode(bytes.subarray(off + 46, off + 46 + nameLen));
+        off += 46 + nameLen + extraLen + commentLen;
+        if (method !== 0) { skippedCompressed++; continue; }
+        if (name.endsWith('/')) continue; // directory entry
+        // Parse the local header at localOff to find actual data offset.
+        const lhNameLen  = dv.getUint16(localOff + 26, true);
+        const lhExtraLen = dv.getUint16(localOff + 28, true);
+        const dataOff = localOff + 30 + lhNameLen + lhExtraLen;
+        const data = bytes.subarray(dataOff, dataOff + compSize);
+        entries.push({ path: name, content: td.decode(data) });
+    }
+    return { entries, skippedCompressed };
+}
+
 function sortChildren(n) {
     if (!n || !n.children) return;
     n.children.sort((a, b) => (a.isDir === b.isDir) ? a.name.localeCompare(b.name) : (a.isDir ? -1 : 1));
@@ -720,6 +853,10 @@ export default {
         // ── Menu ────────────────────────────────
         function renderMenu() {
             const items = [];
+            if (backend && backend.kind === 'virtual') {
+                items.push({ label: '⬇ Export as .zip', action: 'export-zip' });
+                items.push({ label: '⬆ Import .zip',   action: 'import-zip' });
+            }
             if (backend) items.push({ label: '✕ Close folder', action: 'close-folder' });
             $menuPop.innerHTML = items.length
                 ? items.map(it => `<button class="menu-item" data-action="${it.action}">${escapeHTML(it.label)}</button>`).join('')
@@ -739,7 +876,97 @@ export default {
             toggleMenu(false);
             const action = btn.dataset.action;
             if (action === 'close-folder') await closeFolder();
+            else if (action === 'export-zip') await exportZip();
+            else if (action === 'import-zip') await importZip();
         });
+
+        async function exportZip() {
+            if (!backend || backend.kind !== 'virtual') return;
+            const entries = [];
+            (function walk(node) {
+                if (!node) return;
+                if (!node.isDir) { entries.push({ path: node.path, content: node.content || '' }); return; }
+                for (const c of (node.children || [])) walk(c);
+            })(tree);
+            if (!entries.length) {
+                try { await ctx.toast('Workspace is empty — nothing to export.', 'warning'); } catch {}
+                return;
+            }
+            const bytes = encodeZip(entries);
+            const blob = new Blob([bytes], { type: 'application/zip' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = (backend.rootName() || 'workspace') + '.zip';
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+            setTimeout(() => URL.revokeObjectURL(url), 1000);
+        }
+
+        async function importZip() {
+            if (!backend || backend.kind !== 'virtual') return;
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = '.zip,application/zip';
+            input.addEventListener('change', async () => {
+                const file = input.files?.[0];
+                if (!file) return;
+                try {
+                    const buf = new Uint8Array(await file.arrayBuffer());
+                    const { entries, skippedCompressed } = decodeZip(buf);
+                    if (!entries.length) {
+                        try { await ctx.toast('No STORE-method entries found in .zip.', 'warning'); } catch {}
+                        return;
+                    }
+                    // Build a fresh in-memory tree from the entries.
+                    const rootName = file.name.replace(/\.zip$/i, '') || 'workspace';
+                    const fresh = { name: rootName, path: '', isDir: true, children: [] };
+                    const byPath = new Map([['', fresh]]);
+                    for (const { path, content } of entries) {
+                        const parts = path.split('/').filter(Boolean);
+                        let cur = fresh, curPath = '';
+                        for (let i = 0; i < parts.length; i++) {
+                            const seg = parts[i];
+                            const isFile = (i === parts.length - 1);
+                            const p = curPath ? curPath + '/' + seg : seg;
+                            if (isFile) {
+                                cur.children.push({ name: seg, path: p, isDir: false, content });
+                            } else {
+                                let child = byPath.get(p);
+                                if (!child) {
+                                    child = { name: seg, path: p, isDir: true, children: [] };
+                                    cur.children.push(child);
+                                    byPath.set(p, child);
+                                }
+                                cur = child;
+                                curPath = p;
+                            }
+                        }
+                    }
+                    sortChildren(fresh);
+                    // Replace backend tree in place and persist.
+                    backend._tree = fresh;
+                    backend._name = rootName;
+                    backend._persist();
+                    tree = fresh;
+                    expanded.clear();
+                    _fileDocs.clear();
+                    activeId = null;
+                    updateHeaderControls();
+                    renderFolderTree();
+                    await renderBody();
+                    await persistActive();
+                    if (skippedCompressed) {
+                        try { await ctx.toast(`Imported ${entries.length} file(s); skipped ${skippedCompressed} compressed entr${skippedCompressed === 1 ? 'y' : 'ies'} (only STORE method supported).`, 'warning'); } catch {}
+                    }
+                } catch (e) {
+                    console.warn('[grimoire] zip import failed', e);
+                    alert('Could not read .zip: ' + (e.message || e));
+                }
+            });
+            input.click();
+        }
 
         // ── Launcher (shown when no backend is active) ───────
         function showLauncher() {
