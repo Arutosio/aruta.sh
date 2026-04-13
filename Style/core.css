@@ -62,7 +62,7 @@ body {
     color: var(--text);
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
     font-weight: 500;
-    height: 100vh;
+    height: 100dvh;
     overflow: hidden;
     transition: background-color 0.6s, color 0.5s;
 }
@@ -107,7 +107,7 @@ html.magic-cursor-active, html.magic-cursor-active * { cursor: none !important; 
 /* § MAIN APP
  * ──────────────────────────────── */
 #app {
-    position: relative; z-index: 2; height: 100vh;
+    position: relative; z-index: 2; height: 100dvh;
     display: block;
     padding: 0; overflow: hidden;
     transition: opacity 0.5s;

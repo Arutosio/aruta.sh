@@ -67,3 +67,42 @@
     #app { padding: 16px 20px 56px; }
     .magic-circle-frame { width: min(300px, 80vw); height: min(300px, 80vw); }
 }
+
+/* ──────────────────────────────────────────────
+   HOVER NEUTRALIZATION
+   When the viewport is narrow OR the device has no hover capability,
+   neutralize hover-only visual changes so a narrowed desktop window
+   behaves identically to a real phone. Without this, hover states
+   linger after taps on touch-desktop and cards pulse/lift on mouse-over
+   at mobile widths — producing divergent looks between "phone" and
+   "desktop narrowed to mobile breakpoint".
+   ────────────────────────────────────────────── */
+@media (max-width: 640px), (hover: none) {
+    .taskbar-start:hover,
+    .taskbar-tab:hover,
+    .tray-btn:hover,
+    .start-item:hover,
+    .start-action:hover,
+    .win-btn:hover,
+    .settings-cat:hover,
+    .settings-color-btn:hover,
+    .lang-select:hover,
+    .theme-btn:hover,
+    .interest-card:hover,
+    .link-card:hover,
+    .project-card:hover,
+    .portrait-img-wrap:hover .portrait-img {
+        transform: revert-layer;
+        animation: revert-layer !important;
+        box-shadow: revert-layer;
+        background: revert-layer;
+        color: revert-layer;
+        border-color: revert-layer;
+        text-shadow: revert-layer;
+        scale: revert-layer;
+    }
+    /* Taskbar tab close button is always visible on touch so users
+       don't have to guess where to tap to close. */
+    .taskbar-tab-close { opacity: 0.6; }
+    .taskbar-tab-close:active { color: #ff6b6b; opacity: 1; }
+}
