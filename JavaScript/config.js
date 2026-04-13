@@ -140,6 +140,12 @@ const i18n = {
         perm_theme_desc: 'Leggere e cambiare il tema (chiaro/scuro).',
         perm_clipboard: 'appunti',
         perm_clipboard_desc: 'Leggere o scrivere negli appunti del sistema.',
+        cat_info: 'Informazioni',
+        cat_games: 'Giochi',
+        cat_tools: 'Strumenti',
+        cat_creativity: 'Creatività',
+        cat_other: 'Altro',
+        cat_system: 'Sistema',
         settings_wipe_settings: 'Cancella solo impostazioni',
         settings_wipe_settings_desc: 'Azzera le preferenze ma conserva app, comandi e permessi',
         settings_wipe_settings_confirm: 'Azzerare le preferenze? App, comandi e relativi permessi saranno conservati.',
@@ -278,6 +284,12 @@ const i18n = {
         perm_theme_desc: 'Read and change the (light/dark) theme.',
         perm_clipboard: 'clipboard',
         perm_clipboard_desc: 'Read or write the system clipboard.',
+        cat_info: 'Info',
+        cat_games: 'Games',
+        cat_tools: 'Tools',
+        cat_creativity: 'Creativity',
+        cat_other: 'Other',
+        cat_system: 'System',
         settings_wipe_settings: 'Wipe Settings Only',
         settings_wipe_settings_desc: 'Reset preferences but keep installed apps, commands and permissions',
         settings_wipe_settings_confirm: 'Reset preferences? Installed apps, commands and their permissions will be kept.',
@@ -419,7 +431,13 @@ const i18n = {
         perm_theme: 'tema',
         perm_theme_desc: 'Leer y cambiar el tema (claro/oscuro).',
         perm_clipboard: 'portapapeles',
-        perm_clipboard_desc: 'Leer o escribir el portapapeles del sistema.'
+        perm_clipboard_desc: 'Leer o escribir el portapapeles del sistema.',
+        cat_info: 'Información',
+        cat_games: 'Juegos',
+        cat_tools: 'Herramientas',
+        cat_creativity: 'Creatividad',
+        cat_other: 'Otros',
+        cat_system: 'Sistema'
     },
     ja: {
         char_class: 'ストリーマー · プログラマー · 冒険者',
@@ -557,7 +575,13 @@ const i18n = {
         perm_theme: 'テーマ',
         perm_theme_desc: 'テーマ(明暗)を読み取り・変更します。',
         perm_clipboard: 'クリップボード',
-        perm_clipboard_desc: 'システムのクリップボードを読み書きします。'
+        perm_clipboard_desc: 'システムのクリップボードを読み書きします。',
+        cat_info: '情報',
+        cat_games: 'ゲーム',
+        cat_tools: 'ツール',
+        cat_creativity: 'クリエイティブ',
+        cat_other: 'その他',
+        cat_system: 'システム'
     },
     fn: {
         char_class: 'ᛊᛏᚱᛖᚨᛗᛖᚱ · ᛈᚱᛟᚷᚱᚨᛗᛗᛖᚱ · ᚨᛞᚹᛖᚾᛏᚢᚱᛖᚱ',
@@ -695,7 +719,13 @@ const i18n = {
         perm_theme: 'ᛏᚺᛖᛗᛖ',
         perm_theme_desc: 'ᚱᛖᚨᛞ ᛏᚺᛖᛗᛖ',
         perm_clipboard: 'ᚲᛚᛁᛈ',
-        perm_clipboard_desc: 'ᚱᛖᚨᛞ ᚹᚱᛁᛏᛖ'
+        perm_clipboard_desc: 'ᚱᛖᚨᛞ ᚹᚱᛁᛏᛖ',
+        cat_info: 'ᛁᚾᚠᛟ',
+        cat_games: 'ᚷᚨᛗᛖᛊ',
+        cat_tools: 'ᛏᛟᛟᛚᛊ',
+        cat_creativity: 'ᚲᚱᛖᚨᛏᛁᚹᛁᛏᛃ',
+        cat_other: 'ᛟᛏᚺᛖᚱ',
+        cat_system: 'ᛊᛃᛊᛏᛖᛗ'
     }
 };
 

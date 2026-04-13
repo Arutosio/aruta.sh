@@ -68,24 +68,71 @@ function unregisterAppFromOS(id) {
     if (typeof removeWindowTab === 'function') removeWindowTab(id);
 }
 
+/* Built-in windows grouped by category. Mirrors the static HTML that used
+   to live inside .start-items. Each entry: id, icon, i18n-key, category. */
+const BUILTIN_ITEMS = [
+    { id: 'about',    icon: '📖',  key: 'sec_about',    cat: 'info'   },
+    { id: 'live',     icon: '🔮',  key: 'sec_live',     cat: 'info'   },
+    { id: 'links',    icon: '🔗',  key: 'sec_links',    cat: 'info'   },
+    { id: 'terminal', icon: '⌨️',  key: 'sec_terminal', cat: 'system' },
+    { id: 'settings', icon: '⚙️', key: 'sec_settings', cat: 'system' },
+];
+
+/* Rendering order. Empty categories are skipped automatically. */
+const CATEGORY_ORDER = ['info', 'games', 'tools', 'creativity', 'other', 'system'];
+const CATEGORY_ICON = {
+    info: '✦', games: '⚔', tools: '🔧', creativity: '🎨', other: '📦', system: '⚙',
+};
+
 function renderStartMenuItems() {
-    const items = document.querySelector('#start-menu .start-items');
+    const items = document.getElementById('start-items');
     if (!items) return;
-    items.querySelectorAll('.start-item.start-custom').forEach(b => b.remove());
+
+    // Bucket everything by category.
+    const buckets = Object.fromEntries(CATEGORY_ORDER.map(c => [c, []]));
+    for (const b of BUILTIN_ITEMS) {
+        buckets[b.cat].push({ ...b, builtin: true });
+    }
     for (const m of _manifests.values()) {
         if (m.type !== 'app') continue;
-        const btn = document.createElement('button');
-        btn.className = 'start-item start-custom';
-        btn.dataset.window = m.id;
-        btn.innerHTML = `${m.icon || '📦'} <span>${m.name}</span>`;
-        btn.addEventListener('click', () => {
-            if (typeof openWindow === 'function') openWindow(m.id);
-            const menu = document.getElementById('start-menu');
-            const startBtn = document.getElementById('start-btn');
-            // Trigger the start button's toggle so internal isOpen state stays consistent.
-            if (menu && menu.style.display !== 'none') startBtn?.click();
+        const cat = CATEGORY_ORDER.includes(m.category) ? m.category : 'other';
+        buckets[cat].push({
+            id: m.id,
+            icon: m.icon || '📦',
+            label: m.name,
+            cat,
+            custom: true,
         });
-        items.appendChild(btn);
+    }
+
+    // Rebuild DOM. First-in-first-shown within each bucket preserves
+    // built-in order and install order for customs.
+    const t = window.t();
+    items.innerHTML = '';
+    let first = true;
+    for (const cat of CATEGORY_ORDER) {
+        const entries = buckets[cat];
+        if (!entries.length) continue;
+        if (!first) items.appendChild(Object.assign(document.createElement('div'), { className: 'start-cat-sep' }));
+        first = false;
+        const header = document.createElement('div');
+        header.className = 'start-cat-header';
+        header.innerHTML = `<span class="start-cat-icon">${CATEGORY_ICON[cat]}</span><span class="start-cat-label" data-i18n="cat_${cat}">${t['cat_' + cat] || cat}</span>`;
+        items.appendChild(header);
+        for (const e of entries) {
+            const btn = document.createElement('button');
+            btn.className = 'start-item' + (e.custom ? ' start-custom' : '');
+            btn.dataset.window = e.id;
+            const label = e.builtin ? (t[e.key] || e.key) : (e.label || e.id);
+            btn.innerHTML = `${e.icon} <span${e.builtin ? ` data-i18n="${e.key}"` : ''}>${window.escapeHTML(label)}</span>`;
+            btn.addEventListener('click', () => {
+                if (typeof openWindow === 'function') openWindow(e.id);
+                const menu = document.getElementById('start-menu');
+                const startBtn = document.getElementById('start-btn');
+                if (menu && menu.style.display !== 'none') startBtn?.click();
+            });
+            items.appendChild(btn);
+        }
     }
 }
 

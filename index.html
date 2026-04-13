@@ -168,13 +168,10 @@
                     <span class="start-subtitle">Tome of the Wandering Mage</span>
                 </div>
             </div>
-            <div class="start-items">
-                <button class="start-item" data-window="about">📖 <span data-i18n="sec_about">About</span></button>
-                <button class="start-item" data-window="live">🔮 <span data-i18n="sec_live">Live</span></button>
-                <button class="start-item" data-window="links">🔗 <span data-i18n="sec_links">Links</span></button>
-                <button class="start-item" data-window="terminal">⌨️ <span data-i18n="sec_terminal">Terminal</span></button>
-                <button class="start-item" data-window="settings">⚙️ <span data-i18n="sec_settings">Settings</span></button>
-            </div>
+            <!-- Items rendered dynamically by registry.js:renderStartMenuItems
+                 so that built-ins + installed packages can be grouped by
+                 category (info/games/tools/creativity/other/system). -->
+            <div class="start-items" id="start-items"></div>
             <div class="start-divider"></div>
             <div class="start-actions">
                 <button class="start-action" id="start-share">📤 <span data-i18n="start_share">Share</span></button>
