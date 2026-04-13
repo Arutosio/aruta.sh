@@ -94,6 +94,46 @@ body {
     opacity: 0.55;
 }
 
+/* ── Launcher (shown when no folder is open) ────── */
+.launcher {
+    padding: 0.7rem 0.6rem;
+    display: flex; flex-direction: column; gap: 0.4rem;
+}
+.launcher-title {
+    font-family: 'Cinzel', serif;
+    font-size: 0.78rem;
+    color: var(--g);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    opacity: 0.85;
+    text-align: center;
+    margin-bottom: 0.2rem;
+}
+.launcher-btn {
+    background: transparent;
+    border: 1px solid rgba(255,200,87,0.3);
+    color: #ffe4a0;
+    border-radius: 6px;
+    padding: 0.5rem 0.55rem;
+    font-size: 0.82rem;
+    font-family: inherit;
+    text-align: left;
+    cursor: pointer;
+    transition: background 0.12s, border-color 0.12s, color 0.12s;
+}
+.launcher-btn:hover {
+    background: rgba(255,200,87,0.1);
+    border-color: var(--g);
+    color: var(--g);
+}
+.launcher-hint {
+    margin-top: 0.3rem;
+    font-size: 0.72rem;
+    line-height: 1.4;
+    opacity: 0.5;
+    font-style: italic;
+}
+
 /* ── Folder section ──────────────── */
 .fs-section {
     flex: 1;
