@@ -373,15 +373,26 @@ html.magic-cursor-active, html.magic-cursor-active * { cursor: none !important; 
     animation: toastProgress var(--toast-duration, 3500ms) linear forwards;
     opacity: 0.5;
 }
-.toast.toast-success { border-left-color: #8aaf30; }
-.toast.toast-success .toast-icon { color: #8aaf30; text-shadow: 0 0 6px rgba(138,175,48,0.4); }
-.toast.toast-success::after { background: #8aaf30; }
-.toast.toast-error { border-left-color: #ff6b6b; }
-.toast.toast-error .toast-icon { color: #ff6b6b; text-shadow: 0 0 6px rgba(255,107,107,0.4); }
-.toast.toast-error::after { background: #ff6b6b; }
+.toast.toast-success { border-left-color: var(--green); }
+.toast.toast-success .toast-icon { color: var(--green); text-shadow: 0 0 6px color-mix(in srgb, var(--green) 40%, transparent); }
+.toast.toast-success::after { background: var(--green); }
+.toast.toast-error { border-left-color: var(--red); }
+.toast.toast-error .toast-icon { color: var(--red); text-shadow: 0 0 6px color-mix(in srgb, var(--red) 40%, transparent); }
+.toast.toast-error::after { background: var(--red); }
 .toast.toast-warning { border-left-color: #ffb347; }
 .toast.toast-warning .toast-icon { color: #ffb347; text-shadow: 0 0 6px rgba(255,179,71,0.4); }
 .toast.toast-warning::after { background: #ffb347; }
+
+/* Light-theme toast parity — accent colors stay legible on light hud-bg */
+[data-theme="light"] .toast.toast-success { border-left-color: #2f8a55; }
+[data-theme="light"] .toast.toast-success .toast-icon,
+[data-theme="light"] .toast.toast-success::after { color: #2f8a55; background: #2f8a55; }
+[data-theme="light"] .toast.toast-error { border-left-color: #c23a4f; }
+[data-theme="light"] .toast.toast-error .toast-icon,
+[data-theme="light"] .toast.toast-error::after { color: #c23a4f; background: #c23a4f; }
+[data-theme="light"] .toast.toast-warning { border-left-color: #b86a0c; }
+[data-theme="light"] .toast.toast-warning .toast-icon,
+[data-theme="light"] .toast.toast-warning::after { color: #b86a0c; background: #b86a0c; }
 @keyframes toastProgress { from { transform: scaleX(1); } to { transform: scaleX(0); } }
 @media (max-width: 640px) {
     .toast-container { left: 12px; right: 12px; bottom: 12px; max-width: none; }
