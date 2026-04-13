@@ -84,7 +84,7 @@ const CATEGORY_ICON = {
     info: '✦', games: '⚔', tools: '🔧', creativity: '🎨', other: '📦', system: '⚙',
 };
 
-const COLLAPSED_KEY = 'aruta_start_collapsed';
+const OPEN_CAT_KEY = 'aruta_start_open_cat';
 
 function renderStartMenuItems() {
     const items = document.getElementById('start-items');
@@ -108,7 +108,9 @@ function renderStartMenuItems() {
     }
 
     const t = window.t();
-    const collapsed = new Set(window.storage.get(COLLAPSED_KEY, []) || []);
+    // Accordion behavior: at most one category open at a time.
+    // Persisted open-category id (empty string = none open). Default: none.
+    const openCat = window.storage.get(OPEN_CAT_KEY, '');
     items.innerHTML = '';
     let first = true;
     for (const cat of CATEGORY_ORDER) {
@@ -119,7 +121,7 @@ function renderStartMenuItems() {
 
         const group = document.createElement('div');
         group.className = 'start-cat-group';
-        if (collapsed.has(cat)) group.classList.add('is-collapsed');
+        if (cat !== openCat) group.classList.add('is-collapsed');
         group.dataset.cat = cat;
 
         const header = document.createElement('button');
@@ -132,11 +134,12 @@ function renderStartMenuItems() {
             <span class="start-cat-count">${entries.length}</span>
         `;
         header.addEventListener('click', () => {
-            const willCollapse = !group.classList.contains('is-collapsed');
-            group.classList.toggle('is-collapsed', willCollapse);
-            const set = new Set(window.storage.get(COLLAPSED_KEY, []) || []);
-            willCollapse ? set.add(cat) : set.delete(cat);
-            window.storage.set(COLLAPSED_KEY, Array.from(set));
+            const isCurrentlyOpen = !group.classList.contains('is-collapsed');
+            // Collapse every sibling group first…
+            items.querySelectorAll('.start-cat-group').forEach(g => g.classList.add('is-collapsed'));
+            // …then, unless this group was the one already open, open it.
+            if (!isCurrentlyOpen) group.classList.remove('is-collapsed');
+            window.storage.set(OPEN_CAT_KEY, isCurrentlyOpen ? '' : cat);
         });
         group.appendChild(header);
 
