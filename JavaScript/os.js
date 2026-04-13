@@ -595,29 +595,72 @@ function initSettings() {
     }
 
     // Accent color buttons
+    const ACCENTS = {
+        gold:    { gold: '#ffc857', goldLight: '#ffe4a0' },
+        purple:  { gold: '#a78bfa', goldLight: '#c4b5fd' },
+        cyan:    { gold: '#22d3ee', goldLight: '#67e8f9' },
+        rose:    { gold: '#fb7185', goldLight: '#fda4af' },
+        emerald: { gold: '#34d399', goldLight: '#6ee7b7' },
+    };
+    // Derive a lighter variant by mixing with white (40%) — used for custom colors.
+    function lightenHex(hex, amount = 0.4) {
+        const h = hex.replace('#', '');
+        const r = parseInt(h.substr(0, 2), 16);
+        const g = parseInt(h.substr(2, 2), 16);
+        const b = parseInt(h.substr(4, 2), 16);
+        const mix = (c) => Math.round(c + (255 - c) * amount);
+        const toHex = (c) => c.toString(16).padStart(2, '0');
+        return '#' + toHex(mix(r)) + toHex(mix(g)) + toHex(mix(b));
+    }
+    function applyAccent(gold, goldLight) {
+        document.documentElement.style.setProperty('--gold', gold);
+        document.documentElement.style.setProperty('--gold-light', goldLight);
+    }
+    const customPicker = document.getElementById('settings-accent-custom');
+    const customBtn = document.querySelector('.settings-color-btn[data-accent="custom"]');
+
     document.querySelectorAll('.settings-color-btn').forEach(btn => {
+        // Preset buttons: click = select. Custom button: the <input type="color">
+        // inside handles the interaction; we only update "active" after it changes.
+        if (btn.dataset.accent === 'custom') return;
         btn.addEventListener('click', () => {
             document.querySelectorAll('.settings-color-btn').forEach(b => b.classList.remove('active'));
             btn.classList.add('active');
-            const accent = btn.dataset.accent;
-            const ACCENTS = {
-                gold:    { gold: '#ffc857', goldLight: '#ffe4a0' },
-                purple:  { gold: '#a78bfa', goldLight: '#c4b5fd' },
-                cyan:    { gold: '#22d3ee', goldLight: '#67e8f9' },
-                rose:    { gold: '#fb7185', goldLight: '#fda4af' },
-                emerald: { gold: '#34d399', goldLight: '#6ee7b7' },
-            };
-            const colors = ACCENTS[accent];
+            const colors = ACCENTS[btn.dataset.accent];
             if (colors) {
-                document.documentElement.style.setProperty('--gold', colors.gold);
-                document.documentElement.style.setProperty('--gold-light', colors.goldLight);
-                localStorage.setItem('aruta_accent', accent);
+                applyAccent(colors.gold, colors.goldLight);
+                localStorage.setItem('aruta_accent', btn.dataset.accent);
             }
         });
     });
+
+    if (customPicker && customBtn) {
+        const onCustomPick = () => {
+            const hex = customPicker.value;
+            const light = lightenHex(hex, 0.4);
+            applyAccent(hex, light);
+            localStorage.setItem('aruta_accent', 'custom');
+            localStorage.setItem('aruta_accent_custom', hex);
+            document.querySelectorAll('.settings-color-btn').forEach(b => b.classList.remove('active'));
+            customBtn.classList.add('active');
+            customBtn.style.setProperty('--custom-color', hex);
+        };
+        customPicker.addEventListener('input', onCustomPick);
+        customPicker.addEventListener('change', onCustomPick);
+    }
+
     // Restore saved accent
     const savedAccent = localStorage.getItem('aruta_accent');
-    if (savedAccent) {
+    if (savedAccent === 'custom') {
+        const hex = localStorage.getItem('aruta_accent_custom') || '#ffc857';
+        if (customPicker) customPicker.value = hex;
+        applyAccent(hex, lightenHex(hex, 0.4));
+        document.querySelectorAll('.settings-color-btn').forEach(b => b.classList.remove('active'));
+        if (customBtn) {
+            customBtn.classList.add('active');
+            customBtn.style.setProperty('--custom-color', hex);
+        }
+    } else if (savedAccent) {
         const btn = document.querySelector(`.settings-color-btn[data-accent="${savedAccent}"]`);
         if (btn) btn.click();
     }
@@ -681,6 +724,7 @@ function initSettings() {
             localStorage.removeItem('aruta_theme');
             localStorage.removeItem('aruta_fontsize');
             localStorage.removeItem('aruta_accent');
+            localStorage.removeItem('aruta_accent_custom');
             localStorage.removeItem('aruta_showdate');
             localStorage.removeItem('aruta_24h');
             localStorage.removeItem('aruta_lang');

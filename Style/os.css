@@ -476,6 +476,23 @@
 }
 .settings-color-btn:hover { transform: scale(1.15); }
 .settings-color-btn.active { border-color: var(--text); box-shadow: 0 0 8px currentColor; }
+.settings-color-custom {
+    position: relative;
+    background: var(--custom-color, conic-gradient(#fb7185, #ffc857, #34d399, #22d3ee, #a78bfa, #fb7185)) !important;
+    display: inline-flex; align-items: center; justify-content: center;
+    overflow: hidden;
+}
+.settings-color-custom .custom-swatch {
+    font-size: 0.8rem; pointer-events: none;
+    filter: drop-shadow(0 0 2px rgba(0, 0, 0, 0.7));
+}
+.settings-color-custom input[type="color"] {
+    position: absolute; inset: 0;
+    width: 100%; height: 100%;
+    opacity: 0; cursor: pointer;
+    border: none; padding: 0; background: transparent;
+}
+.settings-color-custom.active .custom-swatch { filter: drop-shadow(0 0 3px rgba(0, 0, 0, 0.9)); }
 
 /* Language select in settings */
 .settings-select {
