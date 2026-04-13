@@ -885,6 +885,24 @@ export default {
 
         async function tryDirectoryPicker() {
             try {
+                // Pre-flight diagnostics: dump everything that could explain a
+                // SecurityError / NotAllowedError so we can see from the console
+                // which gate failed (secure-context, permissions-policy, origin).
+                try {
+                    const pp = document.featurePolicy?.allowedFeatures?.()
+                        || (document.permissionsPolicy?.allowedFeatures?.() ?? null);
+                    console.info('[grimoire] picker preflight', {
+                        hasAPI: typeof window.showDirectoryPicker,
+                        isSecureContext: window.isSecureContext,
+                        protocol: location.protocol,
+                        origin: location.origin,
+                        href: location.href,
+                        allowedFeatures: pp,
+                        crossOriginIsolated: window.crossOriginIsolated,
+                    });
+                } catch (diagErr) {
+                    console.warn('[grimoire] preflight dump failed', diagErr);
+                }
                 const handle = await window.showDirectoryPicker();
                 _folder.root = handle;
                 _folder.name = handle.name;
@@ -898,8 +916,10 @@ export default {
                 return true;
             } catch (e) {
                 if (e?.name === 'AbortError') return true; // user cancelled — stop here
-                console.warn('[grimoire] showDirectoryPicker failed, falling back', e);
-                showTreeMessage('Folder read blocked — try again (browser permission?)', true);
+                console.error('[grimoire] picker blocked', {
+                    name: e?.name, message: e?.message, stack: e?.stack, error: e,
+                });
+                showTreeMessage(`Folder read blocked (${e?.name || 'error'}: ${e?.message || 'unknown'}) — falling back`, true);
                 return false;
             }
         }
