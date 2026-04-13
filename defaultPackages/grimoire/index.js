@@ -247,6 +247,7 @@ export default {
             const lines = $ta.value.split('\n');
             if (!settings.wrap) {
                 // 1:1 mapping — each logical line takes exactly one row.
+                _lineRows = null;
                 let html = '';
                 for (let i = 0; i < lines.length; i++) html += (i + 1) + '\n';
                 $gutter.textContent = html;
@@ -264,9 +265,11 @@ export default {
                 mirror.style.tabSize = settings.tabWidth;
                 const lineH = parseFloat(getComputedStyle(mirror).lineHeight) || 22;
                 let html = '';
+                _lineRows = new Array(lines.length);
                 for (let i = 0; i < lines.length; i++) {
                     mirror.textContent = lines[i] === '' ? ' ' : lines[i];
                     const rows = Math.max(1, Math.round(mirror.clientHeight / lineH));
+                    _lineRows[i] = rows;
                     html += (i + 1);
                     for (let j = 1; j < rows; j++) html += '\n';
                     html += '\n';
@@ -276,6 +279,11 @@ export default {
             syncHLScroll();
         }
 
+        // Cache of visual-row counts per logical line, populated by
+        // updateGutter when wrap is on. Lets updateActiveLine compute the
+        // wrapped caret position without re-measuring each line.
+        let _lineRows = null;
+
         function updateActiveLine() {
             if (!$activeLine || !$ta) return;
             const before = $ta.value.slice(0, $ta.selectionStart);
@@ -283,7 +291,23 @@ export default {
             const rootStyles = getComputedStyle(document.documentElement);
             const lineH = parseFloat(rootStyles.getPropertyValue('--ed-line')) || 22;
             const padY  = parseFloat(rootStyles.getPropertyValue('--ed-pad-y')) || 12;
-            $activeLine.style.transform = `translateY(${padY + lineIdx * lineH - $ta.scrollTop}px)`;
+
+            let visualRow = lineIdx;
+            if (settings.wrap && _lineRows) {
+                // Sum visual rows of lines before the caret's line…
+                let sum = 0;
+                for (let i = 0; i < lineIdx && i < _lineRows.length; i++) sum += _lineRows[i];
+                // …plus the wrapped row offset within the current line,
+                // measured on-demand (small: one line at a time).
+                const mirror = ensureGutterMirror();
+                const lineStart = before.lastIndexOf('\n') + 1;
+                const colBefore = $ta.value.slice(lineStart, $ta.selectionStart);
+                mirror.textContent = colBefore === '' ? ' ' : colBefore;
+                const mLineH = parseFloat(getComputedStyle(mirror).lineHeight) || 22;
+                const rowInLine = Math.max(0, Math.round(mirror.clientHeight / mLineH) - 1);
+                visualRow = sum + rowInLine;
+            }
+            $activeLine.style.transform = `translateY(${padY + visualRow * lineH - $ta.scrollTop}px)`;
         }
 
         // Content-change events (input) reshape the gutter (line count,
