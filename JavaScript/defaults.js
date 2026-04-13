@@ -34,16 +34,15 @@ async function fetchBlob(path) {
 
 async function installDefault(pkg) {
     const base = 'defaultPackages/' + pkg.id + '/';
-    const manifestBlob = await fetchBlob(base + 'manifest.json');
-    const manifestText = await manifestBlob.text();
-    const manifest = JSON.parse(manifestText);
-
-    const files = {};
-    for (const f of pkg.files) {
-        if (f === 'manifest.json') continue;
-        files[f] = await fetchBlob(base + f);
-    }
-    await window.registry.saveManifest(manifest, files);
+    // Fetch every file (including manifest) in parallel. The manifest is tiny JSON;
+    // the others are JS/CSS blobs. This collapses ~3 round-trips per package into 1.
+    const entries = await Promise.all(
+        pkg.files.map(async f => [f, await fetchBlob(base + f)])
+    );
+    const map = Object.fromEntries(entries);
+    const manifest = JSON.parse(await map['manifest.json'].text());
+    delete map['manifest.json'];
+    await window.registry.saveManifest(manifest, map);
     return manifest;
 }
 
@@ -68,12 +67,18 @@ async function bootstrapDefaults() {
     }
     writeList(SEEN_KEY, Array.from(seen));
 
+    // Install packages in parallel. Each installDefault awaits one IndexedDB
+    // write which is fast; the network fetches are also parallel within each,
+    // turning a ~25-request serial chain into a single burst.
+    const pending = [];
     for (const pkg of index.packages) {
         if (blacklist.has(pkg.id)) continue;
         if (window.registry.isInstalled(pkg.id)) continue;
-        try { await installDefault(pkg); }
-        catch (e) { console.warn('[defaults] failed to install', pkg.id, e); }
+        pending.push(
+            installDefault(pkg).catch(e => console.warn('[defaults] failed to install', pkg.id, e))
+        );
     }
+    await Promise.all(pending);
 }
 
 function markUninstalled(id) {

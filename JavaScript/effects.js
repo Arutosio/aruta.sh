@@ -249,9 +249,18 @@ function initMagicCursor() {
     sync();
     mq.addEventListener('change', sync);
 
+    // Batch cursor position updates via rAF — mousemove can fire 100+ times per
+    // second on fast mice, but the compositor only commits at display refresh.
+    let px = 0, py = 0, scheduled = false;
     window.addEventListener('mousemove', e => {
         if (mq.matches) return;
-        el.style.transform = `translate(${e.clientX}px,${e.clientY}px)`;
+        px = e.clientX; py = e.clientY;
+        if (scheduled) return;
+        scheduled = true;
+        requestAnimationFrame(() => {
+            el.style.transform = `translate(${px}px,${py}px)`;
+            scheduled = false;
+        });
     });
 
     // Ring expands over interactive elements (delegation handles dynamic cards)

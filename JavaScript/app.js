@@ -115,6 +115,14 @@ document.addEventListener('DOMContentLoaded', () => {
     currentTheme = savedTheme || (window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark');
     document.documentElement.setAttribute('data-theme', currentTheme);
     _isLight = currentTheme === 'light';
+
+    // Respect OS reduced-motion preference — disable heavy mouse-driven effects.
+    // The user can still re-enable these from Settings → Performance if they want.
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+        window._parallaxEnabled = false;
+        window._clickSpellsEnabled = false;
+        window._circleRotationEnabled = false;
+    }
 });
 
 // Wait for ALL resources (CSS, fonts, images) before initializing

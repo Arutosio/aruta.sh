@@ -167,7 +167,8 @@ async function uninstall(id) {
     _manifests.delete(id);
     _commands.delete(id);
     unregisterAppFromOS(id);
-    // Drop app's own storage DB
+    // Close any cached DB handle before deleting — deleteDatabase is blocked by open connections.
+    try { await window.sandbox?.closeAppStorage?.(id); } catch {}
     try { indexedDB.deleteDatabase('aruta_app_' + id); } catch {}
     // If this was a default package, remember so we don't auto-reinstall it.
     window.defaults?.markUninstalled(id);
