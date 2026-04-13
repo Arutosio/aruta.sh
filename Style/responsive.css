@@ -28,7 +28,6 @@
         transform: none;
     }
     .start-menu { top: 60px; left: 12px; right: 12px; width: auto; }
-    .taskbar-sep { display: none; }
     #app { padding: 60px 0 0; }
     .desktop-hero .magic-circle-frame { width: min(300px, 80vw); height: min(300px, 80vw); }
     .hud-date      { display: none; }
