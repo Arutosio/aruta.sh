@@ -111,7 +111,6 @@ export default {
                         <button class="import-btn" title="Load a file from disk">⬆</button>
                         <button class="export-btn" title="Save the current scroll to disk">⬇</button>
                     </div>
-                    <ul class="doclist"></ul>
                     <div class="folder-section">
                         <div class="folder-head">
                             <button class="folder-open-btn" title="Open a folder to browse/edit its files">📁 Open folder</button>
@@ -119,6 +118,7 @@ export default {
                         </div>
                         <div class="folder-tree"></div>
                     </div>
+                    <ul class="doclist"></ul>
                 </aside>
                 <section class="main">
                     <div class="toolbar">
