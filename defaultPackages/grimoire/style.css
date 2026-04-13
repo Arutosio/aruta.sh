@@ -210,12 +210,15 @@ body {
     line-height: inherit;
     color: #e8e8f0;
     background: transparent;
-    white-space: pre-wrap;
-    word-wrap: break-word;
+    white-space: pre;
     overflow: hidden;
     pointer-events: none;
     z-index: 1;
     tab-size: 4;
+}
+.editor.opt-wrap .hl-layer {
+    white-space: pre-wrap;
+    word-wrap: break-word;
 }
 .editor .hl-layer code {
     font-family: inherit;
@@ -238,8 +241,14 @@ body {
     padding: var(--ed-pad-y) var(--ed-pad-x);
     tab-size: 4;
     caret-color: var(--g);
+    white-space: pre;              /* match .hl-layer so wraps agree */
+    overflow: auto;
+}
+.editor.opt-wrap textarea {
     white-space: pre-wrap;
     word-wrap: break-word;
+    overflow-y: auto;
+    overflow-x: hidden;
 }
 .editor textarea::selection { background: rgba(255, 200, 87, 0.3); color: transparent; }
 /* Fallback when live highlight is off — show textarea text directly. */

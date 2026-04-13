@@ -27,11 +27,12 @@ const LANGS = [
 ];
 
 const DEFAULT_SETTINGS = {
-    activeLine:   true,
-    lineNumbers:  true,
-    grid:         false,
+    activeLine:    true,
+    lineNumbers:   true,
+    grid:          false,
     liveHighlight: true,
-    tabWidth:     4,
+    wrap:          false,
+    tabWidth:      4,
 };
 
 function uuid() { return Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 8); }
@@ -120,6 +121,7 @@ export default {
             $editor.classList.toggle('opt-activeline', settings.activeLine);
             $editor.classList.toggle('opt-linenums',   settings.lineNumbers);
             $editor.classList.toggle('opt-hl-live',    settings.liveHighlight);
+            $editor.classList.toggle('opt-wrap',       settings.wrap);
             $paper.classList.toggle('opt-grid',        settings.grid);
             $ta.style.tabSize = settings.tabWidth;
         }
@@ -270,6 +272,10 @@ export default {
                         <div class="settings-row">
                             <div class="label"><strong>Live syntax highlighting</strong><small>Colors the code as you type based on the selected language. Turn off for large files if typing feels sluggish.</small></div>
                             <button class="toggle" data-opt="liveHighlight" type="button"></button>
+                        </div>
+                        <div class="settings-row">
+                            <div class="label"><strong>Wrap long lines</strong><small>Off: long lines scroll horizontally — line numbers stay aligned. On: lines wrap visually, but a wrapped line still carries a single number (gutter may look off).</small></div>
+                            <button class="toggle" data-opt="wrap" type="button"></button>
                         </div>
                         <div class="settings-row">
                             <div class="label"><strong>Tab width</strong><small>Number of spaces inserted by the Tab key.</small></div>
