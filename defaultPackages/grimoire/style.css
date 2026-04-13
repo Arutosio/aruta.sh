@@ -75,6 +75,83 @@ body {
 }
 .doclist li:hover .del { opacity: 1; }
 
+/* ── Folder section ──────────────── */
+.folder-section {
+    flex-shrink: 0;
+    border-top: 1px solid rgba(255, 200, 87, 0.15);
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    max-height: 50%;
+}
+.folder-head {
+    padding: 0.5rem;
+    display: flex; gap: 0.3rem; align-items: center;
+    border-bottom: 1px solid rgba(255, 200, 87, 0.10);
+}
+.folder-head button {
+    flex: 1;
+    background: transparent;
+    border: 1px solid rgba(255, 200, 87, 0.35);
+    color: var(--g);
+    border-radius: 6px;
+    padding: 0.35rem;
+    font-size: 0.8rem;
+    font-family: inherit;
+    cursor: pointer;
+}
+.folder-head button:hover { background: rgba(255, 200, 87, 0.1); }
+.folder-head .folder-close { flex: 0 0 auto; padding: 0.35rem 0.5rem; border-color: rgba(251, 113, 133, 0.4); color: #fb7185; }
+.folder-head .folder-close:hover { background: rgba(251, 113, 133, 0.12); }
+
+.folder-tree {
+    overflow-y: auto;
+    min-height: 0;
+    padding: 0.25rem 0;
+    font-size: 0.82rem;
+}
+.ftree-item {
+    display: flex; align-items: center;
+    gap: 0.3rem;
+    padding: 0.2rem 0.5rem;
+    cursor: pointer;
+    color: #ffe4a0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    user-select: none;
+    transition: background 0.1s;
+}
+.ftree-item:hover { background: rgba(255, 255, 255, 0.04); }
+.ftree-item.ftree-active { background: rgba(167, 139, 250, 0.18); color: var(--g); }
+.ftree-item .ftree-chev {
+    display: inline-block;
+    width: 10px;
+    flex-shrink: 0;
+    transition: transform 0.12s;
+    color: rgba(255, 228, 160, 0.55);
+    font-size: 0.7rem;
+}
+.ftree-dir.is-collapsed > .ftree-item .ftree-chev { transform: rotate(-90deg); }
+.ftree-item .ftree-icon { flex-shrink: 0; }
+.ftree-item .ftree-name {
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.ftree-file .ftree-chev { visibility: hidden; }
+.ftree-dir.is-collapsed > .ftree-children { display: none; }
+.ftree-children {
+    padding-left: 0.8rem;
+    border-left: 1px dashed rgba(255, 200, 87, 0.08);
+    margin-left: 0.5rem;
+}
+.ftree-empty {
+    padding: 0.6rem 0.8rem;
+    color: rgba(255, 228, 160, 0.4);
+    font-style: italic;
+    font-size: 0.78rem;
+}
+
 /* ── Main ──────────────────────── */
 .main { flex: 1; display: flex; flex-direction: column; min-width: 0; }
 .toolbar {

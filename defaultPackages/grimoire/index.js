@@ -112,6 +112,13 @@ export default {
                         <button class="export-btn" title="Save the current scroll to disk">⬇</button>
                     </div>
                     <ul class="doclist"></ul>
+                    <div class="folder-section">
+                        <div class="folder-head">
+                            <button class="folder-open-btn" title="Open a folder to browse/edit its files">📁 Open folder</button>
+                            <button class="folder-close" style="display:none" title="Close folder">✕</button>
+                        </div>
+                        <div class="folder-tree"></div>
+                    </div>
                 </aside>
                 <section class="main">
                     <div class="toolbar">
@@ -145,11 +152,25 @@ export default {
         let view = 'edit';
         let saveTimer = null;
 
+        // Folder state — session-only (File System Access handles can't be
+        // persisted; re-opening the folder is a user gesture anyway).
+        // _folder.root is a FileSystemDirectoryHandle when the modern API is
+        // available; otherwise _folder.fallbackFiles holds a File[] coming
+        // from <input webkitdirectory>.
+        const _folder = { root: null, name: '', tree: null, expanded: new Set(), fallback: false };
+        const _fileDocs = new Map(); // path → { handle?, file?, title, lang, content, updatedAt }
+        let fileSaveTimer = null;
+
         // Hold references to the current edit-view nodes (re-set by renderBody)
         let $editor = null, $paper = null, $ta = null, $gutter = null, $activeLine = null;
         let $hlLayer = null, $hlCode = null, hlTimer = null;
 
-        function active() { return docs.find(d => d.id === activeId); }
+        function active() {
+            if (activeId && typeof activeId === 'string' && activeId.startsWith('file:')) {
+                return _fileDocs.get(activeId.slice(5)) || null;
+            }
+            return docs.find(d => d.id === activeId);
+        }
 
         function renderSidebar() {
             $doclist.innerHTML = docs.map(d =>
@@ -504,22 +525,243 @@ export default {
             input.click();
         });
 
-        // Export: download the active scroll as a text file named after the
-        // document title with an extension picked from the chosen language.
-        root.querySelector('.export-btn').addEventListener('click', () => {
+        // Export: for file-backed docs (opened via folder) this writes back
+        // to disk via the File System Access handle. For in-memory scrolls
+        // (and fallback <input webkitdirectory> files) it triggers a download.
+        root.querySelector('.export-btn').addEventListener('click', async () => {
             const d = active();
             if (!d) return;
+            if (d.handle && typeof d.handle.createWritable === 'function') {
+                try {
+                    const w = await d.handle.createWritable();
+                    await w.write(d.content || '');
+                    await w.close();
+                    $saveInd.textContent = 'saved to file';
+                    setTimeout(() => { $saveInd.textContent = ''; }, 1400);
+                    return;
+                } catch (e) {
+                    console.warn('[grimoire] write-back failed, falling back to download', e);
+                }
+            }
             const ext = extForLang(d.lang || 'plaintext');
-            const safeName = (d.title || 'scroll').replace(/[\\/:*?"<>|]+/g, '_').trim() || 'scroll';
+            const base = (d.displayTitle || d.title || 'scroll').replace(/[\\/:*?"<>|]+/g, '_').trim() || 'scroll';
+            const name = /\.[^.]+$/.test(base) ? base : base + '.' + ext;
             const blob = new Blob([d.content || ''], { type: 'text/plain;charset=utf-8' });
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
-            a.download = safeName + '.' + ext;
+            a.download = name;
             document.body.appendChild(a);
             a.click();
             a.remove();
             setTimeout(() => URL.revokeObjectURL(url), 1000);
+        });
+
+        // ── Folder tree ────────────────────────────
+        const $folderOpen  = root.querySelector('.folder-open-btn');
+        const $folderClose = root.querySelector('.folder-close');
+        const $folderTree  = root.querySelector('.folder-tree');
+
+        // Skipped entries that would clutter the tree for no real gain.
+        const SKIP_DIRS = new Set(['node_modules', '.git', '.svn', '.hg', '.DS_Store', 'dist', 'build', '.next', '.cache', '.idea', '.vscode']);
+        const SKIP_FILES_RE = /\.(lock|log|map|pyc|class|so|dll|exe|bin|zip|gz|tar|jar|war|pdf|png|jpe?g|gif|webp|ico|svg|woff2?|ttf|otf|mp[34]|wav|mov|mp4|webm)$/i;
+
+        async function buildTreeFromHandle(dirHandle, path = '') {
+            const node = { name: dirHandle.name, path, isDir: true, handle: dirHandle, children: [] };
+            for await (const [name, h] of dirHandle.entries()) {
+                if (h.kind === 'directory') {
+                    if (SKIP_DIRS.has(name)) continue;
+                    const childPath = path ? path + '/' + name : name;
+                    node.children.push(await buildTreeFromHandle(h, childPath));
+                } else {
+                    if (SKIP_FILES_RE.test(name)) continue;
+                    const childPath = path ? path + '/' + name : name;
+                    node.children.push({ name, path: childPath, isDir: false, handle: h });
+                }
+            }
+            node.children.sort((a, b) => (a.isDir === b.isDir) ? a.name.localeCompare(b.name) : (a.isDir ? -1 : 1));
+            return node;
+        }
+
+        function buildTreeFromFiles(files, rootName = 'folder') {
+            const root = { name: rootName, path: '', isDir: true, children: [] };
+            const byPath = new Map([['', root]]);
+            for (const f of files) {
+                const rel = f.webkitRelativePath || f.name;
+                if (SKIP_FILES_RE.test(f.name)) continue;
+                const parts = rel.split('/');
+                // First segment is the folder name
+                if (!root.name || root.name === 'folder') root.name = parts[0];
+                let cur = root;
+                let curPath = '';
+                for (let i = 1; i < parts.length; i++) {
+                    const seg = parts[i];
+                    if (i === parts.length - 1) {
+                        cur.children.push({ name: seg, path: curPath ? curPath + '/' + seg : seg, isDir: false, file: f });
+                    } else {
+                        if (SKIP_DIRS.has(seg)) { cur = null; break; }
+                        curPath = curPath ? curPath + '/' + seg : seg;
+                        let child = byPath.get(curPath);
+                        if (!child) {
+                            child = { name: seg, path: curPath, isDir: true, children: [] };
+                            cur.children.push(child);
+                            byPath.set(curPath, child);
+                        }
+                        cur = child;
+                    }
+                }
+            }
+            function sortRec(n) {
+                if (!n.children) return;
+                n.children.sort((a, b) => (a.isDir === b.isDir) ? a.name.localeCompare(b.name) : (a.isDir ? -1 : 1));
+                n.children.forEach(sortRec);
+            }
+            sortRec(root);
+            return root;
+        }
+
+        function renderFolderTree() {
+            if (!_folder.tree) { $folderTree.innerHTML = ''; return; }
+            // Root is always expanded; sub-dirs default collapsed unless user opened.
+            const html = renderNode(_folder.tree, 0, true);
+            $folderTree.innerHTML = html;
+            wireTreeInteractions();
+        }
+        function renderNode(node, depth, isRoot) {
+            if (node.isDir) {
+                const collapsed = !isRoot && !_folder.expanded.has(node.path);
+                const kids = (node.children || []).map(c => renderNode(c, depth + 1, false)).join('');
+                return `
+                    <div class="ftree-dir ${collapsed ? 'is-collapsed' : ''}" data-path="${window.escapeHTML(node.path)}">
+                        <div class="ftree-item" data-kind="dir" data-path="${window.escapeHTML(node.path)}">
+                            <span class="ftree-chev">▾</span>
+                            <span class="ftree-icon">${isRoot ? '📂' : '📁'}</span>
+                            <span class="ftree-name">${window.escapeHTML(node.name)}</span>
+                        </div>
+                        <div class="ftree-children">${kids || '<div class="ftree-empty">empty</div>'}</div>
+                    </div>
+                `;
+            } else {
+                const isActive = activeId === 'file:' + node.path;
+                return `
+                    <div class="ftree-file" data-path="${window.escapeHTML(node.path)}">
+                        <div class="ftree-item ${isActive ? 'ftree-active' : ''}" data-kind="file" data-path="${window.escapeHTML(node.path)}">
+                            <span class="ftree-chev"></span>
+                            <span class="ftree-icon">📄</span>
+                            <span class="ftree-name">${window.escapeHTML(node.name)}</span>
+                        </div>
+                    </div>
+                `;
+            }
+        }
+        function wireTreeInteractions() {
+            $folderTree.querySelectorAll('.ftree-item').forEach(el => {
+                el.addEventListener('click', async () => {
+                    const path = el.dataset.path;
+                    if (el.dataset.kind === 'dir') {
+                        const dir = el.closest('.ftree-dir');
+                        if (dir && !dir.classList.contains('is-root')) {
+                            const wasCollapsed = dir.classList.toggle('is-collapsed');
+                            if (wasCollapsed) _folder.expanded.delete(path);
+                            else _folder.expanded.add(path);
+                        }
+                    } else {
+                        await openFileFromTree(path);
+                    }
+                });
+            });
+        }
+        function findNode(path, node = _folder.tree) {
+            if (!node) return null;
+            if (node.path === path && !node.isDir) return node;
+            if (node.children) {
+                for (const c of node.children) {
+                    const r = findNode(path, c);
+                    if (r) return r;
+                }
+            }
+            return null;
+        }
+        async function openFileFromTree(path) {
+            const node = findNode(path);
+            if (!node) return;
+            let content = '';
+            let file = node.file || null;
+            if (node.handle) {
+                try { file = await node.handle.getFile(); }
+                catch (e) { console.warn('[grimoire] getFile failed', e); return; }
+            }
+            if (!file) return;
+            content = await file.text();
+            const title = node.name.replace(/\.[^.]+$/, '');
+            const lang = langFromFilename(node.name);
+            _fileDocs.set(path, {
+                id: 'file:' + path,
+                title: node.name,
+                lang,
+                content,
+                updatedAt: Date.now(),
+                // Keep the write handle around when available so Export saves
+                // back to disk instead of forcing a download.
+                handle: node.handle || null,
+                file,
+                displayTitle: title,
+            });
+            activeId = 'file:' + path;
+            view = 'edit';
+            $tabs.forEach(x => x.classList.toggle('active', x.dataset.view === 'edit'));
+            renderSidebar();
+            renderFolderTree();
+            await renderBody();
+            await persistActive();
+        }
+
+        $folderOpen.addEventListener('click', async () => {
+            // Modern path: File System Access API (Chrome/Edge; may also fail
+            // inside sandboxed iframes — we fall back gracefully).
+            if ('showDirectoryPicker' in window) {
+                try {
+                    const handle = await window.showDirectoryPicker();
+                    _folder.root = handle;
+                    _folder.name = handle.name;
+                    _folder.fallback = false;
+                    _folder.expanded.clear();
+                    _folder.tree = await buildTreeFromHandle(handle);
+                    $folderClose.style.display = '';
+                    $folderOpen.textContent = '📂 ' + handle.name;
+                    renderFolderTree();
+                    return;
+                } catch (e) {
+                    if (e?.name === 'AbortError') return; // user cancelled
+                    // Any other error (SecurityError, NotAllowedError) → fall through.
+                }
+            }
+            // Fallback: <input webkitdirectory> — read-only, Export saves via download.
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.webkitdirectory = true;
+            input.multiple = true;
+            input.addEventListener('change', () => {
+                const files = Array.from(input.files || []);
+                if (!files.length) return;
+                _folder.root = null;
+                _folder.name = files[0].webkitRelativePath.split('/')[0] || 'folder';
+                _folder.fallback = true;
+                _folder.expanded.clear();
+                _folder.tree = buildTreeFromFiles(files, _folder.name);
+                $folderClose.style.display = '';
+                $folderOpen.textContent = '📂 ' + _folder.name;
+                renderFolderTree();
+            });
+            input.click();
+        });
+
+        $folderClose.addEventListener('click', () => {
+            _folder.root = null; _folder.tree = null; _folder.name = '';
+            _folder.expanded.clear();
+            $folderClose.style.display = 'none';
+            $folderOpen.textContent = '📁 Open folder';
+            $folderTree.innerHTML = '';
         });
 
         $doclist.addEventListener('click', async (e) => {
