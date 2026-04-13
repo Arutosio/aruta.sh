@@ -34,65 +34,13 @@ body {
 }
 .sidebar-head {
     padding: 0.5rem;
-    display: flex; gap: 0.3rem;
+    display: flex; gap: 0.3rem; align-items: center;
     border-bottom: 1px solid rgba(255,200,87,0.15);
+    position: relative;
 }
 .sidebar-head button {
-    flex: 1;
     background: transparent;
     border: 1px solid rgba(255,200,87,0.35);
-    color: var(--g);
-    border-radius: 6px;
-    padding: 0.35rem;
-    font-size: 0.8rem;
-    cursor: pointer;
-}
-.sidebar-head button:hover { background: rgba(255,200,87,0.1); }
-.doclist {
-    flex: 1 1 auto;
-    list-style: none;
-    padding: 0.3rem; margin: 0;
-    overflow-y: auto;
-    min-height: 0;
-}
-.doclist li {
-    padding: 0.45rem 0.6rem;
-    border-radius: 6px;
-    cursor: pointer;
-    font-size: 0.85rem;
-    display: flex; justify-content: space-between; align-items: center;
-    gap: 0.3rem;
-    transition: background 0.15s;
-}
-.doclist li:hover { background: rgba(255,255,255,0.04); }
-.doclist li.active { background: rgba(167,139,250,0.18); color: var(--g); }
-.doclist .dot { font-size: 0.75rem; opacity: 0.7; }
-.doclist .del {
-    background: transparent; border: none;
-    color: #fb7185; cursor: pointer;
-    font-size: 0.85rem; padding: 0 0.2rem;
-    opacity: 0; transition: opacity 0.15s;
-}
-.doclist li:hover .del { opacity: 1; }
-
-/* ── Folder section ──────────────── */
-.folder-section {
-    flex-shrink: 0;
-    border-top: 1px solid rgba(255, 200, 87, 0.15);
-    display: flex;
-    flex-direction: column;
-    min-height: 0;
-    max-height: 50%;
-}
-.folder-head {
-    padding: 0.5rem;
-    display: flex; gap: 0.3rem; align-items: center;
-    border-bottom: 1px solid rgba(255, 200, 87, 0.10);
-}
-.folder-head button {
-    flex: 1;
-    background: transparent;
-    border: 1px solid rgba(255, 200, 87, 0.35);
     color: var(--g);
     border-radius: 6px;
     padding: 0.35rem;
@@ -100,12 +48,62 @@ body {
     font-family: inherit;
     cursor: pointer;
 }
-.folder-head button:hover { background: rgba(255, 200, 87, 0.1); }
-.folder-head .folder-close { flex: 0 0 auto; padding: 0.35rem 0.5rem; border-color: rgba(251, 113, 133, 0.4); color: #fb7185; }
-.folder-head .folder-close:hover { background: rgba(251, 113, 133, 0.12); }
+.sidebar-head button:hover { background: rgba(255,200,87,0.1); }
+.sidebar-head .folder-open-btn { flex: 1; }
+.sidebar-head .folder-new-file,
+.sidebar-head .folder-new-dir { flex: 0 0 auto; padding: 0.35rem 0.45rem; }
+.sidebar-head .menu-btn {
+    flex: 0 0 auto;
+    padding: 0.35rem 0.5rem;
+    border-color: rgba(255,200,87,0.25);
+    line-height: 1;
+    font-size: 1rem;
+}
 
+.menu-pop {
+    position: absolute;
+    top: calc(100% + 2px);
+    right: 0.5rem;
+    background: #1a0f2e;
+    border: 1px solid rgba(255,200,87,0.35);
+    border-radius: 6px;
+    padding: 0.3rem;
+    min-width: 150px;
+    z-index: 50;
+    box-shadow: 0 8px 20px rgba(0,0,0,0.4);
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+}
+.menu-item {
+    background: transparent;
+    border: none;
+    color: #ffe4a0;
+    text-align: left;
+    padding: 0.4rem 0.55rem;
+    font-size: 0.82rem;
+    font-family: inherit;
+    border-radius: 4px;
+    cursor: pointer;
+}
+.menu-item:hover { background: rgba(255, 200, 87, 0.12); color: var(--g); }
+.menu-empty {
+    padding: 0.4rem 0.55rem;
+    font-size: 0.78rem;
+    font-style: italic;
+    opacity: 0.55;
+}
+
+/* ── Folder section ──────────────── */
+.fs-section {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+}
 .folder-tree {
-    overflow-y: auto;
+    flex: 1;
+    overflow: auto;
     min-height: 0;
     padding: 0.25rem 0;
     font-size: 0.82rem;
@@ -257,7 +255,7 @@ body {
     font-size: inherit;
     line-height: inherit;
     user-select: none;
-    overflow: hidden;              /* the inner element scrolls via transform */
+    overflow: hidden;
     position: relative;
 }
 .editor .gutter-inner {
@@ -282,7 +280,6 @@ body {
     background-position: var(--ed-pad-x) var(--ed-pad-y);
 }
 .editor .paper.opt-grid::before {
-    /* A stronger gridline every 5 cells — feels like graph paper. */
     content: '';
     position: absolute; inset: 0;
     background-image:
@@ -305,20 +302,17 @@ body {
 }
 .editor.opt-activeline .active-line { display: block; }
 
-/* Syntax-highlight overlay. Rendered text sits behind the (transparent)
-   textarea so the user sees colored tokens while typing. The textarea
-   handles input + caret + selection natively. */
 .editor .hl-layer {
     position: absolute;
     inset: 0;
     margin: 0;
-    padding: 0;                    /* padding lives on the <code> so translate works */
+    padding: 0;
     font-family: inherit;
     font-size: inherit;
     line-height: inherit;
     color: #e8e8f0;
     background: transparent;
-    overflow: hidden;              /* pre is the viewport; code scrolls within */
+    overflow: hidden;
     pointer-events: none;
     z-index: 1;
     tab-size: 4;
@@ -328,13 +322,12 @@ body {
     background: transparent !important;
     padding: var(--ed-pad-y) var(--ed-pad-x) !important;
     display: block;
-    white-space: pre;              /* default no-wrap — mirrored from textarea */
+    white-space: pre;
     will-change: transform;
 }
 .editor.opt-wrap .hl-layer code {
     white-space: pre-wrap;
     word-wrap: break-word;
-    /* Textarea reserves scrollbar-width; match it here so wrap boundaries agree. */
     padding-right: calc(var(--ed-pad-x) + var(--sbw, 0px)) !important;
 }
 
@@ -344,27 +337,23 @@ body {
     width: 100%; height: 100%;
     border: none; outline: none; resize: none;
     background: transparent;
-    color: transparent;            /* text is rendered by .hl-layer below */
+    color: transparent;
     font-family: inherit;
     font-size: inherit;
     line-height: inherit;
     padding: var(--ed-pad-y) var(--ed-pad-x);
     tab-size: 4;
     caret-color: var(--g);
-    white-space: pre;              /* match .hl-layer so wraps agree */
+    white-space: pre;
     overflow: auto;
 }
 .editor.opt-wrap textarea {
     white-space: pre-wrap;
     word-wrap: break-word;
-    /* Force the vertical scrollbar to always occupy its gutter so the
-       textarea's wrap width is constant — see .opt-wrap .hl-layer for
-       the matching shadow-reservation on the overlay. */
     overflow-y: scroll;
     overflow-x: hidden;
 }
 .editor textarea::selection { background: rgba(255, 200, 87, 0.3); color: transparent; }
-/* Fallback when live highlight is off — show textarea text directly. */
 .editor:not(.opt-hl-live) .hl-layer { display: none; }
 .editor:not(.opt-hl-live) textarea { color: #e8e8f0; }
 
@@ -463,11 +452,13 @@ body {
     color: rgba(255,228,160,0.45); font-style: italic;
     font-family: 'Cinzel', serif;
     letter-spacing: 0.1em;
+    text-align: center;
+    padding: 1rem;
 }
 
 @media (max-width: 520px) {
     .wrap { flex-direction: column; }
-    .sidebar { width: 100%; max-height: 160px; border-right: none; border-bottom: 1px solid rgba(255,200,87,0.2); }
+    .sidebar { width: 100%; max-height: 200px; border-right: none; border-bottom: 1px solid rgba(255,200,87,0.2); }
     .toolbar { font-size: 0.8rem; }
     .toolbar .view-tabs button { padding: 0.25rem 0.5rem; }
     .editor .gutter { width: 2.8em; }

@@ -26,21 +26,11 @@ const EXT_TO_LANG = {
     txt: 'plaintext', log: 'plaintext',
 };
 
-const LANG_TO_EXT = {
-    javascript: 'js', typescript: 'ts', python: 'py', csharp: 'cs',
-    cpp: 'cpp', rust: 'rs', go: 'go', java: 'java', kotlin: 'kt',
-    swift: 'swift', php: 'php', ruby: 'rb', sql: 'sql', bash: 'sh',
-    powershell: 'ps1', html: 'html', css: 'css', json: 'json',
-    yaml: 'yaml', xml: 'xml', markdown: 'md', plaintext: 'txt',
-};
-
 function langFromFilename(name) {
     const m = /\.([a-zA-Z0-9]+)$/.exec(name || '');
     if (!m) return 'plaintext';
     return EXT_TO_LANG[m[1].toLowerCase()] || 'plaintext';
 }
-
-function extForLang(lang) { return LANG_TO_EXT[lang] || 'txt'; }
 
 const LANGS = [
     { id: 'plaintext', label: 'Plain' },
@@ -76,8 +66,6 @@ const DEFAULT_SETTINGS = {
     tabWidth:      4,
 };
 
-function uuid() { return Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 8); }
-
 function loadScript(src) {
     return new Promise((resolve, reject) => {
         const s = document.createElement('script');
@@ -107,20 +95,15 @@ export default {
             <div class="wrap">
                 <aside class="sidebar">
                     <div class="sidebar-head">
-                        <button class="new-btn" title="New scroll">＋</button>
-                        <button class="import-btn" title="Load a file from disk">⬆</button>
-                        <button class="export-btn" title="Save the current scroll to disk">⬇</button>
+                        <button class="folder-open-btn" title="Open a folder to browse/edit its files">📁 Open folder</button>
+                        <button class="folder-new-file" style="display:none" title="New file in root">📄＋</button>
+                        <button class="folder-new-dir" style="display:none" title="New folder in root">📁＋</button>
+                        <button class="menu-btn" title="More">⋮</button>
+                        <div class="menu-pop" style="display:none"></div>
                     </div>
-                    <div class="folder-section">
-                        <div class="folder-head">
-                            <button class="folder-open-btn" title="Open a folder to browse/edit its files">📁 Open folder</button>
-                            <button class="folder-new-file" style="display:none" title="New file in root">📄＋</button>
-                            <button class="folder-new-dir" style="display:none" title="New folder in root">📁＋</button>
-                            <button class="folder-close" style="display:none" title="Close folder">✕</button>
-                        </div>
+                    <div class="fs-section">
                         <div class="folder-tree"></div>
                     </div>
-                    <ul class="doclist"></ul>
                 </aside>
                 <section class="main">
                     <div class="toolbar">
@@ -135,30 +118,25 @@ export default {
                         </div>
                         <span class="save-indicator"></span>
                     </div>
-                    <div class="body"><div class="empty">Select or create a scroll…</div></div>
+                    <div class="body"><div class="empty">Open a folder to start editing.</div></div>
                 </section>
             </div>
         `;
 
-        const $doclist = root.querySelector('.doclist');
-        const $newBtn  = root.querySelector('.new-btn');
         const $title   = root.querySelector('.title');
         const $lang    = root.querySelector('.lang');
         const $tabs    = root.querySelectorAll('.view-tabs button');
         const $body    = root.querySelector('.body');
         const $saveInd = root.querySelector('.save-indicator');
 
-        let docs = (await ctx.storage.get('docs')) || [];
         let activeId = (await ctx.storage.get('active')) || null;
+        // Ignore any non-file: active id (legacy scroll id from pre-1.8.0).
+        if (activeId && !(typeof activeId === 'string' && activeId.startsWith('file:'))) activeId = null;
         let settings = Object.assign({}, DEFAULT_SETTINGS, (await ctx.storage.get('settings')) || {});
         let view = 'edit';
-        let saveTimer = null;
 
         // Folder state — session-only (File System Access handles can't be
         // persisted; re-opening the folder is a user gesture anyway).
-        // _folder.root is a FileSystemDirectoryHandle when the modern API is
-        // available; otherwise _folder.fallbackFiles holds a File[] coming
-        // from <input webkitdirectory>.
         const _folder = { root: null, name: '', tree: null, expanded: new Set(), fallback: false };
         const _fileDocs = new Map(); // path → { handle?, file?, title, lang, content, updatedAt }
         let fileSaveTimer = null;
@@ -171,16 +149,7 @@ export default {
             if (activeId && typeof activeId === 'string' && activeId.startsWith('file:')) {
                 return _fileDocs.get(activeId.slice(5)) || null;
             }
-            return docs.find(d => d.id === activeId);
-        }
-
-        function renderSidebar() {
-            $doclist.innerHTML = docs.map(d =>
-                `<li data-id="${d.id}" class="${d.id === activeId ? 'active' : ''}">
-                    <span><span class="dot">●</span> ${escapeHTML(d.title || 'Untitled')}</span>
-                    <button class="del" data-del="${d.id}" title="Delete">✕</button>
-                </li>`
-            ).join('');
+            return null;
         }
 
         // ── Editor helpers ──────────────────────────
@@ -192,10 +161,6 @@ export default {
             $editor.classList.toggle('opt-wrap',       settings.wrap);
             $paper.classList.toggle('opt-grid',        settings.grid);
             $ta.style.tabSize = settings.tabWidth;
-            // When wrap is on the textarea reserves a scrollbar gutter; the
-            // hl-layer has to mirror that padding so both wrap at the same x.
-            // Measure after the class toggle so offsetWidth reflects the
-            // overflow-y: scroll rule we just enabled.
             if (settings.wrap) {
                 requestAnimationFrame(() => {
                     const sbw = $ta.offsetWidth - $ta.clientWidth;
@@ -207,9 +172,6 @@ export default {
             }
         }
 
-        // File-size bail: above this byte count, skip the hljs highlight
-        // pass — just render plain text through the hl-layer so typing
-        // stays snappy. (Setting toggle still wins if user forces off.)
         const HL_MAX_BYTES = 200 * 1024;
 
         function updateHighlight() {
@@ -217,8 +179,6 @@ export default {
             if (!settings.liveHighlight) return;
             const d = active();
             const lang = d?.lang || 'plaintext';
-            // Trailing newline ensures the rendered layer extends one row
-            // past the caret so the last empty line still paints.
             const text = $ta.value + '\n';
             $hlCode.textContent = text;
             const tooBig = text.length > HL_MAX_BYTES;
@@ -239,19 +199,10 @@ export default {
 
         function syncHLScroll() {
             if (!$hlCode || !$ta || !$gutter) return;
-            // The <pre class=hl-layer> is a fixed-size viewport; its <code>
-            // child holds the full text. Translate the CODE so the visible
-            // slice matches the textarea's scroll position. Translating the
-            // pre itself would just shift the clip region — content below
-            // the first viewport-tall slice would never be renderable.
             $hlCode.style.transform = `translate(${-$ta.scrollLeft}px, ${-$ta.scrollTop}px)`;
-            // Gutter: same story — overflow:hidden means scrollTop is a
-            // no-op, so translate the text node inside instead.
             $gutter.style.transform = `translateY(${-$ta.scrollTop}px)`;
         }
 
-        // Hidden mirror used to measure visual row count per logical line
-        // when wrap is on. Cached across calls; its width is synced to .paper.
         let $gutterMirror = null;
         function ensureGutterMirror() {
             if ($gutterMirror && $gutterMirror.isConnected) return $gutterMirror;
@@ -269,16 +220,11 @@ export default {
             if (!$gutter || !$ta) return;
             const lines = $ta.value.split('\n');
             if (!settings.wrap) {
-                // 1:1 mapping — each logical line takes exactly one row.
                 _lineRows = null;
                 let html = '';
                 for (let i = 0; i < lines.length; i++) html += (i + 1) + '\n';
                 $gutter.textContent = html;
             } else {
-                // Measure each line's visual row count so the gutter can
-                // pad with empty rows for wrapped continuations.
-                // Wrap happens inside the textarea's *content area*
-                // (clientWidth minus its own padding), NOT the paper's width.
                 const mirror = ensureGutterMirror();
                 const taStyle = getComputedStyle($ta);
                 const padX = parseFloat(taStyle.paddingLeft) + parseFloat(taStyle.paddingRight);
@@ -302,9 +248,6 @@ export default {
             syncHLScroll();
         }
 
-        // Cache of visual-row counts per logical line, populated by
-        // updateGutter when wrap is on. Lets updateActiveLine compute the
-        // wrapped caret position without re-measuring each line.
         let _lineRows = null;
 
         function updateActiveLine() {
@@ -317,11 +260,8 @@ export default {
 
             let visualRow = lineIdx;
             if (settings.wrap && _lineRows) {
-                // Sum visual rows of lines before the caret's line…
                 let sum = 0;
                 for (let i = 0; i < lineIdx && i < _lineRows.length; i++) sum += _lineRows[i];
-                // …plus the wrapped row offset within the current line,
-                // measured on-demand (small: one line at a time).
                 const mirror = ensureGutterMirror();
                 const lineStart = before.lastIndexOf('\n') + 1;
                 const colBefore = $ta.value.slice(lineStart, $ta.selectionStart);
@@ -333,9 +273,6 @@ export default {
             $activeLine.style.transform = `translateY(${padY + visualRow * lineH - $ta.scrollTop}px)`;
         }
 
-        // Content-change events (input) reshape the gutter (line count,
-        // wrap boundaries can change). Caret/scroll events only move the
-        // highlight + the scroll-synced transforms, which is cheap.
         function onContentChange() { updateGutter(); updateActiveLine(); syncHLScroll(); }
         function onCaretChange()   { updateActiveLine(); syncHLScroll(); }
 
@@ -345,7 +282,9 @@ export default {
             $title.disabled = !d || view === 'settings';
             $lang.disabled  = !d || view === 'settings';
             if (!d) {
-                $body.innerHTML = '<div class="empty">Select or create a scroll…</div>';
+                $body.innerHTML = _folder.tree
+                    ? '<div class="empty">Select a file from the tree…</div>'
+                    : '<div class="empty">Open a folder to start editing.</div>';
                 $title.value = ''; return;
             }
             $title.value = d.title || '';
@@ -373,8 +312,6 @@ export default {
                 applyEditorSettings();
                 updateGutter();
                 updateActiveLine();
-                // Highlight initially; the layer needs highlight.js to be
-                // loaded, so wait on hljsReady for the very first paint.
                 hljsReady.then(updateHighlight);
 
                 $ta.addEventListener('input', () => {
@@ -382,7 +319,7 @@ export default {
                     d.updatedAt = Date.now();
                     onContentChange();
                     scheduleHighlight();
-                    scheduleSave();
+                    scheduleFileSave();
                 });
                 $ta.addEventListener('keyup',  onCaretChange);
                 $ta.addEventListener('click',  onCaretChange);
@@ -397,13 +334,11 @@ export default {
                         d.content = $ta.value;
                         onContentChange();
                         scheduleHighlight();
-                        scheduleSave();
+                        scheduleFileSave();
                     }
                 });
                 $ta.focus();
 
-                // Wrap-aware gutter needs to recompute when the viewport
-                // resizes, since wrap boundaries change.
                 window.addEventListener('resize', () => {
                     if ($editor?.isConnected) updateGutter();
                 });
@@ -422,7 +357,7 @@ export default {
                 $body.innerHTML = `
                     <div class="settings-pane">
                         <h3>Editor</h3>
-                        <p>These apply to every scroll; changes save automatically.</p>
+                        <p>These apply to every file; changes save automatically.</p>
                         <div class="settings-row">
                             <div class="label"><strong>Highlight active line</strong><small>Soft glow on the line containing the cursor.</small></div>
                             <button class="toggle" data-opt="activeLine" type="button"></button>
@@ -436,11 +371,11 @@ export default {
                             <button class="toggle" data-opt="grid" type="button"></button>
                         </div>
                         <div class="settings-row">
-                            <div class="label"><strong>Live syntax highlighting</strong><small>Colors the code as you type based on the selected language. Turn off for large files if typing feels sluggish.</small></div>
+                            <div class="label"><strong>Live syntax highlighting</strong><small>Colors the code as you type. Turn off for large files if typing feels sluggish.</small></div>
                             <button class="toggle" data-opt="liveHighlight" type="button"></button>
                         </div>
                         <div class="settings-row">
-                            <div class="label"><strong>Wrap long lines</strong><small>Off: long lines scroll horizontally — line numbers stay aligned. On: lines wrap visually, but a wrapped line still carries a single number (gutter may look off).</small></div>
+                            <div class="label"><strong>Wrap long lines</strong><small>Off: long lines scroll horizontally. On: lines wrap visually.</small></div>
                             <button class="toggle" data-opt="wrap" type="button"></button>
                         </div>
                         <div class="settings-row">
@@ -469,120 +404,103 @@ export default {
             }
         }
 
-        function scheduleSave() {
-            $saveInd.textContent = 'saving…';
-            if (saveTimer) clearTimeout(saveTimer);
-            saveTimer = setTimeout(async () => {
-                await ctx.storage.set('docs', docs);
-                $saveInd.textContent = 'saved';
-                setTimeout(() => { $saveInd.textContent = ''; }, 1400);
-            }, 450);
-        }
-        async function persistActive() { await ctx.storage.set('active', activeId); }
-
-        // ── Wire sidebar / toolbar ─────────────────
-        $newBtn.addEventListener('click', async () => {
-            const d = { id: uuid(), title: 'Untitled', lang: 'plaintext', content: '', updatedAt: Date.now() };
-            docs.unshift(d);
-            activeId = d.id;
-            view = 'edit';
-            $tabs.forEach(x => x.classList.toggle('active', x.dataset.view === 'edit'));
-            renderSidebar();
-            await renderBody();
-            scheduleSave();
-            await persistActive();
-        });
-
-        // Import: read a text file from disk into a new scroll.
-        root.querySelector('.import-btn').addEventListener('click', () => {
-            const input = document.createElement('input');
-            input.type = 'file';
-            input.accept = '.txt,.md,.markdown,.js,.mjs,.cjs,.ts,.tsx,.jsx,.py,.cs,.cpp,.cc,.cxx,.h,.hpp,.c,.rs,.go,.java,.kt,.kts,.swift,.php,.phtml,.rb,.sql,.sh,.bash,.zsh,.ps1,.psm1,.html,.htm,.css,.scss,.sass,.json,.yaml,.yml,.xml,.svg,.log,text/*';
-            input.addEventListener('change', async () => {
-                const file = input.files?.[0];
-                if (!file) return;
-                if (file.size > 5 * 1024 * 1024) {
-                    alert('File too large (>5 MB). Grimoire is meant for scrolls, not tomes.');
-                    return;
-                }
-                const text = await file.text();
-                const title = file.name.replace(/\.[^.]+$/, '');
-                const lang = langFromFilename(file.name);
-                const d = {
-                    id: uuid(),
-                    title: title || 'Imported',
-                    lang,
-                    content: text,
-                    updatedAt: Date.now(),
-                };
-                docs.unshift(d);
-                activeId = d.id;
-                view = 'edit';
-                $tabs.forEach(x => x.classList.toggle('active', x.dataset.view === 'edit'));
-                renderSidebar();
-                await renderBody();
-                scheduleSave();
-                await persistActive();
-            });
-            input.click();
-        });
-
-        // Export: for file-backed docs (opened via folder) this writes back
-        // to disk via the File System Access handle. For in-memory scrolls
-        // (and fallback <input webkitdirectory> files) it triggers a download.
-        root.querySelector('.export-btn').addEventListener('click', async () => {
+        // File-backed docs: debounced write-back to disk via FS Access handle.
+        // For fallback (webkitdirectory, read-only) there's no handle, so
+        // edits stay in memory only until the user manually saves (future
+        // virtual-workspace will cover this).
+        function scheduleFileSave() {
             const d = active();
-            if (!d) return;
-            if (d.handle && typeof d.handle.createWritable === 'function') {
+            if (!d || !d.handle || typeof d.handle.createWritable !== 'function') return;
+            $saveInd.textContent = 'saving…';
+            if (fileSaveTimer) clearTimeout(fileSaveTimer);
+            fileSaveTimer = setTimeout(async () => {
                 try {
                     const w = await d.handle.createWritable();
                     await w.write(d.content || '');
                     await w.close();
-                    $saveInd.textContent = 'saved to file';
+                    $saveInd.textContent = 'saved';
                     setTimeout(() => { $saveInd.textContent = ''; }, 1400);
-                    return;
                 } catch (e) {
-                    console.warn('[grimoire] write-back failed, falling back to download', e);
+                    console.warn('[grimoire] autosave failed', e);
+                    $saveInd.textContent = 'save failed';
                 }
+            }, 450);
+        }
+
+        async function persistActive() {
+            if (activeId && typeof activeId === 'string' && activeId.startsWith('file:')) {
+                await ctx.storage.set('active', activeId);
+            } else {
+                await ctx.storage.set('active', null);
             }
-            const ext = extForLang(d.lang || 'plaintext');
-            const base = (d.displayTitle || d.title || 'scroll').replace(/[\\/:*?"<>|]+/g, '_').trim() || 'scroll';
-            const name = /\.[^.]+$/.test(base) ? base : base + '.' + ext;
-            const blob = new Blob([d.content || ''], { type: 'text/plain;charset=utf-8' });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = name;
-            document.body.appendChild(a);
-            a.click();
-            a.remove();
-            setTimeout(() => URL.revokeObjectURL(url), 1000);
-        });
+        }
 
         // ── Folder tree ────────────────────────────
         const $folderOpen    = root.querySelector('.folder-open-btn');
-        const $folderClose   = root.querySelector('.folder-close');
         const $folderNewFile = root.querySelector('.folder-new-file');
         const $folderNewDir  = root.querySelector('.folder-new-dir');
         const $folderTree    = root.querySelector('.folder-tree');
+        const $menuBtn       = root.querySelector('.menu-btn');
+        const $menuPop       = root.querySelector('.menu-pop');
 
-        // Firefox/Safari don't implement showDirectoryPicker — we can still
-        // READ a folder via <input webkitdirectory>, but write access requires
-        // a Chromium browser. Flag it upfront so the user isn't left looking
-        // for 📄＋/📁＋ buttons that physically can't exist here.
         const _canWrite = 'showDirectoryPicker' in window;
         if (!_canWrite) {
             $folderOpen.title = 'Read-only mode: this browser does not support folder write access.\nOpen in Chrome/Edge/Brave/Opera for create/rename/move/delete.';
-            $folderTree.innerHTML = '<div class="ftree-empty" style="font-size:11px;opacity:0.75;line-height:1.5;">⚠ Read-only mode<br>This browser has no File System Access API.<br>Open the site in Chrome/Edge for full folder editing.</div>';
         }
 
         function folderHeaderControls(show) {
-            const disp = show ? '' : 'none';
-            $folderClose.style.display = disp;
-            // Writable-only actions — require a DirectoryHandle from the FS Access API.
             const writable = show && !!_folder.root;
             $folderNewFile.style.display = writable ? '' : 'none';
             $folderNewDir.style.display  = writable ? '' : 'none';
+            renderMenu();
+        }
+
+        function renderMenu() {
+            const items = [];
+            if (_folder.tree) {
+                items.push({ label: '✕ Close folder', action: 'close-folder' });
+            }
+            if (!items.length) {
+                $menuPop.innerHTML = '<div class="menu-empty">No actions yet.</div>';
+            } else {
+                $menuPop.innerHTML = items.map(it =>
+                    `<button class="menu-item" data-action="${it.action}">${escapeHTML(it.label)}</button>`
+                ).join('');
+            }
+        }
+        renderMenu();
+
+        function toggleMenu(force) {
+            const show = force ?? ($menuPop.style.display === 'none');
+            $menuPop.style.display = show ? '' : 'none';
+        }
+        $menuBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            toggleMenu();
+        });
+        document.addEventListener('click', (e) => {
+            if (!$menuPop.contains(e.target) && e.target !== $menuBtn) toggleMenu(false);
+        });
+        $menuPop.addEventListener('click', async (e) => {
+            const btn = e.target.closest('[data-action]');
+            if (!btn) return;
+            toggleMenu(false);
+            const action = btn.dataset.action;
+            if (action === 'close-folder') {
+                closeFolder();
+            }
+        });
+
+        function closeFolder() {
+            _folder.root = null; _folder.tree = null; _folder.name = '';
+            _folder.expanded.clear();
+            _fileDocs.clear();
+            activeId = null;
+            folderHeaderControls(false);
+            $folderOpen.textContent = '📁 Open folder';
+            $folderTree.innerHTML = '';
+            renderBody();
+            persistActive();
         }
 
         // Skipped entries that would clutter the tree for no real gain.
@@ -591,18 +509,13 @@ export default {
 
         async function buildTreeFromHandle(dirHandle, path = '') {
             const node = { name: dirHandle.name, path, isDir: true, handle: dirHandle, children: [] };
-            // Some browsers (or sandboxed iframes) return a handle that
-            // can be picked but whose entries() is gated by an explicit
-            // permission request. Ask once, up-front.
             try {
                 const q = await dirHandle.queryPermission?.({ mode: 'read' });
                 if (q !== 'granted' && dirHandle.requestPermission) {
                     const r = await dirHandle.requestPermission({ mode: 'read' });
                     if (r !== 'granted') throw new Error('read permission denied');
                 }
-            } catch (e) {
-                // permission flow not available — entries() below will throw if blocked
-            }
+            } catch (e) { /* entries() will throw if truly blocked */ }
             try {
                 for await (const [name, h] of dirHandle.entries()) {
                     if (h.kind === 'directory') {
@@ -631,7 +544,6 @@ export default {
                 const rel = f.webkitRelativePath || f.name;
                 if (SKIP_FILES_RE.test(f.name)) continue;
                 const parts = rel.split('/');
-                // First segment is the folder name
                 if (!root.name || root.name === 'folder') root.name = parts[0];
                 let cur = root;
                 let curPath = '';
@@ -663,13 +575,12 @@ export default {
 
         function renderFolderTree() {
             if (!_folder.tree) { $folderTree.innerHTML = ''; return; }
-            // Root is always expanded; sub-dirs default collapsed unless user opened.
             const html = renderNode(_folder.tree, 0, true);
             $folderTree.innerHTML = html;
             wireTreeInteractions();
         }
         function renderNode(node, depth, isRoot) {
-            const canWrite = !!_folder.root;  // FS Access API mode only
+            const canWrite = !!_folder.root;
             if (node.isDir) {
                 const collapsed = !isRoot && !_folder.expanded.has(node.path);
                 const kids = (node.children || []).map(c => renderNode(c, depth + 1, false)).join('');
@@ -704,7 +615,6 @@ export default {
         function wireTreeInteractions() {
             $folderTree.querySelectorAll('.ftree-item').forEach(el => {
                 el.addEventListener('click', async (e) => {
-                    // Per-directory action buttons
                     const act = e.target.closest('.ftree-act');
                     if (act) {
                         e.stopPropagation();
@@ -728,7 +638,6 @@ export default {
                         await openFileFromTree(path);
                     }
                 });
-                // Drag source (files only)
                 if (el.getAttribute('draggable') === 'true') {
                     el.addEventListener('dragstart', (e) => {
                         e.dataTransfer.setData('text/grimoire-path', el.dataset.path);
@@ -737,7 +646,6 @@ export default {
                     });
                     el.addEventListener('dragend', () => el.classList.remove('ftree-dragging'));
                 }
-                // Drop target (dirs only)
                 if (el.classList.contains('ftree-drop')) {
                     el.addEventListener('dragover', (e) => {
                         if (!e.dataTransfer.types.includes('text/grimoire-path')) return;
@@ -820,8 +728,7 @@ export default {
             const destDir = findDirNode(destDirPath);
             if (!src || !destDir) return;
             const srcParentPath = srcPath.split('/').slice(0, -1).join('/');
-            if (srcParentPath === destDirPath) return; // same dir, nothing to do
-            // Prefer the native move() (Chrome) when it's available.
+            if (srcParentPath === destDirPath) return;
             if (src.handle && typeof src.handle.move === 'function') {
                 try {
                     await src.handle.move(destDir.handle, src.name);
@@ -829,7 +736,6 @@ export default {
                     return;
                 } catch (e) { console.warn('[grimoire] native move failed, falling back', e); }
             }
-            // Fallback: copy content → remove original.
             try {
                 const file = await src.handle.getFile();
                 const newH = await destDir.handle.getFileHandle(src.name, { create: true });
@@ -858,14 +764,13 @@ export default {
         async function openFileFromTree(path) {
             const node = findNode(path);
             if (!node) return;
-            let content = '';
             let file = node.file || null;
             if (node.handle) {
                 try { file = await node.handle.getFile(); }
                 catch (e) { console.warn('[grimoire] getFile failed', e); return; }
             }
             if (!file) return;
-            content = await file.text();
+            const content = await file.text();
             const title = node.name.replace(/\.[^.]+$/, '');
             const lang = langFromFilename(node.name);
             _fileDocs.set(path, {
@@ -874,8 +779,6 @@ export default {
                 lang,
                 content,
                 updatedAt: Date.now(),
-                // Keep the write handle around when available so Export saves
-                // back to disk instead of forcing a download.
                 handle: node.handle || null,
                 file,
                 displayTitle: title,
@@ -883,7 +786,6 @@ export default {
             activeId = 'file:' + path;
             view = 'edit';
             $tabs.forEach(x => x.classList.toggle('active', x.dataset.view === 'edit'));
-            renderSidebar();
             renderFolderTree();
             await renderBody();
             await persistActive();
@@ -895,24 +797,6 @@ export default {
 
         async function tryDirectoryPicker() {
             try {
-                // Pre-flight diagnostics: dump everything that could explain a
-                // SecurityError / NotAllowedError so we can see from the console
-                // which gate failed (secure-context, permissions-policy, origin).
-                try {
-                    const pp = document.featurePolicy?.allowedFeatures?.()
-                        || (document.permissionsPolicy?.allowedFeatures?.() ?? null);
-                    console.info('[grimoire] picker preflight', {
-                        hasAPI: typeof window.showDirectoryPicker,
-                        isSecureContext: window.isSecureContext,
-                        protocol: location.protocol,
-                        origin: location.origin,
-                        href: location.href,
-                        allowedFeatures: pp,
-                        crossOriginIsolated: window.crossOriginIsolated,
-                    });
-                } catch (diagErr) {
-                    console.warn('[grimoire] preflight dump failed', diagErr);
-                }
                 const handle = await window.showDirectoryPicker();
                 _folder.root = handle;
                 _folder.name = handle.name;
@@ -923,12 +807,11 @@ export default {
                 folderHeaderControls(true);
                 $folderOpen.textContent = '📂 ' + handle.name;
                 renderFolderTree();
+                renderBody();
                 return true;
             } catch (e) {
-                if (e?.name === 'AbortError') return true; // user cancelled — stop here
-                console.error('[grimoire] picker blocked', {
-                    name: e?.name, message: e?.message, stack: e?.stack, error: e,
-                });
+                if (e?.name === 'AbortError') return true;
+                console.error('[grimoire] picker blocked', e);
                 showTreeMessage(`Folder read blocked (${e?.name || 'error'}: ${e?.message || 'unknown'}) — falling back`, true);
                 return false;
             }
@@ -951,29 +834,17 @@ export default {
                 $folderOpen.textContent = '📂 ' + _folder.name + ' (read-only)';
                 $folderOpen.title = 'This browser does not support folder write access. Open in Chrome/Edge for create/rename/move/delete.';
                 renderFolderTree();
+                renderBody();
             });
             input.click();
         }
 
         $folderOpen.addEventListener('click', async () => {
-            // File System Access API gives us read+write handles — preferred
-            // path. If it's gated by the sandboxed-iframe policy, we fall back
-            // to <input webkitdirectory>. Fallback has to be kicked off in a
-            // fresh user gesture (a click) so we don't lose activation: route
-            // through a retry button if async path fails.
             if ('showDirectoryPicker' in window) {
                 const ok = await tryDirectoryPicker();
                 if (ok) return;
             }
             openWebkitDirInput();
-        });
-
-        $folderClose.addEventListener('click', () => {
-            _folder.root = null; _folder.tree = null; _folder.name = '';
-            _folder.expanded.clear();
-            folderHeaderControls(false);
-            $folderOpen.textContent = '📁 Open folder';
-            $folderTree.innerHTML = '';
         });
 
         $folderNewFile.addEventListener('click', () => {
@@ -983,38 +854,14 @@ export default {
             if (_folder.tree) promptAndCreateDir(_folder.tree);
         });
 
-        $doclist.addEventListener('click', async (e) => {
-            const del = e.target.closest('[data-del]');
-            if (del) {
-                e.stopPropagation();
-                const id = del.dataset.del;
-                docs = docs.filter(d => d.id !== id);
-                if (activeId === id) activeId = docs[0]?.id || null;
-                await ctx.storage.set('docs', docs);
-                await persistActive();
-                renderSidebar();
-                await renderBody();
-                return;
-            }
-            const li = e.target.closest('li[data-id]');
-            if (!li) return;
-            activeId = li.dataset.id;
-            renderSidebar();
-            await renderBody();
-            await persistActive();
-        });
-
         $title.addEventListener('input', () => {
             const d = active(); if (!d) return;
             d.title = $title.value; d.updatedAt = Date.now();
-            renderSidebar();
-            scheduleSave();
         });
 
         $lang.addEventListener('change', () => {
             const d = active(); if (!d) return;
             d.lang = $lang.value; d.updatedAt = Date.now();
-            scheduleSave();
             if (view === 'preview') renderBody();
             else if (view === 'edit') updateHighlight();
         });
@@ -1026,24 +873,11 @@ export default {
             await renderBody();
         }));
 
-        // Seed a welcome doc the first time Grimoire is opened.
-        if (docs.length === 0) {
-            docs.push({
-                id: uuid(),
-                title: 'Welcome',
-                lang: 'markdown',
-                content: '# Grimoire\n\nWrite your incantations here. Switch language for syntax highlighting.\n\nTap the ⚙ icon in the toolbar to toggle line numbers, the active-line glow, or a graph-paper background.\n\n```js\nconsole.log("hello, wanderer");\n```',
-                updatedAt: Date.now(),
-            });
-            activeId = docs[0].id;
-            await ctx.storage.set('docs', docs);
-            await persistActive();
-        } else if (!active()) {
-            activeId = docs[0].id;
-            await persistActive();
-        }
-
-        renderSidebar();
+        // No folder is restored on boot — FS handles can't be persisted. Any
+        // leftover legacy 'docs' key in storage is intentionally ignored (kept
+        // for user rollback safety, not deleted).
+        activeId = null;
+        await persistActive();
         await renderBody();
     }
 };
