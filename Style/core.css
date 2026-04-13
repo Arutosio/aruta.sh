@@ -218,7 +218,7 @@ html.magic-cursor-active, html.magic-cursor-active * { cursor: none !important; 
     transition: opacity var(--dur-base);
 }
 #app.hidden  { opacity: 0; pointer-events: none; }
-#app.visible { animation: pageReveal 1s cubic-bezier(0.22,1,0.36,1) forwards; }
+#app.visible { animation: pageReveal 1s var(--ease-standard) forwards; }
 @keyframes pageReveal {
     from { opacity: 0; transform: translateY(18px); }
     to   { opacity: 1; transform: translateY(0); }
@@ -230,7 +230,7 @@ html.magic-cursor-active, html.magic-cursor-active * { cursor: none !important; 
 #summon-overlay {
     position: fixed; inset: 0; background: #050310;
     z-index: 999; display: flex; align-items: center; justify-content: center;
-    transition: opacity 1.2s cubic-bezier(0.22, 1, 0.36, 1);
+    transition: opacity 1.2s var(--ease-standard);
 }
 #summon-overlay.fade-out { opacity: 0; pointer-events: none; }
 
@@ -307,7 +307,7 @@ html.magic-cursor-active, html.magic-cursor-active * { cursor: none !important; 
     border-radius: 10px;
     box-shadow: 0 8px 32px rgba(0,0,0,0.4), 0 0 20px rgba(255,200,87,0.1);
     transform: translateX(120%);
-    transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+    transition: transform 0.4s var(--ease-bounce);
     pointer-events: none;
 }
 .achievement-toast.ach-show { transform: translateX(0); }
@@ -367,7 +367,7 @@ html.magic-cursor-active, html.magic-cursor-active * { cursor: none !important; 
     font-size: 0.82rem;
     transform: translateX(120%);
     opacity: 0;
-    transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1), opacity var(--dur-mellow);
+    transition: transform 0.4s var(--ease-bounce), opacity var(--dur-mellow);
     pointer-events: auto;
 }
 .toast.toast-show { transform: translateX(0); opacity: 1; }
@@ -435,7 +435,7 @@ html.magic-cursor-active, html.magic-cursor-active * { cursor: none !important; 
     box-shadow: 0 12px 48px rgba(0,0,0,0.5), 0 0 24px rgba(255,200,87,0.1);
     color: var(--text);
     transform: translateY(-10px) scale(0.96);
-    transition: transform var(--dur-mellow) cubic-bezier(0.34, 1.56, 0.64, 1);
+    transition: transform var(--dur-mellow) var(--ease-bounce);
 }
 .confirm-backdrop.confirm-show .confirm-modal { transform: translateY(0) scale(1); }
 .confirm-modal.confirm-warning { border-left-color: #ffb347; }
