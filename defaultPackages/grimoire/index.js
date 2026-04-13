@@ -184,6 +184,11 @@ export default {
             }
         }
 
+        // File-size bail: above this byte count, skip the hljs highlight
+        // pass — just render plain text through the hl-layer so typing
+        // stays snappy. (Setting toggle still wins if user forces off.)
+        const HL_MAX_BYTES = 200 * 1024;
+
         function updateHighlight() {
             if (!$hlCode || !$ta) return;
             if (!settings.liveHighlight) return;
@@ -193,7 +198,8 @@ export default {
             // past the caret so the last empty line still paints.
             const text = $ta.value + '\n';
             $hlCode.textContent = text;
-            if (window.hljs && lang !== 'plaintext') {
+            const tooBig = text.length > HL_MAX_BYTES;
+            if (window.hljs && lang !== 'plaintext' && !tooBig) {
                 $hlCode.className = 'language-' + lang;
                 $hlCode.removeAttribute('data-highlighted');
                 try { window.hljs.highlightElement($hlCode); } catch {}
@@ -280,7 +286,11 @@ export default {
             $activeLine.style.transform = `translateY(${padY + lineIdx * lineH - $ta.scrollTop}px)`;
         }
 
-        function onEditEvent() { updateGutter(); updateActiveLine(); }
+        // Content-change events (input) reshape the gutter (line count,
+        // wrap boundaries can change). Caret/scroll events only move the
+        // highlight + the scroll-synced transforms, which is cheap.
+        function onContentChange() { updateGutter(); updateActiveLine(); syncHLScroll(); }
+        function onCaretChange()   { updateActiveLine(); syncHLScroll(); }
 
         // ── Body rendering ──────────────────────────
         async function renderBody() {
@@ -323,13 +333,13 @@ export default {
                 $ta.addEventListener('input', () => {
                     d.content = $ta.value;
                     d.updatedAt = Date.now();
-                    onEditEvent();
+                    onContentChange();
                     scheduleHighlight();
                     scheduleSave();
                 });
-                $ta.addEventListener('keyup',    onEditEvent);
-                $ta.addEventListener('click',    onEditEvent);
-                $ta.addEventListener('scroll',   () => { onEditEvent(); syncHLScroll(); });
+                $ta.addEventListener('keyup',  onCaretChange);
+                $ta.addEventListener('click',  onCaretChange);
+                $ta.addEventListener('scroll', syncHLScroll);
                 $ta.addEventListener('keydown', (e) => {
                     if (e.key === 'Tab') {
                         e.preventDefault();
@@ -338,7 +348,7 @@ export default {
                         $ta.value = $ta.value.slice(0, start) + ins + $ta.value.slice(end);
                         $ta.selectionStart = $ta.selectionEnd = start + ins.length;
                         d.content = $ta.value;
-                        onEditEvent();
+                        onContentChange();
                         scheduleHighlight();
                         scheduleSave();
                     }
