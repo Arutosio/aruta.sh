@@ -9,7 +9,7 @@ body {
     overflow: auto;
 }
 .wrap { max-width: 520px; margin: 0 auto; display: flex; flex-direction: column; gap: 0.9rem; }
-h1 { margin: 0; text-align: center; font-size: 1.3rem; color: var(--g); letter-spacing: 0.12em; }
+h1 { margin: 0; text-align: center; font-size: var(--text-2xl); color: var(--g); letter-spacing: 0.12em; }
 
 .quick {
     display: grid; grid-template-columns: repeat(7, 1fr);
@@ -22,7 +22,7 @@ h1 { margin: 0; text-align: center; font-size: 1.3rem; color: var(--g); letter-s
     border-radius: var(--radius-md);
     padding: 0.6rem 0;
     font-family: inherit;
-    font-size: 0.85rem;
+    font-size: var(--text-base);
     cursor: pointer;
     transition: transform 0.1s, box-shadow var(--dur-fast);
 }
@@ -39,7 +39,7 @@ h1 { margin: 0; text-align: center; font-size: 1.3rem; color: var(--g); letter-s
     border-radius: var(--radius-md);
     color: #ffe4a0;
     font-family: 'Courier New', monospace;
-    font-size: 1rem;
+    font-size: var(--text-lg);
     padding: 0.55rem 0.8rem;
 }
 .custom input:focus { outline: none; border-color: var(--g); box-shadow: 0 0 8px var(--gold-30); }
@@ -50,7 +50,7 @@ h1 { margin: 0; text-align: center; font-size: 1.3rem; color: var(--g); letter-s
     border-radius: var(--radius-md);
     padding: 0 1.1rem;
     font-family: inherit;
-    font-weight: 700;
+    font-weight: var(--fw-bold);
     cursor: pointer;
 }
 
@@ -65,10 +65,10 @@ h1 { margin: 0; text-align: center; font-size: 1.3rem; color: var(--g); letter-s
     align-items: center;
     gap: 0.3rem;
 }
-.display .spec { font-size: 0.85rem; letter-spacing: 0.1em; opacity: 0.8; }
+.display .spec { font-size: var(--text-base); letter-spacing: 0.1em; opacity: 0.8; }
 .display .total {
     font-size: 3rem;
-    font-weight: 700;
+    font-weight: var(--fw-bold);
     color: var(--g);
     line-height: 1;
     transition: transform var(--dur-snap) ease, color var(--dur-fast) ease;
@@ -76,20 +76,20 @@ h1 { margin: 0; text-align: center; font-size: 1.3rem; color: var(--g); letter-s
 .display.rolling .total { animation: rollSpin 0.4s ease-out; }
 .display.crit  .total { color: #34d399; }
 .display.fumble .total { color: #fb7185; }
-.display .rolls { font-size: 0.8rem; color: var(--p); font-family: 'Courier New', monospace; }
-.display .tag { font-size: 0.85rem; letter-spacing: 0.15em; }
+.display .rolls { font-size: var(--text-sm); color: var(--p); font-family: 'Courier New', monospace; }
+.display .tag { font-size: var(--text-base); letter-spacing: 0.15em; }
 @keyframes rollSpin {
     0%   { transform: scale(0.5) rotate(-180deg); opacity: 0; }
     60%  { transform: scale(1.15) rotate(15deg); opacity: 1; }
     100% { transform: scale(1) rotate(0); }
 }
 
-h2 { font-size: 0.85rem; margin: 0.5rem 0 0; letter-spacing: 0.1em; color: var(--p); text-transform: uppercase; }
+h2 { font-size: var(--text-base); margin: 0.5rem 0 0; letter-spacing: 0.1em; color: var(--p); text-transform: uppercase; }
 .history {
     list-style: none; padding: 0; margin: 0;
     max-height: 160px; overflow-y: auto;
     font-family: 'Courier New', monospace;
-    font-size: 0.82rem;
+    font-size: var(--text-sm);
     display: flex; flex-direction: column; gap: 0.2rem;
 }
 .history li {
@@ -100,7 +100,7 @@ h2 { font-size: 0.85rem; margin: 0.5rem 0 0; letter-spacing: 0.1em; color: var(-
     display: flex; justify-content: space-between;
 }
 .history li .spec  { color: var(--p); }
-.history li .total { color: var(--g); font-weight: 700; }
+.history li .total { color: var(--g); font-weight: var(--fw-bold); }
 .clear-btn {
     align-self: flex-end;
     background: transparent;
@@ -108,7 +108,7 @@ h2 { font-size: 0.85rem; margin: 0.5rem 0 0; letter-spacing: 0.1em; color: var(-
     border: 1px solid rgba(251, 113, 133, 0.3);
     border-radius: var(--radius-sm);
     padding: 0.25rem 0.7rem;
-    font-size: 0.78rem;
+    font-size: var(--text-sm);
     cursor: pointer;
     font-family: inherit;
 }

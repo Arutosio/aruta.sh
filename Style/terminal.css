@@ -21,14 +21,14 @@
     height: 100%;
     min-height: 320px;
     font-family: 'IM Fell English', 'Cinzel', 'Courier New', monospace;
-    font-size: 1rem;
-    font-weight: 600;
+    font-size: var(--text-lg);
+    font-weight: var(--fw-medium);
     letter-spacing: 0.02em;
     color: var(--gold-light, #ffe4a0);
 }
 .term-line { font-family: inherit; }
 /* Keep monospaced alignment for command tables (help, apps, commands) */
-.term-output pre, .term-output code { font-family: 'Courier New', monospace; font-weight: 700; }
+.term-output pre, .term-output code { font-family: 'Courier New', monospace; font-weight: var(--fw-bold); }
 .term-output {
     flex: 1 1 auto;
     overflow-y: auto;
@@ -47,9 +47,9 @@
 .term-success      { color: var(--green); }
 .term-error        { color: var(--red); }
 .term-dim          { color: rgba(232, 232, 240, 0.45); font-style: italic; }
-.term-prompt       { color: var(--gold); font-weight: 700; }
+.term-prompt       { color: var(--gold); font-weight: var(--fw-bold); }
 .term-cmd          { color: var(--purple); }
-.term-key          { color: var(--gold); font-weight: 700; }
+.term-key          { color: var(--gold); font-weight: var(--fw-bold); }
 .term-value        { color: var(--purple); }
 .term-num          { color: #fb923c; }
 .term-str          { color: var(--green); }
@@ -108,8 +108,8 @@
 .perm-header {
     display: flex; align-items: center; gap: 0.8rem; margin-bottom: 0.8rem;
 }
-.perm-icon { font-size: 2rem; }
-.perm-title { font-weight: 700; font-size: 1.05rem; color: var(--gold, #ffc857); }
+.perm-icon { font-size: var(--text-3xl); }
+.perm-title { font-weight: var(--fw-bold); font-size: var(--text-lg); color: var(--gold, #ffc857); }
 .perm-body {
     background: var(--ink-25);
     padding: 0.8rem 1rem;
@@ -136,7 +136,7 @@
 .perm-app-name { color: var(--gold, #ffc857); }
 .perm-app-type {
     margin-left: auto;
-    font-size: 0.75rem;
+    font-size: var(--text-xs);
     text-transform: uppercase;
     opacity: 0.6;
     padding: 0.15rem 0.5rem;
@@ -150,7 +150,7 @@
     border-radius: var(--radius-sm);
     padding: 0.25rem 0.5rem;
     cursor: pointer;
-    font-size: 0.95rem;
+    font-size: var(--text-lg);
 }
 .perm-uninstall:hover { background: rgba(251, 113, 133, 0.15); }
 
@@ -164,9 +164,9 @@
     border-radius: var(--radius-sm);
 }
 .perm-item:hover { background: rgba(255, 255, 255, 0.04); }
-.perm-name { font-weight: 500; }
+.perm-name { font-weight: var(--fw-normal); }
 .perm-state {
-    font-size: 0.78rem;
+    font-size: var(--text-sm);
     text-transform: uppercase;
     padding: 0.15rem 0.5rem;
     border-radius: var(--radius-xs);
@@ -182,7 +182,7 @@
     border-radius: var(--radius-sm);
     padding: 0.25rem 0.6rem;
     cursor: pointer;
-    font-size: 0.8rem;
+    font-size: var(--text-sm);
 }
 .perm-toggle:hover { background: var(--gold-12); }
 .perm-empty, .perm-empty-small {
@@ -200,7 +200,7 @@
     border-radius: var(--radius-md);
     margin-bottom: 1rem;
     font-family: 'Courier New', monospace;
-    font-size: 0.85rem;
+    font-size: var(--text-base);
     line-height: 1.5;
     white-space: pre-wrap;
     color: var(--gold-light, #ffe4a0);
@@ -231,7 +231,7 @@
     text-align: center;
     animation: dropPulse 1.4s ease-in-out infinite;
 }
-.install-dropzone-inner > span { display: block; margin-top: 0.6rem; font-size: 1.1rem; }
+.install-dropzone-inner > span { display: block; margin-top: 0.6rem; font-size: var(--text-xl); }
 @keyframes dropPulse {
     0%, 100% { transform: scale(1); opacity: 0.95; }
     50%      { transform: scale(1.03); opacity: 1; }
@@ -247,7 +247,7 @@
 
 /* Mobile */
 @media (max-width: 640px) {
-    .install-dropzone-inner { padding: 2rem; font-size: 1.1rem; }
+    .install-dropzone-inner { padding: 2rem; font-size: var(--text-xl); }
     .perm-item { grid-template-columns: 1fr auto; }
     .perm-state { grid-column: 2; }
     .perm-toggle { grid-column: 1 / -1; justify-self: end; }

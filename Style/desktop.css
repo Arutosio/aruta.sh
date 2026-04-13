@@ -146,9 +146,9 @@
     filter: drop-shadow(0 0 6px var(--gold-20));
 }
 .desktop-icon-label {
-    font-size: 0.75rem;
+    font-size: var(--text-xs);
     color: var(--text);
-    font-weight: 700;
+    font-weight: var(--fw-bold);
     letter-spacing: 0.06em;
     text-shadow: 0 1px 3px var(--ink-80);
     text-align: center;
@@ -281,7 +281,7 @@
  * ──────────────────────────────── */
 .char-name {
     font-family: 'IM Fell English', Georgia, serif;
-    font-size: clamp(2.2rem, 5.5vw, 3.6rem); font-weight: 900;
+    font-size: clamp(2.2rem, 5.5vw, 3.6rem); font-weight: var(--fw-heavy);
     color: var(--gold-light); letter-spacing: 0.04em; line-height: 1.1; margin-bottom: 10px;
     text-shadow: 0 0 28px rgba(192,200,224,0.45), 0 2px 6px var(--ink-60);
     transition: color var(--dur-base);
@@ -315,7 +315,7 @@
 }
 .char-class {
     font-family: 'IM Fell English', Georgia, serif;
-    font-size: 0.88rem; font-weight: 700; letter-spacing: 0.18em;
+    font-size: var(--text-base); font-weight: var(--fw-bold); letter-spacing: 0.18em;
     color: var(--purple); margin-bottom: 22px; transition: color var(--dur-base);
     animation: classFlicker 4s ease-in-out infinite;
 }

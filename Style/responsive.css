@@ -16,10 +16,10 @@
     .taskbar { height: 40px; padding: 0 8px; }
     .start-text { display: none; }
     .taskbar-start { width: 32px; height: 28px; margin: auto 0; padding: 0; }
-    .taskbar-start .start-icon { font-size: 1.1rem; }
+    .taskbar-start .start-icon { font-size: var(--text-xl); }
     .tray-btn { width: 30px; height: 26px; }
     .taskbar-tabs { padding: 0 4px; }
-    .taskbar-tab { padding: 0 8px; font-size: 0.75rem; }
+    .taskbar-tab { padding: 0 8px; font-size: var(--text-xs); }
     .os-window:not(.win-maximized) {
         width: calc(100vw - 24px);
         max-height: calc(100vh - 80px);
@@ -32,7 +32,7 @@
     .desktop-hero .magic-circle-frame { width: min(300px, 80vw); height: min(300px, 80vw); }
     .hud-date      { display: none; }
     .hud-clock-sep { display: none; }
-    .hud-time  { font-size: 0.9rem; }
+    .hud-time  { font-size: var(--text-md); }
     .projects-grid { grid-template-columns: 1fr; }
     .portrait-img-wrap  { width: 188px; height: 188px; }
     .interest-grid { grid-template-columns: 1fr; }
@@ -58,7 +58,7 @@
 @media (max-width: 420px) {
     .taskbar-tab span:not(.taskbar-tab-close) { display: none; }
     .taskbar-clock { display: none; }
-    .char-name  { font-size: 2rem; }
+    .char-name  { font-size: var(--text-3xl); }
     .portrait-img-wrap  { width: 162px; height: 162px; }
 }
 

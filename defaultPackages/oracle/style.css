@@ -38,7 +38,7 @@ blockquote {
 }
 blockquote.loading { opacity: 0.3; }
 .author {
-    font-size: 0.95rem;
+    font-size: var(--text-lg);
     color: var(--p);
     letter-spacing: 0.1em;
     text-transform: uppercase;
@@ -50,11 +50,11 @@ button {
     border-radius: var(--radius-md);
     padding: 0.6rem 1.4rem;
     font-family: inherit;
-    font-size: 0.9rem;
+    font-size: var(--text-md);
     letter-spacing: 0.08em;
     cursor: pointer;
     transition: transform 0.12s, box-shadow var(--dur-fast);
 }
 button:hover  { box-shadow: 0 0 14px var(--gold-40); }
 button:active { transform: scale(0.97); }
-.err { color: #fb7185; font-size: 0.85rem; }
+.err { color: #fb7185; font-size: var(--text-base); }
