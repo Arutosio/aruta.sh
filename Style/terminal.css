@@ -3,10 +3,18 @@
  * ╚══════════════════════════════════════════════════════════╝ */
 
 /* ── Terminal window ────────────────────────────────────── */
+#win-terminal {
+    height: min(520px, calc(100dvh - 120px));
+    width: min(720px, calc(100vw - 80px));
+}
 #win-terminal .win-content {
     padding: 0;
     background: rgba(8, 6, 18, 0.92);
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow: hidden;
 }
+#win-terminal.win-maximized { height: auto; }
 .term-screen {
     display: flex;
     flex-direction: column;
@@ -67,10 +75,33 @@
 }
 .term-input::placeholder { color: rgba(255, 228, 160, 0.4); }
 
-/* Custom-app windows: full-bleed iframe content */
-.os-window-custom .win-content { padding: 0; overflow: hidden; }
-.custom-app-content { width: 100%; height: 100%; min-height: 320px; }
-.sandbox-iframe { display: block; }
+/* Custom-app windows: full-bleed iframe content
+   The built-in .os-window has no explicit height — its children drive it.
+   For an iframe-based app that wants "height:100%" of its container, we
+   give the custom window an explicit height and let the content area grow
+   via flex: 1 so the iframe fills the remaining space below the titlebar. */
+.os-window.os-window-custom {
+    height: min(640px, calc(100dvh - 120px));
+    width: min(720px, calc(100vw - 80px));
+}
+.os-window-custom .win-content {
+    padding: 0;
+    overflow: hidden;
+    flex: 1 1 auto;
+    min-height: 0;
+    display: flex;
+}
+.custom-app-content {
+    flex: 1 1 auto;
+    width: 100%;
+    min-height: 0;
+    display: flex;
+}
+.sandbox-iframe { display: block; flex: 1 1 auto; width: 100%; height: 100%; }
+
+/* When maximized the window fills the viewport below the taskbar —
+   ensure the iframe follows along without fighting the flex chain. */
+.os-window-custom.win-maximized { height: auto; }
 
 /* ── Permission modal ───────────────────────────────────── */
 .perm-modal { max-width: 460px; }
