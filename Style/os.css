@@ -8,11 +8,11 @@
  * and clock. Glass-morphism with backdrop blur.
  * ──────────────────────────────── */
 .taskbar {
-    position: fixed; top: 12px; left: 12px; right: 12px; z-index: 100;
+    position: fixed; top: 12px; left: 12px; right: 12px; z-index: var(--z-taskbar);
     display: flex; align-items: stretch; justify-content: space-between;
     padding: 0 12px; height: 44px;
     background: var(--hud-bg);
-    backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px);
+    backdrop-filter: blur(var(--blur-glass)); -webkit-backdrop-filter: blur(var(--blur-glass));
     border: 1.5px solid var(--card-border);
     border-radius: 12px;
     box-shadow: 0 4px 24px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.04), inset 0 -1px 0 var(--gold-06);
@@ -107,7 +107,7 @@
 /* § FIREFLY PARTICLES (on nav buttons)
  * ──────────────────────────────── */
 .firefly {
-    position: absolute; left: 0; top: 0; pointer-events: none; z-index: 1;
+    position: absolute; left: 0; top: 0; pointer-events: none; z-index: var(--z-fog);
     width: 4px; height: 4px; border-radius: 50%;
     background: #8aaf30;
     box-shadow: 0 0 4px #8aaf30, 0 0 8px rgba(138,175,48,0.6), 0 0 14px rgba(120,160,40,0.3);
@@ -162,7 +162,7 @@
 
 /* Theme transition ripple */
 .theme-ripple {
-    position: fixed; z-index: 9990; pointer-events: none;
+    position: fixed; z-index: var(--z-ripple); pointer-events: none;
     width: 20px; height: 20px; border-radius: 50%;
     background: var(--bg);
     transform: translate(-50%, -50%) scale(0);
@@ -218,11 +218,11 @@
     top: 58px; left: 12px;
     width: 300px;
     background: var(--hud-bg);
-    backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px);
+    backdrop-filter: blur(var(--blur-deep)); -webkit-backdrop-filter: blur(var(--blur-deep));
     border: 1px solid var(--card-border);
     border-radius: 12px;
     box-shadow: 0 8px 40px rgba(0,0,0,0.5), 0 0 1px rgba(255,255,255,0.05);
-    z-index: 200;
+    z-index: var(--z-menu);
     animation: startMenuOpen var(--dur-quick) var(--ease-bounce) forwards;
     overflow: hidden;
 }
@@ -302,11 +302,11 @@
     border: 1px solid var(--card-border);
     border-radius: 10px;
     background: var(--hud-bg);
-    backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px);
+    backdrop-filter: blur(var(--blur-deep)); -webkit-backdrop-filter: blur(var(--blur-deep));
     box-shadow: 0 8px 40px rgba(0,0,0,0.5), 0 0 1px rgba(255,255,255,0.05);
     display: flex;
     flex-direction: column;
-    z-index: 10;
+    z-index: var(--z-window);
     animation: windowOpen var(--dur-mellow) var(--ease-bounce) forwards;
     overflow: hidden;
 }
@@ -564,11 +564,11 @@
     position: fixed; top: 58px; right: 12px;
     width: 320px;
     background: var(--hud-bg);
-    backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px);
+    backdrop-filter: blur(var(--blur-deep)); -webkit-backdrop-filter: blur(var(--blur-deep));
     border: 1px solid var(--card-border);
     border-radius: 10px;
     box-shadow: 0 8px 40px rgba(0,0,0,0.4);
-    z-index: 200;
+    z-index: var(--z-menu);
     animation: startMenuOpen var(--dur-quick) var(--ease-bounce) forwards;
     overflow: hidden;
 }

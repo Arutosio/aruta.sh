@@ -71,6 +71,11 @@
     --ease-bounce: cubic-bezier(0.34, 1.56, 0.64, 1);
     --ease-standard: cubic-bezier(0.22, 1, 0.36, 1);
 
+    /* Glassmorphism blur depths */
+    --blur-subtle: 6px;
+    --blur-glass:  18px;
+    --blur-deep:   24px;
+
     /* Transition durations (by how quickly they *feel*):
        snap  = micro-feedback     (0.15s)
        fast  = UI hover/state     (0.2s)
@@ -120,8 +125,8 @@
     background: var(--hud-bg);
     border: var(--border-card);
     border-radius: var(--radius-lg);
-    backdrop-filter: blur(18px);
-    -webkit-backdrop-filter: blur(18px);
+    backdrop-filter: blur(var(--blur-glass));
+    -webkit-backdrop-filter: blur(var(--blur-glass));
 }
 .arcane-input {
     background: rgba(0, 0, 0, 0.3);
@@ -187,7 +192,7 @@ body {
  * ──────────────────────────────── */
 #rune-bg {
     position: fixed; inset: 0;
-    z-index: 0; pointer-events: none;
+    z-index: var(--z-bg); pointer-events: none;
     will-change: contents;
 }
 
@@ -197,7 +202,7 @@ body {
 html.magic-cursor-active, html.magic-cursor-active * { cursor: none !important; }
 #magic-cursor {
     position: fixed; top: 0; left: 0;
-    pointer-events: none; z-index: 99999;
+    pointer-events: none; z-index: var(--z-cursor);
     will-change: transform;
     transform: translate(-999px, -999px);
 }
@@ -223,7 +228,7 @@ html.magic-cursor-active, html.magic-cursor-active * { cursor: none !important; 
 /* § MAIN APP
  * ──────────────────────────────── */
 #app {
-    position: relative; z-index: 2; height: 100dvh;
+    position: relative; z-index: var(--z-app); height: 100dvh;
     display: block;
     padding: 0; overflow: hidden;
     transition: opacity var(--dur-base);
@@ -240,7 +245,7 @@ html.magic-cursor-active, html.magic-cursor-active * { cursor: none !important; 
 #summon-canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
 #summon-overlay {
     position: fixed; inset: 0; background: #050310;
-    z-index: 999; display: flex; align-items: center; justify-content: center;
+    z-index: var(--z-summon); display: flex; align-items: center; justify-content: center;
     transition: opacity 1.2s var(--ease-standard);
 }
 #summon-overlay.fade-out { opacity: 0; pointer-events: none; }
@@ -251,7 +256,7 @@ html.magic-cursor-active, html.magic-cursor-active * { cursor: none !important; 
     position: absolute; inset: 0;
     display: flex; flex-direction: column;
     align-items: center; justify-content: center;
-    gap: 24px; z-index: 2; pointer-events: none;
+    gap: 24px; z-index: var(--z-app); pointer-events: none;
 }
 .summon-logo {
     font-family: 'IM Fell English', Georgia, serif;
@@ -289,7 +294,7 @@ html.magic-cursor-active, html.magic-cursor-active * { cursor: none !important; 
 /* § CLICK SPELL BURST
  * ──────────────────────────────── */
 .spell-burst {
-    position: fixed; pointer-events: none; z-index: 50;
+    position: fixed; pointer-events: none; z-index: var(--z-spell);
     width: 4px; height: 4px; border-radius: 50%;
     background: var(--gold);
     box-shadow: 0 0 6px var(--gold), 0 0 12px rgba(167,139,250,0.5);
@@ -309,11 +314,11 @@ html.magic-cursor-active, html.magic-cursor-active * { cursor: none !important; 
 /* § ACHIEVEMENT TOASTS
  * ──────────────────────────────── */
 .achievement-toast {
-    position: fixed; bottom: 20px; right: 20px; z-index: 9990;
+    position: fixed; bottom: 20px; right: 20px; z-index: var(--z-ripple);
     display: flex; align-items: center; gap: 12px;
     padding: 14px 20px;
     background: var(--hud-bg);
-    backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px);
+    backdrop-filter: blur(var(--blur-glass)); -webkit-backdrop-filter: blur(var(--blur-glass));
     border: 1px solid var(--gold);
     border-radius: 10px;
     box-shadow: 0 8px 32px rgba(0,0,0,0.4), 0 0 20px rgba(255,200,87,0.1);
@@ -359,7 +364,7 @@ html.magic-cursor-active, html.magic-cursor-active * { cursor: none !important; 
 /* § TOAST NOTIFICATIONS — arcane themed popups
  * ──────────────────────────────── */
 .toast-container {
-    position: fixed; bottom: 20px; right: 20px; z-index: 9995;
+    position: fixed; bottom: 20px; right: 20px; z-index: var(--z-toast);
     display: flex; flex-direction: column-reverse; gap: 10px;
     pointer-events: none;
     max-width: min(360px, calc(100vw - 40px));
@@ -369,7 +374,7 @@ html.magic-cursor-active, html.magic-cursor-active * { cursor: none !important; 
     display: flex; align-items: center; gap: 12px;
     padding: 12px 18px 12px 16px;
     background: var(--hud-bg);
-    backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px);
+    backdrop-filter: blur(var(--blur-glass)); -webkit-backdrop-filter: blur(var(--blur-glass));
     border: 1px solid var(--card-border);
     border-left: 3px solid var(--gold);
     border-radius: 10px;
@@ -429,10 +434,10 @@ html.magic-cursor-active, html.magic-cursor-active * { cursor: none !important; 
 /* § CONFIRM MODAL — themed dialog
  * ──────────────────────────────── */
 .confirm-backdrop {
-    position: fixed; inset: 0; z-index: 9998;
+    position: fixed; inset: 0; z-index: var(--z-modal);
     display: flex; align-items: center; justify-content: center;
     background: rgba(6, 4, 16, 0.55);
-    backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
+    backdrop-filter: blur(var(--blur-subtle)); -webkit-backdrop-filter: blur(var(--blur-subtle));
     opacity: 0; transition: opacity var(--dur-quick);
 }
 .confirm-backdrop.confirm-show { opacity: 1; }
