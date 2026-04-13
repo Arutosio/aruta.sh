@@ -124,6 +124,19 @@ export default {
             $editor.classList.toggle('opt-wrap',       settings.wrap);
             $paper.classList.toggle('opt-grid',        settings.grid);
             $ta.style.tabSize = settings.tabWidth;
+            // When wrap is on the textarea reserves a scrollbar gutter; the
+            // hl-layer has to mirror that padding so both wrap at the same x.
+            // Measure after the class toggle so offsetWidth reflects the
+            // overflow-y: scroll rule we just enabled.
+            if (settings.wrap) {
+                requestAnimationFrame(() => {
+                    const sbw = $ta.offsetWidth - $ta.clientWidth;
+                    $editor.style.setProperty('--sbw', sbw + 'px');
+                    updateGutter();
+                });
+            } else {
+                $editor.style.setProperty('--sbw', '0px');
+            }
         }
 
         function updateHighlight() {

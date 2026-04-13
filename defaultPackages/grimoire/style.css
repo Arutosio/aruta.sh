@@ -219,6 +219,9 @@ body {
 .editor.opt-wrap .hl-layer {
     white-space: pre-wrap;
     word-wrap: break-word;
+    /* The textarea reserves scrollbar space (see .opt-wrap textarea rule);
+       we shadow-reserve the same gutter here so both wrap at the same x. */
+    padding-right: calc(var(--ed-pad-x) + var(--sbw, 0px));
 }
 .editor .hl-layer code {
     font-family: inherit;
@@ -247,7 +250,10 @@ body {
 .editor.opt-wrap textarea {
     white-space: pre-wrap;
     word-wrap: break-word;
-    overflow-y: auto;
+    /* Force the vertical scrollbar to always occupy its gutter so the
+       textarea's wrap width is constant — see .opt-wrap .hl-layer for
+       the matching shadow-reservation on the overlay. */
+    overflow-y: scroll;
     overflow-x: hidden;
 }
 .editor textarea::selection { background: rgba(255, 200, 87, 0.3); color: transparent; }
