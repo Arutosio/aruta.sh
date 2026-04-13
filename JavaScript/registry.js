@@ -165,6 +165,29 @@ function renderStartMenuItems() {
 }
 
 async function saveManifest(manifest, files) {
+    // Detect update: if the id is already known and anything about the
+    // iframe-bound config changed (version, sandbox policy, entry, type),
+    // tear down the live iframe so the next openWindow remounts with the
+    // fresh manifest. The sandbox attribute can't be edited after insertion,
+    // so without this the user would keep seeing the old sandboxed app.
+    const previous = _manifests.get(manifest.id);
+    const isUpdate = !!previous;
+    const ifameShapeChanged = isUpdate && (
+        previous.version    !== manifest.version    ||
+        previous.allowOrigin !== manifest.allowOrigin ||
+        previous.entry      !== manifest.entry      ||
+        previous.type       !== manifest.type
+    );
+    if (ifameShapeChanged) {
+        try { window.sandbox?.unmount(manifest.id); } catch {}
+        // If the window is currently visible, close it — better than leaving
+        // the user staring at an empty frame. They'll reopen to get fresh.
+        const win = document.getElementById('win-' + manifest.id);
+        if (win && win.style.display !== 'none' && typeof closeWindow === 'function') {
+            closeWindow(manifest.id);
+        }
+    }
+
     const db = await openDB();
     await new Promise((res, rej) => {
         const t = tx(db, ['manifests', 'files'], 'readwrite');

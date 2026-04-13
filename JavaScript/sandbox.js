@@ -190,6 +190,7 @@ async function mountApp(appId) {
         ? 'allow-scripts allow-same-origin'
         : 'allow-scripts';
     iframe.setAttribute('sandbox', sandboxAttr);
+    console.debug('[sandbox] mounted', appId, 'with sandbox=', sandboxAttr);
     iframe.style.cssText = 'width:100%;height:100%;border:0;background:transparent;';
     iframe.srcdoc = IFRAME_BOOT;
     content.appendChild(iframe);
