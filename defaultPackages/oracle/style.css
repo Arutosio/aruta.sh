@@ -55,6 +55,6 @@ button {
     cursor: pointer;
     transition: transform 0.12s, box-shadow var(--dur-fast);
 }
-button:hover  { box-shadow: 0 0 14px rgba(255, 200, 87, 0.4); }
+button:hover  { box-shadow: 0 0 14px var(--gold-40); }
 button:active { transform: scale(0.97); }
 .err { color: #fb7185; font-size: 0.85rem; }

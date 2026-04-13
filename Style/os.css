@@ -15,7 +15,7 @@
     backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px);
     border: 1.5px solid var(--card-border);
     border-radius: 12px;
-    box-shadow: 0 4px 24px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.04), inset 0 -1px 0 rgba(255, 200, 87, 0.06);
+    box-shadow: 0 4px 24px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.04), inset 0 -1px 0 var(--gold-06);
     transition: background var(--dur-base), border-color var(--dur-base);
 }
 .taskbar-left  { display: flex; align-items: stretch; gap: 0; flex-shrink: 0; }
@@ -24,8 +24,8 @@
 .taskbar-start {
     display: flex; align-items: center; justify-content: center;
     width: 34px; height: 28px; margin: auto 0; padding: 0;
-    background: rgba(255, 200, 87, 0.12);
-    border: 1px solid rgba(255, 200, 87, 0.35);
+    background: var(--gold-12);
+    border: 1px solid var(--gold-35);
     color: var(--gold); cursor: pointer;
     font-family: var(--font-display);
     transition: background var(--dur-fast), color var(--dur-fast), border-color var(--dur-fast), box-shadow var(--dur-fast);
@@ -33,18 +33,18 @@
 }
 .taskbar-start .start-icon {
     font-size: 1.1rem;
-    text-shadow: 0 0 8px rgba(255, 200, 87, 0.4);
+    text-shadow: 0 0 8px var(--gold-40);
     line-height: 1;
 }
 .taskbar-start:hover {
-    background: rgba(255, 200, 87, 0.12);
-    border-color: rgba(255, 200, 87, 0.3);
-    box-shadow: 0 0 8px rgba(255, 200, 87, 0.1);
+    background: var(--gold-12);
+    border-color: var(--gold-30);
+    box-shadow: 0 0 8px var(--gold-10);
 }
 .taskbar-start.start-open {
-    background: rgba(255, 200, 87, 0.15);
+    background: var(--gold-15);
     border-color: var(--gold);
-    box-shadow: 0 0 12px rgba(255, 200, 87, 0.15);
+    box-shadow: 0 0 12px var(--gold-15);
 }
 .start-icon {
     font-size: 1.2rem;
@@ -59,16 +59,16 @@
     width: 34px; height: 28px; margin: auto 1px;
     display: flex; align-items: center; justify-content: center;
     color: var(--gold); font-size: 0.9rem;
-    background: rgba(255, 200, 87, 0.1);
-    border: 1px solid rgba(255, 200, 87, 0.25);
+    background: var(--gold-10);
+    border: 1px solid var(--gold-25);
     border-radius: 6px; cursor: pointer;
     transition: color var(--dur-fast), background var(--dur-fast), border-color var(--dur-fast), box-shadow var(--dur-fast);
 }
 .tray-btn:hover {
     color: var(--gold);
-    background: rgba(255, 200, 87, 0.1);
-    border-color: rgba(255, 200, 87, 0.25);
-    box-shadow: 0 0 6px rgba(255,200,87,0.1);
+    background: var(--gold-10);
+    border-color: var(--gold-25);
+    box-shadow: 0 0 6px var(--gold-10);
 }
 /* Tray buttons with an inline text label next to the icon.
    Uses width:max-content so the button always fits icon + gap +
@@ -195,7 +195,7 @@
 }
 .taskbar-tab:hover {
     color: var(--text);
-    background: rgba(255,200,87,0.04);
+    background: var(--gold-04);
 }
 .taskbar-tab.tab-active {
     color: var(--gold);
@@ -242,7 +242,7 @@
 .start-logo {
     font-family: var(--font-display);
     font-size: 2rem; color: var(--gold);
-    text-shadow: 0 0 15px rgba(255,200,87,0.3);
+    text-shadow: 0 0 15px var(--gold-30);
 }
 .start-header-text {
     display: flex; flex-direction: column; gap: 2px;
@@ -272,7 +272,7 @@
     width: 100%;
 }
 .start-item:hover, .start-action:hover {
-    background: rgba(255, 200, 87, 0.08);
+    background: var(--gold-08);
     color: var(--gold);
 }
 .start-divider {
@@ -315,8 +315,8 @@
     user-select: none;
 }
 .os-window.win-focused {
-    box-shadow: 0 8px 40px rgba(0,0,0,0.5), 0 0 20px rgba(255,200,87,0.08);
-    border-color: rgba(255, 200, 87, 0.2);
+    box-shadow: 0 8px 40px rgba(0,0,0,0.5), 0 0 20px var(--gold-08);
+    border-color: var(--gold-20);
 }
 
 @keyframes windowOpen {
@@ -363,7 +363,7 @@
     transition: background var(--dur-snap), color var(--dur-snap);
 }
 .win-btn:hover {
-    background: rgba(255, 200, 87, 0.1);
+    background: var(--gold-10);
     color: var(--gold);
 }
 .win-close:hover {
@@ -426,11 +426,11 @@
     white-space: nowrap;
 }
 .settings-cat:hover {
-    background: rgba(255,200,87,0.06);
+    background: var(--gold-06);
     color: var(--text);
 }
 .settings-cat.active {
-    background: rgba(255,200,87,0.1);
+    background: var(--gold-10);
     color: var(--gold);
     border-left: 2px solid var(--gold);
 }
@@ -489,7 +489,7 @@
 .settings-range::-webkit-slider-thumb {
     -webkit-appearance: none; width: 16px; height: 16px;
     background: var(--gold); border-radius: 50%; cursor: pointer;
-    box-shadow: 0 0 6px rgba(255,200,87,0.3);
+    box-shadow: 0 0 6px var(--gold-30);
 }
 .settings-range-value {
     font-size: 0.8rem; color: var(--gold); font-weight: 700;

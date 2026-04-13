@@ -59,7 +59,7 @@
     display: flex;
     align-items: center;
     padding: 0.5rem 1rem 0.9rem;
-    border-top: 1px solid rgba(255, 200, 87, 0.18);
+    border-top: 1px solid var(--gold-18);
     background: rgba(0, 0, 0, 0.3);
 }
 .term-input {
@@ -124,7 +124,7 @@
 /* ── Settings → Permessi page ───────────────────────────── */
 #settings-perms-list { display: flex; flex-direction: column; gap: 0.8rem; }
 .perm-app {
-    border: 1px solid rgba(255, 200, 87, 0.22);
+    border: 1px solid var(--gold-22);
     border-radius: 12px;
     padding: 0.85rem 1rem;
     background: rgba(255, 255, 255, 0.025);
@@ -140,7 +140,7 @@
     text-transform: uppercase;
     opacity: 0.6;
     padding: 0.15rem 0.5rem;
-    border: 1px solid rgba(255, 200, 87, 0.3);
+    border: 1px solid var(--gold-30);
     border-radius: 6px;
 }
 .perm-uninstall {
@@ -174,17 +174,17 @@
 }
 .perm-state-granted { background: rgba(52, 211, 153, 0.18); color: var(--green); }
 .perm-state-denied  { background: rgba(251, 113, 133, 0.18); color: var(--red); }
-.perm-state-ask     { background: rgba(167, 139, 250, 0.18); color: #c4b5fd; }
+.perm-state-ask     { background: var(--purple-18); color: #c4b5fd; }
 .perm-toggle {
     background: transparent;
-    border: 1px solid rgba(255, 200, 87, 0.4);
+    border: 1px solid var(--gold-40);
     color: var(--gold, #ffc857);
     border-radius: 6px;
     padding: 0.25rem 0.6rem;
     cursor: pointer;
     font-size: 0.8rem;
 }
-.perm-toggle:hover { background: rgba(255, 200, 87, 0.12); }
+.perm-toggle:hover { background: var(--gold-12); }
 .perm-empty, .perm-empty-small {
     text-align: center;
     padding: 1rem;
@@ -227,7 +227,7 @@
     padding: 3rem 4rem;
     font-size: 1.5rem;
     color: var(--gold-light, #ffe4a0);
-    background: rgba(255, 200, 87, 0.06);
+    background: var(--gold-06);
     text-align: center;
     animation: dropPulse 1.4s ease-in-out infinite;
 }

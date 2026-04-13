@@ -135,7 +135,7 @@
     min-width: 80px;
 }
 .desktop-icon:hover {
-    background: rgba(255, 200, 87, 0.06);
+    background: var(--gold-06);
     transform: scale(1.05);
 }
 .desktop-icon:active {
@@ -143,7 +143,7 @@
 }
 .desktop-icon-emoji {
     font-size: 2.2rem;
-    filter: drop-shadow(0 0 6px rgba(255,200,87,0.2));
+    filter: drop-shadow(0 0 6px var(--gold-20));
 }
 .desktop-icon-label {
     font-size: 0.75rem;

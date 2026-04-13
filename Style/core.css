@@ -32,12 +32,23 @@
     --emerald:#34d399;
 
     /* Brand opacity ramps — auto-track the active theme via color-mix */
+    --gold-04:   color-mix(in srgb, var(--gold)  4%, transparent);
+    --gold-06:   color-mix(in srgb, var(--gold)  6%, transparent);
     --gold-08:   color-mix(in srgb, var(--gold)  8%, transparent);
+    --gold-10:   color-mix(in srgb, var(--gold) 10%, transparent);
+    --gold-12:   color-mix(in srgb, var(--gold) 12%, transparent);
     --gold-15:   color-mix(in srgb, var(--gold) 15%, transparent);
+    --gold-18:   color-mix(in srgb, var(--gold) 18%, transparent);
+    --gold-20:   color-mix(in srgb, var(--gold) 20%, transparent);
+    --gold-22:   color-mix(in srgb, var(--gold) 22%, transparent);
     --gold-25:   color-mix(in srgb, var(--gold) 25%, transparent);
+    --gold-28:   color-mix(in srgb, var(--gold) 28%, transparent);
+    --gold-30:   color-mix(in srgb, var(--gold) 30%, transparent);
     --gold-35:   color-mix(in srgb, var(--gold) 35%, transparent);
+    --gold-40:   color-mix(in srgb, var(--gold) 40%, transparent);
     --gold-50:   color-mix(in srgb, var(--gold) 50%, transparent);
     --purple-15: color-mix(in srgb, var(--purple) 15%, transparent);
+    --purple-18: color-mix(in srgb, var(--purple) 18%, transparent);
     --purple-25: color-mix(in srgb, var(--purple) 25%, transparent);
 
     /* Radii */

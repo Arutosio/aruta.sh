@@ -26,7 +26,7 @@ h1 { margin: 0; text-align: center; font-size: 1.3rem; color: var(--g); letter-s
     cursor: pointer;
     transition: transform 0.1s, box-shadow var(--dur-fast);
 }
-.quick button:hover  { box-shadow: 0 0 10px rgba(255, 200, 87, 0.35); }
+.quick button:hover  { box-shadow: 0 0 10px var(--gold-35); }
 .quick button:active { transform: scale(0.95); }
 
 .custom {
@@ -35,14 +35,14 @@ h1 { margin: 0; text-align: center; font-size: 1.3rem; color: var(--g); letter-s
 .custom input {
     flex: 1;
     background: rgba(0,0,0,0.3);
-    border: 1px solid rgba(255, 200, 87, 0.35);
+    border: 1px solid var(--gold-35);
     border-radius: 8px;
     color: #ffe4a0;
     font-family: 'Courier New', monospace;
     font-size: 1rem;
     padding: 0.55rem 0.8rem;
 }
-.custom input:focus { outline: none; border-color: var(--g); box-shadow: 0 0 8px rgba(255, 200, 87, 0.3); }
+.custom input:focus { outline: none; border-color: var(--g); box-shadow: 0 0 8px var(--gold-30); }
 .custom button {
     background: var(--g);
     color: var(--bg);
@@ -56,7 +56,7 @@ h1 { margin: 0; text-align: center; font-size: 1.3rem; color: var(--g); letter-s
 
 .display {
     background: rgba(0,0,0,0.35);
-    border: 1px solid rgba(255, 200, 87, 0.3);
+    border: 1px solid var(--gold-30);
     border-radius: 12px;
     padding: 1.2rem;
     text-align: center;
@@ -94,7 +94,7 @@ h2 { font-size: 0.85rem; margin: 0.5rem 0 0; letter-spacing: 0.1em; color: var(-
 }
 .history li {
     padding: 0.3rem 0.6rem;
-    border: 1px solid rgba(255, 200, 87, 0.15);
+    border: 1px solid var(--gold-15);
     border-radius: 4px;
     background: rgba(0,0,0,0.2);
     display: flex; justify-content: space-between;
