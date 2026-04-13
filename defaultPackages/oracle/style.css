@@ -34,7 +34,7 @@ blockquote {
     color: #ffe4a0;
     border: none;
     min-height: 3em;
-    transition: opacity 0.3s ease;
+    transition: opacity var(--dur-mellow) ease;
 }
 blockquote.loading { opacity: 0.3; }
 .author {
@@ -53,7 +53,7 @@ button {
     font-size: 0.9rem;
     letter-spacing: 0.08em;
     cursor: pointer;
-    transition: transform 0.12s, box-shadow 0.2s;
+    transition: transform 0.12s, box-shadow var(--dur-fast);
 }
 button:hover  { box-shadow: 0 0 14px rgba(255, 200, 87, 0.4); }
 button:active { transform: scale(0.97); }

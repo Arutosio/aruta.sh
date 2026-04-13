@@ -24,7 +24,7 @@ h1 { margin: 0; text-align: center; font-size: 1.3rem; color: var(--g); letter-s
     font-family: inherit;
     font-size: 0.85rem;
     cursor: pointer;
-    transition: transform 0.1s, box-shadow 0.2s;
+    transition: transform 0.1s, box-shadow var(--dur-fast);
 }
 .quick button:hover  { box-shadow: 0 0 10px rgba(255, 200, 87, 0.35); }
 .quick button:active { transform: scale(0.95); }
@@ -71,7 +71,7 @@ h1 { margin: 0; text-align: center; font-size: 1.3rem; color: var(--g); letter-s
     font-weight: 700;
     color: var(--g);
     line-height: 1;
-    transition: transform 0.15s ease, color 0.2s ease;
+    transition: transform var(--dur-snap) ease, color var(--dur-fast) ease;
 }
 .display.rolling .total { animation: rollSpin 0.4s ease-out; }
 .display.crit  .total { color: #34d399; }

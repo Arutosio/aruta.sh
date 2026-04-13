@@ -130,7 +130,7 @@
     padding: 12px 16px;
     border-radius: 8px;
     cursor: pointer;
-    transition: background 0.2s, transform 0.15s;
+    transition: background var(--dur-fast), transform var(--dur-snap);
     user-select: none;
     min-width: 80px;
 }
@@ -206,7 +206,7 @@
     position: absolute; top: 50%; left: 50%;
     color: var(--mc-color);
     filter: drop-shadow(0 0 6px var(--magic-orb)) drop-shadow(0 0 14px var(--magic-orb));
-    transition: color 0.5s, filter 0.5s, opacity 1.2s ease;
+    transition: color var(--dur-base), filter var(--dur-base), opacity 1.2s ease;
     animation: mcGlowPulse 5s ease-in-out infinite;
     cursor: grab;
     opacity: 0;
@@ -233,7 +233,7 @@
     width: 53%; height: 53%; border-radius: 50%; overflow: hidden;
     border: 2.5px solid var(--gold);
     animation: portraitPulse 4s ease-in-out infinite alternate;
-    transition: border-color 0.5s;
+    transition: border-color var(--dur-base);
 }
 @keyframes portraitPulse {
     from {
@@ -273,7 +273,7 @@
 .portrait-img {
     width: 100%; height: 100%;
     object-fit: cover; object-position: top center;
-    transition: transform 0.5s ease;
+    transition: transform var(--dur-base) ease;
 }
 .portrait-img-wrap:hover .portrait-img { transform: scale(1.06); }
 
@@ -284,7 +284,7 @@
     font-size: clamp(2.2rem, 5.5vw, 3.6rem); font-weight: 900;
     color: var(--gold-light); letter-spacing: 0.04em; line-height: 1.1; margin-bottom: 10px;
     text-shadow: 0 0 28px rgba(192,200,224,0.45), 0 2px 6px rgba(0,0,0,0.6);
-    transition: color 0.5s;
+    transition: color var(--dur-base);
     animation: titleBreathe 6s ease-in-out infinite;
     min-height: 1.2em; /* prevent layout shift during flying letters */
 }
@@ -292,7 +292,7 @@
 .fly-letter {
     will-change: transform, opacity;
     text-shadow: 0 0 14px rgba(110,142,251,0.8), 0 0 30px rgba(110,142,251,0.4);
-    transition: color 0.6s ease, text-shadow 0.6s ease;
+    transition: color var(--dur-slow) ease, text-shadow var(--dur-slow) ease;
 }
 .fly-letter-landed {
     color: var(--gold-light) !important;
@@ -316,7 +316,7 @@
 .char-class {
     font-family: 'IM Fell English', Georgia, serif;
     font-size: 0.88rem; font-weight: 700; letter-spacing: 0.18em;
-    color: var(--purple); margin-bottom: 22px; transition: color 0.5s;
+    color: var(--purple); margin-bottom: 22px; transition: color var(--dur-base);
     animation: classFlicker 4s ease-in-out infinite;
 }
 @keyframes classFlicker {
@@ -328,11 +328,11 @@
 }
 .char-bio {
     font-size: 1.12rem; line-height: 1.90;
-    color: var(--text); opacity: 0.9; margin-bottom: 8px; transition: color 0.5s;
+    color: var(--text); opacity: 0.9; margin-bottom: 8px; transition: color var(--dur-base);
 }
 .cursor {
     display: inline-block; width: 2px; height: 1em;
     background: var(--gold); margin-left: 2px; vertical-align: middle;
-    animation: blinkCursor 0.8s step-end infinite; transition: background 0.5s;
+    animation: blinkCursor 0.8s step-end infinite; transition: background var(--dur-base);
 }
 @keyframes blinkCursor { 50% { opacity: 0; } }

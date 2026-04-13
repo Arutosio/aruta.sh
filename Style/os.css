@@ -16,7 +16,7 @@
     border: 1.5px solid var(--card-border);
     border-radius: 12px;
     box-shadow: 0 4px 24px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.04), inset 0 -1px 0 rgba(255, 200, 87, 0.06);
-    transition: background 0.5s, border-color 0.5s;
+    transition: background var(--dur-base), border-color var(--dur-base);
 }
 .taskbar-left  { display: flex; align-items: stretch; gap: 0; flex-shrink: 0; }
 .taskbar-tray  { display: flex; align-items: stretch; gap: 0; flex-shrink: 0; }
@@ -28,7 +28,7 @@
     border: 1px solid rgba(255, 200, 87, 0.35);
     color: var(--gold); cursor: pointer;
     font-family: var(--font-display);
-    transition: background 0.2s, color 0.2s, border-color 0.2s, box-shadow 0.2s;
+    transition: background var(--dur-fast), color var(--dur-fast), border-color var(--dur-fast), box-shadow var(--dur-fast);
     border-radius: var(--radius-md);
 }
 .taskbar-start .start-icon {
@@ -62,7 +62,7 @@
     background: rgba(255, 200, 87, 0.1);
     border: 1px solid rgba(255, 200, 87, 0.25);
     border-radius: 6px; cursor: pointer;
-    transition: color 0.2s, background 0.2s, border-color 0.2s, box-shadow 0.2s;
+    transition: color var(--dur-fast), background var(--dur-fast), border-color var(--dur-fast), box-shadow var(--dur-fast);
 }
 .tray-btn:hover {
     color: var(--gold);
@@ -116,15 +116,15 @@
     will-change: transform, opacity;
 }
 .firefly.alive { opacity: 1; }
-.firefly.dying { opacity: 0; transition: opacity 0.6s; }
+.firefly.dying { opacity: 0; transition: opacity var(--dur-slow); }
 [data-theme="light"] .firefly {
     background: var(--gold);
     box-shadow: 0 0 4px var(--gold), 0 0 8px rgba(122,78,6,0.6), 0 0 14px rgba(139,28,34,0.3);
 }
 
 /* Clock display */
-.hud-time  { font-size: clamp(1rem, 2.5vw, 1.35rem); font-weight: 900; letter-spacing: 0.04em; line-height: 1; color: var(--gold); transition: color 0.5s; font-variant-numeric: tabular-nums; }
-.hud-date  { font-size: clamp(1rem, 2.5vw, 1.35rem); font-weight: 700; letter-spacing: 0.04em; line-height: 1; color: var(--text-dim); transition: color 0.5s; font-variant-numeric: tabular-nums; }
+.hud-time  { font-size: clamp(1rem, 2.5vw, 1.35rem); font-weight: 900; letter-spacing: 0.04em; line-height: 1; color: var(--gold); transition: color var(--dur-base); font-variant-numeric: tabular-nums; }
+.hud-date  { font-size: clamp(1rem, 2.5vw, 1.35rem); font-weight: 700; letter-spacing: 0.04em; line-height: 1; color: var(--text-dim); transition: color var(--dur-base); font-variant-numeric: tabular-nums; }
 .hud-clock-sep { color: var(--text-faint); font-size: 0.8rem; opacity: 0.4; }
 
 /* Language select */
@@ -134,7 +134,7 @@
     border: none; border-radius: 0; padding: 0 10px;
     cursor: pointer; -webkit-appearance: none; appearance: none;
     align-self: stretch; display: flex; align-items: center;
-    transition: color 0.25s, background 0.25s, text-shadow 0.25s;
+    transition: color var(--dur-quick), background var(--dur-quick), text-shadow var(--dur-quick);
 }
 .lang-select:hover, .lang-select:focus {
     color: var(--gold); background: rgba(192,200,224,0.06); outline: none;
@@ -148,12 +148,12 @@
     color: #f0e8b0; width: 52px; border-radius: 0;
     cursor: pointer; display: flex; align-items: center; justify-content: center;
     font-size: clamp(0.95rem, 2.2vw, 1.25rem); align-self: stretch;
-    transition: color 0.3s, background 0.3s;
+    transition: color var(--dur-mellow), background var(--dur-mellow);
 }
 .theme-btn:hover {
     color: var(--gold); background: rgba(192,200,224,0.06);
 }
-.theme-btn:active { animation: themeClick 0.3s ease-out; }
+.theme-btn:active { animation: themeClick var(--dur-mellow) ease-out; }
 @keyframes themeClick {
     0%   { background: transparent; }
     50%  { background: rgba(192,200,224,0.15); box-shadow: inset 0 0 20px rgba(192,200,224,0.30); }
@@ -166,7 +166,7 @@
     width: 20px; height: 20px; border-radius: 50%;
     background: var(--bg);
     transform: translate(-50%, -50%) scale(0);
-    animation: themeRipple 0.6s ease-out forwards;
+    animation: themeRipple var(--dur-slow) ease-out forwards;
 }
 @keyframes themeRipple {
     0% { transform: translate(-50%, -50%) scale(0); opacity: 0.8; }
@@ -190,7 +190,7 @@
     background: transparent;
     border: none; border-bottom: 2px solid transparent;
     cursor: pointer; white-space: nowrap;
-    transition: color 0.2s, border-color 0.2s, background 0.2s;
+    transition: color var(--dur-fast), border-color var(--dur-fast), background var(--dur-fast);
     font-family: inherit; letter-spacing: 0.04em;
 }
 .taskbar-tab:hover {
@@ -204,7 +204,7 @@
 .taskbar-tab-close {
     font-size: 0.65rem; color: var(--text-faint);
     margin-left: 4px; cursor: pointer;
-    opacity: 0; transition: opacity 0.15s;
+    opacity: 0; transition: opacity var(--dur-snap);
     background: none; border: none; padding: 2px;
     font-family: inherit;
 }
@@ -223,7 +223,7 @@
     border-radius: 12px;
     box-shadow: 0 8px 40px rgba(0,0,0,0.5), 0 0 1px rgba(255,255,255,0.05);
     z-index: 200;
-    animation: startMenuOpen 0.25s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+    animation: startMenuOpen var(--dur-quick) cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
     overflow: hidden;
 }
 @keyframes startMenuOpen {
@@ -266,7 +266,7 @@
     font-size: 0.92rem; font-weight: 700;
     color: var(--text); background: transparent;
     border: none; cursor: pointer; text-align: left;
-    transition: background 0.15s, color 0.15s;
+    transition: background var(--dur-snap), color var(--dur-snap);
     letter-spacing: 0.04em;
     font-family: inherit;
     width: 100%;
@@ -307,7 +307,7 @@
     display: flex;
     flex-direction: column;
     z-index: 10;
-    animation: windowOpen 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+    animation: windowOpen var(--dur-mellow) cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
     overflow: hidden;
 }
 .os-window.win-dragging {
@@ -360,7 +360,7 @@
     color: var(--text-dim);
     font-size: 0.7rem;
     cursor: pointer;
-    transition: background 0.15s, color 0.15s;
+    transition: background var(--dur-snap), color var(--dur-snap);
 }
 .win-btn:hover {
     background: rgba(255, 200, 87, 0.1);
@@ -422,7 +422,7 @@
     border: none; border-radius: 6px;
     cursor: pointer; text-align: left;
     font-family: inherit; letter-spacing: 0.03em;
-    transition: background 0.15s, color 0.15s;
+    transition: background var(--dur-snap), color var(--dur-snap);
     white-space: nowrap;
 }
 .settings-cat:hover {
@@ -468,13 +468,13 @@
 .toggle-track {
     display: block; width: 44px; height: 24px;
     background: var(--text-faint); border-radius: 12px;
-    position: relative; transition: background 0.2s;
+    position: relative; transition: background var(--dur-fast);
 }
 .toggle-thumb {
     display: block; width: 20px; height: 20px;
     background: #fff; border-radius: 50%;
     position: absolute; top: 2px; left: 2px;
-    transition: transform 0.2s;
+    transition: transform var(--dur-fast);
     box-shadow: 0 1px 3px rgba(0,0,0,0.3);
 }
 .settings-toggle.active .toggle-track { background: var(--gold); }
@@ -501,7 +501,7 @@
 .settings-color-btn {
     width: 28px; height: 28px; border-radius: 50%;
     border: 2px solid transparent; cursor: pointer;
-    transition: border-color 0.2s, transform 0.15s;
+    transition: border-color var(--dur-fast), transform var(--dur-snap);
 }
 .settings-color-btn:hover { transform: scale(1.15); }
 .settings-color-btn.active { border-color: var(--text); box-shadow: 0 0 8px currentColor; }
@@ -550,7 +550,7 @@
     color: #ff6b6b;
     font-family: inherit; font-size: 0.85rem; font-weight: 700;
     cursor: pointer; letter-spacing: 0.04em;
-    transition: background 0.2s, border-color 0.2s, box-shadow 0.2s;
+    transition: background var(--dur-fast), border-color var(--dur-fast), box-shadow var(--dur-fast);
 }
 .settings-reset-btn:hover {
     background: rgba(255, 60, 60, 0.2);
@@ -569,7 +569,7 @@
     border-radius: 10px;
     box-shadow: 0 8px 40px rgba(0,0,0,0.4);
     z-index: 200;
-    animation: startMenuOpen 0.25s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+    animation: startMenuOpen var(--dur-quick) cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
     overflow: hidden;
 }
 .sysinfo-header {

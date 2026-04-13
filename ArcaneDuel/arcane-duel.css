@@ -50,7 +50,7 @@
     border: 1px solid rgba(255,255,255,0.10);
 }
 .duel-enemy-stats .duel-bar-wrap { margin-left: auto; }
-.duel-bar { height: 100%; border-radius: 2px; transition: width 0.15s; }
+.duel-bar { height: 100%; border-radius: 2px; transition: width var(--dur-snap); }
 .duel-hp    { background: linear-gradient(90deg, #c04040, #40c040); }
 .duel-mana  { background: linear-gradient(90deg, #4060d0, #60a0ff); }
 .duel-shield { background: linear-gradient(90deg, #a08040, #c0a860); }
@@ -84,7 +84,7 @@
     background: rgba(255,255,255,0.05); border: 1px solid rgba(192,200,224,0.18);
     display: flex; flex-direction: column; align-items: center; justify-content: center;
     gap: 1px; cursor: pointer; position: relative;
-    transition: all 0.15s;
+    transition: all var(--dur-snap);
 }
 .duel-spell-btn:hover {
     background: rgba(167,139,250,0.15); border-color: var(--ad-purple);
@@ -94,7 +94,7 @@
 .duel-spell-casting {
     background: rgba(192,200,224,0.15) !important; border-color: var(--ad-gold) !important;
     box-shadow: 0 0 14px rgba(192,200,224,0.3);
-    animation: spellCastPulse 0.6s ease-in-out infinite;
+    animation: spellCastPulse var(--dur-slow) ease-in-out infinite;
 }
 @keyframes spellCastPulse {
     0%, 100% { box-shadow: 0 0 8px rgba(192,200,224,0.2); }
@@ -193,7 +193,7 @@
 .duel-rematch-btn, .duel-exit-btn {
     font-family: var(--ad-font); font-size: 0.9rem; font-weight: 700;
     padding: 10px 24px; border-radius: 6px; cursor: pointer;
-    letter-spacing: 0.06em; transition: all 0.2s;
+    letter-spacing: 0.06em; transition: all var(--dur-fast);
 }
 .duel-rematch-btn {
     color: #fff; background: rgba(167,139,250,0.2); border: 1px solid var(--ad-purple);
@@ -221,7 +221,7 @@
     background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.15);
     color: var(--ad-gold); font-size: 1.3rem; cursor: pointer;
     display: flex; align-items: center; justify-content: center;
-    transition: all 0.2s;
+    transition: all var(--dur-fast);
 }
 .duel-close:hover { background: rgba(255,60,60,0.2); border-color: #ff4040; color: #ff4040; }
 
@@ -288,7 +288,7 @@
     color: #fff; letter-spacing: 0.08em;
     background: rgba(167,139,250,0.2); border: 1px solid var(--ad-purple);
     border-radius: 6px; cursor: pointer;
-    transition: all 0.25s;
+    transition: all var(--dur-quick);
     text-shadow: 0 0 10px rgba(167,139,250,0.4);
 }
 .guide-ready-btn:hover {

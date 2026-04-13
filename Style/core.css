@@ -58,6 +58,23 @@
 
     /* Easings */
     --ease-bounce: cubic-bezier(0.34, 1.56, 0.64, 1);
+    --ease-standard: cubic-bezier(0.22, 1, 0.36, 1);
+
+    /* Transition durations (by how quickly they *feel*):
+       snap  = micro-feedback     (0.15s)
+       fast  = UI hover/state     (0.2s)
+       quick = snappier UI        (0.25s)
+       brisk = card/tilt settle   (0.28s)
+       mellow= short fades        (0.3s)
+       base  = theme/color swaps  (0.5s)
+       slow  = page reveals       (0.6s) */
+    --dur-snap:   0.15s;
+    --dur-fast:   0.2s;
+    --dur-quick:  0.25s;
+    --dur-brisk:  0.28s;
+    --dur-mellow: 0.3s;
+    --dur-base:   0.5s;
+    --dur-slow:   0.6s;
 
     /* Border recipes */
     --border-subtle: 1px solid var(--seal-border);
@@ -103,7 +120,7 @@
     padding: var(--space-2) var(--space-3);
     font-family: inherit;
     font-size: 0.88rem;
-    transition: border-color 0.2s, box-shadow 0.2s;
+    transition: border-color var(--dur-fast), box-shadow var(--dur-fast);
 }
 .arcane-input:focus {
     outline: none;
@@ -152,7 +169,7 @@ body {
     font-weight: 500;
     height: 100dvh;
     overflow: hidden;
-    transition: background-color 0.6s, color 0.5s;
+    transition: background-color var(--dur-slow), color var(--dur-base);
 }
 
 /* § RUNE PARTICLE CANVAS
@@ -198,7 +215,7 @@ html.magic-cursor-active, html.magic-cursor-active * { cursor: none !important; 
     position: relative; z-index: 2; height: 100dvh;
     display: block;
     padding: 0; overflow: hidden;
-    transition: opacity 0.5s;
+    transition: opacity var(--dur-base);
 }
 #app.hidden  { opacity: 0; pointer-events: none; }
 #app.visible { animation: pageReveal 1s cubic-bezier(0.22,1,0.36,1) forwards; }
@@ -350,7 +367,7 @@ html.magic-cursor-active, html.magic-cursor-active * { cursor: none !important; 
     font-size: 0.82rem;
     transform: translateX(120%);
     opacity: 0;
-    transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.3s;
+    transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1), opacity var(--dur-mellow);
     pointer-events: auto;
 }
 .toast.toast-show { transform: translateX(0); opacity: 1; }
@@ -363,7 +380,7 @@ html.magic-cursor-active, html.magic-cursor-active * { cursor: none !important; 
 .toast-close {
     background: none; border: none; color: var(--text-dim);
     cursor: pointer; font-size: 0.9rem; padding: 2px 4px;
-    transition: color 0.2s;
+    transition: color var(--dur-fast);
 }
 .toast-close:hover { color: var(--gold); }
 .toast::after {
@@ -405,7 +422,7 @@ html.magic-cursor-active, html.magic-cursor-active * { cursor: none !important; 
     display: flex; align-items: center; justify-content: center;
     background: rgba(6, 4, 16, 0.55);
     backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
-    opacity: 0; transition: opacity 0.25s;
+    opacity: 0; transition: opacity var(--dur-quick);
 }
 .confirm-backdrop.confirm-show { opacity: 1; }
 .confirm-modal {
@@ -418,7 +435,7 @@ html.magic-cursor-active, html.magic-cursor-active * { cursor: none !important; 
     box-shadow: 0 12px 48px rgba(0,0,0,0.5), 0 0 24px rgba(255,200,87,0.1);
     color: var(--text);
     transform: translateY(-10px) scale(0.96);
-    transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+    transition: transform var(--dur-mellow) cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 .confirm-backdrop.confirm-show .confirm-modal { transform: translateY(0) scale(1); }
 .confirm-modal.confirm-warning { border-left-color: #ffb347; }
@@ -436,7 +453,7 @@ html.magic-cursor-active, html.magic-cursor-active * { cursor: none !important; 
     border-radius: 8px;
     color: var(--text); font-size: 0.82rem; cursor: pointer;
     font-family: var(--font-display); letter-spacing: 0.04em;
-    transition: background-color 0.2s, border-color 0.2s, color 0.2s;
+    transition: background-color var(--dur-fast), border-color var(--dur-fast), color var(--dur-fast);
 }
 .confirm-btn:hover { border-color: var(--gold); color: var(--gold); }
 .confirm-btn.confirm-ok {
