@@ -70,28 +70,33 @@
     border-color: rgba(255, 200, 87, 0.25);
     box-shadow: 0 0 6px rgba(255,200,87,0.1);
 }
-/* Tray buttons with an inline text label next to the icon */
+/* Tray buttons with an inline text label next to the icon.
+   Uses width:max-content so the button always fits icon + gap +
+   label + padding, with a generous padding to breathe. */
 .tray-btn-sys {
-    width: auto;
-    min-width: 28px;
-    padding: 0 8px;
-    gap: 6px;
+    width: max-content;
+    min-width: 58px;
+    padding: 0 10px;
+    gap: 8px;
     flex-shrink: 0;
     white-space: nowrap;
+    overflow: visible;
 }
+.tray-btn-sys .fa-circle-info { font-size: 0.9rem; flex-shrink: 0; }
 .tray-btn-label {
     font-family: var(--font-display);
-    font-size: 0.68rem; font-weight: 700;
-    letter-spacing: 0.12em;
+    font-size: 0.7rem; font-weight: 700;
+    letter-spacing: 0.1em;
     color: var(--gold);
     line-height: 1;
     flex-shrink: 0;
+    display: inline-block;
 }
 /* On very narrow screens drop the label so the icon stays readable
-   instead of letting the button squish to half its size. */
+   instead of letting the button squish. */
 @media (max-width: 480px) {
     .tray-btn-label { display: none; }
-    .tray-btn-sys { width: 30px; padding: 0; }
+    .tray-btn-sys { width: 30px; min-width: 30px; padding: 0; }
 }
 
 /* Taskbar clock */
