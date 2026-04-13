@@ -235,17 +235,28 @@ function initRuneParticles() {
  * ──────────────────────────────── */
 function initMagicCursor() {
     const el = document.getElementById('magic-cursor');
-    if (!el || window.matchMedia('(pointer: coarse)').matches) return;
+    if (!el) return;
 
-    // Hide native cursor everywhere — the magic dot replaces it
-    document.documentElement.classList.add('magic-cursor-active');
+    // "Mobile-ish": coarse pointer OR narrow viewport. Kept in sync so a
+    // desktop window narrowed past the breakpoint matches a real phone.
+    const mq = window.matchMedia('(pointer: coarse), (max-width: 640px)');
+    const sync = () => {
+        const userOff = localStorage.getItem('aruta_settings-cursor') === 'false';
+        const enabled = !mq.matches && !userOff;
+        document.documentElement.classList.toggle('magic-cursor-active', enabled);
+        if (el) el.style.display = enabled ? '' : 'none';
+    };
+    sync();
+    mq.addEventListener('change', sync);
 
     window.addEventListener('mousemove', e => {
+        if (mq.matches) return;
         el.style.transform = `translate(${e.clientX}px,${e.clientY}px)`;
     });
 
     // Ring expands over interactive elements (delegation handles dynamic cards)
     document.addEventListener('mouseover', e => {
+        if (mq.matches) return;
         if (e.target.closest('a, button')) el.classList.add('cursor-hover');
     });
     document.addEventListener('mouseout', e => {

@@ -274,13 +274,26 @@ function revealCards(selector, delay) {
  * ──────────────────────────────── */
 
 /** Apply 3D tilt effect to an element */
+// Shared "mobile-ish" matcher: coarse pointer OR narrow viewport.
+// Kept in sync so a desktop window narrowed past the breakpoint
+// behaves the same as a real phone (no tilt, no magic cursor, etc).
+const _tiltMQ = window.matchMedia('(pointer: coarse), (max-width: 640px)');
+_tiltMQ.addEventListener('change', () => {
+    if (!_tiltMQ.matches) return;
+    document.querySelectorAll('[data-tilt-bound]').forEach(el => {
+        el.style.transform = '';
+    });
+});
+
 function applyTilt(el, maxDeg, scale) {
     if (el._tiltBound) return;
     el._tiltBound = true;
+    el.dataset.tiltBound = '1';
     el.style.transformStyle = 'preserve-3d';
     el.style.transition = 'transform 0.2s ease';
 
     el.addEventListener('mousemove', (e) => {
+        if (_tiltMQ.matches) return;
         const rect = el.getBoundingClientRect();
         const x = (e.clientX - rect.left) / rect.width;
         const y = (e.clientY - rect.top) / rect.height;
@@ -296,7 +309,7 @@ function applyTilt(el, maxDeg, scale) {
 
 /** Initialize 3D tilt hover effect on card elements */
 function initTilt() {
-    if (window.matchMedia('(pointer: coarse)').matches) return;
+    if (_tiltMQ.matches) return;
 
     document.querySelectorAll('.interest-card, .link-card').forEach(el => {
         applyTilt(el, 5, 1.02);
