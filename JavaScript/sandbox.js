@@ -180,7 +180,16 @@ async function mountApp(appId) {
     content.innerHTML = '';
     const iframe = document.createElement('iframe');
     iframe.className = 'sandbox-iframe';
-    iframe.setAttribute('sandbox', 'allow-scripts');
+    // Packages can opt into same-origin by declaring `allowOrigin: true` in
+    // their manifest. This breaks the opaque-origin sandbox boundary (the
+    // iframe can then reach window.parent and shares storage origin) but is
+    // required for a handful of browser APIs — notably the File System
+    // Access API (showDirectoryPicker) — which refuse to run in a null-
+    // origin frame. Trust is on the user: the install modal shows the flag.
+    const sandboxAttr = manifest.allowOrigin
+        ? 'allow-scripts allow-same-origin'
+        : 'allow-scripts';
+    iframe.setAttribute('sandbox', sandboxAttr);
     iframe.style.cssText = 'width:100%;height:100%;border:0;background:transparent;';
     iframe.srcdoc = IFRAME_BOOT;
     content.appendChild(iframe);

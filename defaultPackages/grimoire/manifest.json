@@ -3,9 +3,10 @@
     "id": "grimoire",
     "name": "Grimoire",
     "icon": "📜",
-    "version": "1.6.0",
+    "version": "1.7.0",
     "author": "Aruta",
     "entry": "index.js",
     "category": "tools",
+    "allowOrigin": true,
     "permissions": ["storage"]
 }
