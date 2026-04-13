@@ -1,0 +1,11 @@
+{
+    "type": "app",
+    "id": "snake",
+    "name": "Snake",
+    "icon": "🐍",
+    "version": "1.0.0",
+    "author": "Aruta",
+    "entry": "index.js",
+    "category": "games",
+    "permissions": ["storage"]
+}
