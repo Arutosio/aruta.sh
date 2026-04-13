@@ -72,6 +72,7 @@ function registerAppInOS(manifest) {
 }
 
 function unregisterAppFromOS(id) {
+    window.sandbox?.unmount(id);
     if (typeof WIN_META !== 'undefined') delete WIN_META[id];
     const win = document.getElementById('win-' + id);
     if (win) win.remove();
@@ -90,11 +91,10 @@ function renderStartMenuItems() {
         btn.innerHTML = `${m.icon || '📦'} <span>${m.name}</span>`;
         btn.addEventListener('click', () => {
             if (typeof openWindow === 'function') openWindow(m.id);
-            // close menu — defer via document click outside
             const menu = document.getElementById('start-menu');
-            if (menu && menu.style.display !== 'none') {
-                document.body.click();
-            }
+            const startBtn = document.getElementById('start-btn');
+            // Trigger the start button's toggle so internal isOpen state stays consistent.
+            if (menu && menu.style.display !== 'none') startBtn?.click();
         });
         items.appendChild(btn);
     }
@@ -106,14 +106,12 @@ async function saveManifest(manifest, files) {
         const t = tx(db, ['manifests', 'files'], 'readwrite');
         t.objectStore('manifests').put({ ...manifest, _installedAt: Date.now() });
         const filesStore = t.objectStore('files');
-        // Clear existing files for this app
-        const idx = filesStore.openCursor();
-        idx.onsuccess = (e) => {
+        const range = IDBKeyRange.bound([manifest.id, ''], [manifest.id, '\uffff']);
+        const req = filesStore.openCursor(range);
+        req.onsuccess = (e) => {
             const cursor = e.target.result;
-            if (cursor) {
-                if (cursor.value.appId === manifest.id) cursor.delete();
-                cursor.continue();
-            } else {
+            if (cursor) { cursor.delete(); cursor.continue(); }
+            else {
                 for (const [path, blob] of Object.entries(files)) {
                     filesStore.put({ appId: manifest.id, path, blob });
                 }
@@ -138,15 +136,14 @@ async function getFiles(appId) {
         const t = tx(db, ['files'], 'readonly');
         const store = t.objectStore('files');
         const out = {};
-        const cursor = store.openCursor();
-        cursor.onsuccess = (e) => {
+        const range = IDBKeyRange.bound([appId, ''], [appId, '\uffff']);
+        const req = store.openCursor(range);
+        req.onsuccess = (e) => {
             const c = e.target.result;
-            if (c) {
-                if (c.value.appId === appId) out[c.value.path] = c.value.blob;
-                c.continue();
-            } else res(out);
+            if (c) { out[c.value.path] = c.value.blob; c.continue(); }
+            else res(out);
         };
-        cursor.onerror = () => rej(cursor.error);
+        req.onerror = () => rej(req.error);
     });
 }
 
@@ -158,13 +155,11 @@ async function uninstall(id) {
         const t = tx(db, ['manifests', 'files'], 'readwrite');
         t.objectStore('manifests').delete(id);
         const filesStore = t.objectStore('files');
-        const cursor = filesStore.openCursor();
-        cursor.onsuccess = (e) => {
+        const range = IDBKeyRange.bound([id, ''], [id, '\uffff']);
+        const req = filesStore.openCursor(range);
+        req.onsuccess = (e) => {
             const c = e.target.result;
-            if (c) {
-                if (c.value.appId === id) c.delete();
-                c.continue();
-            }
+            if (c) { c.delete(); c.continue(); }
         };
         t.oncomplete = () => res();
         t.onerror = () => rej(t.error);
@@ -215,8 +210,8 @@ function ensureAppWindow(manifest) {
     win.querySelector('.win-close')?.addEventListener('click', e => {
         e.stopPropagation();
         if (typeof closeWindow === 'function') closeWindow(id);
-        // Also unmount sandbox
-        window.sandbox?.unmount(id);
+        // Keep iframe alive so app state (game progress, form input, ...) survives close/reopen.
+        // Full teardown happens only on uninstall via unregisterAppFromOS → sandbox.unmount.
     });
 }
 

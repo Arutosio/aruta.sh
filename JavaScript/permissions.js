@@ -43,11 +43,22 @@ function permSet(appId, perm, value) {
 
 let _activePrompt = null;
 async function permRequest(appId, perm) {
-    const stored = permGet(appId, perm);
-    if (stored === 'granted') return true;
-    if (stored === 'denied') return false;
+    const check = () => {
+        const s = permGet(appId, perm);
+        if (s === 'granted') return true;
+        if (s === 'denied') return false;
+        return null;
+    };
+    const initial = check();
+    if (initial !== null) return initial;
 
-    if (_activePrompt) await _activePrompt;
+    // Wait for any in-flight prompt to finish, then re-check stored state
+    // in case the same permission was just granted/denied by that prompt.
+    while (_activePrompt) {
+        try { await _activePrompt; } catch {}
+        const again = check();
+        if (again !== null) return again;
+    }
     _activePrompt = (async () => {
         const manifest = window.registry?.getManifest(appId) || { name: appId, icon: '📦' };
         const t = (typeof i18n !== 'undefined' && i18n[currentLang]) || {};

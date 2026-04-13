@@ -228,22 +228,23 @@ async function runCommand(commandId, args) {
     const entry = files[manifest.entry || 'index.js'];
     if (!entry) throw new Error('entry_missing');
 
-    const url = URL.createObjectURL(entry);
+    const entryURL = URL.createObjectURL(entry);
+    const { ctx, cleanup } = _buildHostCtx(commandId, files);
     try {
-        const mod = await import(/* @vite-ignore */ url);
+        const mod = await import(/* @vite-ignore */ entryURL);
         const exp = mod.default || mod;
-        const ctx = _buildHostCtx(commandId, files);
         if (typeof exp.run === 'function') return await exp.run(args, ctx);
         throw new Error('command_missing_run');
     } finally {
-        setTimeout(() => URL.revokeObjectURL(url), 1000);
+        setTimeout(() => { URL.revokeObjectURL(entryURL); cleanup(); }, 1000);
     }
 }
 
 function _buildHostCtx(appId, files) {
     const fileURLs = {};
     for (const [p, b] of Object.entries(files || {})) fileURLs[p] = URL.createObjectURL(b);
-    return {
+    const cleanup = () => { for (const u of Object.values(fileURLs)) URL.revokeObjectURL(u); };
+    const ctx = {
         appId,
         asset: (p) => fileURLs[p] || fileURLs['assets/' + p] || null,
         print: async (s) => { if (await window.permissions.request(appId, 'terminal')) window.terminal?.print(String(s ?? '')); },
@@ -271,6 +272,7 @@ function _buildHostCtx(appId, files) {
         i18n: (k) => (window.i18n?.[window.currentLang] || {})[k] || k,
         permission: { request: (p) => window.permissions.request(appId, p) },
     };
+    return { ctx, cleanup };
 }
 
 window.sandbox = { mount: mountApp, unmount: unmountApp, runCommand };
