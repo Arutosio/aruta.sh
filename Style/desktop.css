@@ -128,7 +128,7 @@
     display: flex; flex-direction: column;
     align-items: center; gap: 6px;
     padding: 12px 16px;
-    border-radius: 8px;
+    border-radius: var(--radius-md);
     cursor: pointer;
     transition: background var(--dur-fast), transform var(--dur-snap);
     user-select: none;
@@ -150,7 +150,7 @@
     color: var(--text);
     font-weight: 700;
     letter-spacing: 0.06em;
-    text-shadow: 0 1px 3px rgba(0,0,0,0.8);
+    text-shadow: 0 1px 3px var(--ink-80);
     text-align: center;
 }
 
@@ -241,14 +241,14 @@
                     0 0 18px rgba(192,200,224,0.40),
                     0 0 40px rgba(167,139,250,0.28),
                     0 0 70px rgba(167,139,250,0.12),
-                    inset 0 0 24px rgba(0,0,0,0.5);
+                    inset 0 0 24px var(--ink-50);
     }
     to {
         box-shadow: 0 0 0 6px rgba(192,200,224,0.28),
                     0 0 32px rgba(192,200,224,0.70),
                     0 0 65px rgba(167,139,250,0.50),
                     0 0 110px rgba(167,139,250,0.22),
-                    inset 0 0 24px rgba(0,0,0,0.5);
+                    inset 0 0 24px var(--ink-50);
     }
 }
 [data-theme="light"] .portrait-img-wrap {
@@ -283,7 +283,7 @@
     font-family: 'IM Fell English', Georgia, serif;
     font-size: clamp(2.2rem, 5.5vw, 3.6rem); font-weight: 900;
     color: var(--gold-light); letter-spacing: 0.04em; line-height: 1.1; margin-bottom: 10px;
-    text-shadow: 0 0 28px rgba(192,200,224,0.45), 0 2px 6px rgba(0,0,0,0.6);
+    text-shadow: 0 0 28px rgba(192,200,224,0.45), 0 2px 6px var(--ink-60);
     transition: color var(--dur-base);
     animation: titleBreathe 6s ease-in-out infinite;
     min-height: 1.2em; /* prevent layout shift during flying letters */

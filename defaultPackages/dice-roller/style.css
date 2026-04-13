@@ -19,7 +19,7 @@ h1 { margin: 0; text-align: center; font-size: 1.3rem; color: var(--g); letter-s
     background: linear-gradient(135deg, #2a1f4a, #1a0f2e);
     color: var(--g);
     border: 1px solid var(--g);
-    border-radius: 8px;
+    border-radius: var(--radius-md);
     padding: 0.6rem 0;
     font-family: inherit;
     font-size: 0.85rem;
@@ -34,9 +34,9 @@ h1 { margin: 0; text-align: center; font-size: 1.3rem; color: var(--g); letter-s
 }
 .custom input {
     flex: 1;
-    background: rgba(0,0,0,0.3);
+    background: var(--ink-30);
     border: 1px solid var(--gold-35);
-    border-radius: 8px;
+    border-radius: var(--radius-md);
     color: #ffe4a0;
     font-family: 'Courier New', monospace;
     font-size: 1rem;
@@ -47,7 +47,7 @@ h1 { margin: 0; text-align: center; font-size: 1.3rem; color: var(--g); letter-s
     background: var(--g);
     color: var(--bg);
     border: none;
-    border-radius: 8px;
+    border-radius: var(--radius-md);
     padding: 0 1.1rem;
     font-family: inherit;
     font-weight: 700;
@@ -55,9 +55,9 @@ h1 { margin: 0; text-align: center; font-size: 1.3rem; color: var(--g); letter-s
 }
 
 .display {
-    background: rgba(0,0,0,0.35);
+    background: var(--ink-35);
     border: 1px solid var(--gold-30);
-    border-radius: 12px;
+    border-radius: var(--radius-xl);
     padding: 1.2rem;
     text-align: center;
     min-height: 110px;
@@ -95,8 +95,8 @@ h2 { font-size: 0.85rem; margin: 0.5rem 0 0; letter-spacing: 0.1em; color: var(-
 .history li {
     padding: 0.3rem 0.6rem;
     border: 1px solid var(--gold-15);
-    border-radius: 4px;
-    background: rgba(0,0,0,0.2);
+    border-radius: var(--radius-xs);
+    background: var(--ink-20);
     display: flex; justify-content: space-between;
 }
 .history li .spec  { color: var(--p); }
@@ -106,7 +106,7 @@ h2 { font-size: 0.85rem; margin: 0.5rem 0 0; letter-spacing: 0.1em; color: var(-
     background: transparent;
     color: #fb7185;
     border: 1px solid rgba(251, 113, 133, 0.3);
-    border-radius: 6px;
+    border-radius: var(--radius-sm);
     padding: 0.25rem 0.7rem;
     font-size: 0.78rem;
     cursor: pointer;

@@ -51,6 +51,15 @@
     --purple-18: color-mix(in srgb, var(--purple) 18%, transparent);
     --purple-25: color-mix(in srgb, var(--purple) 25%, transparent);
 
+    /* Ink ramp — pure-black transparencies for shadows + scrims.
+       Not theme-aware on purpose: drop shadows stay inky in both modes. */
+    --ink-04: rgba(0,0,0,0.04); --ink-15: rgba(0,0,0,0.15);
+    --ink-20: rgba(0,0,0,0.2);  --ink-25: rgba(0,0,0,0.25);
+    --ink-30: rgba(0,0,0,0.3);
+    --ink-35: rgba(0,0,0,0.35); --ink-40: rgba(0,0,0,0.4);
+    --ink-50: rgba(0,0,0,0.5);  --ink-60: rgba(0,0,0,0.6);
+    --ink-80: rgba(0,0,0,0.8);
+
     /* Radii */
     --radius-xs: 4px;  --radius-sm: 6px;  --radius-md: 8px;
     --radius-lg: 10px; --radius-xl: 12px;
@@ -129,7 +138,7 @@
     -webkit-backdrop-filter: blur(var(--blur-glass));
 }
 .arcane-input {
-    background: rgba(0, 0, 0, 0.3);
+    background: var(--ink-30);
     color: var(--text);
     border: 1px solid var(--seal-border);
     border-radius: var(--radius-md);
@@ -320,8 +329,8 @@ html.magic-cursor-active, html.magic-cursor-active * { cursor: none !important; 
     background: var(--hud-bg);
     backdrop-filter: blur(var(--blur-glass)); -webkit-backdrop-filter: blur(var(--blur-glass));
     border: 1px solid var(--gold);
-    border-radius: 10px;
-    box-shadow: 0 8px 32px rgba(0,0,0,0.4), 0 0 20px rgba(255,200,87,0.1);
+    border-radius: var(--radius-lg);
+    box-shadow: 0 8px 32px var(--ink-40), 0 0 20px var(--gold-10);
     transform: translateX(120%);
     transition: transform 0.4s var(--ease-bounce);
     pointer-events: none;
@@ -355,8 +364,8 @@ html.magic-cursor-active, html.magic-cursor-active * { cursor: none !important; 
  * ──────────────────────────────── */
 ::-webkit-scrollbar { width: 6px; }
 ::-webkit-scrollbar-track { background: var(--bg); }
-::-webkit-scrollbar-thumb { background: rgba(255, 200, 87, 0.2); border-radius: 3px; }
-::-webkit-scrollbar-thumb:hover { background: rgba(255, 200, 87, 0.4); }
+::-webkit-scrollbar-thumb { background: var(--gold-20); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--gold-40); }
 [data-theme="light"]::-webkit-scrollbar-track { background: var(--bg); }
 [data-theme="light"]::-webkit-scrollbar-thumb { background: rgba(139, 105, 20, 0.2); border-radius: 3px; }
 [data-theme="light"]::-webkit-scrollbar-thumb:hover { background: rgba(139, 105, 20, 0.4); }
@@ -377,8 +386,8 @@ html.magic-cursor-active, html.magic-cursor-active * { cursor: none !important; 
     backdrop-filter: blur(var(--blur-glass)); -webkit-backdrop-filter: blur(var(--blur-glass));
     border: 1px solid var(--card-border);
     border-left: 3px solid var(--gold);
-    border-radius: 10px;
-    box-shadow: 0 8px 32px rgba(0,0,0,0.4), 0 0 16px rgba(255,200,87,0.08);
+    border-radius: var(--radius-lg);
+    box-shadow: 0 8px 32px var(--ink-40), 0 0 16px var(--gold-08);
     color: var(--text);
     font-size: 0.82rem;
     transform: translateX(120%);
@@ -390,7 +399,7 @@ html.magic-cursor-active, html.magic-cursor-active * { cursor: none !important; 
 .toast.toast-hide { transform: translateX(120%); opacity: 0; }
 .toast-icon {
     font-size: 1.1rem; color: var(--gold); flex-shrink: 0;
-    text-shadow: 0 0 6px rgba(255,200,87,0.35);
+    text-shadow: 0 0 6px var(--gold-35);
 }
 .toast-msg { flex: 1; line-height: 1.35; }
 .toast-close {
@@ -447,8 +456,8 @@ html.magic-cursor-active, html.magic-cursor-active * { cursor: none !important; 
     background: var(--hud-bg);
     border: 1px solid var(--card-border);
     border-left: 3px solid var(--gold);
-    border-radius: 12px;
-    box-shadow: 0 12px 48px rgba(0,0,0,0.5), 0 0 24px rgba(255,200,87,0.1);
+    border-radius: var(--radius-xl);
+    box-shadow: 0 12px 48px var(--ink-50), 0 0 24px var(--gold-10);
     color: var(--text);
     transform: translateY(-10px) scale(0.96);
     transition: transform var(--dur-mellow) var(--ease-bounce);
@@ -466,14 +475,14 @@ html.magic-cursor-active, html.magic-cursor-active * { cursor: none !important; 
     padding: 8px 18px;
     background: transparent;
     border: 1px solid var(--card-border);
-    border-radius: 8px;
+    border-radius: var(--radius-md);
     color: var(--text); font-size: 0.82rem; cursor: pointer;
     font-family: var(--font-display); letter-spacing: 0.04em;
     transition: background-color var(--dur-fast), border-color var(--dur-fast), color var(--dur-fast);
 }
 .confirm-btn:hover { border-color: var(--gold); color: var(--gold); }
 .confirm-btn.confirm-ok {
-    background: rgba(255, 200, 87, 0.12);
+    background: var(--gold-12);
     border-color: var(--gold); color: var(--gold);
 }
-.confirm-btn.confirm-ok:hover { background: rgba(255, 200, 87, 0.22); }
+.confirm-btn.confirm-ok:hover { background: var(--gold-22); }

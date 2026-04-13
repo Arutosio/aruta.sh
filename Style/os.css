@@ -14,8 +14,8 @@
     background: var(--hud-bg);
     backdrop-filter: blur(var(--blur-glass)); -webkit-backdrop-filter: blur(var(--blur-glass));
     border: 1.5px solid var(--card-border);
-    border-radius: 12px;
-    box-shadow: 0 4px 24px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.04), inset 0 -1px 0 var(--gold-06);
+    border-radius: var(--radius-xl);
+    box-shadow: 0 4px 24px var(--ink-30), inset 0 1px 0 rgba(255, 255, 255, 0.04), inset 0 -1px 0 var(--gold-06);
     transition: background var(--dur-base), border-color var(--dur-base);
 }
 .taskbar-left  { display: flex; align-items: stretch; gap: 0; flex-shrink: 0; }
@@ -61,7 +61,7 @@
     color: var(--gold); font-size: 0.9rem;
     background: var(--gold-10);
     border: 1px solid var(--gold-25);
-    border-radius: 6px; cursor: pointer;
+    border-radius: var(--radius-sm); cursor: pointer;
     transition: color var(--dur-fast), background var(--dur-fast), border-color var(--dur-fast), box-shadow var(--dur-fast);
 }
 .tray-btn:hover {
@@ -220,8 +220,8 @@
     background: var(--hud-bg);
     backdrop-filter: blur(var(--blur-deep)); -webkit-backdrop-filter: blur(var(--blur-deep));
     border: 1px solid var(--card-border);
-    border-radius: 12px;
-    box-shadow: 0 8px 40px rgba(0,0,0,0.5), 0 0 1px rgba(255,255,255,0.05);
+    border-radius: var(--radius-xl);
+    box-shadow: 0 8px 40px var(--ink-50), 0 0 1px rgba(255,255,255,0.05);
     z-index: var(--z-menu);
     animation: startMenuOpen var(--dur-quick) var(--ease-bounce) forwards;
     overflow: hidden;
@@ -300,10 +300,10 @@
     width: min(900px, calc(100vw - 80px));
     max-height: calc(100vh - 120px);
     border: 1px solid var(--card-border);
-    border-radius: 10px;
+    border-radius: var(--radius-lg);
     background: var(--hud-bg);
     backdrop-filter: blur(var(--blur-deep)); -webkit-backdrop-filter: blur(var(--blur-deep));
-    box-shadow: 0 8px 40px rgba(0,0,0,0.5), 0 0 1px rgba(255,255,255,0.05);
+    box-shadow: 0 8px 40px var(--ink-50), 0 0 1px rgba(255,255,255,0.05);
     display: flex;
     flex-direction: column;
     z-index: var(--z-window);
@@ -315,7 +315,7 @@
     user-select: none;
 }
 .os-window.win-focused {
-    box-shadow: 0 8px 40px rgba(0,0,0,0.5), 0 0 20px var(--gold-08);
+    box-shadow: 0 8px 40px var(--ink-50), 0 0 20px var(--gold-08);
     border-color: var(--gold-20);
 }
 
@@ -355,7 +355,7 @@
 .win-btn {
     width: 28px; height: 24px;
     display: flex; align-items: center; justify-content: center;
-    border: none; border-radius: 4px;
+    border: none; border-radius: var(--radius-xs);
     background: transparent;
     color: var(--text-dim);
     font-size: 0.7rem;
@@ -411,7 +411,7 @@
     display: flex; flex-direction: column; gap: 2px;
     width: 180px; min-width: 180px; padding: 8px;
     border-right: 1px solid var(--card-border);
-    background: rgba(0,0,0,0.15);
+    background: var(--ink-15);
     overflow-y: auto;
 }
 .settings-cat {
@@ -419,7 +419,7 @@
     padding: 10px 14px;
     font-size: 0.82rem; font-weight: 700;
     color: var(--text-dim); background: transparent;
-    border: none; border-radius: 6px;
+    border: none; border-radius: var(--radius-sm);
     cursor: pointer; text-align: left;
     font-family: inherit; letter-spacing: 0.03em;
     transition: background var(--dur-snap), color var(--dur-snap);
@@ -434,7 +434,7 @@
     color: var(--gold);
     border-left: 2px solid var(--gold);
 }
-[data-theme="light"] .settings-sidebar { background: rgba(0,0,0,0.04); }
+[data-theme="light"] .settings-sidebar { background: var(--ink-04); }
 
 .settings-content {
     flex: 1; padding: 24px; overflow-y: auto;
@@ -467,7 +467,7 @@
 }
 .toggle-track {
     display: block; width: 44px; height: 24px;
-    background: var(--text-faint); border-radius: 12px;
+    background: var(--text-faint); border-radius: var(--radius-xl);
     position: relative; transition: background var(--dur-fast);
 }
 .toggle-thumb {
@@ -475,7 +475,7 @@
     background: #fff; border-radius: 50%;
     position: absolute; top: 2px; left: 2px;
     transition: transform var(--dur-fast);
-    box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+    box-shadow: 0 1px 3px var(--ink-30);
 }
 .settings-toggle.active .toggle-track { background: var(--gold); }
 .settings-toggle.active .toggle-thumb { transform: translateX(20px); }
@@ -526,7 +526,7 @@
 /* Language select in settings */
 .settings-select {
     padding: 6px 12px; background: rgba(12,10,30,0.5);
-    border: 1px solid var(--seal-border); border-radius: 6px;
+    border: 1px solid var(--seal-border); border-radius: var(--radius-sm);
     color: var(--text); font-family: inherit; font-size: 0.88rem;
     cursor: pointer;
 }
@@ -546,7 +546,7 @@
     padding: 8px 18px;
     background: rgba(255, 60, 60, 0.1);
     border: 1px solid rgba(255, 60, 60, 0.25);
-    border-radius: 6px;
+    border-radius: var(--radius-sm);
     color: #ff6b6b;
     font-family: inherit; font-size: 0.85rem; font-weight: 700;
     cursor: pointer; letter-spacing: 0.04em;
@@ -566,8 +566,8 @@
     background: var(--hud-bg);
     backdrop-filter: blur(var(--blur-deep)); -webkit-backdrop-filter: blur(var(--blur-deep));
     border: 1px solid var(--card-border);
-    border-radius: 10px;
-    box-shadow: 0 8px 40px rgba(0,0,0,0.4);
+    border-radius: var(--radius-lg);
+    box-shadow: 0 8px 40px var(--ink-40);
     z-index: var(--z-menu);
     animation: startMenuOpen var(--dur-quick) var(--ease-bounce) forwards;
     overflow: hidden;

@@ -15,7 +15,7 @@ body {
 /* ── Sidebar ───────────────────── */
 .sidebar {
     width: 180px; flex-shrink: 0;
-    background: rgba(0,0,0,0.35);
+    background: var(--ink-35);
     border-right: 1px solid var(--gold-20);
     display: flex; flex-direction: column;
     min-height: 0;
@@ -30,7 +30,7 @@ body {
     background: transparent;
     border: 1px solid var(--gold-35);
     color: var(--g);
-    border-radius: 6px;
+    border-radius: var(--radius-sm);
     padding: 0.35rem;
     font-size: 0.8rem;
     cursor: pointer;
@@ -45,7 +45,7 @@ body {
 }
 .doclist li {
     padding: 0.45rem 0.6rem;
-    border-radius: 6px;
+    border-radius: var(--radius-sm);
     cursor: pointer;
     font-size: 0.85rem;
     display: flex; justify-content: space-between; align-items: center;
@@ -74,7 +74,7 @@ body {
     padding: 0.45rem 0.6rem;
     display: flex; gap: 0.4rem; align-items: center;
     border-bottom: 1px solid var(--gold-15);
-    background: rgba(0,0,0,0.2);
+    background: var(--ink-20);
     flex-wrap: wrap;
 }
 .toolbar input.title {
@@ -82,7 +82,7 @@ body {
     background: transparent;
     border: 1px solid var(--gold-25);
     color: #ffe4a0;
-    border-radius: 6px;
+    border-radius: var(--radius-sm);
     padding: 0.3rem 0.55rem;
     font-family: inherit;
     font-size: 0.88rem;
@@ -92,7 +92,7 @@ body {
     background: #1a0f2e;
     color: #ffe4a0;
     border: 1px solid var(--gold-35);
-    border-radius: 6px;
+    border-radius: var(--radius-sm);
     padding: 0.3rem 0.5rem;
     font-family: inherit;
     font-size: 0.82rem;
@@ -101,7 +101,7 @@ body {
 .toolbar .view-tabs {
     display: flex;
     border: 1px solid var(--gold-35);
-    border-radius: 6px;
+    border-radius: var(--radius-sm);
     overflow: hidden;
 }
 .toolbar .view-tabs button {
