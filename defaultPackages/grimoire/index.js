@@ -650,11 +650,11 @@ export default {
                 const collapsed = !isRoot && !_folder.expanded.has(node.path);
                 const kids = (node.children || []).map(c => renderNode(c, depth + 1, false)).join('');
                 return `
-                    <div class="ftree-dir ${collapsed ? 'is-collapsed' : ''}" data-path="${window.escapeHTML(node.path)}">
-                        <div class="ftree-item" data-kind="dir" data-path="${window.escapeHTML(node.path)}">
+                    <div class="ftree-dir ${collapsed ? 'is-collapsed' : ''}" data-path="${escapeHTML(node.path)}">
+                        <div class="ftree-item" data-kind="dir" data-path="${escapeHTML(node.path)}">
                             <span class="ftree-chev">▾</span>
                             <span class="ftree-icon">${isRoot ? '📂' : '📁'}</span>
-                            <span class="ftree-name">${window.escapeHTML(node.name)}</span>
+                            <span class="ftree-name">${escapeHTML(node.name)}</span>
                         </div>
                         <div class="ftree-children">${kids || '<div class="ftree-empty">empty</div>'}</div>
                     </div>
@@ -662,11 +662,11 @@ export default {
             } else {
                 const isActive = activeId === 'file:' + node.path;
                 return `
-                    <div class="ftree-file" data-path="${window.escapeHTML(node.path)}">
-                        <div class="ftree-item ${isActive ? 'ftree-active' : ''}" data-kind="file" data-path="${window.escapeHTML(node.path)}">
+                    <div class="ftree-file" data-path="${escapeHTML(node.path)}">
+                        <div class="ftree-item ${isActive ? 'ftree-active' : ''}" data-kind="file" data-path="${escapeHTML(node.path)}">
                             <span class="ftree-chev"></span>
                             <span class="ftree-icon">📄</span>
-                            <span class="ftree-name">${window.escapeHTML(node.name)}</span>
+                            <span class="ftree-name">${escapeHTML(node.name)}</span>
                         </div>
                     </div>
                 `;
@@ -735,7 +735,7 @@ export default {
         }
 
         function showTreeMessage(msg, isErr) {
-            $folderTree.innerHTML = `<div class="ftree-empty" style="${isErr ? 'color:#fb7185;' : ''}">${window.escapeHTML(msg)}</div>`;
+            $folderTree.innerHTML = `<div class="ftree-empty" style="${isErr ? 'color:#fb7185;' : ''}">${escapeHTML(msg)}</div>`;
         }
 
         async function tryDirectoryPicker() {
