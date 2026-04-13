@@ -155,8 +155,14 @@ body {
     font-size: inherit;
     line-height: inherit;
     user-select: none;
-    overflow: hidden;              /* scroll is synced manually */
+    overflow: hidden;              /* the inner element scrolls via transform */
+    position: relative;
+}
+.editor .gutter-inner {
     white-space: pre;
+    will-change: transform;
+    font-family: inherit;
+    line-height: inherit;
 }
 .editor:not(.opt-linenums) .gutter { display: none; }
 
@@ -204,31 +210,30 @@ body {
     position: absolute;
     inset: 0;
     margin: 0;
-    padding: var(--ed-pad-y) var(--ed-pad-x);
+    padding: 0;                    /* padding lives on the <code> so translate works */
     font-family: inherit;
     font-size: inherit;
     line-height: inherit;
     color: #e8e8f0;
     background: transparent;
-    white-space: pre;
-    overflow: hidden;
+    overflow: hidden;              /* pre is the viewport; code scrolls within */
     pointer-events: none;
     z-index: 1;
     tab-size: 4;
 }
-.editor.opt-wrap .hl-layer {
-    white-space: pre-wrap;
-    word-wrap: break-word;
-    /* The textarea reserves scrollbar space (see .opt-wrap textarea rule);
-       we shadow-reserve the same gutter here so both wrap at the same x. */
-    padding-right: calc(var(--ed-pad-x) + var(--sbw, 0px));
-}
 .editor .hl-layer code {
     font-family: inherit;
     background: transparent !important;
-    padding: 0 !important;
-    white-space: inherit;
+    padding: var(--ed-pad-y) var(--ed-pad-x) !important;
     display: block;
+    white-space: pre;              /* default no-wrap — mirrored from textarea */
+    will-change: transform;
+}
+.editor.opt-wrap .hl-layer code {
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    /* Textarea reserves scrollbar-width; match it here so wrap boundaries agree. */
+    padding-right: calc(var(--ed-pad-x) + var(--sbw, 0px)) !important;
 }
 
 .editor textarea {

@@ -209,11 +209,16 @@ export default {
         }
 
         function syncHLScroll() {
-            if (!$hlLayer || !$ta) return;
-            $hlLayer.scrollTop = $ta.scrollTop;
-            $hlLayer.scrollLeft = $ta.scrollLeft;
-            // Our hl-layer uses overflow: hidden, so we translate instead.
-            $hlLayer.style.transform = `translate(${-$ta.scrollLeft}px, ${-$ta.scrollTop}px)`;
+            if (!$hlCode || !$ta || !$gutter) return;
+            // The <pre class=hl-layer> is a fixed-size viewport; its <code>
+            // child holds the full text. Translate the CODE so the visible
+            // slice matches the textarea's scroll position. Translating the
+            // pre itself would just shift the clip region — content below
+            // the first viewport-tall slice would never be renderable.
+            $hlCode.style.transform = `translate(${-$ta.scrollLeft}px, ${-$ta.scrollTop}px)`;
+            // Gutter: same story — overflow:hidden means scrollTop is a
+            // no-op, so translate the text node inside instead.
+            $gutter.style.transform = `translateY(${-$ta.scrollTop}px)`;
         }
 
         // Hidden mirror used to measure visual row count per logical line
@@ -262,7 +267,7 @@ export default {
                 }
                 $gutter.textContent = html;
             }
-            $gutter.scrollTop = $ta.scrollTop;
+            syncHLScroll();
         }
 
         function updateActiveLine() {
@@ -292,7 +297,7 @@ export default {
             if (view === 'edit') {
                 $body.innerHTML = `
                     <div class="editor">
-                        <div class="gutter"></div>
+                        <div class="gutter"><div class="gutter-inner"></div></div>
                         <div class="paper">
                             <div class="active-line"></div>
                             <pre class="hl-layer" aria-hidden="true"><code></code></pre>
@@ -303,7 +308,7 @@ export default {
                 $editor     = $body.querySelector('.editor');
                 $paper      = $body.querySelector('.paper');
                 $ta         = $body.querySelector('textarea');
-                $gutter     = $body.querySelector('.gutter');
+                $gutter     = $body.querySelector('.gutter-inner');
                 $activeLine = $body.querySelector('.active-line');
                 $hlLayer    = $body.querySelector('.hl-layer');
                 $hlCode     = $hlLayer.querySelector('code');
