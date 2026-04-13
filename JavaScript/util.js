@@ -3,9 +3,17 @@
  * ║  t() i18n · escapeHTML · safe storage · mq state · toast  ║
  * ╚══════════════════════════════════════════════════════════╝ */
 
-/* i18n accessor — returns the current-language table, empty on miss */
+/* i18n accessor — returns the current-language table, empty on miss.
+   i18n (config.js) and currentLang (core.js) are declared with const/let,
+   which do NOT attach to `window` in classic scripts — so we have to
+   reference them by bare name via `typeof` guards. */
 window.t = function t() {
-    return (window.i18n && window.i18n[window.currentLang]) || {};
+    try {
+        if (typeof i18n !== 'undefined' && typeof currentLang !== 'undefined') {
+            return i18n[currentLang] || {};
+        }
+    } catch {}
+    return {};
 };
 
 /* HTML entity escape for user-provided text rendered via innerHTML */

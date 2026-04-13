@@ -84,6 +84,8 @@ const CATEGORY_ICON = {
     info: '✦', games: '⚔', tools: '🔧', creativity: '🎨', other: '📦', system: '⚙',
 };
 
+const COLLAPSED_KEY = 'aruta_start_collapsed';
+
 function renderStartMenuItems() {
     const items = document.getElementById('start-items');
     if (!items) return;
@@ -105,9 +107,8 @@ function renderStartMenuItems() {
         });
     }
 
-    // Rebuild DOM. First-in-first-shown within each bucket preserves
-    // built-in order and install order for customs.
     const t = window.t();
+    const collapsed = new Set(window.storage.get(COLLAPSED_KEY, []) || []);
     items.innerHTML = '';
     let first = true;
     for (const cat of CATEGORY_ORDER) {
@@ -115,10 +116,32 @@ function renderStartMenuItems() {
         if (!entries.length) continue;
         if (!first) items.appendChild(Object.assign(document.createElement('div'), { className: 'start-cat-sep' }));
         first = false;
-        const header = document.createElement('div');
+
+        const group = document.createElement('div');
+        group.className = 'start-cat-group';
+        if (collapsed.has(cat)) group.classList.add('is-collapsed');
+        group.dataset.cat = cat;
+
+        const header = document.createElement('button');
         header.className = 'start-cat-header';
-        header.innerHTML = `<span class="start-cat-icon">${CATEGORY_ICON[cat]}</span><span class="start-cat-label" data-i18n="cat_${cat}">${t['cat_' + cat] || cat}</span>`;
-        items.appendChild(header);
+        header.type = 'button';
+        header.innerHTML = `
+            <span class="start-cat-chevron" aria-hidden="true">▾</span>
+            <span class="start-cat-icon">${CATEGORY_ICON[cat]}</span>
+            <span class="start-cat-label" data-i18n="cat_${cat}">${t['cat_' + cat] || cat}</span>
+            <span class="start-cat-count">${entries.length}</span>
+        `;
+        header.addEventListener('click', () => {
+            const willCollapse = !group.classList.contains('is-collapsed');
+            group.classList.toggle('is-collapsed', willCollapse);
+            const set = new Set(window.storage.get(COLLAPSED_KEY, []) || []);
+            willCollapse ? set.add(cat) : set.delete(cat);
+            window.storage.set(COLLAPSED_KEY, Array.from(set));
+        });
+        group.appendChild(header);
+
+        const body = document.createElement('div');
+        body.className = 'start-cat-body';
         for (const e of entries) {
             const btn = document.createElement('button');
             btn.className = 'start-item' + (e.custom ? ' start-custom' : '');
@@ -131,8 +154,10 @@ function renderStartMenuItems() {
                 const startBtn = document.getElementById('start-btn');
                 if (menu && menu.style.display !== 'none') startBtn?.click();
             });
-            items.appendChild(btn);
+            body.appendChild(btn);
         }
+        group.appendChild(body);
+        items.appendChild(group);
     }
 }
 
