@@ -578,6 +578,31 @@ function initSettings() {
         });
     }
 
+    // Font family preset
+    const FONTS = {
+        default:  { body: "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif", display: "'Cinzel', Georgia, serif" },
+        medieval: { body: "'IM Fell English', Georgia, serif", display: "'IM Fell English', Georgia, serif" },
+        modern:   { body: "-apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif", display: "-apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif" },
+        serif:    { body: "Georgia, 'Times New Roman', serif", display: "Georgia, 'Times New Roman', serif" },
+        mono:     { body: "'Courier New', Consolas, monospace", display: "'Courier New', Consolas, monospace" },
+        nordic:   { body: "'Cinzel', Georgia, serif", display: "'Cinzel', Georgia, serif" },
+    };
+    function applyFont(id) {
+        const f = FONTS[id] || FONTS.default;
+        document.documentElement.style.setProperty('--font-body', f.body);
+        document.documentElement.style.setProperty('--font-display', f.display);
+    }
+    const fontSel = document.getElementById('settings-font');
+    if (fontSel) {
+        const saved = localStorage.getItem('aruta_font') || 'default';
+        fontSel.value = FONTS[saved] ? saved : 'default';
+        applyFont(fontSel.value);
+        fontSel.addEventListener('change', () => {
+            applyFont(fontSel.value);
+            localStorage.setItem('aruta_font', fontSel.value);
+        });
+    }
+
     // Font size slider
     const fontRange = document.getElementById('settings-font-size');
     const fontLabel = document.getElementById('font-size-label');
@@ -723,6 +748,7 @@ function initSettings() {
         resetBtn.addEventListener('click', () => {
             localStorage.removeItem('aruta_theme');
             localStorage.removeItem('aruta_fontsize');
+            localStorage.removeItem('aruta_font');
             localStorage.removeItem('aruta_accent');
             localStorage.removeItem('aruta_accent_custom');
             localStorage.removeItem('aruta_showdate');
@@ -736,6 +762,7 @@ function initSettings() {
             // Reset toggles UI
             if (themeToggle) themeToggle.classList.remove('active');
             if (fontRange) { fontRange.value = 100; if (fontLabel) fontLabel.textContent = '100%'; }
+            if (fontSel) { fontSel.value = 'default'; applyFont('default'); }
             if (dateToggle) { dateToggle.classList.add('active'); if (dateEl) dateEl.style.display = ''; if (dateSep) dateSep.style.display = ''; }
             if (h24Toggle) { h24Toggle.classList.add('active'); window._use24h = true; }
             document.querySelectorAll('.settings-color-btn').forEach(b => b.classList.remove('active'));

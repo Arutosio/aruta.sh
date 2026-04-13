@@ -23,6 +23,7 @@
     --magic-orb:   rgba(167, 139, 250, 0.55);
     --bg-ring-col: #a78bfa;
     --font-display: 'Cinzel', Georgia, serif;
+    --font-body: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
 }
 
 [data-theme="light"] {
@@ -60,7 +61,7 @@ body {
     background-image: var(--bg-grad);
     background-attachment: fixed;
     color: var(--text);
-    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    font-family: var(--font-body);
     font-weight: 500;
     height: 100dvh;
     overflow: hidden;

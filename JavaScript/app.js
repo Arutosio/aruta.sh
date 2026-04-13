@@ -97,6 +97,20 @@ document.addEventListener('DOMContentLoaded', () => {
     const savedFontSize = localStorage.getItem('aruta_fontsize');
     if (savedFontSize) document.documentElement.style.fontSize = savedFontSize + '%';
 
+    // Restore font family preset ASAP to avoid a flash of default fonts
+    const FONT_PRESETS = {
+        medieval: { body: "'IM Fell English', Georgia, serif", display: "'IM Fell English', Georgia, serif" },
+        modern:   { body: "-apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif", display: "-apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif" },
+        serif:    { body: "Georgia, 'Times New Roman', serif", display: "Georgia, 'Times New Roman', serif" },
+        mono:     { body: "'Courier New', Consolas, monospace", display: "'Courier New', Consolas, monospace" },
+        nordic:   { body: "'Cinzel', Georgia, serif", display: "'Cinzel', Georgia, serif" },
+    };
+    const savedFont = localStorage.getItem('aruta_font');
+    if (savedFont && FONT_PRESETS[savedFont]) {
+        document.documentElement.style.setProperty('--font-body', FONT_PRESETS[savedFont].body);
+        document.documentElement.style.setProperty('--font-display', FONT_PRESETS[savedFont].display);
+    }
+
     const savedTheme = localStorage.getItem('aruta_theme');
     currentTheme = savedTheme || (window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark');
     document.documentElement.setAttribute('data-theme', currentTheme);
