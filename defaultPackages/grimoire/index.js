@@ -566,6 +566,16 @@ export default {
         const $folderNewDir  = root.querySelector('.folder-new-dir');
         const $folderTree    = root.querySelector('.folder-tree');
 
+        // Firefox/Safari don't implement showDirectoryPicker — we can still
+        // READ a folder via <input webkitdirectory>, but write access requires
+        // a Chromium browser. Flag it upfront so the user isn't left looking
+        // for 📄＋/📁＋ buttons that physically can't exist here.
+        const _canWrite = 'showDirectoryPicker' in window;
+        if (!_canWrite) {
+            $folderOpen.title = 'Read-only mode: this browser does not support folder write access.\nOpen in Chrome/Edge/Brave/Opera for create/rename/move/delete.';
+            $folderTree.innerHTML = '<div class="ftree-empty" style="font-size:11px;opacity:0.75;line-height:1.5;">⚠ Read-only mode<br>This browser has no File System Access API.<br>Open the site in Chrome/Edge for full folder editing.</div>';
+        }
+
         function folderHeaderControls(show) {
             const disp = show ? '' : 'none';
             $folderClose.style.display = disp;
@@ -938,7 +948,8 @@ export default {
                 _folder.expanded.clear();
                 _folder.tree = buildTreeFromFiles(files, _folder.name);
                 folderHeaderControls(true);
-                $folderOpen.textContent = '📂 ' + _folder.name;
+                $folderOpen.textContent = '📂 ' + _folder.name + ' (read-only)';
+                $folderOpen.title = 'This browser does not support folder write access. Open in Chrome/Edge for create/rename/move/delete.';
                 renderFolderTree();
             });
             input.click();
