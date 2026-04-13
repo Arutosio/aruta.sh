@@ -43,6 +43,14 @@ async function installDefault(pkg) {
     const manifest = JSON.parse(await map['manifest.json'].text());
     delete map['manifest.json'];
     await window.registry.saveManifest(manifest, map);
+    // Default (system) packages ship trusted — auto-grant every permission
+    // the manifest declares, so the user doesn't see a stream of prompts on
+    // first use. The user can still revoke from Settings → Permissions.
+    if (Array.isArray(manifest.permissions) && manifest.permissions.length) {
+        const grants = {};
+        for (const p of manifest.permissions) grants[p] = 'granted';
+        window.storage.set('aruta_perms_' + manifest.id, grants);
+    }
     return manifest;
 }
 
