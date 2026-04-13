@@ -10,6 +10,33 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="theme-color" id="meta-theme-color" content="#0c0a1a">
+    <script>
+        // Restore theme + font-size + font-family synchronously so the first
+        // paint already reflects the user's saved preferences. Running this
+        // from app.js at DOMContentLoaded leaves a visible flash on mobile
+        // when the default (dark) theme renders before the override applies.
+        (function() {
+            try {
+                var t = localStorage.getItem('aruta_theme');
+                if (!t) t = matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
+                document.documentElement.setAttribute('data-theme', t);
+                var fs = localStorage.getItem('aruta_fontsize');
+                if (fs) document.documentElement.style.fontSize = fs + '%';
+                var f = localStorage.getItem('aruta_font');
+                var FONTS = {
+                    medieval: ["'IM Fell English', Georgia, serif", "'IM Fell English', Georgia, serif"],
+                    modern:   ["-apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif", "-apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif"],
+                    serif:    ["Georgia, 'Times New Roman', serif", "Georgia, 'Times New Roman', serif"],
+                    mono:     ["'Courier New', Consolas, monospace", "'Courier New', Consolas, monospace"],
+                    nordic:   ["'Cinzel', Georgia, serif", "'Cinzel', Georgia, serif"]
+                };
+                if (f && FONTS[f]) {
+                    document.documentElement.style.setProperty('--font-body', FONTS[f][0]);
+                    document.documentElement.style.setProperty('--font-display', FONTS[f][1]);
+                }
+            } catch (e) {}
+        })();
+    </script>
     <meta property="og:type"        content="website">
     <meta property="og:url"         content="https://aruta.sh">
     <meta property="og:title"       content="Aruta.sh — The Wandering Mage">
@@ -29,7 +56,14 @@
     <link href="https://fonts.googleapis.com/css2?family=IM+Fell+English:ital@0;1&family=Inter:wght@400;600;700;900&family=Cinzel:wght@500;700;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
     <link rel="preload" as="image" href="./Images/aru2_meta.png">
-    <link rel="stylesheet" href="Style/main.css">
+    <!-- Stylesheets loaded explicitly so the preload scanner can fetch all 6 in
+         parallel. A single main.css with @import would serialize discovery and
+         cause a visible FOUC on slower (mobile) connections. -->
+    <link rel="stylesheet" href="Style/core.css">
+    <link rel="stylesheet" href="Style/desktop.css">
+    <link rel="stylesheet" href="Style/os.css">
+    <link rel="stylesheet" href="Style/sections.css">
+    <link rel="stylesheet" href="Style/responsive.css">
     <link rel="stylesheet" href="Style/terminal.css">
     <!-- VanillaTilt removed — replaced with pure CSS/JS tilt -->
 </head>

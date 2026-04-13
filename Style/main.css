@@ -1,10 +1,7 @@
 /* ╔══════════════════════════════════════════════════════════╗
- * ║  MAIN STYLESHEET — Imports all CSS modules              ║
- * ║  Single entry point for all styles                      ║
+ * ║  MAIN — deprecated bundle                                ║
+ * ║  Stylesheets are now linked directly from index.html so  ║
+ * ║  the preload scanner can fetch them in parallel. Keeping ║
+ * ║  this file as a no-op avoids breaking any third-party    ║
+ * ║  link that still points here.                            ║
  * ╚══════════════════════════════════════════════════════════╝ */
-
-@import 'core.css';
-@import 'desktop.css';
-@import 'os.css';
-@import 'sections.css';
-@import 'responsive.css';
