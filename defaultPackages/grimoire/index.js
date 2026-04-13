@@ -568,16 +568,34 @@ export default {
 
         async function buildTreeFromHandle(dirHandle, path = '') {
             const node = { name: dirHandle.name, path, isDir: true, handle: dirHandle, children: [] };
-            for await (const [name, h] of dirHandle.entries()) {
-                if (h.kind === 'directory') {
-                    if (SKIP_DIRS.has(name)) continue;
-                    const childPath = path ? path + '/' + name : name;
-                    node.children.push(await buildTreeFromHandle(h, childPath));
-                } else {
-                    if (SKIP_FILES_RE.test(name)) continue;
-                    const childPath = path ? path + '/' + name : name;
-                    node.children.push({ name, path: childPath, isDir: false, handle: h });
+            // Some browsers (or sandboxed iframes) return a handle that
+            // can be picked but whose entries() is gated by an explicit
+            // permission request. Ask once, up-front.
+            try {
+                const q = await dirHandle.queryPermission?.({ mode: 'read' });
+                if (q !== 'granted' && dirHandle.requestPermission) {
+                    const r = await dirHandle.requestPermission({ mode: 'read' });
+                    if (r !== 'granted') throw new Error('read permission denied');
                 }
+            } catch (e) {
+                // permission flow not available — entries() below will throw if blocked
+            }
+            try {
+                for await (const [name, h] of dirHandle.entries()) {
+                    if (h.kind === 'directory') {
+                        if (SKIP_DIRS.has(name)) continue;
+                        const childPath = path ? path + '/' + name : name;
+                        try { node.children.push(await buildTreeFromHandle(h, childPath)); }
+                        catch (e) { console.warn('[grimoire] skipped dir', childPath, e); }
+                    } else {
+                        if (SKIP_FILES_RE.test(name)) continue;
+                        const childPath = path ? path + '/' + name : name;
+                        node.children.push({ name, path: childPath, isDir: false, handle: h });
+                    }
+                }
+            } catch (e) {
+                console.error('[grimoire] entries() failed for', path || '(root)', e);
+                throw e;
             }
             node.children.sort((a, b) => (a.isDir === b.isDir) ? a.name.localeCompare(b.name) : (a.isDir ? -1 : 1));
             return node;
@@ -716,34 +734,39 @@ export default {
             await persistActive();
         }
 
-        $folderOpen.addEventListener('click', async () => {
-            // Modern path: File System Access API (Chrome/Edge; may also fail
-            // inside sandboxed iframes — we fall back gracefully).
-            if ('showDirectoryPicker' in window) {
-                try {
-                    const handle = await window.showDirectoryPicker();
-                    _folder.root = handle;
-                    _folder.name = handle.name;
-                    _folder.fallback = false;
-                    _folder.expanded.clear();
-                    _folder.tree = await buildTreeFromHandle(handle);
-                    $folderClose.style.display = '';
-                    $folderOpen.textContent = '📂 ' + handle.name;
-                    renderFolderTree();
-                    return;
-                } catch (e) {
-                    if (e?.name === 'AbortError') return; // user cancelled
-                    // Any other error (SecurityError, NotAllowedError) → fall through.
-                }
+        function showTreeMessage(msg, isErr) {
+            $folderTree.innerHTML = `<div class="ftree-empty" style="${isErr ? 'color:#fb7185;' : ''}">${window.escapeHTML(msg)}</div>`;
+        }
+
+        async function tryDirectoryPicker() {
+            try {
+                const handle = await window.showDirectoryPicker();
+                _folder.root = handle;
+                _folder.name = handle.name;
+                _folder.fallback = false;
+                _folder.expanded.clear();
+                showTreeMessage('Reading folder…');
+                _folder.tree = await buildTreeFromHandle(handle);
+                $folderClose.style.display = '';
+                $folderOpen.textContent = '📂 ' + handle.name;
+                renderFolderTree();
+                return true;
+            } catch (e) {
+                if (e?.name === 'AbortError') return true; // user cancelled — stop here
+                console.warn('[grimoire] showDirectoryPicker failed, falling back', e);
+                showTreeMessage('Folder read blocked — try again (browser permission?)', true);
+                return false;
             }
-            // Fallback: <input webkitdirectory> — read-only, Export saves via download.
+        }
+
+        function openWebkitDirInput() {
             const input = document.createElement('input');
             input.type = 'file';
             input.webkitdirectory = true;
             input.multiple = true;
             input.addEventListener('change', () => {
                 const files = Array.from(input.files || []);
-                if (!files.length) return;
+                if (!files.length) { showTreeMessage('No files in folder.', false); return; }
                 _folder.root = null;
                 _folder.name = files[0].webkitRelativePath.split('/')[0] || 'folder';
                 _folder.fallback = true;
@@ -754,6 +777,19 @@ export default {
                 renderFolderTree();
             });
             input.click();
+        }
+
+        $folderOpen.addEventListener('click', async () => {
+            // File System Access API gives us read+write handles — preferred
+            // path. If it's gated by the sandboxed-iframe policy, we fall back
+            // to <input webkitdirectory>. Fallback has to be kicked off in a
+            // fresh user gesture (a click) so we don't lose activation: route
+            // through a retry button if async path fails.
+            if ('showDirectoryPicker' in window) {
+                const ok = await tryDirectoryPicker();
+                if (ok) return;
+            }
+            openWebkitDirInput();
         });
 
         $folderClose.addEventListener('click', () => {

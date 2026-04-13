@@ -3,7 +3,7 @@
     "id": "grimoire",
     "name": "Grimoire",
     "icon": "📜",
-    "version": "1.5.0",
+    "version": "1.5.1",
     "author": "Aruta",
     "entry": "index.js",
     "category": "tools",
