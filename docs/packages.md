@@ -193,6 +193,12 @@ Reinstalling an existing `id` replaces the package (update flow).
 
 ---
 
+## Host-level behaviors apps can rely on
+
+- The host respects `prefers-reduced-motion` (parallax, click spells, circle rotation turn off) and sets `.is-reduced-motion` on `<html>` so your own CSS can follow suit: `@media (prefers-reduced-motion: reduce) { … }` works inside your sandbox too.
+- `<html>` also carries `.is-mobile` and `.is-touch` classes synced with the viewport / pointer type. Useful from inside your app when you want to match the host's layout decisions.
+- Keyboard focus shows a consistent gold outline on all interactive elements. If you add buttons in your app, simply leaving `:focus-visible` to the browser default is fine — the host style cascade doesn't reach inside your sandboxed iframe, but the convention is worth matching for visual parity.
+
 ## Limitations
 
 - Package files are stored as Blobs — very large packages (hundreds of MB) are possible but not recommended.

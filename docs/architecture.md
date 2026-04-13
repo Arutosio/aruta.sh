@@ -8,11 +8,14 @@ This is a contributor-facing overview of how apps and commands are wired interna
 
 | File | Role |
 |---|---|
+| [`JavaScript/util.js`](../JavaScript/util.js) | Shared helpers: `window.t()` i18n accessor, `window.escapeHTML`, `window.storage.{get,set,del}` (JSON-aware, SecurityError-safe), `window.mq` with synced `is-mobile`/`is-touch`/`is-reduced-motion` classes on `<html>`, toast/confirm fallbacks |
+| [`JavaScript/db.js`](../JavaScript/db.js) | Shared IndexedDB helpers: cached `openDB(name, version, upgrade)`, `closeDB`, `txRun`, `rangeCollect`, `rangeDelete`. Used by both `registry.js` and `sandbox.js` |
 | [`JavaScript/installer.js`](../JavaScript/installer.js) | Reads `.zip` (JSZip lazy-loaded from CDN), validates the manifest, shows install confirmation, sets correct MIME types on extracted Blobs, wires drag-drop overlay |
-| [`JavaScript/registry.js`](../JavaScript/registry.js) | IndexedDB `aruta_packages` (manifests + files), `localStorage.aruta_installed_apps` cache for fast boot, registers custom apps in `WIN_META` + dynamically creates their window DOM + Start menu items |
-| [`JavaScript/sandbox.js`](../JavaScript/sandbox.js) | Apps → `<iframe sandbox="allow-scripts">` with `srcdoc` bootstrap, commands → blob-URL dynamic `import()`. Implements the `ctx` bridge (postMessage for apps, direct for commands) and the permission-gated method dispatcher |
-| [`JavaScript/permissions.js`](../JavaScript/permissions.js) | Per-app grant store, runtime prompt modal (serialized so only one shows at a time), Settings → Permissions renderer |
+| [`JavaScript/registry.js`](../JavaScript/registry.js) | IndexedDB `aruta_packages` (manifests + files) via `db.js`, `localStorage.aruta_installed_apps` cache for fast boot, registers custom apps in `WIN_META` + dynamically creates their window DOM + Start menu items |
+| [`JavaScript/sandbox.js`](../JavaScript/sandbox.js) | Apps → `<iframe sandbox="allow-scripts">` with `srcdoc` bootstrap, commands → blob-URL dynamic `import()`. Implements the `ctx` bridge (postMessage for apps, direct for commands) and the permission-gated method dispatcher. Per-app storage DB handles cached via `db.js` |
+| [`JavaScript/permissions.js`](../JavaScript/permissions.js) | Per-app grant store (backed by `window.storage`), runtime prompt modal (serialized so only one shows at a time), Settings → Permissions renderer |
 | [`JavaScript/terminal.js`](../JavaScript/terminal.js) | Shell UI, parser (quoted strings), history, built-in commands. Unknown names fall through to `registry.listCommands()` → `sandbox.runCommand()` |
+| [`JavaScript/defaults.js`](../JavaScript/defaults.js) | Auto-installs bundled `defaultPackages/*` on first boot. Packages fetched and installed in parallel (one burst, not a serial chain). Respects a blacklist so uninstalls persist |
 
 Script load order in `index.html`:
 ```
@@ -120,6 +123,28 @@ To add a new `ctx.foo(...)` method:
 5. Document it in [ctx-api.md](./ctx-api.md).
 
 ---
+
+## CSS Design Tokens
+
+`Style/core.css :root` defines a small design-token layer so new components
+don't hardcode values:
+
+- **Brand colors:** `--gold`, `--gold-light`, `--purple`, `--green`, `--red`, `--cyan`, `--emerald`
+- **Opacity ramps (auto-tracks theme via `color-mix`):** `--gold-08/15/25/35/50`, `--purple-15/25`
+- **Radii:** `--radius-xs/sm/md/lg/xl` (4/6/8/10/12px)
+- **Spacing:** `--space-1..6` (4/6/8/12/16/24px)
+- **Z-index scale:** `--z-bg/fog/app/portrait/window/spell/taskbar/menu/summon/ripple/achievement/toast/modal/cursor`
+- **Easings:** `--ease-bounce`
+- **Borders:** `--border-subtle`, `--border-card`
+
+Two utility classes live in core.css:
+- `.glass-panel` — backdrop-filter + hud-bg + card-border + radius-lg (taskbar, menu, windows, toasts reuse this)
+- `.arcane-input` — shared input/select base (background, border, focus ring)
+
+Accessibility: a single `:focus-visible` rule covers every interactive element
+with a `2px solid var(--gold)` outline. Reduced-motion: if the OS asks, `app.js`
+disables parallax, click spells, and rotation at boot, and `<html>` receives
+`.is-reduced-motion` so CSS can also react.
 
 ## Gotchas to remember
 
