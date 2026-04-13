@@ -7,25 +7,14 @@ const DB_NAME = 'aruta_packages';
 const DB_VERSION = 1;
 const INDEX_KEY = 'aruta_installed_apps';
 
-let _dbPromise = null;
 function openDB() {
-    if (_dbPromise) return _dbPromise;
-    _dbPromise = new Promise((resolve, reject) => {
-        const req = indexedDB.open(DB_NAME, DB_VERSION);
-        req.onupgradeneeded = (e) => {
-            const db = e.target.result;
-            if (!db.objectStoreNames.contains('manifests')) db.createObjectStore('manifests', { keyPath: 'id' });
-            if (!db.objectStoreNames.contains('files')) db.createObjectStore('files', { keyPath: ['appId', 'path'] });
-        };
-        req.onsuccess = () => resolve(req.result);
-        req.onerror = () => reject(req.error);
+    return window.db.openDB(DB_NAME, DB_VERSION, (db) => {
+        if (!db.objectStoreNames.contains('manifests')) db.createObjectStore('manifests', { keyPath: 'id' });
+        if (!db.objectStoreNames.contains('files'))     db.createObjectStore('files',     { keyPath: ['appId', 'path'] });
     });
-    return _dbPromise;
 }
 
-function tx(db, stores, mode) {
-    return db.transaction(stores, mode);
-}
+function tx(db, stores, mode) { return db.transaction(stores, mode); }
 
 const _manifests = new Map();
 const _commands = new Map();

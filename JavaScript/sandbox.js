@@ -5,21 +5,10 @@
 
 const _mounted = new Map(); // appId -> { iframe, channel }
 
-const _appDBCache = new Map();
 function _appStorageDB(appId) {
-    let p = _appDBCache.get(appId);
-    if (p) return p;
-    p = new Promise((resolve, reject) => {
-        const req = indexedDB.open('aruta_app_' + appId, 1);
-        req.onupgradeneeded = (e) => {
-            const db = e.target.result;
-            if (!db.objectStoreNames.contains('kv')) db.createObjectStore('kv');
-        };
-        req.onsuccess = () => resolve(req.result);
-        req.onerror = () => { _appDBCache.delete(appId); reject(req.error); };
+    return window.db.openDB('aruta_app_' + appId, 1, (db) => {
+        if (!db.objectStoreNames.contains('kv')) db.createObjectStore('kv');
     });
-    _appDBCache.set(appId, p);
-    return p;
 }
 
 async function _appStorageGet(appId, key) {
@@ -281,10 +270,7 @@ function _buildHostCtx(appId, files) {
 }
 
 async function closeAppStorage(appId) {
-    const p = _appDBCache.get(appId);
-    if (!p) return;
-    try { const db = await p; db.close(); } catch {}
-    _appDBCache.delete(appId);
+    await window.db.closeDB('aruta_app_' + appId);
 }
 
 window.sandbox = { mount: mountApp, unmount: unmountApp, runCommand, closeAppStorage };

@@ -768,7 +768,7 @@ function initSettings() {
             document.querySelectorAll('.settings-color-btn').forEach(b => b.classList.remove('active'));
             const goldBtn = document.querySelector('.settings-color-btn[data-accent="gold"]');
             if (goldBtn) goldBtn.classList.add('active');
-            const t = (typeof i18n !== 'undefined' && i18n[currentLang]) || {};
+            const t = window.t();
             if (window.showToast) showToast(t.toast_reset_done || 'Settings restored to defaults', 'success');
         });
     }
@@ -777,7 +777,7 @@ function initSettings() {
     const wipeBtn = document.getElementById('settings-wipe');
     if (wipeBtn) {
         wipeBtn.addEventListener('click', async () => {
-            const t = (typeof i18n !== 'undefined' && i18n[currentLang]) || {};
+            const t = window.t();
             const confirmMsg = t.settings_wipe_confirm || 'Delete all locally stored data and reload the page?';
             const confirmFn = window.showConfirm || ((m) => Promise.resolve(confirm(m)));
             const ok = await confirmFn(confirmMsg, { type: 'warning', okText: t.confirm_wipe || 'Wipe', cancelText: t.confirm_cancel || 'Cancel' });
@@ -801,7 +801,7 @@ function initSettings() {
     const wipeSettingsBtn = document.getElementById('settings-wipe-settings');
     if (wipeSettingsBtn) {
         wipeSettingsBtn.addEventListener('click', async () => {
-            const t = (typeof i18n !== 'undefined' && i18n[currentLang]) || {};
+            const t = window.t();
             const confirmMsg = t.settings_wipe_settings_confirm || 'Reset preferences? Installed apps, commands and their permissions will be kept.';
             const confirmFn = window.showConfirm || ((m) => Promise.resolve(confirm(m)));
             const ok = await confirmFn(confirmMsg, { type: 'warning', okText: t.confirm_wipe || 'Wipe', cancelText: t.confirm_cancel || 'Cancel' });

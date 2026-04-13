@@ -73,7 +73,7 @@ const BUILTINS = {
     help: {
         desc: 'Show available commands',
         run() {
-            const t = (typeof i18n !== 'undefined' && i18n[currentLang]) || {};
+            const t = window.t();
             termPrint(t.term_help_header || 'Built-in commands:', 'term-info');
             const max = Math.max(...Object.keys(BUILTINS).map(k => k.length));
             for (const [name, def] of Object.entries(BUILTINS)) {
@@ -191,7 +191,7 @@ const BUILTINS = {
 async function termRun(line) {
     const parsed = _parseLine(line);
     if (!parsed) return;
-    const t = (typeof i18n !== 'undefined' && i18n[currentLang]) || {};
+    const t = window.t();
 
     _history.push(line);
     if (_history.length > HISTORY_MAX) _history = _history.slice(-HISTORY_MAX);
@@ -273,7 +273,7 @@ function initTerminal() {
     _loadHistory();
     _historyIdx = _history.length;
 
-    const t = (typeof i18n !== 'undefined' && i18n[currentLang]) || {};
+    const t = window.t();
     termPrint(t.term_welcome || '✦ Aruta Terminal — type "help" for commands', 'term-info');
     termPrint('');
 

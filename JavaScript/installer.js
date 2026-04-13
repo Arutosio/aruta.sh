@@ -33,7 +33,7 @@ function validateManifest(m) {
 }
 
 async function _confirmInstall(manifest, isUpdate) {
-    const t = (typeof i18n !== 'undefined' && i18n[currentLang]) || {};
+    const t = window.t();
     const titleTpl = isUpdate ? (t.install_update_title || 'Update {name}?') : (t.install_title || 'Install {name}?');
     const title = titleTpl.replace('{name}', manifest.name);
     const permsList = (manifest.permissions || []).map(p => '• ' + (window.permissions?.label(p) || p)).join('\n');
@@ -77,7 +77,7 @@ async function _confirmInstall(manifest, isUpdate) {
 }
 
 async function installFromFile(file) {
-    const t = (typeof i18n !== 'undefined' && i18n[currentLang]) || {};
+    const t = window.t();
     if (!file) throw new Error('no file');
     if (!/\.zip$/i.test(file.name)) {
         if (window.showToast) showToast(t.install_err_not_zip || 'File must be a .zip', 'error');
@@ -160,7 +160,7 @@ function initDragDrop() {
     overlay.innerHTML = '<div class="install-dropzone-inner">📦 <span></span></div>';
     document.body.appendChild(overlay);
     const updateLabel = () => {
-        const t = (typeof i18n !== 'undefined' && i18n[currentLang]) || {};
+        const t = window.t();
         overlay.querySelector('span').textContent = t.install_drop_label || 'Drop .zip to install';
     };
     updateLabel();

@@ -5,30 +5,12 @@
 const PERM_KEY_PREFIX = 'aruta_perms_';
 const PERM_LIST = ['storage', 'notifications', 'windows', 'terminal', 'fetch', 'theme', 'clipboard'];
 
-function permLabel(perm) {
-    const t = (typeof i18n !== 'undefined' && i18n[currentLang]) || {};
-    return t['perm_' + perm] || perm;
-}
+function permLabel(perm) { return window.t()['perm_' + perm] || perm; }
+function permDesc(perm)  { return window.t()['perm_' + perm + '_desc'] || perm; }
 
-function permDesc(perm) {
-    const t = (typeof i18n !== 'undefined' && i18n[currentLang]) || {};
-    return t['perm_' + perm + '_desc'] || perm;
-}
-
-function permsLoad(appId) {
-    try {
-        const raw = localStorage.getItem(PERM_KEY_PREFIX + appId);
-        return raw ? JSON.parse(raw) : {};
-    } catch { return {}; }
-}
-
-function permsSave(appId, obj) {
-    try { localStorage.setItem(PERM_KEY_PREFIX + appId, JSON.stringify(obj)); } catch {}
-}
-
-function permsClear(appId) {
-    try { localStorage.removeItem(PERM_KEY_PREFIX + appId); } catch {}
-}
+const permsLoad  = (appId) => window.storage.get(PERM_KEY_PREFIX + appId, {}) || {};
+const permsSave  = (appId, obj) => window.storage.set(PERM_KEY_PREFIX + appId, obj);
+const permsClear = (appId) => window.storage.del(PERM_KEY_PREFIX + appId);
 
 function permGet(appId, perm) {
     return permsLoad(appId)[perm];
@@ -61,7 +43,7 @@ async function permRequest(appId, perm) {
     }
     _activePrompt = (async () => {
         const manifest = window.registry?.getManifest(appId) || { name: appId, icon: '📦' };
-        const t = (typeof i18n !== 'undefined' && i18n[currentLang]) || {};
+        const t = window.t();
         const titleTpl = t.perm_request_title || '{name} wants to access {perm}';
         const title = titleTpl.replace('{name}', manifest.name).replace('{perm}', permLabel(perm));
         const body = permDesc(perm);
@@ -116,7 +98,7 @@ function permRenderSettings() {
     const root = document.getElementById('settings-perms-list');
     if (!root) return;
     const apps = window.registry?.list() || [];
-    const t = (typeof i18n !== 'undefined' && i18n[currentLang]) || {};
+    const t = window.t();
 
     if (apps.length === 0) {
         root.innerHTML = `<div class="perm-empty">${t.perm_empty || 'No packages installed.'}</div>`;
