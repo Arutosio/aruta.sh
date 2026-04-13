@@ -961,6 +961,41 @@ function initSysInfo() {
         return navigator.platform || 'Unknown';
     }
 
+    /** Detect browser name + version from user agent.
+        Uses userAgentData when available (Chromium), falls back to UA sniffing. */
+    function getBrowser() {
+        // Modern UA-CH path
+        const brands = navigator.userAgentData?.brands;
+        if (brands && brands.length) {
+            const main = brands.find(b => !/Not.*A.Brand/i.test(b.brand)) || brands[0];
+            if (main) return main.brand + ' ' + main.version;
+        }
+        const ua = navigator.userAgent;
+        const tests = [
+            [/Edg\/([\d.]+)/,                     'Edge'],
+            [/OPR\/([\d.]+)|Opera\/([\d.]+)/,     'Opera'],
+            [/Firefox\/([\d.]+)/,                 'Firefox'],
+            [/Chrome\/([\d.]+)/,                  'Chrome'],
+            [/Version\/([\d.]+).*Safari/,         'Safari'],
+            [/MSIE ([\d.]+)|rv:([\d.]+).*Trident/,'Internet Explorer'],
+        ];
+        for (const [re, name] of tests) {
+            const m = ua.match(re);
+            if (m) return name + ' ' + (m[1] || m[2] || '');
+        }
+        return 'Unknown';
+    }
+
+    /** Detect rendering engine. */
+    function getEngine() {
+        const ua = navigator.userAgent;
+        if (/Gecko\/\d/.test(ua) && !/like Gecko/.test(ua)) return 'Gecko';
+        if (/AppleWebKit/.test(ua) && /Chrome|Chromium|Edg/.test(ua)) return 'Blink';
+        if (/AppleWebKit/.test(ua)) return 'WebKit';
+        if (/Trident/.test(ua)) return 'Trident';
+        return 'Unknown';
+    }
+
     /** Format milliseconds as human-readable uptime */
     function formatUptime(ms) {
         const s = Math.floor(ms / 1000);
@@ -998,6 +1033,10 @@ function initSysInfo() {
             { label: 'CPU', value: (navigator.hardwareConcurrency || '?') + ' cores', cls: '' },
             { label: 'Memory', value: (navigator.deviceMemory || '?') + ' GB', cls: '' },
             { label: 'Platform', value: getPlatform(), cls: '' },
+            { label: 'Browser', value: getBrowser(), cls: 'gold' },
+            { label: 'Engine', value: getEngine(), cls: '' },
+            { label: 'Cookies', value: navigator.cookieEnabled ? 'enabled' : 'disabled', cls: navigator.cookieEnabled ? 'green' : 'red' },
+            { label: 'DNT', value: (navigator.doNotTrack === '1' || window.doNotTrack === '1') ? 'on' : 'off', cls: '' },
             { label: 'Viewport', value: window.innerWidth + '\u00d7' + window.innerHeight, cls: '' },
             { label: 'Screen', value: screen.width + '\u00d7' + screen.height + ' @' + devicePixelRatio + 'x', cls: '' },
             { label: 'Locale', value: navigator.language, cls: '' },

@@ -69,6 +69,16 @@
     border-color: rgba(255, 200, 87, 0.25);
     box-shadow: 0 0 6px rgba(255,200,87,0.1);
 }
+/* Tray buttons with an inline text label next to the icon */
+.tray-btn-sys { width: auto; padding: 0 8px; gap: 6px; }
+.tray-btn-label {
+    font-family: var(--font-display);
+    font-size: 0.68rem; font-weight: 700;
+    letter-spacing: 0.12em;
+    color: var(--gold);
+    line-height: 1;
+}
+@media (max-width: 480px) { .tray-btn-label { display: none; } }
 
 /* Taskbar clock */
 .taskbar-clock {
