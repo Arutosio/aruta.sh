@@ -158,12 +158,49 @@ export default {
             $hlLayer.style.transform = `translate(${-$ta.scrollLeft}px, ${-$ta.scrollTop}px)`;
         }
 
+        // Hidden mirror used to measure visual row count per logical line
+        // when wrap is on. Cached across calls; its width is synced to .paper.
+        let $gutterMirror = null;
+        function ensureGutterMirror() {
+            if ($gutterMirror && $gutterMirror.isConnected) return $gutterMirror;
+            $gutterMirror = document.createElement('div');
+            $gutterMirror.setAttribute('aria-hidden', 'true');
+            $gutterMirror.style.cssText =
+                'position:absolute;left:-99999px;top:0;visibility:hidden;pointer-events:none;' +
+                'padding:0;margin:0;border:0;box-sizing:border-box;' +
+                'font-family:var(--mono);font-size:var(--ed-font);line-height:var(--ed-line);' +
+                'white-space:pre-wrap;word-wrap:break-word;tab-size:' + settings.tabWidth + ';';
+            document.body.appendChild($gutterMirror);
+            return $gutterMirror;
+        }
         function updateGutter() {
             if (!$gutter || !$ta) return;
-            const lines = $ta.value.split('\n').length;
-            let html = '';
-            for (let i = 1; i <= lines; i++) html += i + '\n';
-            $gutter.textContent = html;
+            const lines = $ta.value.split('\n');
+            if (!settings.wrap) {
+                // 1:1 mapping — each logical line takes exactly one row.
+                let html = '';
+                for (let i = 0; i < lines.length; i++) html += (i + 1) + '\n';
+                $gutter.textContent = html;
+            } else {
+                // Measure each line's visual row count so the gutter can
+                // pad with empty rows for wrapped continuations.
+                const mirror = ensureGutterMirror();
+                // Match paper's content-box width so wrap boundaries align.
+                const paperStyle = getComputedStyle($paper);
+                const px = parseFloat(paperStyle.paddingLeft) + parseFloat(paperStyle.paddingRight);
+                mirror.style.width = ($paper.clientWidth - px) + 'px';
+                mirror.style.tabSize = settings.tabWidth;
+                const lineH = parseFloat(getComputedStyle(mirror).lineHeight) || 22;
+                let html = '';
+                for (let i = 0; i < lines.length; i++) {
+                    mirror.textContent = lines[i] === '' ? ' ' : lines[i];
+                    const rows = Math.max(1, Math.round(mirror.clientHeight / lineH));
+                    html += (i + 1);
+                    for (let j = 1; j < rows; j++) html += '\n';
+                    html += '\n';
+                }
+                $gutter.textContent = html;
+            }
             $gutter.scrollTop = $ta.scrollTop;
         }
 
@@ -241,6 +278,12 @@ export default {
                     }
                 });
                 $ta.focus();
+
+                // Wrap-aware gutter needs to recompute when the viewport
+                // resizes, since wrap boundaries change.
+                window.addEventListener('resize', () => {
+                    if ($editor?.isConnected) updateGutter();
+                });
             } else if (view === 'preview') {
                 const content = d.content || '';
                 const lang = d.lang || 'plaintext';
