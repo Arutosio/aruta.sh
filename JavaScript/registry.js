@@ -169,6 +169,8 @@ async function uninstall(id) {
     unregisterAppFromOS(id);
     // Drop app's own storage DB
     try { indexedDB.deleteDatabase('aruta_app_' + id); } catch {}
+    // If this was a default package, remember so we don't auto-reinstall it.
+    window.defaults?.markUninstalled(id);
     saveIndex();
     renderStartMenuItems();
 }

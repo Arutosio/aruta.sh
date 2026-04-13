@@ -1,0 +1,10 @@
+{
+    "type": "app",
+    "id": "oracle",
+    "name": "Oracle",
+    "icon": "🔮",
+    "version": "1.0.0",
+    "author": "Aruta",
+    "entry": "index.js",
+    "permissions": ["fetch"]
+}

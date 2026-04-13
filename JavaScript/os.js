@@ -782,6 +782,8 @@ function initSettings() {
             try {
                 const preserve = new Set();
                 preserve.add('aruta_installed_apps');
+                preserve.add('aruta_defaults_seen');
+                preserve.add('aruta_defaults_uninstalled');
                 for (let i = 0; i < localStorage.length; i++) {
                     const k = localStorage.key(i);
                     if (k && k.startsWith('aruta_perms_')) preserve.add(k);

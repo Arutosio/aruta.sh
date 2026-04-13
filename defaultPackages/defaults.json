@@ -1,0 +1,16 @@
+{
+    "version": 1,
+    "packages": [
+        { "id": "roll",         "files": ["manifest.json", "index.js"] },
+        { "id": "rune",         "files": ["manifest.json", "index.js"] },
+        { "id": "fortune",      "files": ["manifest.json", "index.js"] },
+        { "id": "weather",      "files": ["manifest.json", "index.js"] },
+        { "id": "timer",        "files": ["manifest.json", "index.js"] },
+        { "id": "qr",           "files": ["manifest.json", "index.js"] },
+        { "id": "whoami",       "files": ["manifest.json", "index.js"] },
+        { "id": "clip",         "files": ["manifest.json", "index.js"] },
+        { "id": "oracle",       "files": ["manifest.json", "index.js", "style.css"] },
+        { "id": "dice-roller",  "files": ["manifest.json", "index.js", "style.css"] },
+        { "id": "grimoire",     "files": ["manifest.json", "index.js", "style.css"] }
+    ]
+}

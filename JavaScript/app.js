@@ -44,8 +44,12 @@ function showApp() {
     initAchievements();
     initSysInfo();
 
-    // Initialize package registry (loads installed apps + commands from IndexedDB)
-    if (window.registry) window.registry.bootstrap();
+    // Initialize package registry (loads installed apps + commands from IndexedDB),
+    // then install any bundled default packages missing from the registry.
+    (async () => {
+        if (window.registry) await window.registry.bootstrap();
+        if (window.defaults) await window.defaults.bootstrap();
+    })();
     if (window.installer) window.installer.initDragDrop();
 
     // Entrance animation for home hero on desktop

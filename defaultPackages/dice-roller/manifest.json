@@ -1,0 +1,10 @@
+{
+    "type": "app",
+    "id": "dice-roller",
+    "name": "Dice Roller",
+    "icon": "🎲",
+    "version": "1.0.0",
+    "author": "Aruta",
+    "entry": "index.js",
+    "permissions": ["storage"]
+}
