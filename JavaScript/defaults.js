@@ -34,21 +34,29 @@ async function fetchBlob(path) {
 
 async function installDefault(pkg) {
     const base = 'defaultPackages/' + pkg.id + '/';
-    // Fetch every file (including manifest) in parallel. The manifest is tiny JSON;
-    // the others are JS/CSS blobs. This collapses ~3 round-trips per package into 1.
+    // Fetch the manifest first (small), so we can short-circuit when the
+    // bundled version matches what's already installed — avoids pulling
+    // all the JS/CSS on every boot.
+    const manifestBlob = await fetchBlob(base + 'manifest.json');
+    const manifest = JSON.parse(await manifestBlob.text());
+    const installed = window.registry.getManifest(pkg.id);
+    if (installed && installed.version === manifest.version) return null;
+
+    // Install / update. Fetch remaining files in parallel.
+    const others = pkg.files.filter(f => f !== 'manifest.json');
     const entries = await Promise.all(
-        pkg.files.map(async f => [f, await fetchBlob(base + f)])
+        others.map(async f => [f, await fetchBlob(base + f)])
     );
     const map = Object.fromEntries(entries);
-    const manifest = JSON.parse(await map['manifest.json'].text());
-    delete map['manifest.json'];
     await window.registry.saveManifest(manifest, map);
     // Default (system) packages ship trusted — auto-grant every permission
     // the manifest declares, so the user doesn't see a stream of prompts on
-    // first use. The user can still revoke from Settings → Permissions.
+    // first use. Existing grants are preserved; only missing ones are set.
     if (Array.isArray(manifest.permissions) && manifest.permissions.length) {
-        const grants = {};
-        for (const p of manifest.permissions) grants[p] = 'granted';
+        const grants = window.storage.get('aruta_perms_' + manifest.id, {}) || {};
+        for (const p of manifest.permissions) {
+            if (!(p in grants)) grants[p] = 'granted';
+        }
         window.storage.set('aruta_perms_' + manifest.id, grants);
     }
     return manifest;
@@ -81,7 +89,9 @@ async function bootstrapDefaults() {
     const pending = [];
     for (const pkg of index.packages) {
         if (blacklist.has(pkg.id)) continue;
-        if (window.registry.isInstalled(pkg.id)) continue;
+        // installDefault short-circuits when the bundled version matches
+        // the installed one, so it's safe to call unconditionally — and
+        // it's how default packages receive updates across site releases.
         pending.push(
             installDefault(pkg).catch(e => console.warn('[defaults] failed to install', pkg.id, e))
         );

@@ -1,4 +1,16 @@
-:root { --g: #ffc857; --p: #a78bfa; --bg: #0c0a1a; --mono: 'Courier New', 'Consolas', monospace; }
+:root {
+    --g: #ffc857; --p: #a78bfa; --bg: #0c0a1a;
+    --mono: 'Courier New', 'Consolas', monospace;
+    /* Editor geometry — keep font-size × line-height constant so gutter,
+       active-line highlight and grid cells all line up to the same rhythm. */
+    --ed-font:  14px;
+    --ed-line:  22px;
+    --ed-pad-y: 12px;
+    --ed-pad-x: 14px;
+    --grid: rgba(167, 139, 250, 0.08);
+    --grid-strong: rgba(167, 139, 250, 0.16);
+    --active-line: rgba(255, 200, 87, 0.08);
+}
 * { box-sizing: border-box; }
 html, body, #root { margin: 0; width: 100%; height: 100%; overflow: hidden; }
 body {
@@ -15,27 +27,27 @@ body {
 /* ── Sidebar ───────────────────── */
 .sidebar {
     width: 180px; flex-shrink: 0;
-    background: var(--ink-35);
-    border-right: 1px solid var(--gold-20);
+    background: rgba(0,0,0,0.35);
+    border-right: 1px solid rgba(255,200,87,0.2);
     display: flex; flex-direction: column;
     min-height: 0;
 }
 .sidebar-head {
     padding: 0.5rem;
     display: flex; gap: 0.3rem;
-    border-bottom: 1px solid var(--gold-15);
+    border-bottom: 1px solid rgba(255,200,87,0.15);
 }
 .sidebar-head button {
     flex: 1;
     background: transparent;
-    border: 1px solid var(--gold-35);
+    border: 1px solid rgba(255,200,87,0.35);
     color: var(--g);
-    border-radius: var(--radius-sm);
+    border-radius: 6px;
     padding: 0.35rem;
-    font-size: var(--text-sm);
+    font-size: 0.8rem;
     cursor: pointer;
 }
-.sidebar-head button:hover { background: var(--gold-10); }
+.sidebar-head button:hover { background: rgba(255,200,87,0.1); }
 .doclist {
     flex: 1 1 auto;
     list-style: none;
@@ -45,26 +57,21 @@ body {
 }
 .doclist li {
     padding: 0.45rem 0.6rem;
-    border-radius: var(--radius-sm);
+    border-radius: 6px;
     cursor: pointer;
-    font-size: var(--text-base);
+    font-size: 0.85rem;
     display: flex; justify-content: space-between; align-items: center;
     gap: 0.3rem;
-    transition: background var(--dur-snap);
+    transition: background 0.15s;
 }
 .doclist li:hover { background: rgba(255,255,255,0.04); }
-.doclist li.active {
-    background: var(--purple-18);
-    color: var(--g);
-}
-.doclist .dot { font-size: var(--text-xs); opacity: 0.7; }
+.doclist li.active { background: rgba(167,139,250,0.18); color: var(--g); }
+.doclist .dot { font-size: 0.75rem; opacity: 0.7; }
 .doclist .del {
     background: transparent; border: none;
     color: #fb7185; cursor: pointer;
-    font-size: var(--text-base);
-    padding: 0 0.2rem;
-    opacity: 0;
-    transition: opacity var(--dur-snap);
+    font-size: 0.85rem; padding: 0 0.2rem;
+    opacity: 0; transition: opacity 0.15s;
 }
 .doclist li:hover .del { opacity: 1; }
 
@@ -73,47 +80,51 @@ body {
 .toolbar {
     padding: 0.45rem 0.6rem;
     display: flex; gap: 0.4rem; align-items: center;
-    border-bottom: 1px solid var(--gold-15);
-    background: var(--ink-20);
+    border-bottom: 1px solid rgba(255,200,87,0.15);
+    background: rgba(0,0,0,0.2);
     flex-wrap: wrap;
 }
 .toolbar input.title {
     flex: 1; min-width: 120px;
     background: transparent;
-    border: 1px solid var(--gold-25);
+    border: 1px solid rgba(255,200,87,0.25);
     color: #ffe4a0;
-    border-radius: var(--radius-sm);
+    border-radius: 6px;
     padding: 0.3rem 0.55rem;
     font-family: inherit;
-    font-size: var(--text-base);
+    font-size: 0.88rem;
 }
 .toolbar input.title:focus { outline: none; border-color: var(--g); }
 .toolbar select {
     background: #1a0f2e;
     color: #ffe4a0;
-    border: 1px solid var(--gold-35);
-    border-radius: var(--radius-sm);
+    border: 1px solid rgba(255,200,87,0.35);
+    border-radius: 6px;
     padding: 0.3rem 0.5rem;
     font-family: inherit;
-    font-size: var(--text-sm);
+    font-size: 0.82rem;
     cursor: pointer;
 }
 .toolbar .view-tabs {
     display: flex;
-    border: 1px solid var(--gold-35);
-    border-radius: var(--radius-sm);
+    border: 1px solid rgba(255,200,87,0.35);
+    border-radius: 6px;
     overflow: hidden;
 }
 .toolbar .view-tabs button {
-    background: transparent;
-    border: none;
+    background: transparent; border: none;
     color: #ffe4a0;
     padding: 0.3rem 0.7rem;
-    font-family: inherit;
-    font-size: var(--text-sm);
+    font-family: inherit; font-size: 0.82rem;
     cursor: pointer;
 }
 .toolbar .view-tabs button.active { background: var(--g); color: #0c0a1a; }
+.toolbar .view-tabs .tab-settings {
+    padding: 0.3rem 0.55rem;
+    border-left: 1px solid rgba(255,200,87,0.25);
+    font-size: 1rem;
+    line-height: 1;
+}
 .save-indicator {
     font-size: 0.72rem;
     opacity: 0.55;
@@ -122,28 +133,173 @@ body {
     text-align: right;
 }
 
-.body { flex: 1; min-height: 0; position: relative; overflow: hidden; }
-.body textarea {
+.body { flex: 1; min-height: 0; position: relative; overflow: hidden; background: #05030e; }
+
+/* ── Editor (edit view) ───────── */
+.editor {
+    display: flex;
+    width: 100%; height: 100%;
+    font-family: var(--mono);
+    font-size: var(--ed-font);
+    line-height: var(--ed-line);
+}
+.editor .gutter {
+    flex-shrink: 0;
+    padding: var(--ed-pad-y) 0.5rem;
+    width: 3.5em;
+    background: rgba(0, 0, 0, 0.35);
+    border-right: 1px solid rgba(167, 139, 250, 0.15);
+    color: rgba(255, 228, 160, 0.35);
+    text-align: right;
+    font-family: inherit;
+    font-size: inherit;
+    line-height: inherit;
+    user-select: none;
+    overflow: hidden;              /* scroll is synced manually */
+    white-space: pre;
+}
+.editor:not(.opt-linenums) .gutter { display: none; }
+
+.editor .paper {
+    position: relative;
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+}
+.editor .paper.opt-grid {
+    background-image:
+        linear-gradient(to right,  var(--grid) 1px, transparent 1px),
+        linear-gradient(to bottom, var(--grid) 1px, transparent 1px);
+    background-size: var(--ed-line) var(--ed-line);
+    background-position: var(--ed-pad-x) var(--ed-pad-y);
+}
+.editor .paper.opt-grid::before {
+    /* A stronger gridline every 5 cells — feels like graph paper. */
+    content: '';
+    position: absolute; inset: 0;
+    background-image:
+        linear-gradient(to right,  var(--grid-strong) 1px, transparent 1px),
+        linear-gradient(to bottom, var(--grid-strong) 1px, transparent 1px);
+    background-size: calc(var(--ed-line) * 5) calc(var(--ed-line) * 5);
+    background-position: var(--ed-pad-x) var(--ed-pad-y);
+    pointer-events: none;
+}
+.editor .active-line {
+    position: absolute;
+    left: 0; right: 0;
+    top: 0;
+    height: var(--ed-line);
+    background: var(--active-line);
+    pointer-events: none;
+    display: none;
+    will-change: transform;
+    z-index: 1;
+}
+.editor.opt-activeline .active-line { display: block; }
+
+.editor textarea {
+    position: relative;
+    z-index: 2;
     width: 100%; height: 100%;
     border: none; outline: none; resize: none;
-    background: #05030e;
+    background: transparent;
     color: #e8e8f0;
-    font-family: var(--mono);
-    font-size: var(--text-md);
-    line-height: 1.55;
-    padding: 0.8rem 1rem;
+    font-family: inherit;
+    font-size: inherit;
+    line-height: inherit;
+    padding: var(--ed-pad-y) var(--ed-pad-x);
     tab-size: 4;
+    caret-color: var(--g);
 }
+
+/* ── Preview view ─────────────── */
 .body .preview {
     width: 100%; height: 100%;
     overflow: auto;
     background: #05030e;
     font-family: var(--mono);
-    font-size: var(--text-md);
-    line-height: 1.55;
+    font-size: var(--ed-font);
+    line-height: var(--ed-line);
 }
-.body .preview pre { margin: 0; padding: 0.8rem 1rem; }
+.body .preview pre { margin: 0; padding: var(--ed-pad-y) var(--ed-pad-x); }
 .body .preview code { font-family: inherit; }
+
+/* ── Settings pane ────────────── */
+.settings-pane {
+    padding: 1rem 1.2rem;
+    overflow-y: auto;
+    height: 100%;
+    display: flex; flex-direction: column;
+    gap: 0.7rem;
+    color: #ffe4a0;
+    font-family: 'Inter', system-ui, sans-serif;
+    font-size: 0.88rem;
+}
+.settings-pane h3 {
+    margin: 0.3rem 0 0.2rem;
+    font-family: 'Cinzel', serif;
+    font-size: 0.95rem;
+    color: var(--g);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+.settings-pane p {
+    margin: 0;
+    opacity: 0.6;
+    font-size: 0.8rem;
+    font-style: italic;
+}
+.settings-row {
+    display: flex; align-items: center; gap: 0.8rem;
+    padding: 0.55rem 0.7rem;
+    background: rgba(255, 255, 255, 0.025);
+    border: 1px solid rgba(255, 200, 87, 0.15);
+    border-radius: 8px;
+    transition: border-color 0.15s, background 0.15s;
+}
+.settings-row:hover { border-color: rgba(255, 200, 87, 0.3); }
+.settings-row .label {
+    flex: 1;
+    display: flex; flex-direction: column; gap: 0.15rem;
+}
+.settings-row .label strong { font-size: 0.9rem; }
+.settings-row .label small { font-size: 0.75rem; opacity: 0.6; }
+
+/* Toggle */
+.toggle {
+    flex-shrink: 0;
+    width: 40px; height: 22px;
+    background: rgba(0,0,0,0.4);
+    border: 1px solid rgba(255, 200, 87, 0.3);
+    border-radius: 999px;
+    cursor: pointer; position: relative;
+    padding: 0;
+    transition: background 0.2s, border-color 0.2s;
+}
+.toggle::after {
+    content: '';
+    position: absolute; top: 2px; left: 2px;
+    width: 16px; height: 16px;
+    border-radius: 50%;
+    background: #ffe4a0;
+    transition: transform 0.2s, background 0.2s;
+}
+.toggle.on { background: rgba(255, 200, 87, 0.3); border-color: var(--g); }
+.toggle.on::after { transform: translateX(18px); background: var(--g); }
+
+/* Number input */
+.settings-row input[type="number"] {
+    width: 4.5em; flex-shrink: 0;
+    background: rgba(0,0,0,0.3);
+    color: #ffe4a0;
+    border: 1px solid rgba(255, 200, 87, 0.3);
+    border-radius: 6px;
+    padding: 0.3rem 0.5rem;
+    font-family: var(--mono);
+    font-size: 0.85rem;
+    text-align: center;
+}
+.settings-row input[type="number"]:focus { outline: none; border-color: var(--g); }
 
 .empty {
     width: 100%; height: 100%;
@@ -155,7 +311,8 @@ body {
 
 @media (max-width: 520px) {
     .wrap { flex-direction: column; }
-    .sidebar { width: 100%; max-height: 160px; border-right: none; border-bottom: 1px solid var(--gold-20); }
-    .toolbar { font-size: var(--text-sm); }
+    .sidebar { width: 100%; max-height: 160px; border-right: none; border-bottom: 1px solid rgba(255,200,87,0.2); }
+    .toolbar { font-size: 0.8rem; }
     .toolbar .view-tabs button { padding: 0.25rem 0.5rem; }
+    .editor .gutter { width: 2.8em; }
 }
