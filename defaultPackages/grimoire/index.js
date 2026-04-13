@@ -184,11 +184,14 @@ export default {
             } else {
                 // Measure each line's visual row count so the gutter can
                 // pad with empty rows for wrapped continuations.
+                // Wrap happens inside the textarea's *content area*
+                // (clientWidth minus its own padding), NOT the paper's width.
                 const mirror = ensureGutterMirror();
-                // Match paper's content-box width so wrap boundaries align.
-                const paperStyle = getComputedStyle($paper);
-                const px = parseFloat(paperStyle.paddingLeft) + parseFloat(paperStyle.paddingRight);
-                mirror.style.width = ($paper.clientWidth - px) + 'px';
+                const taStyle = getComputedStyle($ta);
+                const padX = parseFloat(taStyle.paddingLeft) + parseFloat(taStyle.paddingRight);
+                const wrapW = $ta.clientWidth - padX;
+                if (wrapW <= 0) { $gutter.textContent = ''; return; }
+                mirror.style.width = wrapW + 'px';
                 mirror.style.tabSize = settings.tabWidth;
                 const lineH = parseFloat(getComputedStyle(mirror).lineHeight) || 22;
                 let html = '';
