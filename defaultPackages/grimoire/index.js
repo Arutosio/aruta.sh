@@ -27,10 +27,11 @@ const LANGS = [
 ];
 
 const DEFAULT_SETTINGS = {
-    activeLine: true,
-    lineNumbers: true,
-    grid: false,
-    tabWidth: 4,
+    activeLine:   true,
+    lineNumbers:  true,
+    grid:         false,
+    liveHighlight: true,
+    tabWidth:     4,
 };
 
 function uuid() { return Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 8); }
@@ -100,6 +101,7 @@ export default {
 
         // Hold references to the current edit-view nodes (re-set by renderBody)
         let $editor = null, $paper = null, $ta = null, $gutter = null, $activeLine = null;
+        let $hlLayer = null, $hlCode = null, hlTimer = null;
 
         function active() { return docs.find(d => d.id === activeId); }
 
@@ -117,8 +119,41 @@ export default {
             if (!$editor) return;
             $editor.classList.toggle('opt-activeline', settings.activeLine);
             $editor.classList.toggle('opt-linenums',   settings.lineNumbers);
+            $editor.classList.toggle('opt-hl-live',    settings.liveHighlight);
             $paper.classList.toggle('opt-grid',        settings.grid);
             $ta.style.tabSize = settings.tabWidth;
+        }
+
+        function updateHighlight() {
+            if (!$hlCode || !$ta) return;
+            if (!settings.liveHighlight) return;
+            const d = active();
+            const lang = d?.lang || 'plaintext';
+            // Trailing newline ensures the rendered layer extends one row
+            // past the caret so the last empty line still paints.
+            const text = $ta.value + '\n';
+            $hlCode.textContent = text;
+            if (window.hljs && lang !== 'plaintext') {
+                $hlCode.className = 'language-' + lang;
+                $hlCode.removeAttribute('data-highlighted');
+                try { window.hljs.highlightElement($hlCode); } catch {}
+            } else {
+                $hlCode.className = '';
+            }
+            syncHLScroll();
+        }
+
+        function scheduleHighlight() {
+            if (hlTimer) clearTimeout(hlTimer);
+            hlTimer = setTimeout(updateHighlight, 80);
+        }
+
+        function syncHLScroll() {
+            if (!$hlLayer || !$ta) return;
+            $hlLayer.scrollTop = $ta.scrollTop;
+            $hlLayer.scrollLeft = $ta.scrollLeft;
+            // Our hl-layer uses overflow: hidden, so we translate instead.
+            $hlLayer.style.transform = `translate(${-$ta.scrollLeft}px, ${-$ta.scrollTop}px)`;
         }
 
         function updateGutter() {
@@ -160,6 +195,7 @@ export default {
                         <div class="gutter"></div>
                         <div class="paper">
                             <div class="active-line"></div>
+                            <pre class="hl-layer" aria-hidden="true"><code></code></pre>
                             <textarea spellcheck="false"></textarea>
                         </div>
                     </div>
@@ -169,20 +205,26 @@ export default {
                 $ta         = $body.querySelector('textarea');
                 $gutter     = $body.querySelector('.gutter');
                 $activeLine = $body.querySelector('.active-line');
+                $hlLayer    = $body.querySelector('.hl-layer');
+                $hlCode     = $hlLayer.querySelector('code');
                 $ta.value = d.content || '';
                 applyEditorSettings();
                 updateGutter();
                 updateActiveLine();
+                // Highlight initially; the layer needs highlight.js to be
+                // loaded, so wait on hljsReady for the very first paint.
+                hljsReady.then(updateHighlight);
 
                 $ta.addEventListener('input', () => {
                     d.content = $ta.value;
                     d.updatedAt = Date.now();
                     onEditEvent();
+                    scheduleHighlight();
                     scheduleSave();
                 });
                 $ta.addEventListener('keyup',    onEditEvent);
                 $ta.addEventListener('click',    onEditEvent);
-                $ta.addEventListener('scroll',   onEditEvent);
+                $ta.addEventListener('scroll',   () => { onEditEvent(); syncHLScroll(); });
                 $ta.addEventListener('keydown', (e) => {
                     if (e.key === 'Tab') {
                         e.preventDefault();
@@ -192,6 +234,7 @@ export default {
                         $ta.selectionStart = $ta.selectionEnd = start + ins.length;
                         d.content = $ta.value;
                         onEditEvent();
+                        scheduleHighlight();
                         scheduleSave();
                     }
                 });
@@ -223,6 +266,10 @@ export default {
                         <div class="settings-row">
                             <div class="label"><strong>Grid paper background</strong><small>Math-notebook ruled background (cells match the line height).</small></div>
                             <button class="toggle" data-opt="grid" type="button"></button>
+                        </div>
+                        <div class="settings-row">
+                            <div class="label"><strong>Live syntax highlighting</strong><small>Colors the code as you type based on the selected language. Turn off for large files if typing feels sluggish.</small></div>
+                            <button class="toggle" data-opt="liveHighlight" type="button"></button>
                         </div>
                         <div class="settings-row">
                             <div class="label"><strong>Tab width</strong><small>Number of spaces inserted by the Tab key.</small></div>
@@ -307,6 +354,7 @@ export default {
             d.lang = $lang.value; d.updatedAt = Date.now();
             scheduleSave();
             if (view === 'preview') renderBody();
+            else if (view === 'edit') updateHighlight();
         });
 
         $tabs.forEach(t => t.addEventListener('click', async () => {
