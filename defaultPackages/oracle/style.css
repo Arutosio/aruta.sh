@@ -2,8 +2,9 @@
 * { box-sizing: border-box; }
 html, body, #root { margin: 0; width: 100%; height: 100%; }
 body {
-    background: radial-gradient(circle at 50% 30%, #1a0f2e 0%, #0c0a1a 70%);
-    color: #ffe4a0;
+    background: var(--bg, #0c0a1a);
+    background-image: radial-gradient(circle at 50% 30%, #1a0f2e 0%, #0c0a1a 70%);
+    color: var(--text, #ffe4a0);
     font-family: 'Cinzel', 'Georgia', serif;
     display: flex; align-items: center; justify-content: center;
     padding: 1.2rem;
@@ -58,3 +59,17 @@ button {
 button:hover  { box-shadow: 0 0 14px var(--gold-40); }
 button:active { transform: scale(0.97); }
 .err { color: #fb7185; font-size: var(--text-base); }
+
+/* ── Light theme overrides ───────────────────────── */
+[data-theme="light"] body {
+    background-image: none;
+    background: var(--bg);
+    color: var(--text);
+}
+[data-theme="light"] blockquote { color: var(--text); }
+[data-theme="light"] .author { color: var(--purple); }
+[data-theme="light"] button {
+    background: linear-gradient(135deg, #f5e8c8, #ece0bc);
+    color: var(--gold);
+    border-color: var(--gold);
+}

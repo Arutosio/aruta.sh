@@ -2,8 +2,9 @@
     position: relative;
     width: 100%; height: 100%;
     display: flex; flex-direction: column;
-    background: radial-gradient(ellipse at top, #1a0f2e, #0a0515);
-    color: #ffe4a0;
+    background: var(--bg, #0a0515);
+    background-image: radial-gradient(ellipse at top, #1a0f2e, #0a0515);
+    color: var(--text, #ffe4a0);
     font-family: 'Cinzel', serif;
     overflow: hidden;
 }
@@ -69,3 +70,23 @@ canvas.board {
     margin-top: 0.6rem;
     line-height: 1.5;
 }
+
+/* ── Light theme overrides ───────────────────────── */
+[data-theme="light"] .wrap {
+    background-image: none;
+    background: var(--bg);
+    color: var(--text);
+}
+[data-theme="light"] .hud {
+    background: rgba(139,105,20,0.08);
+    border-bottom-color: rgba(139,105,20,0.25);
+}
+[data-theme="light"] .hud .score { color: var(--purple); }
+[data-theme="light"] .hud .pause-btn {
+    color: var(--text);
+    border-color: rgba(139,105,20,0.4);
+}
+[data-theme="light"] .hud .pause-btn:hover { background: rgba(139,105,20,0.14); }
+[data-theme="light"] canvas.board { background: #f5efdc; }
+[data-theme="light"] .overlay { background: rgba(245,239,220,0.78); }
+[data-theme="light"] .overlay .title { color: var(--gold); }
