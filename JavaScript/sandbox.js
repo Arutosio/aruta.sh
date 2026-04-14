@@ -5,6 +5,17 @@
 
 const _mounted = new Map(); // appId -> { iframe, channel }
 
+/**
+ * Push a theme change to every mounted app iframe. The in-iframe bootstrap
+ * listens for `{type:'theme', value}` messages and updates the iframe's
+ * root `data-theme` attribute so CSS vars recompute automatically.
+ */
+function broadcastTheme(v) {
+    for (const m of _mounted.values()) {
+        try { m.iframe.contentWindow?.postMessage({ __aruta_sdk: true, type: 'theme', value: v }, '*'); } catch (_) {}
+    }
+}
+
 function _appStorageDB(appId) {
     return window.db.openDB('aruta_app_' + appId, 1, (db) => {
         if (!db.objectStoreNames.contains('kv')) db.createObjectStore('kv');
@@ -110,6 +121,8 @@ html,body{margin:0;padding:0;width:100%;height:100%;background:transparent;color
             pending.delete(d.id);
             if (d.error) p.reject(new Error(d.error));
             else p.resolve(d.value);
+        } else if (d.type === 'theme') {
+            if (d.value) document.documentElement.dataset.theme = d.value;
         } else if (d.type === 'init') {
             try {
                 const fileURLs = {};
@@ -142,6 +155,10 @@ html,body{margin:0;padding:0;width:100%;height:100%;background:transparent;color
                     i18n: (k) => call('i18n', k),
                     permission: { request: (p) => call('permission.request', p) },
                 };
+                // sync theme from host before user CSS loads so the first paint
+                // already matches light/dark instead of flashing the CSS default.
+                // Theme is sent in the init payload (no permission prompt).
+                if (d.theme) document.documentElement.dataset.theme = d.theme;
                 // inject style.css if present
                 if (fileURLs['style.css']) {
                     const link = document.createElement('link');
@@ -200,7 +217,8 @@ async function mountApp(appId) {
         const d = e.data;
         if (!d || !d.__aruta_sdk) return;
         if (d.type === 'ready') {
-            iframe.contentWindow.postMessage({ __aruta_sdk: true, type: 'init', manifest, files }, '*');
+            const theme = window.currentTheme || document.documentElement.dataset.theme || 'dark';
+            iframe.contentWindow.postMessage({ __aruta_sdk: true, type: 'init', manifest, files, theme }, '*');
         } else if (d.type === 'call') {
             try {
                 const value = await _handleCall(appId, d.method, d.args || []);
@@ -283,4 +301,4 @@ async function closeAppStorage(appId) {
     await window.db.closeDB('aruta_app_' + appId);
 }
 
-window.sandbox = { mount: mountApp, unmount: unmountApp, runCommand, closeAppStorage };
+window.sandbox = { mount: mountApp, unmount: unmountApp, runCommand, closeAppStorage, broadcastTheme };

@@ -117,9 +117,12 @@ function toggleTheme() {
 
     currentTheme = currentTheme === 'dark' ? 'light' : 'dark';
     _isLight = currentTheme === 'light';
+    window.currentTheme = currentTheme;
     document.documentElement.setAttribute('data-theme', currentTheme);
     localStorage.setItem('aruta_theme', currentTheme);
     updateThemeIcon();
+    // Push the new theme to every mounted app iframe so CSS vars update live.
+    window.sandbox?.broadcastTheme?.(currentTheme);
 }
 
 /**
