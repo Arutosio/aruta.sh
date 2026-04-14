@@ -337,4 +337,4 @@ async function closeAppStorage(appId) {
     await window.db.closeDB((window.Storage?.constants.APP_DB_PREFIX || 'aruta_app_') + appId);
 }
 
-window.sandbox = { mount: mountApp, unmount: unmountApp, runCommand, closeAppStorage, broadcastTheme };
+window.sandbox = { mount: mountApp, unmount: unmountApp, runCommand, closeAppStorage, broadcastTheme, SDK_VERSION, PERM_REQUIRED };
