@@ -86,24 +86,36 @@ flowchart TD
   }
 }}%%
 sequenceDiagram
-    participant App as App code (iframe)
+    autonumber
+    box rgb(42,31,74) 🪄 Iframe · opaque origin
+    participant App as App code
     participant Boot as IFRAME_BOOT proxy
+    end
+    box rgb(58,42,15) 🏛 Host · aruta.sh
     participant Host as sandbox._handleCall
     participant Perm as permissions.request
-    App->>Boot: ctx.storage.set('k', v)
-    Boot->>Host: postMessage {type:'call', id, method:'storage.set', args}
-    Host->>Perm: request(appId, 'storage')
-    alt first call
-        Perm-->>Perm: show modal (Allow / Always / Deny)
     end
-    Perm-->>Host: granted | denied
+
+    App->>+Boot: ctx.storage.set('k', v)
+    Boot->>+Host: postMessage<br/>{type:'call', id, method, args}
+    Host->>+Perm: request(appId, 'storage')
+
+    alt first invocation for this permission
+        Perm-->>Perm: show modal<br/>(Allow · Always · Deny)
+        Note right of Perm: decision cached<br/>in localStorage
+    end
+
+    Perm-->>-Host: granted | denied
+
     alt granted
-        Host->>Host: real impl (IDB put)
-        Host-->>Boot: postMessage {type:'reply', id, value}
+        Host->>Host: run real impl<br/>(IDB put via Storage.appKV)
+        Host-->>Boot: postMessage<br/>{type:'reply', id, value}
     else denied
-        Host-->>Boot: postMessage {type:'reply', id, value:false}
+        Host-->>Boot: postMessage<br/>{type:'reply', id, error:'permission_denied'}
     end
-    Boot-->>App: Promise resolves
+    deactivate Host
+
+    Boot-->>-App: Promise resolves / rejects
 ```
 
 ---
