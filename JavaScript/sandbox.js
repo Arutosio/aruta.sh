@@ -25,7 +25,10 @@ async function _appStorageSet(appId, key, value) {
     return new Promise((res, rej) => {
         const t = db.transaction('kv', 'readwrite');
         t.objectStore('kv').put(value, key);
-        t.oncomplete = () => res(true);
+        t.oncomplete = () => {
+            try { window.profile?.markDirty?.('app', appId); } catch {}
+            res(true);
+        };
         t.onerror = () => rej(t.error);
     });
 }
@@ -34,7 +37,10 @@ async function _appStorageRemove(appId, key) {
     return new Promise((res, rej) => {
         const t = db.transaction('kv', 'readwrite');
         t.objectStore('kv').delete(key);
-        t.oncomplete = () => res(true);
+        t.oncomplete = () => {
+            try { window.profile?.markDirty?.('app', appId); } catch {}
+            res(true);
+        };
         t.onerror = () => rej(t.error);
     });
 }

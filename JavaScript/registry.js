@@ -215,6 +215,7 @@ async function saveManifest(manifest, files) {
     }
     saveIndex();
     renderStartMenuItems();
+    try { window.profile?.markDirty?.('manifests', manifest.id); } catch {}
 }
 
 async function getFiles(appId) {
@@ -261,6 +262,8 @@ async function uninstall(id) {
     window.defaults?.markUninstalled(id);
     saveIndex();
     renderStartMenuItems();
+    try { window.profile?.markDirty?.('manifests', id); } catch {}
+    try { window.profile?.markDirty?.('app', id); } catch {}
 }
 
 function ensureAppWindow(manifest) {

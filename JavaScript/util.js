@@ -41,11 +41,16 @@ window.storage = {
         try {
             const v = typeof value === 'string' ? value : JSON.stringify(value);
             localStorage.setItem(key, v);
+            try { window.profile?.markDirty?.('localStorage', key); } catch {}
             return true;
         } catch { return false; }
     },
     del(key) {
-        try { localStorage.removeItem(key); return true; }
+        try {
+            localStorage.removeItem(key);
+            try { window.profile?.markDirty?.('localStorage', key); } catch {}
+            return true;
+        }
         catch { return false; }
     },
 };
