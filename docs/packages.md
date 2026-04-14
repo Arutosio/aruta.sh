@@ -163,13 +163,14 @@ Compress-Archive -Path .\mypackage\* -DestinationPath .\mypackage.zip
 
 ### Install
 
-Three ways, all equivalent:
+Four ways, all equivalent:
 
 1. **Drag & drop** the `.zip` anywhere on the desktop.
 2. **Terminal** → `install` → pick the file.
 3. **Settings → 🔐 Permissions → Install package**.
+4. **📦 Package Store** — browse & install from a remote repo, or sideload a `.zip` URL.
 
-All three trigger the install confirmation modal, which shows the manifest details and declared permissions.
+All trigger the install confirmation modal, which shows the manifest details and declared permissions.
 
 Reinstalling an existing `id` replaces the package (update flow).
 
@@ -177,12 +178,16 @@ Reinstalling an existing `id` replaces the package (update flow).
 
 ## Managing installed packages
 
-- **Settings → 🔐 Permissions** — every installed app & command, with per-permission toggles and an uninstall button.
+Install, update and uninstall all flow through the **📦 Package Store** (System category) or the **`pkg`** CLI. Settings → 🔐 Permissions manages only per-app permission grants.
+
+- **📦 Package Store → Installed** — every installed package with uninstall + update-available actions. A "Show defaults" toggle reveals bundled system packages (hidden by default).
+- **Settings → 🔐 Permissions** — per-permission toggles for each installed app/command. No install/uninstall UI here; use the Package Store.
 - **Terminal built-ins:**
     - `apps` — list installed apps
     - `commands` — list installed commands
     - `permissions <id>` — show an app's current grants
     - `uninstall <id>` — remove a package
+    - `pkg` — apt-style frontend (see below)
 - **Wipe Settings Only** (Settings → Reset) preserves packages & permissions.
 - **Wipe All** erases everything, including packages.
 

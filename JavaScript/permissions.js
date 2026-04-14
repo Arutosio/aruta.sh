@@ -100,34 +100,37 @@ function permRenderSettings() {
     const apps = window.registry?.list() || [];
     const t = window.t();
 
-    if (apps.length === 0) {
-        root.innerHTML = `<div class="perm-empty">${t.perm_empty || 'No packages installed.'}</div>`;
-        return;
-    }
+    const notice = `<div class="perm-store-notice">
+        <span class="perm-store-notice-text">${t.perm_store_notice || 'To install or remove packages, open 📦 <strong>Package Store</strong> (System category).'}</span>
+        <button class="perm-store-open" type="button">${t.perm_store_open || 'Open Package Store'}</button>
+    </div>`;
 
-    root.innerHTML = apps.map(a => {
-        const perms = permsLoad(a.id);
-        const declared = a.permissions || [];
-        const allKeys = Array.from(new Set([...declared, ...Object.keys(perms)]));
-        const rows = allKeys.length ? allKeys.map(p => {
-            const state = perms[p] || 'ask';
-            const granted = state === 'granted';
-            return `<div class="perm-item">
-                <span class="perm-name">${permLabel(p)}</span>
-                <span class="perm-state perm-state-${state}">${t['perm_state_' + state] || state}</span>
-                <button class="perm-toggle" data-app="${a.id}" data-perm="${p}" data-state="${state}">${granted ? (t.perm_revoke || 'Revoke') : (t.perm_grant || 'Grant')}</button>
+    if (apps.length === 0) {
+        root.innerHTML = notice + `<div class="perm-empty">${t.perm_empty || 'No packages installed.'}</div>`;
+    } else {
+        root.innerHTML = notice + apps.map(a => {
+            const perms = permsLoad(a.id);
+            const declared = a.permissions || [];
+            const allKeys = Array.from(new Set([...declared, ...Object.keys(perms)]));
+            const rows = allKeys.length ? allKeys.map(p => {
+                const state = perms[p] || 'ask';
+                const granted = state === 'granted';
+                return `<div class="perm-item">
+                    <span class="perm-name">${permLabel(p)}</span>
+                    <span class="perm-state perm-state-${state}">${t['perm_state_' + state] || state}</span>
+                    <button class="perm-toggle" data-app="${a.id}" data-perm="${p}" data-state="${state}">${granted ? (t.perm_revoke || 'Revoke') : (t.perm_grant || 'Grant')}</button>
+                </div>`;
+            }).join('') : `<div class="perm-empty-small">${t.perm_no_perms || 'No permissions used.'}</div>`;
+            return `<div class="perm-app">
+                <div class="perm-app-head">
+                    <span class="perm-app-icon">${a.icon || '📦'}</span>
+                    <strong class="perm-app-name">${a.name}</strong>
+                    <span class="perm-app-type">${a.type}</span>
+                </div>
+                <div class="perm-app-perms">${rows}</div>
             </div>`;
-        }).join('') : `<div class="perm-empty-small">${t.perm_no_perms || 'No permissions used.'}</div>`;
-        return `<div class="perm-app">
-            <div class="perm-app-head">
-                <span class="perm-app-icon">${a.icon || '📦'}</span>
-                <strong class="perm-app-name">${a.name}</strong>
-                <span class="perm-app-type">${a.type}</span>
-                <button class="perm-uninstall" data-app="${a.id}" title="${t.perm_uninstall || 'Uninstall'}">🗑️</button>
-            </div>
-            <div class="perm-app-perms">${rows}</div>
-        </div>`;
-    }).join('');
+        }).join('');
+    }
 
     root.querySelectorAll('.perm-toggle').forEach(btn => {
         btn.addEventListener('click', () => {
@@ -136,19 +139,9 @@ function permRenderSettings() {
             permRenderSettings();
         });
     });
-    root.querySelectorAll('.perm-uninstall').forEach(btn => {
-        btn.addEventListener('click', async () => {
-            const id = btn.dataset.app;
-            const ok = await (window.showConfirm || (m => Promise.resolve(confirm(m))))(
-                (t.perm_uninstall_confirm || 'Uninstall {name}?').replace('{name}', id),
-                { type: 'warning', okText: t.perm_uninstall || 'Uninstall', cancelText: t.confirm_cancel || 'Cancel' }
-            );
-            if (!ok) return;
-            await window.registry?.uninstall(id);
-            permsClear(id);
-            permRenderSettings();
-            if (window.showToast) showToast((t.perm_uninstalled || '{name} uninstalled').replace('{name}', id), 'success');
-        });
+    const openBtn = root.querySelector('.perm-store-open');
+    if (openBtn) openBtn.addEventListener('click', () => {
+        if (typeof window.openWindow === 'function') window.openWindow('packagestore');
     });
 }
 

@@ -27,6 +27,79 @@ body {
     min-height: 0;
 }
 
+/* ── Sidebar nav (Browse / Installed) ─────────────── */
+.ps-nav {
+    display: flex;
+    flex-direction: column;
+    padding: 0.4rem;
+    gap: 0.2rem;
+    border-bottom: 1px solid rgba(255, 200, 87, 0.18);
+}
+.ps-nav-item {
+    display: flex;
+    align-items: center;
+    gap: 0.45rem;
+    width: 100%;
+    padding: 0.4rem 0.55rem;
+    background: transparent;
+    border: 1px solid transparent;
+    border-radius: 6px;
+    color: inherit;
+    font-family: inherit;
+    font-size: 0.85rem;
+    cursor: pointer;
+    text-align: left;
+    transition: background 0.12s, border-color 0.12s, color 0.12s;
+}
+.ps-nav-item:hover {
+    background: rgba(255, 200, 87, 0.08);
+    border-color: rgba(255, 200, 87, 0.25);
+}
+.ps-nav-item.is-active {
+    background: rgba(255, 200, 87, 0.14);
+    border-color: rgba(255, 200, 87, 0.5);
+    color: var(--g);
+}
+.ps-nav-ic { font-size: 1rem; }
+.ps-nav-lbl { flex: 1; }
+.ps-nav-count {
+    font-size: 0.72rem;
+    opacity: 0.65;
+    font-family: 'Courier New', monospace;
+}
+
+.ps-installed-list {
+    flex: 1;
+    overflow-y: auto;
+    padding: 0.5rem;
+}
+.ps-installed-count {
+    margin-left: auto;
+    font-size: 0.75rem;
+    opacity: 0.6;
+    font-style: italic;
+}
+.ps-installed-search {
+    flex: 1;
+    min-width: 120px;
+    background: rgba(0, 0, 0, 0.3);
+    border: 1px solid rgba(255, 200, 87, 0.3);
+    color: var(--text, #ffe4a0);
+    border-radius: 6px;
+    padding: 0.3rem 0.6rem;
+    font-family: inherit;
+    font-size: 0.85rem;
+}
+.ps-installed-search:focus { outline: none; border-color: var(--g); }
+.ps-tag-default {
+    background: rgba(255, 200, 87, 0.18);
+    color: var(--g);
+}
+.ps-tag-update {
+    background: rgba(251, 146, 60, 0.22);
+    color: var(--update);
+}
+
 /* ── Sidebar (repos) ──────────────────────────────── */
 .ps-sidebar {
     width: 220px;
