@@ -3,7 +3,7 @@
     "id": "dice-roller",
     "name": "Dice Roller",
     "icon": "🎲",
-    "version": "1.0.0",
+    "version": "1.0.1",
     "author": "Aruta",
     "entry": "index.js",
     "category": "games",

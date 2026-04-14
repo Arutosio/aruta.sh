@@ -116,7 +116,7 @@
     border-radius: var(--radius-md);
     margin-bottom: 1rem;
     line-height: 1.4;
-    color: var(--text, #ffe4a0);
+    color: var(--text-dim);
 }
 .perm-actions { gap: 0.5rem; flex-wrap: wrap; }
 .perm-always { background: linear-gradient(135deg, var(--green), #059669) !important; color: #062014 !important; }

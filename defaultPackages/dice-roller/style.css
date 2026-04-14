@@ -2,8 +2,9 @@
 * { box-sizing: border-box; }
 html, body, #root { margin: 0; width: 100%; height: 100%; }
 body {
-    background: radial-gradient(circle at 50% 25%, #1a0f2e 0%, #0c0a1a 70%);
-    color: #ffe4a0;
+    background: var(--bg, #0c0a1a);
+    background-image: radial-gradient(circle at 50% 25%, #1a0f2e 0%, #0c0a1a 70%);
+    color: var(--text, #ffe4a0);
     font-family: 'Cinzel', 'Georgia', serif;
     padding: 1rem;
     overflow: auto;
@@ -113,3 +114,29 @@ h2 { font-size: var(--text-base); margin: 0.5rem 0 0; letter-spacing: 0.1em; col
     font-family: inherit;
 }
 .clear-btn:hover { background: rgba(251, 113, 133, 0.1); }
+
+/* ── Light theme overrides ───────────────────────── */
+[data-theme="light"] body {
+    background-image: none;
+    background: var(--bg);
+    color: var(--text);
+}
+[data-theme="light"] .quick button {
+    background: linear-gradient(135deg, #f5e8c8, #ece0bc);
+    color: var(--gold);
+    border-color: var(--gold);
+}
+[data-theme="light"] .custom input {
+    background: var(--input-bg);
+    color: var(--input-text);
+    border-color: var(--input-border);
+}
+[data-theme="light"] .custom button { color: var(--accent-contrast); }
+[data-theme="light"] .display {
+    background: rgba(139,105,20,0.08);
+    border-color: rgba(139,105,20,0.35);
+}
+[data-theme="light"] .history li {
+    background: rgba(139,105,20,0.06);
+    border-color: rgba(139,105,20,0.2);
+}
