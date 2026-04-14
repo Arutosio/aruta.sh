@@ -685,6 +685,23 @@ function initSettings() {
         });
     }
 
+    // Follow-OS toggle — when on, theme tracks prefers-color-scheme live.
+    // Defaults to true; manual theme toggles flip this off via toggleTheme().
+    const followToggle = document.getElementById('settings-theme-follow-toggle');
+    if (followToggle) {
+        const isOn = localStorage.getItem('aruta_theme_follow_os') !== 'false';
+        followToggle.classList.toggle('active', isOn);
+        followToggle.addEventListener('click', () => {
+            const nowOn = !followToggle.classList.contains('active');
+            localStorage.setItem('aruta_theme_follow_os', nowOn ? 'true' : 'false');
+            followToggle.classList.toggle('active', nowOn);
+            if (nowOn) {
+                const osPref = window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
+                if (osPref !== window.currentTheme) toggleTheme({ keepFollowOS: true });
+            }
+        });
+    }
+
     // Font family preset
     const FONTS = {
         default:  { body: "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif", display: "'Cinzel', Georgia, serif" },

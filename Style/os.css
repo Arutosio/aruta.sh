@@ -286,7 +286,7 @@
     cursor: pointer;
     font-family: var(--font-display);
     font-size: var(--text-xs);
-    font-weight: var(--fw-bold);
+    font-weight: 900;
     letter-spacing: 0.18em;
     text-transform: uppercase;
     color: var(--text-faint);

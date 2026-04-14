@@ -98,7 +98,13 @@ function setActiveLangBtn(lang) {
 /**
  * Toggle between dark and light themes with a ripple transition
  */
-function toggleTheme() {
+function toggleTheme(opts) {
+    // Manual toggles disable follow-OS; the OS-driven listener in app.js
+    // passes { keepFollowOS:true } when reacting to a system change so it
+    // doesn't disable the very mode it's responding to.
+    if (!opts || !opts.keepFollowOS) {
+        try { localStorage.setItem('aruta_theme_follow_os', 'false'); } catch (_) {}
+    }
     unlockAchievement('theme_switch');
     // Ripple transition effect
     const ripple = document.createElement('div');

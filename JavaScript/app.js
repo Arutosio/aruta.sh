@@ -117,10 +117,30 @@ document.addEventListener('DOMContentLoaded', () => {
         document.documentElement.style.setProperty('--font-display', FONT_PRESETS[savedFont].display);
     }
 
+    // Follow-OS is the default. The user can disable it from Settings, in
+    // which case we honour the saved manual choice. With follow-OS active,
+    // any saved value is ignored and the system preference wins.
+    const followOS = localStorage.getItem('aruta_theme_follow_os') !== 'false';
     const savedTheme = localStorage.getItem('aruta_theme');
-    currentTheme = savedTheme || (window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark');
+    const osPref = window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
+    currentTheme = followOS ? osPref : (savedTheme || osPref);
+    window.currentTheme = currentTheme;
     document.documentElement.setAttribute('data-theme', currentTheme);
     _isLight = currentTheme === 'light';
+
+    // React to OS theme changes while follow-OS is on. When the user later
+    // toggles manually we flip follow-OS off in toggleTheme, so this listener
+    // becomes a no-op without removal.
+    try {
+        const mq = window.matchMedia('(prefers-color-scheme: light)');
+        const onMqChange = (e) => {
+            if (localStorage.getItem('aruta_theme_follow_os') === 'false') return;
+            const next = e.matches ? 'light' : 'dark';
+            if (next === window.currentTheme) return;
+            if (typeof toggleTheme === 'function') toggleTheme({ keepFollowOS: true });
+        };
+        mq.addEventListener ? mq.addEventListener('change', onMqChange) : mq.addListener(onMqChange);
+    } catch (_) { /* old browsers — skip */ }
 
     // Respect OS reduced-motion preference — disable heavy mouse-driven effects.
     // The user can still re-enable these from Settings → Performance if they want.
