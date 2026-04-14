@@ -9,6 +9,58 @@ let _output, _input, _prompt;
 let _history = [];
 let _historyIdx = -1;
 let _initialized = false;
+let _cwd = ''; // session-local working directory, relative to linked profile folder root
+
+// ── Filesystem helpers ────────────────────────────────────
+// Normalize target path against cwd. Throws on '..' above home.
+// Returns path without leading slash (empty string = home).
+function resolvePath(target, cwd) {
+    target = String(target || '');
+    const absolute = target.startsWith('/') || target.startsWith('~');
+    if (target.startsWith('~')) target = target.slice(1);
+    if (target.startsWith('/')) target = target.slice(1);
+    const stack = absolute ? [] : (cwd ? cwd.split('/').filter(Boolean) : []);
+    const segs = target.split('/');
+    for (const s of segs) {
+        if (!s || s === '.') continue;
+        if (s === '..') {
+            if (stack.length === 0) throw new Error('cannot go above home');
+            stack.pop();
+        } else {
+            stack.push(s);
+        }
+    }
+    return stack.join('/');
+}
+
+// Walk from root handle along slash-separated path, returning the final dir handle.
+async function walkToDir(handle, path) {
+    if (!path) return handle;
+    let dir = handle;
+    for (const seg of path.split('/').filter(Boolean)) {
+        dir = await dir.getDirectoryHandle(seg, { create: false });
+    }
+    return dir;
+}
+
+// Return the linked handle or print a friendly error + return null.
+async function requireLinked() {
+    const fn = window.profile?.getLinkedHandle;
+    if (typeof fn !== 'function') {
+        termPrint('no profile folder linked. Open Settings → Profile to pick one.', 'term-error');
+        return null;
+    }
+    const h = await fn();
+    if (!h) {
+        termPrint('no profile folder linked. Open Settings → Profile to pick one.', 'term-error');
+        return null;
+    }
+    return h;
+}
+
+function _updatePromptUI() {
+    if (_prompt) _prompt.textContent = _promptText();
+}
 
 function _loadHistory() {
     try {
@@ -186,6 +238,63 @@ const BUILTINS = {
             if (typeof switchLanguage === 'function') { switchLanguage(args[0]); termPrint('lang: ' + args[0], 'term-success'); }
         }
     },
+    pwd: {
+        desc: 'Print working directory',
+        async run() {
+            if (!(await requireLinked())) return;
+            termPrint('~' + (_cwd ? '/' + _cwd : ''));
+        }
+    },
+    cd: {
+        desc: 'Change directory: cd [path]',
+        async run(args) {
+            const handle = await requireLinked();
+            if (!handle) return;
+            const arg = args[0];
+            if (!arg || arg === '~') { _cwd = ''; _updatePromptUI(); return; }
+            let target;
+            try { target = resolvePath(arg, _cwd); }
+            catch (e) { termPrint('cd: ' + (e.message || e), 'term-error'); return; }
+            try { await walkToDir(handle, target); }
+            catch { termPrint('cd: no such directory: ' + arg, 'term-error'); return; }
+            _cwd = target;
+            _updatePromptUI();
+        }
+    },
+    ls: {
+        desc: 'List directory: ls [-a] [path]',
+        async run(args) {
+            const handle = await requireLinked();
+            if (!handle) return;
+            let showAll = false;
+            const rest = [];
+            for (const a of (args || [])) {
+                if (a === '-a' || a === '--all') showAll = true;
+                else rest.push(a);
+            }
+            let target = _cwd;
+            if (rest[0]) {
+                try { target = resolvePath(rest[0], _cwd); }
+                catch (e) { termPrint('ls: ' + (e.message || e), 'term-error'); return; }
+            }
+            let dir;
+            try { dir = await walkToDir(handle, target); }
+            catch { termPrint('ls: no such directory: ' + (rest[0] || ('~' + (target ? '/' + target : ''))), 'term-error'); return; }
+            const dirs = [];
+            const files = [];
+            try {
+                for await (const [name, entry] of dir.entries()) {
+                    if (!showAll && name.startsWith('.')) continue;
+                    if (entry.kind === 'directory') dirs.push(name);
+                    else files.push(name);
+                }
+            } catch (e) { termPrint('ls: ' + (e.message || e), 'term-error'); return; }
+            dirs.sort((a, b) => a.localeCompare(b));
+            files.sort((a, b) => a.localeCompare(b));
+            for (const n of dirs) termPrintHTML(`<span class="term-key">${_escape(n)}/</span>`);
+            for (const n of files) termPrintHTML(`<span class="term-value">${_escape(n)}</span>`);
+        }
+    },
 };
 
 async function termRun(line) {
@@ -222,7 +331,7 @@ async function termRun(line) {
 }
 
 function _escape(s) { return s.replace(/[&<>"']/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c])); }
-function _promptText() { return '⚜ aruta:~$ '; }
+function _promptText() { return '⚜ aruta:~' + (_cwd ? '/' + _cwd : '') + '$ '; }
 
 function _onKey(e) {
     if (e.key === 'Enter') {

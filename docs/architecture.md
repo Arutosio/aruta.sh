@@ -259,6 +259,18 @@ By default the iframe is `sandbox="allow-scripts allow-modals"` (opaque origin �
 
 The trade-off: an `allow-same-origin` iframe shares the host's origin, can reach `window.parent`, and shares `localStorage`. The install modal surfaces the flag so users can refuse trust before installation. See [packages.md](./packages.md#manifestalloworigin) for the author-facing notes.
 
+## Terminal — filesystem navigation
+
+`terminal.js` ships three built-ins — `pwd`, `cd [path]`, `ls [-a] [path]` — that treat the **Linked Profile Folder** as the shell's home. Key points:
+
+- **Session-local CWD.** A module-scoped `_cwd` string holds the path relative to the folder root (`""` = home). It is never persisted; closing and reopening the terminal resets to `~`.
+- **Chromium-only.** Navigation relies on the FS Access API. If no folder is linked (or permission was never granted / is dormant), all three commands print `no profile folder linked. Open Settings → Profile to pick one.`
+- **Read-only handle accessor.** `window.profile.getLinkedHandle()` calls `queryPermission({ mode: 'read' })` without ever prompting — safe to invoke without a user gesture. Returns the `FileSystemDirectoryHandle` or `null`.
+- **Path resolution.** A local `resolvePath(target, cwd)` normalizes `.`/`..`, treats leading `/` or `~` as absolute, and throws `cannot go above home` if `..` would escape the root. There is no way to reach files outside the linked folder from the terminal.
+- **Prompt.** The visible prompt is `⚜ aruta:~$ ` at home and `⚜ aruta:~/sub/dir$ ` inside a subdirectory; it updates after every successful `cd`.
+
+Non-goals for v1: tab completion, `cat`/file-content commands, Firefox virtual-workspace fallback, multi-column `ls`, persistence of the CWD across sessions.
+
 ## Gotchas to remember
 
 - `WIN_META` entries for custom apps are created at runtime with `custom: true`. `os.js:openWindow` uses that flag to decide whether to invoke `sandbox.mount(id)`.

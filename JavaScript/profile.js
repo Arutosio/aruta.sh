@@ -527,6 +527,19 @@
         }
     }
 
+    /** Read-only accessor for the currently-linked directory handle.
+     *  Returns the handle only if read permission is already granted.
+     *  Never prompts — safe to call without a user gesture. */
+    async function getLinkedHandle() {
+        let handle;
+        try { handle = await _getHandle(); } catch { return null; }
+        if (!handle) return null;
+        try {
+            const perm = await handle.queryPermission?.({ mode: 'read' });
+            return perm === 'granted' ? handle : null;
+        } catch { return null; }
+    }
+
     async function unlink() {
         await _clearHandle();
         _disk = null;
@@ -624,6 +637,7 @@
         linkedName,
         linkedMode,
         hasHandle: async () => !!(await _getHandle().catch(() => null)),
+        getLinkedHandle,
         isDisconnected: () => _disconnected,
         /** Read the currently-linked folder and return a snapshot (or null). */
         __readLinkedFolder: async () => {
