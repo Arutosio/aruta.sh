@@ -466,6 +466,30 @@
 .os-window.win-maximized .win-titlebar {
     border-radius: 0;
 }
+/* Hide resize handles when maximized */
+.os-window.win-maximized .win-resize { display: none; }
+
+/* Suppress transitions during an active resize */
+.os-window.win-resizing {
+    transition: none !important;
+    user-select: none;
+}
+
+/* 8-direction resize handles — invisible hit strips along the frame */
+.win-resize {
+    position: absolute;
+    z-index: 10;
+    background: transparent;
+    touch-action: none;
+}
+.win-resize.n  { top: 0;    left: 0;  right: 0; height: 5px; cursor: ns-resize; }
+.win-resize.s  { bottom: 0; left: 0;  right: 0; height: 5px; cursor: ns-resize; }
+.win-resize.w  { top: 0;    left: 0;  bottom: 0; width: 5px; cursor: ew-resize; }
+.win-resize.e  { top: 0;    right: 0; bottom: 0; width: 5px; cursor: ew-resize; }
+.win-resize.nw { top: 0;    left: 0;  width: 10px; height: 10px; cursor: nwse-resize; z-index: 11; }
+.win-resize.ne { top: 0;    right: 0; width: 10px; height: 10px; cursor: nesw-resize; z-index: 11; }
+.win-resize.sw { bottom: 0; left: 0;  width: 10px; height: 10px; cursor: nesw-resize; z-index: 11; }
+.win-resize.se { bottom: 0; right: 0; width: 10px; height: 10px; cursor: nwse-resize; z-index: 11; }
 
 /* § SETTINGS PANEL
  * ──────────────────────────────── */

@@ -519,14 +519,50 @@ body {
     .editor .gutter { width: 2.8em; }
 }
 
-/* ── Light theme overrides ───────────────────────── */
-[data-theme="light"] body { color: var(--text); }
-[data-theme="light"] .sidebar { background: rgba(139,105,20,0.08); border-right-color: rgba(139,105,20,0.25); }
-[data-theme="light"] .sidebar-head { border-bottom-color: rgba(139,105,20,0.2); }
-[data-theme="light"] .sidebar-head button { border-color: rgba(139,105,20,0.45); color: var(--gold); }
-[data-theme="light"] .sidebar-head button:hover { background: rgba(139,105,20,0.12); }
-[data-theme="light"] .menu-pop { background: var(--panel-bg); border-color: var(--panel-border); box-shadow: 0 8px 20px rgba(90,60,20,0.25); }
-[data-theme="light"] .menu-item { color: var(--text); }
+/* ══════════════════════════════════════════════════════════
+   LIGHT THEME OVERRIDES
+   Host toggles data-theme="light" on <html> inside the iframe.
+   Palette: warm cream parchment bg, warm brown ink, gold-brown
+   accents. Keep accent-green drag highlight from base (works).
+   ══════════════════════════════════════════════════════════ */
+[data-theme="light"] {
+    --grid: rgba(139, 105, 20, 0.10);
+    --grid-strong: rgba(139, 105, 20, 0.20);
+    --active-line: rgba(139, 105, 20, 0.08);
+}
+[data-theme="light"] body {
+    background: var(--bg);
+    color: var(--text);
+}
+
+/* Sidebar surfaces */
+[data-theme="light"] .sidebar {
+    background: rgba(255, 248, 230, 0.55);
+    border-right-color: rgba(139, 105, 20, 0.28);
+}
+[data-theme="light"] .sidebar-head {
+    border-bottom-color: rgba(139, 105, 20, 0.22);
+}
+[data-theme="light"] .sidebar-head button {
+    border-color: rgba(139, 105, 20, 0.4);
+    color: var(--gold);
+}
+[data-theme="light"] .sidebar-head button:hover {
+    background: rgba(139, 105, 20, 0.12);
+}
+[data-theme="light"] .sidebar-head .menu-btn {
+    border-color: rgba(139, 105, 20, 0.3);
+}
+
+/* Menu popover */
+[data-theme="light"] .menu-pop {
+    background: var(--panel-bg);
+    border-color: var(--panel-border);
+    box-shadow: 0 8px 20px rgba(60, 40, 10, 0.2);
+}
+[data-theme="light"] .menu-item {
+    color: var(--text);
+}
 [data-theme="light"] .menu-item:hover { background: rgba(139,105,20,0.14); color: var(--gold); }
 [data-theme="light"] .launcher-btn { border-color: rgba(139,105,20,0.35); color: var(--text); }
 [data-theme="light"] .launcher-btn:hover { background: rgba(139,105,20,0.12); border-color: var(--gold); color: var(--gold); }
