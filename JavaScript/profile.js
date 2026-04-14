@@ -617,6 +617,11 @@
         linkedMode,
         hasHandle: async () => !!(await _getHandle().catch(() => null)),
         isDisconnected: () => _disconnected,
+        /** Read the currently-linked folder and return a snapshot (or null). */
+        __readLinkedFolder: async () => {
+            if (!_disk) return null;
+            try { return await _disk.readAll(); } catch { return null; }
+        },
     };
 
     // ── Boot gate ──────────────────────────────────────────
