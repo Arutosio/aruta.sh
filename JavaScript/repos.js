@@ -8,7 +8,7 @@
     const LS_KEY = 'aruta_repos';
 
     const DEFAULT_SEED = [{
-        url: 'https://raw.githubusercontent.com/Arutosio/aruta.sh-packages/main/index.json',
+        url: 'https://raw.githubusercontent.com/Arutosio/aruta.sh/master/packages/index.json',
         name: 'Official',
         description: 'Curated bundle by Aruta',
         enabled: false,

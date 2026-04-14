@@ -1,6 +1,14 @@
 # Example Packages
 
-The [`ExampleApps/`](../ExampleApps) folder at the repo root contains two working packages with their raw sources and prebuilt zips.
+The [`packages/`](../packages) folder at the repo root contains working packages with their raw sources, prebuilt zips, and an `index.json` that doubles as a live Package Store repo.
+
+To install them from inside the OS, open the Package Store → add / enable the repo:
+
+```
+https://raw.githubusercontent.com/Arutosio/aruta.sh/master/packages/index.json
+```
+
+(The `Aruta.sh Examples` repo is also seeded in the Package Store but disabled by default — flip it on.)
 
 ---
 
@@ -8,8 +16,8 @@ The [`ExampleApps/`](../ExampleApps) folder at the repo root contains two workin
 
 A tiny command that prints a decorated greeting and fires a success toast. Good starting point for a command package — shows tokenized args, multi-line output, cross-permission use.
 
-**Source**: [`ExampleApps/greet/`](../ExampleApps/greet)
-**Zip**: [`ExampleApps/greet.zip`](../ExampleApps/greet.zip)
+**Source**: [`packages/greet/`](../packages/greet)
+**Zip**: [`packages/greet.zip`](../packages/greet.zip)
 
 **manifest.json**
 ```json
@@ -33,7 +41,7 @@ greet "Stefano Aruta"
 
 ---
 
-## `snake` — an app with canvas, storage, notifications
+## `arcane-snake` — an app with canvas, storage, notifications
 
 Responsive Snake: arrow keys / WASD / on-screen D-pad / swipe, high score persisted per-app, game-over toast. Shows how to:
 
@@ -42,24 +50,27 @@ Responsive Snake: arrow keys / WASD / on-screen D-pad / swipe, high score persis
 - Fire `ctx.toast` on lifecycle events
 - Ship a `style.css` alongside `index.js`
 
-**Source**: [`ExampleApps/snake/`](../ExampleApps/snake)
-**Zip**: [`ExampleApps/snake.zip`](../ExampleApps/snake.zip)
+The id is `arcane-snake` (not `snake`) so it doesn't collide with the bundled default Snake app at `defaultPackages/snake/`.
+
+**Source**: [`packages/arcane-snake/`](../packages/arcane-snake)
+**Zip**: [`packages/arcane-snake.zip`](../packages/arcane-snake.zip)
 
 **manifest.json**
 ```json
 {
     "type": "app",
-    "id": "snake",
+    "id": "arcane-snake",
     "name": "Arcane Snake",
     "icon": "🐍",
-    "version": "1.0.0",
+    "version": "1.0.1",
     "author": "Aruta",
     "entry": "index.js",
+    "category": "games",
     "permissions": ["storage", "notifications"]
 }
 ```
 
-**Install flow**: drop `snake.zip` on the desktop → confirm → 🐍 appears in the Start menu → open it. First time you eat food and beat your high score, the storage permission prompt appears.
+**Install flow**: drop `arcane-snake.zip` on the desktop → confirm → 🐍 appears in the Start menu → open it. First time you eat food and beat your high score, the storage permission prompt appears.
 
 ---
 
