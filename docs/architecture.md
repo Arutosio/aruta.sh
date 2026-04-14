@@ -7,66 +7,53 @@ This is a contributor-facing overview of how apps and commands are wired interna
 ## Boot & runtime overview
 
 ```mermaid
-%%{init: { "flowchart": { "curve": "basis" } }}%%
+%%{init: {
+  "theme": "base",
+  "flowchart": { "curve": "basis", "htmlLabels": true, "padding": 10 },
+  "themeVariables": {
+    "fontFamily": "Georgia, 'IM Fell English', serif",
+    "fontSize": "14px"
+  }
+}}%%
 flowchart TD
-    Start([Browser load])
-    Start --> ProfChk{Profile folder<br/>linked?}
+    A([Browser load<br/>index.html]):::entry --> B[/profile.js IIFE/]:::boot
+    B --> C{tryRestoreFromHandle<br/>handle persisted?}:::gate
+    C -- no --> E[core.js<br/>theme · lang · fonts]:::boot
+    C -- yes / dormant --> E
+    C -- yes / granted + folder has data --> D[[restore snapshot<br/>then location.reload]]:::profile
+    D --> A
+    E --> E1{follow-OS theme?}:::gate
+    E1 -- yes --> E2[matchMedia<br/>prefers-color-scheme]:::boot
+    E1 -- no --> E3[saved aruta_theme]:::boot
+    E2 --> F([app.js · showApp]):::entry
+    E3 --> F
+    F --> F1[taskbar · start menu · windows<br/>initWindowManager + initResize]:::boot
+    F --> F2[await __arutaProfileReady]:::boot
+    F2 --> G[(registry.bootstrap<br/>aruta_packages IDB)]:::reg
+    G --> H[(defaults.bootstrap<br/>install bundled defaultPackages/*)]:::reg
+    H --> I[installer.initDragDrop]:::reg
+    I --> U((User opens<br/>an app window)):::user
+    U --> V[sandbox.mountApp<br/>iframe srcdoc = IFRAME_BOOT]:::app
+    V --> W["iframe ready → host posts init<br/>(manifest, files, theme)"]:::app
+    W --> X[iframe imports entry<br/>mount root, ctx]:::app
+    X <-->|postMessage __aruta_sdk| Y[host _handleCall<br/>permission gate]:::bridge
+    X -. theme change .-> BT[sandbox.broadcastTheme]:::bridge
+    BT --> X
+    Y -.write.-> P[profile.markDirty]:::profile
+    G -.write.-> P
+    P --> P1[debounced flushDirty]:::profile
+    P1 --> P2[(DiskBackend.writeAll<br/>folder mirror)]:::profile
 
-    subgraph Boot["🌙 Boot"]
-        direction TB
-        Core[core.js<br/>theme · lang · fonts]
-        Theme{follow OS<br/>theme?}
-        App[app.js · showApp]
-        Core --> Theme
-        Theme -->|yes| App
-        Theme -->|no| App
-    end
-
-    ProfChk -->|yes · restore| Restore[[Restore from folder<br/>then reload]]
-    Restore --> Start
-    ProfChk -->|no / dormant| Core
-
-    App --> Reg[(Registry · aruta_packages IDB)]
-    Reg --> Def[(Install bundled defaults)]
-    Def --> Ready((Idle — user can<br/>open apps))
-
-    subgraph Runtime["🪄 App runtime"]
-        direction TB
-        Mount[sandbox.mountApp<br/>iframe srcdoc]
-        Init["init payload<br/>(manifest · files · theme · sdkVersion)"]
-        Run[App entry runs<br/>mount(root, ctx)]
-        Mount --> Init --> Run
-    end
-
-    Ready -.->|openWindow| Mount
-    Run <-->|postMessage<br/>__aruta_sdk| Host[Host _handleCall<br/>permission gate]
-
-    subgraph Sync["💾 Profile mirror"]
-        direction TB
-        Dirty[profile.markDirty]
-        Flush[debounced flushDirty]
-        Disk[(DiskBackend<br/>folder write-through)]
-        Dirty --> Flush --> Disk
-    end
-
-    Host -.write.-> Dirty
-    Reg -.write.-> Dirty
-
-    classDef phase fill:#2a1f4a,stroke:#a78bfa,stroke-width:1px,color:#ede5ff
-    classDef gate fill:#5c3a08,stroke:#ffc857,stroke-width:1.5px,color:#ffe4a0
-    classDef entry fill:#3b2a5c,stroke:#ffc857,stroke-width:2px,color:#ffe4a0
-    classDef user fill:#4a1f3a,stroke:#fb7185,stroke-width:2px,color:#ffd5dc
-    classDef io fill:#0f2e1a,stroke:#6ee7b7,stroke-width:1px,color:#c8f5e0
+    classDef entry   fill:#3b2a5c,stroke:#ffc857,stroke-width:2px,color:#ffe4a0
+    classDef boot    fill:#1a0f2e,stroke:#a78bfa,stroke-width:1.5px,color:#e0daf0
+    classDef gate    fill:#5c3a08,stroke:#ffc857,stroke-width:2px,color:#ffe4a0
+    classDef reg     fill:#0f2e1a,stroke:#6ee7b7,stroke-width:1.5px,color:#c8f5e0
+    classDef user    fill:#4a1f3a,stroke:#fb7185,stroke-width:2px,color:#ffd5dc
+    classDef app     fill:#2a1f4a,stroke:#a78bfa,stroke-width:1.5px,color:#ede5ff
+    classDef bridge  fill:#1a2a3a,stroke:#7dd3fc,stroke-width:1.5px,color:#c5e9f5
     classDef profile fill:#3a2a0f,stroke:#fb923c,stroke-width:1.5px,color:#ffd8b0
 
-    class Start,App entry
-    class ProfChk,Theme gate
-    class Ready user
-    class Reg,Def,Disk io
-    class Restore,Dirty,Flush profile
-    class Core,Mount,Init,Run,Host phase
-
-    linkStyle default stroke:#8b6914,stroke-width:1.6px
+    linkStyle default stroke:#8b6914,stroke-width:1.8px
 ```
 
 ### Sandbox bridge — single ctx call
