@@ -263,6 +263,9 @@ async function uninstall(id) {
     // Close any cached DB handle before deleting — deleteDatabase is blocked by open connections.
     try { await window.sandbox?.closeAppStorage?.(id); } catch {}
     try { window.Storage?.deleteAppKV(id) ?? indexedDB.deleteDatabase('aruta_app_' + id); } catch {}
+    // Drop any stored permission grants for this app — keeping them around
+    // would pre-grant a reinstalled package with the same id.
+    try { localStorage.removeItem('aruta_perms_' + id); } catch {}
     // If this was a default package, remember so we don't auto-reinstall it.
     window.defaults?.markUninstalled(id);
     saveIndex();

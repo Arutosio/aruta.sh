@@ -180,7 +180,6 @@ const BUILTINS = {
             if (!id) { termPrint('usage: uninstall <id>', 'term-error'); return; }
             if (!window.registry?.isInstalled(id)) { termPrint('not installed: ' + id, 'term-error'); return; }
             await window.registry.uninstall(id);
-            try { localStorage.removeItem('aruta_perms_' + id); } catch {}
             termPrint('uninstalled: ' + id, 'term-success');
         }
     },
