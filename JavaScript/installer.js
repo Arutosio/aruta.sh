@@ -79,7 +79,10 @@ async function _confirmInstall(manifest, isUpdate) {
 async function installFromFile(file) {
     const t = window.t();
     if (!file) throw new Error('no file');
-    if (!/\.zip$/i.test(file.name)) {
+    // Accept a raw Blob too (e.g. from ctx.installZip). JSZip only needs
+    // something blob-like with .arrayBuffer(); the filename check is purely
+    // a UX guard for drag-drop, so skip it when the caller gave us a Blob.
+    if (file.name && !/\.zip$/i.test(file.name)) {
         if (window.showToast) showToast(t.install_err_not_zip || 'File must be a .zip', 'error');
         throw new Error('not a zip');
     }

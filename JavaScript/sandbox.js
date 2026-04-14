@@ -42,6 +42,8 @@ const PERM_REQUIRED = {
     'theme.set': 'theme',
     'clipboard.read': 'clipboard',
     'clipboard.write': 'clipboard',
+    installZip: 'install',
+    listInstalled: 'install',
 };
 
 async function _handleCall(appId, method, args) {
@@ -70,6 +72,23 @@ async function _handleCall(appId, method, args) {
             return true;
         case 'clipboard.read': return await navigator.clipboard.readText();
         case 'clipboard.write': await navigator.clipboard.writeText(String(args[0] ?? '')); return true;
+        case 'installZip': {
+            // Accept a Blob (postMessage structured-clones Blobs across frames)
+            // and hand it to the existing installer pipeline. The installer
+            // still shows the install-confirm modal — we do NOT bypass it.
+            const blob = args[0];
+            if (!blob) throw new Error('installZip: missing blob');
+            const file = (typeof File !== 'undefined' && blob instanceof File)
+                ? blob
+                : new File([blob], (args[1] && args[1].filename) || 'remote.zip', { type: blob.type || 'application/zip' });
+            const m = await window.installer.installFromFile(file);
+            if (!m) return null; // user cancelled
+            return { id: m.id, name: m.name, version: m.version, type: m.type };
+        }
+        case 'listInstalled': {
+            const all = window.registry?.list() || [];
+            return all.map(m => ({ id: m.id, name: m.name, version: m.version || null, type: m.type }));
+        }
         case 'i18n': return (window.i18n?.[window.currentLang] || {})[args[0]] || args[0];
         default: throw new Error('unknown_method:' + method);
     }
@@ -132,6 +151,8 @@ html,body{margin:0;padding:0;width:100%;height:100%;background:transparent;color
                     theme: { get: () => call('theme.get'), set: (t) => call('theme.set', t) },
                     clipboard: { read: () => call('clipboard.read'), write: (s) => call('clipboard.write', s) },
                     i18n: (k) => call('i18n', k),
+                    installZip: (blob, opts) => call('installZip', blob, opts),
+                    listInstalled: () => call('listInstalled'),
                     permission: { request: (p) => call('permission.request', p) },
                 };
                 // sync theme from host before user CSS loads so the first paint
