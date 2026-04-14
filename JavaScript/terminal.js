@@ -250,13 +250,42 @@ function _onKey(e) {
     }
 }
 
+function _knownCommands() {
+    const set = new Set(Object.keys(BUILTINS));
+    try {
+        const list = window.registry?.list?.() || [];
+        for (const m of list) if (m && m.id) set.add(m.id);
+    } catch {}
+    return set;
+}
+
+function _isKnownCommand(name) {
+    if (!name) return false;
+    return _knownCommands().has(name);
+}
+
+function _splitFirstToken(value) {
+    // Preserves leading whitespace and keeps the raw rest as typed (incl. spaces).
+    const m = /^(\s*)(\S+)(.*)$/.exec(value);
+    if (!m) return { lead: value, first: '', rest: '' };
+    return { lead: m[1], first: m[2], rest: m[3] };
+}
+
 function _renderOverlay() {
     if (!_overlay || !_input) return;
     const value = _input.value;
     _overlay.textContent = '';
     if (!value) return;
-    const plain = document.createTextNode(value);
-    _overlay.appendChild(plain);
+
+    const { lead, first, rest } = _splitFirstToken(value);
+    if (lead) _overlay.appendChild(document.createTextNode(lead));
+    if (first) {
+        const span = document.createElement('span');
+        span.className = _isKnownCommand(first) ? 'term-cmd-ok' : 'term-cmd-bad';
+        span.textContent = first;
+        _overlay.appendChild(span);
+    }
+    if (rest) _overlay.appendChild(document.createTextNode(rest));
 }
 
 function initTerminal() {
