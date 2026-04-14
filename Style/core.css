@@ -60,6 +60,17 @@
     --ink-50: rgba(0,0,0,0.5);  --ink-60: rgba(0,0,0,0.6);
     --ink-80: rgba(0,0,0,0.8);
 
+    /* Form controls / chrome surfaces (theme-aware — overridden in light) */
+    --input-bg:          rgba(20,12,40,0.55);
+    --input-border:      rgba(255,200,87,0.3);
+    --input-text:        var(--text);
+    --toggle-thumb:      #fffaf0;
+    --toggle-track-on:   var(--gold);
+    --toggle-track-off:  rgba(255,255,255,0.15);
+    --panel-bg:          rgba(6,4,16,0.85);
+    --panel-border:      rgba(255,200,87,0.25);
+    --accent-contrast:   #2a1a08;
+
     /* Font-size scale. 15 distinct rem values were collapsed into 8 tokens.
        Max snap drift: ±0.05rem (~0.8px @ 16px root). clamp() / vw values
        stay inline because they're intentionally fluid.
@@ -149,6 +160,26 @@
     --mc-color:    #8b6914;
     --magic-orb:   rgba(139, 105, 20, 0.25);
     --bg-ring-col: #8b6914;
+
+    /* Ink ramp — light variant: warm brown transparencies for shadow/scrim
+       so elevations remain visible without black blotches on parchment. */
+    --ink-04: rgba(90,60,20,0.04); --ink-15: rgba(90,60,20,0.15);
+    --ink-20: rgba(90,60,20,0.20); --ink-25: rgba(90,60,20,0.25);
+    --ink-30: rgba(90,60,20,0.30);
+    --ink-35: rgba(90,60,20,0.35); --ink-40: rgba(90,60,20,0.40);
+    --ink-50: rgba(90,60,20,0.50); --ink-60: rgba(90,60,20,0.60);
+    --ink-80: rgba(90,60,20,0.80);
+
+    /* Form controls / chrome surfaces (light) */
+    --input-bg:          rgba(255,245,220,0.85);
+    --input-border:      rgba(139,105,20,0.4);
+    --input-text:        #2a1a08;
+    --toggle-thumb:      #fffaf0;
+    --toggle-track-on:   var(--gold);
+    --toggle-track-off:  rgba(90,60,20,0.25);
+    --panel-bg:          rgba(248,238,218,0.92);
+    --panel-border:      rgba(139,105,20,0.35);
+    --accent-contrast:   #fffaf0;
 }
 
 /* § UTILITIES
