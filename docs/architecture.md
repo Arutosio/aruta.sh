@@ -158,6 +158,14 @@ permissions.js  registry.js  sandbox.js  installer.js  defaults.js  terminal.js 
 
 ---
 
+## Repos system module
+
+`JavaScript/repos.js` owns the list of package-store sources. It loads on boot from `localStorage.aruta_repos` (single JSON array, seeded with the disabled Official repo on first run), keeps an in-memory cache, and exposes a tiny CRUD API on `window.repos` (`list`, `add`, `remove`, `setEnabled`, `update`, `onChange`/`offChange`). All mutations write through to localStorage synchronously and notify subscribers.
+
+Any package with the `install` permission can read or mutate the same list via `ctx.repos.*` — bridged through `sandbox.js:_handleCall` for iframes and through `_buildHostCtx` for commands. Package Store and the `pkg` CLI both consume the module instead of caching their own copy. Because the data lives in `localStorage` under the `aruta_` prefix, it rides the existing `profile.js` mirror automatically — no additional sync wiring needed.
+
+---
+
 ## Storage layout
 
 All the DB and key-prefix string literals live in `storage.js:Storage.constants` (`PACKAGES_DB`, `APP_DB_PREFIX`, `LS_PREFIX`). `registry.js`, `profile.js`, and `sandbox.js` read them from there instead of hardcoding. The facade also exposes `Storage.appKV.{get,set,remove,dumpAll}` as the canonical path for per-app KV reads/writes.
@@ -171,6 +179,7 @@ All the DB and key-prefix string literals live in `storage.js:Storage.constants`
 | localStorage | `aruta_perms_<id>` | `{ permName: 'granted'\|'denied' }` |
 | localStorage | `aruta_term_history` | Terminal history (max 100) |
 | localStorage | `aruta_theme_follow_os` | `'false'` only when user has manually overridden follow-OS theme |
+| localStorage | `aruta_repos` | System repo list managed by `repos.js` (Package Store + `pkg` CLI consume it) |
 | IndexedDB | `aruta_profile` / `handles` store | Persisted FS Access API directory handle for the linked profile folder |
 
 ### Wipe flows

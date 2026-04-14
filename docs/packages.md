@@ -272,7 +272,7 @@ If you want to *read* the current theme programmatically or *change* it, use `ct
 
 ## Repository format (Package Store)
 
-The bundled **Package Store** app (System category) installs packages from user-added *repositories*. A repository is just a JSON file at a stable URL that lists packages and where to download each `.zip`.
+The bundled **Package Store** app (System category) and the **`pkg`** CLI command both install packages from user-added *repositories*. A repository is just a JSON file at a stable URL that lists packages and where to download each `.zip`. The repository **list itself** is a system concern: it lives in `localStorage.aruta_repos` and is exposed via `window.repos` (host) / `ctx.repos.*` (apps + commands, gated by the `install` permission). Package Store no longer owns the list privately — any package with `install` can read or mutate it.
 
 ### Schema
 
@@ -322,3 +322,24 @@ The bundled **Package Store** app (System category) installs packages from user-
 ### Trust model
 
 The repo index is advisory. The *real* manifest lives inside the `.zip` and goes through the existing install-confirm modal — declared vs. actual permissions cannot be silently swapped. A rogue repo can only propose installs; the user still approves each one.
+
+---
+
+## CLI: `pkg` command
+
+The `pkg` default command is an apt-style frontend over the system repos module. It runs in the Terminal and supports:
+
+| Subcommand | Purpose |
+|---|---|
+| `pkg list` | List installed packages (id, name, version, type) |
+| `pkg search <query>` | Search every enabled repo for packages whose id/name/description matches |
+| `pkg install <id\|url>` | Install by package id (newest version across enabled repos) or by direct `.zip` URL |
+| `pkg update [<id>]` | Upgrade all installed packages (or one by id) to the newest version found in any enabled repo |
+| `pkg remove <id>` | Uninstall a package |
+| `pkg repo list` | List configured repositories |
+| `pkg repo add <url>` | Add a repository (http/https) |
+| `pkg repo remove <url>` | Remove a repository |
+| `pkg repo refresh [<url>]` | Re-fetch one or all enabled repositories |
+| `pkg help` | Show usage |
+
+Every install still surfaces the standard install-confirm modal — `pkg` does not bypass it.

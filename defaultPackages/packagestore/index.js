@@ -10,8 +10,9 @@ const DEFAULT_REPO = {
     enabled: false,
 };
 
-const REPOS_KEY = 'repos';
 const PREFS_KEY = 'prefs';
+// Legacy storage key — only read once during migration to ctx.repos.
+const LEGACY_REPOS_KEY = 'repos';
 
 function escapeHTML(s) {
     return String(s ?? '').replace(/[&<>"']/g, c => (
@@ -62,17 +63,58 @@ export default {
         };
 
         // ── Persist ───────────────────────────────────────────
-        async function saveRepos() { await ctx.storage.set(REPOS_KEY, state.repos); }
+        // Repos now live in the system module (window.repos / ctx.repos). We
+        // pull them on demand and write through with `ctx.repos.update` so all
+        // consumers (pkg CLI, future apps) see the same state.
+        async function reloadRepos() {
+            try { state.repos = await ctx.repos.list() || []; }
+            catch (e) { console.warn('[packagestore] repos.list failed', e); state.repos = []; }
+        }
+        async function persistRepoFields(url, patch) {
+            try { await ctx.repos.update(url, patch); }
+            catch (e) { console.warn('[packagestore] repos.update failed', e); }
+        }
         async function savePrefs() { await ctx.storage.set(PREFS_KEY, state.prefs); }
 
-        async function loadState() {
-            const repos = await ctx.storage.get(REPOS_KEY);
-            if (Array.isArray(repos) && repos.length) {
-                state.repos = repos;
-            } else {
-                state.repos = [{ ...DEFAULT_REPO, addedAt: Date.now() }];
-                await saveRepos();
+        async function migrateLegacyRepos() {
+            // One-time migration: copy any private `repos` entries into the
+            // system module, then drop the private key. After this point the
+            // app never writes to its private storage for repos again.
+            const legacy = await ctx.storage.get(LEGACY_REPOS_KEY);
+            if (!Array.isArray(legacy) || !legacy.length) return;
+            const systemList = (await ctx.repos.list()) || [];
+            const seen = new Set(systemList.map(r => r.url));
+            for (const r of legacy) {
+                if (!r || !r.url) continue;
+                if (seen.has(r.url)) {
+                    // Merge cached fields into the existing system entry.
+                    await ctx.repos.update(r.url, {
+                        name: r.name || r.displayName,
+                        description: r.description,
+                        enabled: !!r.enabled,
+                        lastFetched: r.lastFetched || null,
+                        etag: r.etag || null,
+                        cachedIndex: r.cachedIndex || null,
+                    });
+                } else {
+                    try {
+                        await ctx.repos.add(r.url, {
+                            name: r.name || r.displayName,
+                            description: r.description,
+                            enabled: !!r.enabled,
+                            lastFetched: r.lastFetched || null,
+                            etag: r.etag || null,
+                            cachedIndex: r.cachedIndex || null,
+                        });
+                    } catch (e) { console.warn('[packagestore] migrate add failed', e); }
+                }
             }
+            await ctx.storage.remove(LEGACY_REPOS_KEY);
+        }
+
+        async function loadState() {
+            await migrateLegacyRepos();
+            await reloadRepos();
             const prefs = await ctx.storage.get(PREFS_KEY);
             if (prefs && typeof prefs === 'object') state.prefs = { ...state.prefs, ...prefs };
             await refreshInstalled();
@@ -135,7 +177,15 @@ export default {
         async function refreshAllRepos() {
             const enabled = state.repos.filter(r => r.enabled);
             await Promise.all(enabled.map(r => fetchRepo(r)));
-            await saveRepos();
+            // Push fetched fields back to the system module for each repo.
+            for (const r of enabled) {
+                await persistRepoFields(r.url, {
+                    lastFetched: r.lastFetched,
+                    etag: r.etag,
+                    cachedIndex: r.cachedIndex,
+                    description: r.description,
+                });
+            }
         }
 
         // ── Derived ───────────────────────────────────────────
@@ -264,11 +314,22 @@ export default {
                 return;
             }
             const name = prompt('Display name (optional):', '') || new URL(url).hostname;
-            state.repos.push({ url, name, enabled: true, addedAt: Date.now() });
-            await saveRepos();
+            try {
+                await ctx.repos.add(url, { name, enabled: true });
+            } catch (e) {
+                ctx.toast(String(e.message || e), 'error');
+                return;
+            }
+            await reloadRepos();
             renderRepos();
-            await fetchRepo(state.repos[state.repos.length - 1]);
-            await saveRepos();
+            const r = state.repos.find(x => x.url === url);
+            if (r) {
+                await fetchRepo(r);
+                await persistRepoFields(r.url, {
+                    lastFetched: r.lastFetched, etag: r.etag,
+                    cachedIndex: r.cachedIndex, description: r.description,
+                });
+            }
             renderAll();
         }
 
@@ -302,8 +363,8 @@ export default {
 
         async function removeRepo(url) {
             if (!confirm('Remove this repository?')) return;
-            state.repos = state.repos.filter(r => r.url !== url);
-            await saveRepos();
+            await ctx.repos.remove(url);
+            await reloadRepos();
             renderAll();
         }
 
@@ -311,11 +372,14 @@ export default {
             const r = state.repos.find(x => x.url === url);
             if (!r) return;
             r.enabled = !r.enabled;
-            await saveRepos();
+            await ctx.repos.setEnabled(url, r.enabled);
             renderRepos();
             if (r.enabled && !r.cachedIndex) {
                 await fetchRepo(r);
-                await saveRepos();
+                await persistRepoFields(r.url, {
+                    lastFetched: r.lastFetched, etag: r.etag,
+                    cachedIndex: r.cachedIndex, description: r.description,
+                });
             }
             renderPackages();
         }
@@ -327,7 +391,10 @@ export default {
             renderRepos();
             await fetchRepo(r);
             r.busy = false;
-            await saveRepos();
+            await persistRepoFields(r.url, {
+                lastFetched: r.lastFetched, etag: r.etag,
+                cachedIndex: r.cachedIndex, description: r.description,
+            });
             renderAll();
         }
 
