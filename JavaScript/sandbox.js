@@ -189,9 +189,11 @@ async function mountApp(appId) {
     // required for a handful of browser APIs — notably the File System
     // Access API (showDirectoryPicker) — which refuse to run in a null-
     // origin frame. Trust is on the user: the install modal shows the flag.
+    // allow-modals lets apps use prompt()/alert()/confirm(). Without it these
+    // silently return null in sandboxed iframes (Firefox/Chrome both block).
     const sandboxAttr = manifest.allowOrigin
-        ? 'allow-scripts allow-same-origin'
-        : 'allow-scripts';
+        ? 'allow-scripts allow-same-origin allow-modals'
+        : 'allow-scripts allow-modals';
     iframe.setAttribute('sandbox', sandboxAttr);
     console.debug('[sandbox] mounted', appId, 'with sandbox=', sandboxAttr);
     iframe.style.cssText = 'width:100%;height:100%;border:0;background:transparent;';
