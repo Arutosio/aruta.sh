@@ -3,7 +3,7 @@
     "id": "packagestore",
     "name": "Package Store",
     "icon": "📦",
-    "version": "1.0.0",
+    "version": "1.0.1",
     "author": "Aruta",
     "entry": "index.js",
     "category": "system",

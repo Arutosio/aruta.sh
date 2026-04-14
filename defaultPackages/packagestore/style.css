@@ -55,6 +55,13 @@ body {
     border-top: 1px solid rgba(255, 200, 87, 0.15);
 }
 .ps-side-foot .ps-btn { width: 100%; }
+.ps-side-foot .ps-btn-util {
+    margin-top: 0.35rem;
+    font-size: 0.74rem;
+    opacity: 0.85;
+    border-style: dashed;
+}
+.ps-side-foot .ps-btn-util:hover:not(:disabled) { opacity: 1; }
 
 .ps-repo {
     display: flex;

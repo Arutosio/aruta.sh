@@ -248,6 +248,34 @@ export default {
             renderAll();
         }
 
+        async function installFromURL() {
+            const url = prompt('Package .zip URL:', 'https://');
+            if (!url) return;
+            if (!/^https?:\/\//i.test(url)) {
+                ctx.toast('URL must start with http(s)://', 'error');
+                return;
+            }
+            if (!/^https:/i.test(url)) {
+                if (!confirm('This URL is NOT HTTPS. Continue anyway?')) return;
+            }
+            try {
+                ctx.toast('Downloading…', 'info');
+                const resp = await ctx.fetch(url, { binary: true });
+                if (!resp.ok) throw new Error('Download failed: HTTP ' + resp.status);
+                const blob = await resp.blob();
+                const filename = (url.split('/').pop() || 'remote.zip').split('?')[0];
+                const result = await ctx.installZip(blob, { filename });
+                if (result) ctx.toast('Installed ' + (result.name || result.id), 'success');
+                else ctx.toast('Install cancelled', 'info');
+            } catch (e) {
+                console.warn('[packagestore] sideload failed', e);
+                ctx.toast(String(e.message || e), 'error');
+            } finally {
+                await refreshInstalled();
+                renderAll();
+            }
+        }
+
         async function removeRepo(url) {
             if (!confirm('Remove this repository?')) return;
             state.repos = state.repos.filter(r => r.url !== url);
@@ -290,6 +318,7 @@ export default {
                     <div class="ps-repos"></div>
                     <div class="ps-side-foot">
                         <button class="ps-btn" data-action="add-repo">+ Add Repository</button>
+                        <button class="ps-btn ps-btn-util" data-action="install-url" title="Sideload a .zip from any URL">⇣ Install from URL</button>
                     </div>
                 </aside>
                 <section class="ps-main">
@@ -462,6 +491,7 @@ export default {
 
         // ── Wire events ───────────────────────────────────────
         root.querySelector('[data-action="add-repo"]').addEventListener('click', addRepo);
+        root.querySelector('[data-action="install-url"]').addEventListener('click', installFromURL);
         root.querySelector('[data-action="refresh-all"]').addEventListener('click', async () => {
             const btn = root.querySelector('[data-action="refresh-all"]');
             btn.disabled = true;
