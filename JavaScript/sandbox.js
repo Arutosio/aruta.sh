@@ -96,7 +96,9 @@ async function _handleCall(appId, method, args) {
             const file = (typeof File !== 'undefined' && blob instanceof File)
                 ? blob
                 : new File([blob], (args[1] && args[1].filename) || 'remote.zip', { type: blob.type || 'application/zip' });
-            const m = await window.installer.installFromFile(file);
+            // Flag this install as sandbox-originated so the installer can
+            // add an extra consent prompt if the package requests allowOrigin.
+            const m = await window.installer.installFromFile(file, { sandboxOrigin: true, callerAppId: appId });
             if (!m) return null; // user cancelled
             return { id: m.id, name: m.name, version: m.version, type: m.type };
         }

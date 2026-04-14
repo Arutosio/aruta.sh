@@ -113,8 +113,10 @@ async function _confirmInstall(manifest, isUpdate) {
     });
 }
 
-async function installFromFile(file) {
+async function installFromFile(file, opts) {
     const t = window.t();
+    const sandboxOrigin = !!(opts && opts.sandboxOrigin);
+    const callerAppId = (opts && opts.callerAppId) || null;
     if (!file) throw new Error('no file');
     // Accept a raw Blob too (e.g. from ctx.installZip). JSZip only needs
     // something blob-like with .arrayBuffer(); the filename check is purely
@@ -142,6 +144,17 @@ async function installFromFile(file) {
     const entryPath = manifest.entry || 'index.js';
     if (!zip.file(entryPath)) throw new Error('entry not found: ' + entryPath);
 
+    // Sandbox-originated installs of allowOrigin packages need an explicit
+    // extra gesture — a sandboxed app should not be able to hand the user a
+    // relaxed-sandbox package without a second, plain-language consent.
+    if (sandboxOrigin && manifest.allowOrigin === true) {
+        const warn = '⚠ The package "' + (manifest.name || manifest.id) + '" requests same-origin iframe sandbox (allowOrigin). This breaks the usual isolation. Install anyway?'
+            + (callerAppId ? '\n\nRequested by: ' + callerAppId : '');
+        const approved = (typeof window.showConfirm === 'function')
+            ? await window.showConfirm(warn)
+            : window.confirm(warn);
+        if (!approved) throw new Error('allowOrigin_consent_denied');
+    }
     const isUpdate = window.registry.isInstalled(manifest.id);
     const ok = await _confirmInstall(manifest, isUpdate);
     if (!ok) return false;
