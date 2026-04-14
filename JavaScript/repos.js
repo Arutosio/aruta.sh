@@ -29,6 +29,9 @@
     function _write() {
         try { localStorage.setItem(LS_KEY, JSON.stringify(_repos)); }
         catch (e) { console.warn('[repos] write failed', e); }
+        // Mirror into linked Profile folder so cross-device sync picks up
+        // repo edits even when no other localStorage write follows.
+        try { window.profile?.markDirty?.('localStorage'); } catch (_) {}
     }
     function _emit() {
         for (const cb of Array.from(_listeners)) {
