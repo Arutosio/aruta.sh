@@ -506,8 +506,11 @@ export default {
                     : st.status === 'update' ? 'ps-btn ps-act ps-act-update'
                     : 'ps-btn ps-act';
                 const sel = state.selectedPkg === pkg.id ? 'is-selected' : '';
+                const isSelf = pkg.id === 'packagestore';
                 const uninstallBtn = (st.status === 'installed' || st.status === 'update') && !busy
-                    ? '<button class="ps-btn ps-act ps-btn-ghost ps-danger" data-action="uninstall" title="Uninstall">Uninstall</button>'
+                    ? (isSelf
+                        ? '<button class="ps-btn ps-act ps-btn-ghost ps-danger" data-action="uninstall" title="Cannot uninstall the Package Store from itself — use Settings → Permissions." disabled>Uninstall</button>'
+                        : '<button class="ps-btn ps-act ps-btn-ghost ps-danger" data-action="uninstall" title="Uninstall">Uninstall</button>')
                     : '';
                 return `
                     <div class="ps-pkg ${sel}" data-id="${escapeHTML(pkg.id)}">

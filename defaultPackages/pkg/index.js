@@ -239,6 +239,16 @@ async function cmdUpdate(ctx, target) {
 
 async function cmdRemove(ctx, target) {
     if (!target) { await ctx.print('Usage: pkg remove <id>'); return; }
+    // Refuse obvious self-harm before crossing the sandbox boundary. The
+    // host enforces this too, but a friendly message beats a raw error.
+    if (target === ctx.appId) {
+        await ctx.print('! Refusing to uninstall pkg from itself. Use Settings → Permissions.');
+        return;
+    }
+    if (target === 'packagestore' && window?.sandbox?.isMounted?.('packagestore')) {
+        await ctx.print('! Package Store is currently open — close it first, then retry.');
+        return;
+    }
     const installed = await ctx.listInstalled() || [];
     if (!installed.some(m => m.id === target)) { await ctx.print('! Not installed: ' + target); return; }
     try {

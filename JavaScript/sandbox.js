@@ -105,7 +105,7 @@ async function _handleCall(appId, method, args) {
             if (!targetId) throw new Error('uninstall: missing id');
             // Guard against an app uninstalling itself mid-call (would yank its
             // own iframe out while we're still waiting on the reply).
-            if (targetId === appId) throw new Error('uninstall: refusing to self-uninstall');
+            if (targetId === appId) throw new Error('self_uninstall_refused');
             if (!window.registry?.isInstalled(targetId)) return false;
             await window.registry.uninstall(targetId);
             try { localStorage.removeItem('aruta_perms_' + targetId); } catch {}
@@ -379,4 +379,4 @@ async function closeAppStorage(appId) {
     await window.db.closeDB((window.Storage?.constants.APP_DB_PREFIX || 'aruta_app_') + appId);
 }
 
-window.sandbox = { mount: mountApp, unmount: unmountApp, runCommand, closeAppStorage, broadcastTheme, SDK_VERSION, PERM_REQUIRED };
+window.sandbox = { mount: mountApp, unmount: unmountApp, runCommand, closeAppStorage, broadcastTheme, SDK_VERSION, PERM_REQUIRED, isMounted: (id) => _mounted.has(id) };

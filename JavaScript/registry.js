@@ -238,6 +238,11 @@ async function getFiles(appId) {
 async function uninstall(id) {
     const m = _manifests.get(id);
     if (!m) return;
+    // Refuse to yank an iframe out from under itself — the caller would
+    // crash mid-await because its own execution context is about to vanish.
+    if (window.sandbox?.isMounted?.(id)) {
+        throw new Error('cannot_uninstall_mounted_app:' + id);
+    }
     const db = await openDB();
     await new Promise((res, rej) => {
         const t = tx(db, ['manifests', 'files'], 'readwrite');
