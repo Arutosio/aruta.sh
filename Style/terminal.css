@@ -62,18 +62,48 @@
     border-top: 1px solid var(--gold-18);
     background: var(--ink-30);
 }
+.term-input-wrap {
+    position: relative;
+    flex: 1;
+    margin-left: 0.4rem;
+    display: flex;
+    align-items: center;
+    min-width: 0;
+}
 .term-input {
     flex: 1;
+    width: 100%;
     background: transparent;
     border: none;
     outline: none;
-    color: var(--gold-light, #ffe4a0);
+    color: transparent;
     font-family: inherit;
     font-size: inherit;
     caret-color: var(--gold, #ffc857);
-    margin-left: 0.4rem;
+    padding: 0;
+    position: relative;
+    z-index: 1;
 }
+.term-input::selection { background: var(--gold-22, rgba(255, 200, 87, 0.3)); color: var(--gold-light, #ffe4a0); }
 .term-input::placeholder { color: rgba(255, 228, 160, 0.4); }
+.term-overlay {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    font-family: inherit;
+    font-size: inherit;
+    letter-spacing: inherit;
+    padding: 0;
+    white-space: pre;
+    overflow: hidden;
+    color: var(--gold-light, #ffe4a0);
+    display: flex;
+    align-items: center;
+    z-index: 0;
+}
+.term-overlay .term-cmd-ok { color: #6ee7b7; font-weight: var(--fw-bold, 600); }
+.term-overlay .term-cmd-bad { color: #fb7185; font-weight: var(--fw-bold, 600); }
+.term-overlay .term-ghost { opacity: 0.45; font-style: italic; }
 
 /* Custom-app windows: full-bleed iframe content
    The built-in .os-window has no explicit height — its children drive it.
@@ -242,7 +272,8 @@
 [data-theme="light"] .term-screen { color: #2a1a08; }
 [data-theme="light"] .term-prompt { color: #8a5a00; }
 [data-theme="light"] .term-cmd    { color: #6d28d9; }
-[data-theme="light"] .term-input  { color: #2a1a08; caret-color: #8a5a00; }
+[data-theme="light"] .term-input  { color: transparent; caret-color: #8a5a00; }
+[data-theme="light"] .term-overlay { color: #2a1a08; }
 [data-theme="light"] .term-inputline { background: var(--ink-04); }
 
 /* Mobile */
