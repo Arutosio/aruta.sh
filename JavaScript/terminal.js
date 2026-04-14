@@ -229,11 +229,31 @@ function _onKey(e) {
         const v = _input.value;
         _input.value = '';
         termRun(v);
+        _renderOverlay();
         e.preventDefault();
+    } else if (e.key === 'Tab') {
+        const sug = _currentSuggestion();
+        if (sug && sug !== _input.value) {
+            _input.value = sug;
+            _input.setSelectionRange(sug.length, sug.length);
+            _renderOverlay();
+        }
+        e.preventDefault();
+    } else if (e.key === 'ArrowRight') {
+        const atEnd = _input.selectionStart === _input.value.length
+                   && _input.selectionEnd === _input.value.length;
+        const sug = _currentSuggestion();
+        if (atEnd && sug && sug !== _input.value) {
+            _input.value = sug;
+            _input.setSelectionRange(sug.length, sug.length);
+            _renderOverlay();
+            e.preventDefault();
+        }
     } else if (e.key === 'ArrowUp') {
         if (_history.length === 0) return;
         _historyIdx = Math.max(0, _historyIdx - 1);
         _input.value = _history[_historyIdx] || '';
+        _renderOverlay();
         e.preventDefault();
     } else if (e.key === 'ArrowDown') {
         if (_historyIdx < _history.length - 1) {
@@ -243,6 +263,7 @@ function _onKey(e) {
             _historyIdx = _history.length;
             _input.value = '';
         }
+        _renderOverlay();
         e.preventDefault();
     } else if (e.key === 'l' && (e.ctrlKey || e.metaKey)) {
         termClear();
@@ -271,6 +292,28 @@ function _splitFirstToken(value) {
     return { lead: m[1], first: m[2], rest: m[3] };
 }
 
+function _findSuggestion(value) {
+    if (!value) return '';
+    // 1) most-recent history match that is strictly longer
+    for (let i = _history.length - 1; i >= 0; i--) {
+        const h = _history[i];
+        if (h && h.length > value.length && h.startsWith(value)) return h;
+    }
+    // 2) if still typing first token (no space), try command names alphabetically
+    if (!/\s/.test(value)) {
+        const names = Array.from(_knownCommands()).sort();
+        for (const n of names) {
+            if (n.length > value.length && n.startsWith(value)) return n;
+        }
+    }
+    return '';
+}
+
+function _currentSuggestion() {
+    const v = _input ? _input.value : '';
+    return _findSuggestion(v);
+}
+
 function _renderOverlay() {
     if (!_overlay || !_input) return;
     const value = _input.value;
@@ -286,6 +329,15 @@ function _renderOverlay() {
         _overlay.appendChild(span);
     }
     if (rest) _overlay.appendChild(document.createTextNode(rest));
+
+    const suggestion = _findSuggestion(value);
+    if (suggestion && suggestion.startsWith(value) && suggestion.length > value.length) {
+        const tail = suggestion.slice(value.length);
+        const ghost = document.createElement('span');
+        ghost.className = 'term-ghost';
+        ghost.textContent = tail;
+        _overlay.appendChild(ghost);
+    }
 }
 
 function initTerminal() {
