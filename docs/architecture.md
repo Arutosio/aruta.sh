@@ -59,31 +59,63 @@ flowchart TD
 ### Sandbox bridge — single ctx call
 
 ```mermaid
+%%{init: {
+  "theme": "base",
+  "themeVariables": {
+    "fontFamily": "Georgia, 'IM Fell English', serif",
+    "fontSize": "13px",
+    "primaryColor": "#2a1f4a",
+    "primaryTextColor": "#ede5ff",
+    "primaryBorderColor": "#a78bfa",
+    "lineColor": "#ffc857",
+    "actorBkg": "#2a1f4a",
+    "actorBorder": "#ffc857",
+    "actorTextColor": "#ffe4a0",
+    "actorLineColor": "#ffc857",
+    "signalColor": "#ffe4a0",
+    "signalTextColor": "#ffe4a0",
+    "labelBoxBkgColor": "#3b2a5c",
+    "labelBoxBorderColor": "#ffc857",
+    "labelTextColor": "#ffe4a0",
+    "loopTextColor": "#ffe4a0",
+    "noteBkgColor": "#3a2a0f",
+    "noteTextColor": "#ffd8b0",
+    "noteBorderColor": "#fb923c",
+    "altBackground": "#0f2e1a",
+    "sequenceNumberColor": "#1a0f2e",
+    "activationBkgColor": "#a78bfa",
+    "activationBorderColor": "#ffc857"
+  }
+}}%%
 sequenceDiagram
     autonumber
-    participant App as 🪄 App (iframe)
-    participant Boot as 🔌 Boot proxy
-    participant Host as 🏛 Host dispatcher
-    participant Perm as 🔐 Permission
-    participant IDB as 💾 IndexedDB
-
-    App->>+Boot: ctx.storage.set(k, v)
-    Boot->>+Host: postMessage · type:call
-    Host->>+Perm: request(appId, 'storage')
-
-    alt first time
-        Perm->>Perm: show modal
-        Note right of Perm: Allow · Always · Deny<br/>decision cached
+    box rgba(42,31,74,0.55) 🪄 Iframe · opaque origin
+    participant App as App code
+    participant Boot as IFRAME_BOOT proxy
+    end
+    box rgba(58,42,15,0.55) 🏛 Host · aruta.sh
+    participant Host as sandbox._handleCall
+    participant Perm as permissions.request
+    participant IDB as aruta_app_&lt;id&gt; IDB
     end
 
-    Perm-->>-Host: granted / denied
+    App->>+Boot: ctx.storage.set('k', v)
+    Boot->>+Host: postMessage<br/>{type:'call', method, args}
+    Host->>+Perm: request(appId, 'storage')
+
+    alt first invocation
+        Perm-->>Perm: show modal<br/>(Allow · Always · Deny)
+        Note right of Perm: decision cached<br/>in localStorage
+    end
+
+    Perm-->>-Host: granted | denied
 
     alt granted
-        Host->>+IDB: put into aruta_app_<id>
-        IDB-->>-Host: ok
-        Host-->>Boot: reply · value
+        Host->>+IDB: put into kv store
+        IDB-->>-Host: ack
+        Host-->>Boot: reply {value}
     else denied
-        Host-->>Boot: reply · error
+        Host-->>Boot: reply {error}
     end
     deactivate Host
 
