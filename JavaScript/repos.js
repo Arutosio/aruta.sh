@@ -130,9 +130,22 @@
     function _tryMigrateLegacyPackagestoreRepos() {
         try {
             const req = indexedDB.open('aruta_app_packagestore');
+            // If upgradeneeded fires, the DB didn't previously exist. Abort so
+            // we don't leave an empty v1 stub that would block the real
+            // sandbox _appStorageDB from creating its 'kv' store later.
+            req.onupgradeneeded = (e) => {
+                try { e.target.transaction.abort(); } catch (_) {}
+            };
             req.onsuccess = () => {
                 const db = req.result;
-                if (!db.objectStoreNames.contains('kv')) { db.close(); return; }
+                if (!db.objectStoreNames.contains('kv')) {
+                    // Either this boot created a stub, or an earlier buggy
+                    // migration did. Either way, delete it so the next
+                    // _appStorageDB open recreates it with kv.
+                    try { db.close(); } catch (_) {}
+                    try { indexedDB.deleteDatabase('aruta_app_packagestore'); } catch (_) {}
+                    return;
+                }
                 try {
                     const t = db.transaction('kv', 'readwrite');
                     const store = t.objectStore('kv');
@@ -149,6 +162,7 @@
                     t.oncomplete = () => { try { db.close(); } catch (_) {} };
                 } catch (_) { try { db.close(); } catch (__) {} }
             };
+            // abort() + deleteDatabase both surface as error — swallow silently
             req.onerror = () => {};
         } catch (_) {}
     }
