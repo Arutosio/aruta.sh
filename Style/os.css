@@ -533,17 +533,17 @@
 }
 .toggle-track {
     display: block; width: 44px; height: 24px;
-    background: var(--text-faint); border-radius: var(--radius-xl);
+    background: var(--toggle-track-off); border-radius: var(--radius-xl);
     position: relative; transition: background var(--dur-fast);
 }
 .toggle-thumb {
     display: block; width: 20px; height: 20px;
-    background: #fff; border-radius: 50%;
+    background: var(--toggle-thumb); border-radius: 50%;
     position: absolute; top: 2px; left: 2px;
     transition: transform var(--dur-fast);
     box-shadow: 0 1px 3px var(--ink-30);
 }
-.settings-toggle.active .toggle-track { background: var(--gold); }
+.settings-toggle.active .toggle-track { background: var(--toggle-track-on); }
 .settings-toggle.active .toggle-thumb { transform: translateX(20px); }
 
 /* Range slider */
@@ -591,13 +591,12 @@
 
 /* Language select in settings */
 .settings-select {
-    padding: 6px 12px; background: rgba(12,10,30,0.5);
-    border: 1px solid var(--seal-border); border-radius: var(--radius-sm);
-    color: var(--text); font-family: inherit; font-size: var(--text-base);
+    padding: 6px 12px; background: var(--input-bg);
+    border: 1px solid var(--input-border); border-radius: var(--radius-sm);
+    color: var(--input-text); font-family: inherit; font-size: var(--text-base);
     cursor: pointer;
 }
 .settings-select option { background: var(--bg); }
-[data-theme="light"] .settings-select { background: rgba(240,232,216,0.5); }
 
 /* About section */
 .settings-about {
