@@ -74,6 +74,10 @@ sequenceDiagram
 | [`JavaScript/registry.js`](../JavaScript/registry.js) | IndexedDB `aruta_packages` (manifests + files) via `db.js`, `localStorage.aruta_installed_apps` cache for fast boot, registers custom apps in `WIN_META` + dynamically creates their window DOM + Start menu items |
 | [`JavaScript/sandbox.js`](../JavaScript/sandbox.js) | Apps → `<iframe sandbox="allow-scripts">` with `srcdoc` bootstrap, commands → blob-URL dynamic `import()`. Implements the `ctx` bridge (postMessage for apps, direct for commands) and the permission-gated method dispatcher. Per-app storage DB handles cached via `db.js` |
 | [`JavaScript/permissions.js`](../JavaScript/permissions.js) | Per-app grant store (backed by `window.storage`), runtime prompt modal (serialized so only one shows at a time), Settings → Permissions renderer |
+| [`JavaScript/os-windows.js`](../JavaScript/os-windows.js) | Window manager split out of `os.js`: `WIN_META`, taskbar tabs (`addWindowTab`/`removeWindowTab`/`updateActiveTab`), `openWindow`/`closeWindow`/`minimizeWindow`/`focusWindow`/`toggleMaximize`, `initWindowManager`, `initDrag`, `initResize`. Must load before the other `os-*.js` files — `registry.js` and the rest reach into these globals |
+| [`JavaScript/os.js`](../JavaScript/os.js) | OS shell: start menu, mobile swipe section switching, clock, tab title, bio typewriter. Coordinator that binds the `os-*.js` siblings together |
+| [`JavaScript/os-settings.js`](../JavaScript/os-settings.js) | Settings panel (`initSettings`) — theme/font/accent/clock/language/performance toggles, reset/wipe — and portable-profile UI (`initProfileSettings` — pick folder, reconnect, export/import zip) |
+| [`JavaScript/os-sysinfo.js`](../JavaScript/os-sysinfo.js) | System-info popover (`initSysInfo`): IP/location/battery/CPU/browser/engine/FPS/uptime rows auto-refreshed every second while open |
 | [`JavaScript/terminal.js`](../JavaScript/terminal.js) | Shell UI, parser (quoted strings), history, built-in commands. Unknown names fall through to `registry.listCommands()` → `sandbox.runCommand()` |
 | [`JavaScript/defaults.js`](../JavaScript/defaults.js) | Auto-installs bundled `defaultPackages/*` on first boot. Packages fetched and installed in parallel (one burst, not a serial chain). Respects a blacklist so uninstalls persist. Re-runs when a default's `version` changes |
 | [`JavaScript/profile.js`](../JavaScript/profile.js) | Portable profile snapshot/restore. `DiskBackend` mirrors state to a folder via FS Access API (Chromium); `exportZip`/`importZip` work in any browser. Boot-gates registry/defaults via `window.__arutaProfileReady`. See [profile.md](./profile.md) |
@@ -82,8 +86,9 @@ sequenceDiagram
 Script load order in `index.html`:
 ```
 config.js  core.js  util.js  zip.js  db.js  storage.js  profile.js
-effects.js  desktop.js  content.js  extras.js  os.js  permissions.js
-registry.js  sandbox.js  installer.js  defaults.js  terminal.js  app.js
+effects.js  desktop.js  content.js  extras.js
+os-windows.js  os.js  os-settings.js  os-sysinfo.js
+permissions.js  registry.js  sandbox.js  installer.js  defaults.js  terminal.js  app.js
 ```
 
 `profile.js` runs an IIFE on load that sets `window.__arutaProfileReady` — a Promise that may resolve to `true` if a linked folder triggered a state restore + reload (in which case `app.js` aborts further bootstrap). See [profile.md](./profile.md).
