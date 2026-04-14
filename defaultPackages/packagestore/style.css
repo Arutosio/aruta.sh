@@ -248,6 +248,43 @@ body {
     align-self: center;
     min-width: 82px;
 }
+.ps-pkg-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    flex-shrink: 0;
+    align-self: center;
+}
+.ps-chip-installed {
+    font-size: 0.74rem;
+    color: var(--ok);
+    border: 1px dashed rgba(52, 211, 153, 0.45);
+    border-radius: 6px;
+    padding: 0.25rem 0.5rem;
+    text-align: center;
+    white-space: nowrap;
+    min-width: 120px;
+}
+.ps-act-update {
+    background: var(--update);
+    color: #1a0f00;
+    border-color: var(--update);
+    font-weight: 600;
+}
+.ps-act-update:hover:not(:disabled) {
+    background: transparent;
+    color: var(--update);
+}
+.ps-updates-chip {
+    background: var(--update);
+    color: #1a0f00;
+    font-weight: 600;
+    padding: 0.1rem 0.5rem;
+    border-radius: 999px;
+    font-size: 0.7rem;
+    margin-right: 0.4rem;
+    font-style: normal;
+}
 
 /* ── Details ──────────────────────────────────────── */
 .ps-details {

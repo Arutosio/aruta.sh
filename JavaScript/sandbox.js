@@ -44,6 +44,7 @@ const PERM_REQUIRED = {
     'clipboard.write': 'clipboard',
     installZip: 'install',
     listInstalled: 'install',
+    uninstall: 'install',
 };
 
 async function _handleCall(appId, method, args) {
@@ -93,6 +94,17 @@ async function _handleCall(appId, method, args) {
             const m = await window.installer.installFromFile(file);
             if (!m) return null; // user cancelled
             return { id: m.id, name: m.name, version: m.version, type: m.type };
+        }
+        case 'uninstall': {
+            const targetId = String(args[0] || '');
+            if (!targetId) throw new Error('uninstall: missing id');
+            // Guard against an app uninstalling itself mid-call (would yank its
+            // own iframe out while we're still waiting on the reply).
+            if (targetId === appId) throw new Error('uninstall: refusing to self-uninstall');
+            if (!window.registry?.isInstalled(targetId)) return false;
+            await window.registry.uninstall(targetId);
+            try { localStorage.removeItem('aruta_perms_' + targetId); } catch {}
+            return true;
         }
         case 'listInstalled': {
             const all = window.registry?.list() || [];
@@ -167,6 +179,7 @@ html,body{margin:0;padding:0;width:100%;height:100%;background:transparent;color
                     i18n: (k) => call('i18n', k),
                     installZip: (blob, opts) => call('installZip', blob, opts),
                     listInstalled: () => call('listInstalled'),
+                    uninstall: (id) => call('uninstall', id),
                     permission: { request: (p) => call('permission.request', p) },
                 };
                 // sync theme from host before user CSS loads so the first paint

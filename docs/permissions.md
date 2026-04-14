@@ -15,7 +15,7 @@ aruta.sh uses an **iOS-style runtime permission model**: no capability is grante
 | `fetch` | `ctx.fetch` — HTTP requests to external URLs |
 | `theme` | `ctx.theme.get/set` — read and switch the UI theme |
 | `clipboard` | `ctx.clipboard.read/write` — read/write system clipboard |
-| `install` | `ctx.installZip(blob)` submits a `.zip` to the host installer, and `ctx.listInstalled()` enumerates installed packages (id + version). The user still sees the standard install-confirm modal for every install — this permission gates *submission*, not approval. |
+| `install` | `ctx.installZip(blob)` submits a `.zip` to the host installer, `ctx.listInstalled()` enumerates installed packages (id + version), and `ctx.uninstall(id)` removes an installed package (refuses to self-uninstall). The user still sees the standard install-confirm modal for every install — this permission gates *submission*, not approval. Uninstalls are immediate; the calling app is expected to prompt the user first. |
 
 Anything not in this table has no permission gate (e.g. `ctx.asset`, `ctx.i18n`, DOM access inside your own iframe).
 
