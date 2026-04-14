@@ -7,39 +7,84 @@ This is a contributor-facing overview of how apps and commands are wired interna
 ## Boot & runtime overview
 
 ```mermaid
+%%{init: {
+  "theme": "base",
+  "flowchart": { "curve": "basis", "htmlLabels": true, "padding": 10 },
+  "themeVariables": {
+    "fontFamily": "Georgia, 'IM Fell English', serif",
+    "fontSize": "14px"
+  }
+}}%%
 flowchart TD
-    A[Browser load: index.html] --> B[profile.js IIFE]
-    B --> C{tryRestoreFromHandle<br/>handle persisted?}
-    C -- no --> E[core.js: theme + lang + fonts]
+    A([Browser load<br/>index.html]):::entry --> B[/profile.js IIFE/]:::boot
+    B --> C{tryRestoreFromHandle<br/>handle persisted?}:::gate
+    C -- no --> E[core.js<br/>theme · lang · fonts]:::boot
     C -- yes / dormant --> E
-    C -- yes / granted + folder has data --> D[restore snapshot<br/>then location.reload]
+    C -- yes / granted + folder has data --> D[[restore snapshot<br/>then location.reload]]:::profile
     D --> A
-    E --> E1{follow-OS theme?}
-    E1 -- yes --> E2[matchMedia<br/>prefers-color-scheme listener]
-    E1 -- no --> E3[saved aruta_theme]
-    E2 --> F[app.js: showApp]
+    E --> E1{follow-OS theme?}:::gate
+    E1 -- yes --> E2[matchMedia<br/>prefers-color-scheme]:::boot
+    E1 -- no --> E3[saved aruta_theme]:::boot
+    E2 --> F([app.js · showApp]):::entry
     E3 --> F
-    F --> F1[taskbar / start menu / windows<br/>initWindowManager + initResize]
-    F --> F2[await __arutaProfileReady]
-    F2 --> G[registry.bootstrap<br/>read aruta_packages IDB]
-    G --> H[defaults.bootstrap<br/>install bundled defaultPackages/*]
-    H --> I[installer.initDragDrop]
-    I --> U[User opens an app window]
-    U --> V[sandbox.mountApp<br/>iframe srcdoc = IFRAME_BOOT]
-    V --> W["iframe ready → host posts init<br/>(manifest, files, theme)"]
-    W --> X[iframe imports entry -> mount root, ctx]
-    X <-->|postMessage __aruta_sdk| Y[host _handleCall<br/>permission gate]
-    X -. theme change .-> BT[sandbox.broadcastTheme]
+    F --> F1[taskbar · start menu · windows<br/>initWindowManager + initResize]:::boot
+    F --> F2[await __arutaProfileReady]:::boot
+    F2 --> G[(registry.bootstrap<br/>aruta_packages IDB)]:::reg
+    G --> H[(defaults.bootstrap<br/>install bundled defaultPackages/*)]:::reg
+    H --> I[installer.initDragDrop]:::reg
+    I --> U((User opens<br/>an app window)):::user
+    U --> V[sandbox.mountApp<br/>iframe srcdoc = IFRAME_BOOT]:::app
+    V --> W["iframe ready → host posts init<br/>(manifest, files, theme)"]:::app
+    W --> X[iframe imports entry<br/>mount root, ctx]:::app
+    X <-->|postMessage __aruta_sdk| Y[host _handleCall<br/>permission gate]:::bridge
+    X -. theme change .-> BT[sandbox.broadcastTheme]:::bridge
     BT --> X
-    Y -.write.-> P[profile.markDirty]
+    Y -.write.-> P[profile.markDirty]:::profile
     G -.write.-> P
-    P --> P1[debounced flushDirty]
-    P1 --> P2[DiskBackend.writeAll<br/>folder mirror]
+    P --> P1[debounced flushDirty]:::profile
+    P1 --> P2[(DiskBackend.writeAll<br/>folder mirror)]:::profile
+
+    classDef entry   fill:#3b2a5c,stroke:#ffc857,stroke-width:2px,color:#ffe4a0
+    classDef boot    fill:#1a0f2e,stroke:#a78bfa,stroke-width:1.5px,color:#e0daf0
+    classDef gate    fill:#5c3a08,stroke:#ffc857,stroke-width:2px,color:#ffe4a0
+    classDef reg     fill:#0f2e1a,stroke:#6ee7b7,stroke-width:1.5px,color:#c8f5e0
+    classDef user    fill:#4a1f3a,stroke:#fb7185,stroke-width:2px,color:#ffd5dc
+    classDef app     fill:#2a1f4a,stroke:#a78bfa,stroke-width:1.5px,color:#ede5ff
+    classDef bridge  fill:#1a2a3a,stroke:#7dd3fc,stroke-width:1.5px,color:#c5e9f5
+    classDef profile fill:#3a2a0f,stroke:#fb923c,stroke-width:1.5px,color:#ffd8b0
+
+    linkStyle default stroke:#8b6914,stroke-width:1.8px
 ```
 
 ### Sandbox bridge — single ctx call
 
 ```mermaid
+%%{init: {
+  "theme": "base",
+  "themeVariables": {
+    "fontFamily": "Georgia, 'IM Fell English', serif",
+    "fontSize": "13px",
+    "primaryColor": "#2a1f4a",
+    "primaryTextColor": "#ede5ff",
+    "primaryBorderColor": "#a78bfa",
+    "secondaryColor": "#3a2a0f",
+    "tertiaryColor": "#1a0f2e",
+    "lineColor": "#ffc857",
+    "actorBkg": "#2a1f4a",
+    "actorBorder": "#ffc857",
+    "actorTextColor": "#ffe4a0",
+    "actorLineColor": "#ffc857",
+    "signalColor": "#ffe4a0",
+    "signalTextColor": "#ffe4a0",
+    "labelBoxBkgColor": "#3b2a5c",
+    "labelBoxBorderColor": "#ffc857",
+    "labelTextColor": "#ffe4a0",
+    "noteBkgColor": "#3a2a0f",
+    "noteTextColor": "#ffd8b0",
+    "noteBorderColor": "#fb923c",
+    "altBackground": "#0f2e1a"
+  }
+}}%%
 sequenceDiagram
     participant App as App code (iframe)
     participant Boot as IFRAME_BOOT proxy
@@ -49,7 +94,7 @@ sequenceDiagram
     Boot->>Host: postMessage {type:'call', id, method:'storage.set', args}
     Host->>Perm: request(appId, 'storage')
     alt first call
-        Perm-->>Perm: show modal (Allow/Always/Deny)
+        Perm-->>Perm: show modal (Allow / Always / Deny)
     end
     Perm-->>Host: granted | denied
     alt granted
