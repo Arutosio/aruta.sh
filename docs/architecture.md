@@ -269,7 +269,17 @@ The trade-off: an `allow-same-origin` iframe shares the host's origin, can reach
 - **Path resolution.** A local `resolvePath(target, cwd)` normalizes `.`/`..`, treats leading `/` or `~` as absolute, and throws `cannot go above home` if `..` would escape the root. There is no way to reach files outside the linked folder from the terminal.
 - **Prompt.** The visible prompt is `⚜ aruta:~$ ` at home and `⚜ aruta:~/sub/dir$ ` inside a subdirectory; it updates after every successful `cd`.
 
-Non-goals for v1: tab completion, `cat`/file-content commands, Firefox virtual-workspace fallback, multi-column `ls`, persistence of the CWD across sessions.
+### Live input decoration (zsh-like)
+
+The terminal input is rendered through a two-layer trick so it can show live feedback while you type:
+
+- **Transparent `<input>` + mirrored `<div class="term-overlay">`** behind it, sharing font/padding. The caret is still visible via `caret-color`. `color: transparent` hides the raw input text; the overlay paints styled copies instead.
+- **Command-name highlighting.** The first token of the input is wrapped in `.term-cmd-ok` (mint green) when it matches a known command — union of `Object.keys(BUILTINS)` + every installed manifest id — or `.term-cmd-bad` (soft red) when it doesn't.
+- **Ghost-text autosuggestion.** A `.term-ghost` span appends the tail of a suggested completion in dimmed italic: first a newest-first scan of `_history` for a strict-prefix match, else the first alphabetical command name that prefixes the current token.
+- **Acceptance.** `Tab` always commits the ghost text (and is no-op if empty — it never steals focus out of the terminal). `ArrowRight` commits only when the caret is at the end of the input and a ghost exists; otherwise it's a normal caret move.
+- **Re-render triggers.** `input` event, `Tab`/`ArrowRight` accept, `ArrowUp`/`ArrowDown` history nav, and post-`Enter` clear all call the overlay renderer.
+
+Non-goals for v1: `cat`/file-content commands, Firefox virtual-workspace fallback, multi-column `ls`, persistence of the CWD across sessions.
 
 ## Gotchas to remember
 
