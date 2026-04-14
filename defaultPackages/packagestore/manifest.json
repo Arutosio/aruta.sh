@@ -1,0 +1,11 @@
+{
+    "type": "app",
+    "id": "packagestore",
+    "name": "Package Store",
+    "icon": "📦",
+    "version": "1.0.0",
+    "author": "Aruta",
+    "entry": "index.js",
+    "category": "system",
+    "permissions": ["fetch", "storage", "notifications", "install"]
+}

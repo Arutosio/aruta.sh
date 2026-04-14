@@ -62,7 +62,16 @@ async function _handleCall(appId, method, args) {
         case 'storage.set': return await _appStorageSet(appId, args[0], args[1]);
         case 'storage.remove': return await _appStorageRemove(appId, args[0]);
         case 'fetch': {
-            const r = await fetch(args[0], args[1] || {});
+            const opts = args[1] || {};
+            const binary = opts && opts.binary;
+            // Strip our custom flag before passing through to fetch — browsers
+            // treat unknown init fields as no-ops but this keeps it clean.
+            const init = { ...opts }; delete init.binary;
+            const r = await fetch(args[0], init);
+            if (binary) {
+                const blob = await r.blob();
+                return { ok: r.ok, status: r.status, statusText: r.statusText, blob };
+            }
             const text = await r.text();
             return { ok: r.ok, status: r.status, statusText: r.statusText, body: text };
         }
@@ -146,6 +155,11 @@ html,body{margin:0;padding:0;width:100%;height:100%;background:transparent;color
                             ok: r.ok, status: r.status, statusText: r.statusText,
                             text: async () => r.body,
                             json: async () => JSON.parse(r.body),
+                            blob: async () => r.blob || new Blob([r.body || ''], { type: 'application/octet-stream' }),
+                            arrayBuffer: async () => {
+                                if (r.blob) return await r.blob.arrayBuffer();
+                                return new TextEncoder().encode(r.body || '').buffer;
+                            },
                         };
                     },
                     theme: { get: () => call('theme.get'), set: (t) => call('theme.set', t) },
