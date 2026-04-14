@@ -342,6 +342,17 @@ The terminal input is rendered through a two-layer trick so it can show live fee
 
 Non-goals for v1: `cat`/file-content commands, Firefox virtual-workspace fallback, multi-column `ls`, persistence of the CWD across sessions.
 
+### History features
+
+- **Persisted history.** `_history` mirrors to `localStorage.aruta_term_history` (JSON array, capped at 200 entries). Loaded in `initTerminal`, re-saved after every successful `termRun`.
+- **Bang expansion.** Before parsing, `_expandHistory(line)` rewrites:
+    - `!!` → most recent entry
+    - `!N` → 1-based index into history
+    - `!prefix` → most recent entry starting with `prefix`
+
+    A miss prints `no history match: <line>` and aborts.
+- **Ctrl-R reverse-i-search.** Pressing Ctrl-R replaces the prompt with `(reverse-i-search)`<code>\`query':</code> and paints the newest matching history entry in the same `.term-overlay` the autosuggest uses. Subsequent Ctrl-R cycles to the next older match, Backspace edits the query, Enter runs the match, Esc cancels. Any other key commits the current match and falls through (bash/zsh parity).
+
 ## Gotchas to remember
 
 - `WIN_META` entries for custom apps are created at runtime with `custom: true`. `os.js:openWindow` uses that flag to decide whether to invoke `sandbox.mount(id)`.
