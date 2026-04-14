@@ -80,6 +80,9 @@ function initWindowManager() {
     document.querySelectorAll('.os-window').forEach(win => {
         const id = win.dataset.window;
 
+        // Resize handles (8-direction)
+        initResize(win);
+
         // Titlebar drag
         const titlebar = win.querySelector('.win-titlebar');
         if (titlebar) {
@@ -367,6 +370,110 @@ function initDrag(win, handle) {
     window.addEventListener('touchmove', onMove, { passive: true });
     window.addEventListener('mouseup', onUp);
     window.addEventListener('touchend', onUp);
+}
+
+/**
+ * Attach 8-direction resize handles (4 edges + 4 corners) to a window.
+ * Uses pointer events with setPointerCapture so the drag survives
+ * the cursor leaving the viewport. Skips work when the window is
+ * maximized. Idempotent — bails if handles were already added.
+ * @param {HTMLElement} win
+ */
+function initResize(win) {
+    if (win._resizeWired) return;
+    win._resizeWired = true;
+
+    const DIRS = ['n', 's', 'w', 'e', 'nw', 'ne', 'sw', 'se'];
+    const MIN_W = 240, MIN_H = 160;
+
+    DIRS.forEach(dir => {
+        const h = document.createElement('div');
+        h.className = 'win-resize ' + dir;
+        h.dataset.dir = dir;
+        h.addEventListener('pointerdown', (e) => startResize(e, win, dir));
+        win.appendChild(h);
+    });
+
+    function startResize(e, win, dir) {
+        if (e.button !== 0) return;
+        if (win.classList.contains('win-maximized')) return;
+        e.preventDefault();
+        e.stopPropagation();
+        if (typeof focusWindow === 'function') focusWindow(win);
+
+        const handle = e.currentTarget;
+        try { handle.setPointerCapture(e.pointerId); } catch {}
+
+        const rect = win.getBoundingClientRect();
+        const startX = e.clientX, startY = e.clientY;
+        const startLeft = rect.left, startTop = rect.top;
+        const startW = rect.width, startH = rect.height;
+        const prevUserSelect = document.body.style.userSelect;
+        document.body.style.userSelect = 'none';
+        win.classList.add('win-resizing');
+
+        // Commit to fixed-position geometry to match dragged state
+        win.style.position = 'fixed';
+        win.style.transform = 'none';
+        win.style.margin = '0';
+        win.style.left = startLeft + 'px';
+        win.style.top = startTop + 'px';
+        win.style.width = startW + 'px';
+        win.style.height = startH + 'px';
+        win.style.right = '';
+        win.style.bottom = '';
+
+        const TASKBAR_H = 68;
+        const MAX_W = window.innerWidth;
+        const MAX_H = window.innerHeight - TASKBAR_H;
+
+        function onMove(ev) {
+            const dx = ev.clientX - startX;
+            const dy = ev.clientY - startY;
+            let newLeft = startLeft, newTop = startTop;
+            let newW = startW, newH = startH;
+
+            if (dir.includes('e')) {
+                newW = Math.max(MIN_W, Math.min(MAX_W - startLeft, startW + dx));
+            }
+            if (dir.includes('s')) {
+                newH = Math.max(MIN_H, Math.min(MAX_H - (startTop - TASKBAR_H), startH + dy));
+            }
+            if (dir.includes('w')) {
+                // Constrain so width stays >= MIN_W and left stays >= 0
+                const maxDx = startW - MIN_W;
+                const minDx = -startLeft;
+                const cdx = Math.max(minDx, Math.min(maxDx, dx));
+                newLeft = startLeft + cdx;
+                newW = startW - cdx;
+            }
+            if (dir.includes('n')) {
+                const maxDy = startH - MIN_H;
+                const minDy = TASKBAR_H - startTop;
+                const cdy = Math.max(minDy, Math.min(maxDy, dy));
+                newTop = startTop + cdy;
+                newH = startH - cdy;
+            }
+
+            win.style.left = newLeft + 'px';
+            win.style.top = newTop + 'px';
+            win.style.width = newW + 'px';
+            win.style.height = newH + 'px';
+        }
+
+        function onUp(ev) {
+            handle.removeEventListener('pointermove', onMove);
+            handle.removeEventListener('pointerup', onUp);
+            handle.removeEventListener('pointercancel', onUp);
+            try { handle.releasePointerCapture(ev.pointerId); } catch {}
+            document.body.style.userSelect = prevUserSelect;
+            win.classList.remove('win-resizing');
+        }
+
+        handle.addEventListener('pointermove', onMove);
+        handle.addEventListener('pointerup', onUp);
+        handle.addEventListener('pointercancel', onUp);
+    }
 }
 
 /* ────────────────────────────────

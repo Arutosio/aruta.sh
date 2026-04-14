@@ -286,6 +286,7 @@ function ensureAppWindow(manifest) {
     `;
     desktop.appendChild(win);
     // Wire window controls (mirrors initWindowManager logic for one window)
+    if (typeof initResize === 'function') initResize(win);
     const titlebar = win.querySelector('.win-titlebar');
     if (titlebar && typeof initDrag === 'function') {
         initDrag(win, titlebar);
