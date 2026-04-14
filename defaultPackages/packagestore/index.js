@@ -87,6 +87,13 @@ export default {
             }
         }
 
+        // Host fires this when an install/uninstall happens anywhere (Settings,
+        // terminal, another iframe). Re-query + re-render so our rows stay in sync.
+        document.addEventListener('aruta:installChanged', async () => {
+            await refreshInstalled();
+            if (typeof renderAll === 'function') renderAll();
+        });
+
         // ── Network ───────────────────────────────────────────
         async function fetchRepo(repo) {
             const headers = {};

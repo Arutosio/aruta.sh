@@ -21,6 +21,17 @@ function broadcastTheme(v) {
     }
 }
 
+/**
+ * Notify every mounted iframe that the set of installed packages changed
+ * (install / uninstall / update). Iframes receive it as a DOM event
+ * `aruta:installChanged` on document — apps can `addEventListener` to refresh.
+ */
+function broadcastInstallChange() {
+    for (const m of _mounted.values()) {
+        try { m.iframe.contentWindow?.postMessage({ __aruta_sdk: true, type: 'install-change' }, '*'); } catch (_) {}
+    }
+}
+
 // Per-app KV is implemented in storage.js (window.Storage.appKV). These thin
 // wrappers route the host-side `ctx.storage.*` calls through the facade so
 // the DB name (`aruta_app_<id>`) lives in exactly one place.
@@ -153,6 +164,8 @@ html,body{margin:0;padding:0;width:100%;height:100%;background:transparent;color
             else p.resolve(d.value);
         } else if (d.type === 'theme') {
             if (d.value) document.documentElement.dataset.theme = d.value;
+        } else if (d.type === 'install-change') {
+            try { document.dispatchEvent(new Event('aruta:installChanged')); } catch (_) {}
         } else if (d.type === 'init') {
             try {
                 const fileURLs = {};
@@ -381,4 +394,4 @@ async function closeAppStorage(appId) {
     await window.db.closeDB((window.Storage?.constants.APP_DB_PREFIX || 'aruta_app_') + appId);
 }
 
-window.sandbox = { mount: mountApp, unmount: unmountApp, runCommand, closeAppStorage, broadcastTheme, SDK_VERSION, PERM_REQUIRED, isMounted: (id) => _mounted.has(id) };
+window.sandbox = { mount: mountApp, unmount: unmountApp, runCommand, closeAppStorage, broadcastTheme, broadcastInstallChange, SDK_VERSION, PERM_REQUIRED, isMounted: (id) => _mounted.has(id) };
