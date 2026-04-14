@@ -98,7 +98,7 @@ export default {
 
 ### Sizing and layout
 
-The host does **not** force a size on your app. You get an iframe filling the window — if the window is resized, your CSS (or `ResizeObserver`) must react. See `ExampleApps/snake` for a working pattern: the canvas listens on its container and snaps to a grid multiple.
+The host does **not** force a size on your app. You get an iframe filling the window — if the window is resized, your CSS (or `ResizeObserver`) must react. See `packages/arcane-snake` for a working pattern: the canvas listens on its container and snaps to a grid multiple.
 
 ### CSS
 
@@ -315,7 +315,7 @@ The bundled **Package Store** app (System category) installs packages from user-
 
 ### Hosting
 
-- **GitHub raw** — put `index.json` and the `.zip` files at the root of a repo, then point users at `https://raw.githubusercontent.com/<user>/<repo>/main/index.json`. Relative `url`s resolve automatically.
+- **GitHub raw** — put `index.json` and the `.zip` files at the root of a repo (or any subfolder), then point users at `https://raw.githubusercontent.com/<user>/<repo>/<branch>/<path>/index.json`. Relative `url`s resolve automatically. The bundled example repo lives in this source tree at `packages/index.json` and is served via `https://raw.githubusercontent.com/Arutosio/aruta.sh/master/packages/index.json`.
 - **Any static host** (S3, Netlify, a plain `www` folder) works — just serve the JSON with `Content-Type: application/json` and the zips with whatever type (the installer reads bytes, not headers).
 - Respect `ETag` / `Last-Modified` if you can: the Package Store sends `If-None-Match` on refresh for lightweight update checks.
 

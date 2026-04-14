@@ -45,7 +45,7 @@ export default {
 
 Drag the zip onto the desktop, confirm the install, then in the Terminal: `hi Aruta`.
 
-Full walkthrough and a windowed-app example (with canvas, storage, notifications): see [`docs/packages.md`](./docs/packages.md) and [`ExampleApps/`](./ExampleApps).
+Full walkthrough and a windowed-app example (with canvas, storage, notifications): see [`docs/packages.md`](./docs/packages.md) and [`packages/`](./packages). The `packages/` folder doubles as a live Package Store repo — enable the `Aruta.sh Examples` repo in the Package Store (URL: `https://raw.githubusercontent.com/Arutosio/aruta.sh/master/packages/index.json`) to install them from inside the OS.
 
 ---
 
@@ -66,7 +66,7 @@ python -m http.server 8000
 ```
 JavaScript/       boot sequence, OS, packages, terminal, effects
 Style/            CSS (main.css bundles the rest + terminal.css for plugins)
-ExampleApps/      working example packages (sources + prebuilt zips)
+packages/         working example packages (sources + prebuilt zips + index.json repo manifest)
 docs/             full documentation (start here → docs/README.md)
 ```
 
