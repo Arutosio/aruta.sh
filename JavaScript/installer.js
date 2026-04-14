@@ -21,14 +21,51 @@ function loadJSZip() {
 
 const ID_RE = /^[a-z0-9][a-z0-9_-]{1,40}$/;
 const TYPES = ['app', 'command'];
+const KNOWN_CATEGORIES = ['info', 'games', 'tools', 'creativity', 'system', 'other'];
+
+function _knownPermissions() {
+    // Derive from the live PERM_REQUIRED map in sandbox.js: every unique
+    // permission string declared as a gate for some ctx.* method.
+    const set = new Set();
+    const perms = window.sandbox?.PERM_REQUIRED || {};
+    for (const v of Object.values(perms)) if (v) set.add(v);
+    return set;
+}
 
 function validateManifest(m) {
     if (!m || typeof m !== 'object') return 'manifest is not an object';
     if (!ID_RE.test(m.id || '')) return 'invalid id (a-z, 0-9, _-, 2-41 chars)';
+    if (!m.version || typeof m.version !== 'string') return 'version is required (non-empty string)';
     if (!TYPES.includes(m.type)) return 'type must be "app" or "command"';
     if (!m.name || typeof m.name !== 'string') return 'name is required';
     if (m.entry && typeof m.entry !== 'string') return 'entry must be a string';
-    if (m.permissions && !Array.isArray(m.permissions)) return 'permissions must be an array';
+    if (m.permissions != null) {
+        if (!Array.isArray(m.permissions)) return 'permissions must be an array';
+        const known = _knownPermissions();
+        for (const p of m.permissions) {
+            if (typeof p !== 'string') return 'permissions must be strings';
+            if (known.size && !known.has(p)) return 'unknown permission: "' + p + '"';
+        }
+    }
+    if (m.allowOrigin != null && typeof m.allowOrigin !== 'boolean') {
+        return 'allowOrigin must be a boolean';
+    }
+    if (m.category != null) {
+        if (typeof m.category !== 'string') return 'category must be a string';
+        if (!KNOWN_CATEGORIES.includes(m.category)) {
+            // Warn-only — unknown categories fall back to an "other" bucket
+            // and don't block install. Author still gets the console heads-up.
+            console.warn('[installer] unknown category "' + m.category + '" — falling back to "other"');
+        }
+    }
+    // SDK / minSdk: reject when the package needs a newer host contract.
+    const reqSdk = Number(m.minSdk ?? m.sdk);
+    if (Number.isFinite(reqSdk) && reqSdk > 0) {
+        const hostSdk = Number(window.sandbox?.SDK_VERSION) || 1;
+        if (reqSdk > hostSdk) {
+            return 'package requires SDK v' + reqSdk + ', host provides v' + hostSdk;
+        }
+    }
     return null;
 }
 

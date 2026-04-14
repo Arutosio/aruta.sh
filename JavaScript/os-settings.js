@@ -442,15 +442,62 @@ function initProfileSettings() {
         } catch {}
 
         if (existingMeta) {
-            const msg = (t.settings_profile_found_msg || 'This folder already contains a profile.')
-                + (existingMeta.updatedAt ? ' (' + existingMeta.updatedAt + ')' : '')
-                + '\n\n' + (t.settings_profile_found_prompt || 'Load profile FROM the folder (overwrites browser state), or overwrite the folder WITH current browser state?');
+            // Fingerprint comparison: if the browser's current snapshot was
+            // updated more recently than the folder's profile.json, surface a
+            // 3-way conflict modal so the user doesn't silently clobber fresh
+            // local changes. If folder is newer (or timestamps are
+            // missing/equal) we keep the legacy 2-choice flow.
+            let browserUpdatedAt = null;
+            try { browserUpdatedAt = (await window.profile.snapshot())?.updatedAt || null; } catch {}
+            const folderUpdatedAt = existingMeta.updatedAt || null;
+            const browserNewer = browserUpdatedAt && folderUpdatedAt &&
+                new Date(browserUpdatedAt).getTime() > new Date(folderUpdatedAt).getTime();
+
             const confirmFn = window.showConfirm || ((m) => Promise.resolve(confirm(m)));
-            const loadFromFolder = await confirmFn(msg, {
-                type: 'warning',
-                okText: t.settings_profile_load_from_folder || 'Load from folder',
-                cancelText: t.settings_profile_overwrite_folder || 'Overwrite folder',
-            });
+            let loadFromFolder; // true = load, false = overwrite folder, null = cancel
+            if (browserNewer) {
+                // Chain two confirms to emulate a 3-button modal (Keep Local /
+                // Keep Folder / Cancel) without changing showConfirm's shape.
+                const keepLocal = await confirmFn(
+                    (t.settings_profile_conflict_msg ||
+                        'Conflict: this browser has NEWER data than the folder.') +
+                    '\n\nBrowser: ' + (browserUpdatedAt || '—') +
+                    '\nFolder:  ' + (folderUpdatedAt || '—') +
+                    '\n\nKeep LOCAL (overwrite folder with browser state)?',
+                    {
+                        type: 'warning',
+                        okText: t.settings_profile_keep_local || 'Keep Local',
+                        cancelText: t.settings_profile_choose_other || 'Choose other…',
+                    });
+                if (keepLocal) {
+                    loadFromFolder = false;
+                } else {
+                    const keepFolder = await confirmFn(
+                        (t.settings_profile_conflict_keep_folder ||
+                            'Keep FOLDER (overwrite browser with folder contents)?') +
+                        '\n\nCancel to abort linking.',
+                        {
+                            type: 'warning',
+                            okText: t.settings_profile_keep_folder || 'Keep Folder',
+                            cancelText: t.confirm_cancel || 'Cancel',
+                        });
+                    loadFromFolder = keepFolder ? true : null;
+                }
+            } else {
+                const msg = (t.settings_profile_found_msg || 'This folder already contains a profile.')
+                    + (existingMeta.updatedAt ? ' (' + existingMeta.updatedAt + ')' : '')
+                    + '\n\n' + (t.settings_profile_found_prompt || 'Load profile FROM the folder (overwrites browser state), or overwrite the folder WITH current browser state?');
+                loadFromFolder = await confirmFn(msg, {
+                    type: 'warning',
+                    okText: t.settings_profile_load_from_folder || 'Load from folder',
+                    cancelText: t.settings_profile_overwrite_folder || 'Overwrite folder',
+                });
+            }
+            if (loadFromFolder === null) {
+                // User cancelled the conflict dialog — do not link.
+                showToast(t.settings_profile_link_cancelled || 'Link cancelled.', 'info');
+                return;
+            }
             try {
                 if (loadFromFolder) {
                     // Link without overwriting, then read folder and restore (which reloads).

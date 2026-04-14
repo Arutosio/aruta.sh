@@ -3,13 +3,19 @@
  * ╚══════════════════════════════════════════════════════════╝ */
 
 const HISTORY_KEY = 'aruta_term_history';
-const HISTORY_MAX = 100;
+const HISTORY_MAX = 200;
 
 let _output, _input, _prompt, _overlay;
 let _history = [];
 let _historyIdx = -1;
 let _initialized = false;
 let _cwd = ''; // session-local working directory, relative to linked profile folder root
+
+// Reverse-i-search state (Ctrl-R). `active` is the flag; when non-null the
+// terminal is in search mode and the overlay renders `(reverse-i-search)`.
+// `matchIdx` is the index into _history of the newest match at or before
+// `cursorIdx` — Ctrl-R repeatedly decrements cursorIdx to cycle older matches.
+let _revSearch = null;
 
 // ── Filesystem helpers ────────────────────────────────────
 // Normalize target path against cwd. Throws on '..' above home.
@@ -297,7 +303,42 @@ const BUILTINS = {
     },
 };
 
+// Expand history designators (`!!`, `!N`, `!prefix`). Returns the expanded
+// line, or the original if no expansion applies. Returns `null` if an
+// expansion was attempted but no match exists (callers surface an error).
+function _expandHistory(line) {
+    const trimmed = line.trim();
+    if (!trimmed.startsWith('!') || trimmed.length < 2) return line;
+    const spec = trimmed.slice(1);
+    // !!
+    if (spec === '!') {
+        if (!_history.length) return null;
+        return _history[_history.length - 1];
+    }
+    // !N (1-based index into history)
+    if (/^\d+$/.test(spec)) {
+        const n = parseInt(spec, 10);
+        if (n < 1 || n > _history.length) return null;
+        return _history[n - 1];
+    }
+    // !prefix — most-recent entry starting with prefix
+    for (let i = _history.length - 1; i >= 0; i--) {
+        if (_history[i].startsWith(spec)) return _history[i];
+    }
+    return null;
+}
+
 async function termRun(line) {
+    // History-expansion pass before parsing so `!!` resolves to a real command.
+    const expanded = _expandHistory(line);
+    if (expanded === null) {
+        termPrintHTML(`<span class="term-prompt">${_promptText()}</span><span class="term-cmd">${_escape(line)}</span>`);
+        termPrint((window.t().term_history_nomatch || 'no history match:') + ' ' + line, 'term-error');
+        return;
+    }
+    if (expanded !== line) {
+        line = expanded;
+    }
     const parsed = _parseLine(line);
     if (!parsed) return;
     const t = window.t();
@@ -333,7 +374,80 @@ async function termRun(line) {
 function _escape(s) { return s.replace(/[&<>"']/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c])); }
 function _promptText() { return '⚜ aruta:~' + (_cwd ? '/' + _cwd : '') + '$ '; }
 
+function _findReverseMatch(query, before) {
+    // Walk history newest-first starting at index `before` (inclusive),
+    // return the first entry that contains `query`. Returns -1 on miss.
+    if (!query) return before >= 0 ? before : -1;
+    for (let i = Math.min(before, _history.length - 1); i >= 0; i--) {
+        if (_history[i].includes(query)) return i;
+    }
+    return -1;
+}
+
+function _exitReverseSearch(commit) {
+    if (!_revSearch) return;
+    if (commit && _revSearch.matchIdx >= 0) {
+        _input.value = _history[_revSearch.matchIdx];
+        _input.setSelectionRange(_input.value.length, _input.value.length);
+    } else if (!commit) {
+        _input.value = _revSearch.originalInput || '';
+    }
+    _revSearch = null;
+    _renderOverlay();
+}
+
 function _onKey(e) {
+    // Reverse-i-search captures all keys while active.
+    if (_revSearch) {
+        if (e.key === 'Escape') { _exitReverseSearch(false); e.preventDefault(); return; }
+        if (e.key === 'Enter') {
+            _exitReverseSearch(true);
+            if (_input.value) {
+                const v = _input.value;
+                _input.value = '';
+                termRun(v);
+                _renderOverlay();
+            }
+            e.preventDefault();
+            return;
+        }
+        if (e.key === 'r' && (e.ctrlKey || e.metaKey)) {
+            // Cycle to the next older match.
+            const next = _findReverseMatch(_revSearch.query, _revSearch.matchIdx - 1);
+            if (next >= 0) _revSearch.matchIdx = next;
+            _renderOverlay();
+            e.preventDefault();
+            return;
+        }
+        if (e.key === 'Backspace') {
+            _revSearch.query = _revSearch.query.slice(0, -1);
+            _revSearch.matchIdx = _findReverseMatch(_revSearch.query, _history.length - 1);
+            _renderOverlay();
+            e.preventDefault();
+            return;
+        }
+        if (e.key.length === 1 && !e.ctrlKey && !e.metaKey && !e.altKey) {
+            _revSearch.query += e.key;
+            _revSearch.matchIdx = _findReverseMatch(_revSearch.query, _history.length - 1);
+            _renderOverlay();
+            e.preventDefault();
+            return;
+        }
+        // Any other key (arrow, tab, etc.) commits current match and falls
+        // through to normal handling — mirrors bash/zsh behavior.
+        _exitReverseSearch(true);
+        // don't preventDefault so arrow keys still move the caret
+    }
+    if (e.key === 'r' && (e.ctrlKey || e.metaKey)) {
+        _revSearch = {
+            query: '',
+            matchIdx: _history.length - 1,
+            originalInput: _input.value,
+        };
+        _renderOverlay();
+        e.preventDefault();
+        return;
+    }
     if (e.key === 'Enter') {
         const v = _input.value;
         _input.value = '';
@@ -425,6 +539,31 @@ function _currentSuggestion() {
 
 function _renderOverlay() {
     if (!_overlay || !_input) return;
+    // Reverse-i-search mode: repaint the prompt and overlay with the search
+    // state. The real prompt is temporarily replaced; we restore on exit.
+    if (_prompt) {
+        _prompt.textContent = _revSearch
+            ? '(reverse-i-search)`' + _revSearch.query + "': "
+            : _promptText();
+    }
+    if (_revSearch) {
+        const match = _revSearch.matchIdx >= 0 ? _history[_revSearch.matchIdx] : '';
+        _overlay.textContent = '';
+        if (match) {
+            const span = document.createElement('span');
+            span.className = 'term-cmd-ok';
+            span.textContent = match;
+            _overlay.appendChild(span);
+        } else if (_revSearch.query) {
+            const span = document.createElement('span');
+            span.className = 'term-cmd-bad';
+            span.textContent = '(no match)';
+            _overlay.appendChild(span);
+        }
+        // Hide the real <input> value while in search — we're painting the
+        // matched history entry in the overlay instead.
+        return;
+    }
     const value = _input.value;
     _overlay.textContent = '';
     if (!value) return;

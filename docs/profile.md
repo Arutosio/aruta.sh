@@ -93,10 +93,15 @@ The reload-after-restore is intentional. It keeps the boot path simple — every
 
 ## Conflict resolution
 
-When you link to a folder that already has a profile, you choose the direction explicitly:
+When you link to a folder that already has a profile, aruta compares the folder's `profile.json.updatedAt` against the browser snapshot's `updatedAt` and picks the dialog accordingly:
 
-- **Load from folder** → `restore(snapshotFromBinary(folder))` then `location.reload()`.
-- **Overwrite folder** → `writeAll(snapshotBinary(currentBrowserState))`.
+- **Folder is newer (or timestamps match/missing)** — the classic 2-choice modal:
+    - **Load from folder** → `restore(snapshotFromBinary(folder))` then `location.reload()`.
+    - **Overwrite folder** → `writeAll(snapshotBinary(currentBrowserState))`.
+- **Browser is newer** — a 3-way conflict modal (implemented as two chained confirms so it still works without a custom tri-button widget):
+    - **Keep Local** → overwrite the folder with current browser state.
+    - **Keep Folder** → restore from folder and reload (discards the newer browser changes).
+    - **Cancel** → abort linking; the folder is not adopted.
 
 After that initial decision, **folder always wins** at boot. The browser is treated as a cache; the folder is the source of truth.
 

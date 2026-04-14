@@ -193,6 +193,30 @@ export default {
         }
 
         // ── Actions ───────────────────────────────────────────
+        async function uninstallPackage(pkg) {
+            if (!pkg || !pkg.id) return;
+            if (!confirm('Uninstall ' + (pkg.name || pkg.id) + '?')) return;
+            try {
+                const ok = await ctx.uninstall(pkg.id);
+                if (ok) ctx.toast('Uninstalled ' + (pkg.name || pkg.id), 'success');
+                else ctx.toast('Not installed', 'info');
+            } catch (e) {
+                console.warn('[packagestore] uninstall failed', e);
+                ctx.toast(String(e.message || e), 'error');
+            } finally {
+                await refreshInstalled();
+                renderAll();
+            }
+        }
+
+        function updatesAvailableCount() {
+            let n = 0;
+            for (const { pkg } of getAllPackages()) {
+                if (installedState(pkg).status === 'update') n++;
+            }
+            return n;
+        }
+
         async function installPackage(pkg) {
             if (!pkg || !pkg.url) {
                 ctx.toast('Missing package URL', 'error');
@@ -248,6 +272,34 @@ export default {
             renderAll();
         }
 
+        async function installFromURL() {
+            const url = prompt('Package .zip URL:', 'https://');
+            if (!url) return;
+            if (!/^https?:\/\//i.test(url)) {
+                ctx.toast('URL must start with http(s)://', 'error');
+                return;
+            }
+            if (!/^https:/i.test(url)) {
+                if (!confirm('This URL is NOT HTTPS. Continue anyway?')) return;
+            }
+            try {
+                ctx.toast('Downloading…', 'info');
+                const resp = await ctx.fetch(url, { binary: true });
+                if (!resp.ok) throw new Error('Download failed: HTTP ' + resp.status);
+                const blob = await resp.blob();
+                const filename = (url.split('/').pop() || 'remote.zip').split('?')[0];
+                const result = await ctx.installZip(blob, { filename });
+                if (result) ctx.toast('Installed ' + (result.name || result.id), 'success');
+                else ctx.toast('Install cancelled', 'info');
+            } catch (e) {
+                console.warn('[packagestore] sideload failed', e);
+                ctx.toast(String(e.message || e), 'error');
+            } finally {
+                await refreshInstalled();
+                renderAll();
+            }
+        }
+
         async function removeRepo(url) {
             if (!confirm('Remove this repository?')) return;
             state.repos = state.repos.filter(r => r.url !== url);
@@ -290,6 +342,7 @@ export default {
                     <div class="ps-repos"></div>
                     <div class="ps-side-foot">
                         <button class="ps-btn" data-action="add-repo">+ Add Repository</button>
+                        <button class="ps-btn ps-btn-util" data-action="install-url" title="Sideload a .zip from any URL">⇣ Install from URL</button>
                     </div>
                 </aside>
                 <section class="ps-main">
@@ -360,7 +413,11 @@ export default {
 
         function renderPackages() {
             const list = filteredPackages();
-            $count.textContent = list.length + ' package' + (list.length === 1 ? '' : 's');
+            const updates = updatesAvailableCount();
+            const countText = list.length + ' package' + (list.length === 1 ? '' : 's');
+            $count.innerHTML = (updates > 0
+                ? `<span class="ps-updates-chip" title="Updates available">↑ ${updates} update${updates === 1 ? '' : 's'}</span> `
+                : '') + escapeHTML(countText);
             if (!list.length) {
                 const hasAnyEnabled = state.repos.some(r => r.enabled);
                 $pkgs.innerHTML = `<div class="ps-empty">
@@ -371,12 +428,20 @@ export default {
             $pkgs.innerHTML = list.map(({ pkg, repoName }) => {
                 const st = installedState(pkg);
                 const busy = state.busy.has(pkg.id);
-                const actLabel = busy ? 'Installing…'
-                    : st.status === 'update' ? 'Update ↑'
-                    : st.status === 'installed' ? 'Installed'
+                const primaryLabel = busy ? 'Installing…'
+                    : st.status === 'update' ? ('↑ Update → v' + escapeHTML(pkg.version || '?'))
+                    : st.status === 'installed' ? ('✓ Installed v' + escapeHTML(st.installedVersion || ''))
                     : 'Install';
-                const actDisabled = busy || st.status === 'installed' ? 'disabled' : '';
+                const primaryAction = st.status === 'installed' ? '' : 'install';
+                const primaryDisabled = busy || st.status === 'installed' ? 'disabled' : '';
+                const primaryCls = st.status === 'installed'
+                    ? 'ps-act ps-chip-installed'
+                    : st.status === 'update' ? 'ps-btn ps-act ps-act-update'
+                    : 'ps-btn ps-act';
                 const sel = state.selectedPkg === pkg.id ? 'is-selected' : '';
+                const uninstallBtn = (st.status === 'installed' || st.status === 'update') && !busy
+                    ? '<button class="ps-btn ps-act ps-btn-ghost ps-danger" data-action="uninstall" title="Uninstall">Uninstall</button>'
+                    : '';
                 return `
                     <div class="ps-pkg ${sel}" data-id="${escapeHTML(pkg.id)}">
                         <span class="ps-pkg-icon">${escapeHTML(pkg.icon || '📦')}</span>
@@ -396,7 +461,12 @@ export default {
                                 <span class="ps-meta">${escapeHTML(repoName)}</span>
                             </div>
                         </div>
-                        <button class="ps-btn ps-act" data-action="install" ${actDisabled}>${actLabel}</button>
+                        <div class="ps-pkg-actions">
+                            ${primaryAction
+                                ? `<button class="${primaryCls}" data-action="${primaryAction}" ${primaryDisabled}>${primaryLabel}</button>`
+                                : `<span class="${primaryCls}">${primaryLabel}</span>`}
+                            ${uninstallBtn}
+                        </div>
                     </div>
                 `;
             }).join('');
@@ -449,6 +519,9 @@ export default {
                 ${pkg.allowOrigin ? '<div class="ps-warn">Requests relaxed sandbox (allowOrigin)</div>' : ''}
                 <div class="ps-det-actions">
                     <button class="ps-btn ps-btn-primary" data-action="install-detail" ${actDisabled}>${actLabel}</button>
+                    ${(st.status === 'installed' || st.status === 'update') && !busy
+                        ? '<button class="ps-btn ps-danger" data-action="uninstall-detail">Uninstall</button>'
+                        : ''}
                 </div>
             `;
         }
@@ -462,6 +535,7 @@ export default {
 
         // ── Wire events ───────────────────────────────────────
         root.querySelector('[data-action="add-repo"]').addEventListener('click', addRepo);
+        root.querySelector('[data-action="install-url"]').addEventListener('click', installFromURL);
         root.querySelector('[data-action="refresh-all"]').addEventListener('click', async () => {
             const btn = root.querySelector('[data-action="refresh-all"]');
             btn.disabled = true;
@@ -487,9 +561,15 @@ export default {
             const row = e.target.closest('.ps-pkg');
             if (!row) return;
             const id = row.dataset.id;
-            if (e.target.dataset.action === 'install') {
+            const action = e.target.dataset.action;
+            if (action === 'install') {
                 const found = getAllPackages().find(x => x.pkg.id === id);
                 if (found) await installPackage(found.pkg);
+                return;
+            }
+            if (action === 'uninstall') {
+                const found = getAllPackages().find(x => x.pkg.id === id);
+                if (found) await uninstallPackage(found.pkg);
                 return;
             }
             state.selectedPkg = id;
@@ -498,10 +578,13 @@ export default {
         });
 
         $details.addEventListener('click', async (e) => {
-            if (e.target.dataset.action !== 'install-detail') return;
+            const action = e.target.dataset.action;
+            if (action !== 'install-detail' && action !== 'uninstall-detail') return;
             const id = state.selectedPkg;
             const found = getAllPackages().find(x => x.pkg.id === id);
-            if (found) await installPackage(found.pkg);
+            if (!found) return;
+            if (action === 'install-detail') await installPackage(found.pkg);
+            else await uninstallPackage(found.pkg);
         });
 
         $search.addEventListener('input', () => {

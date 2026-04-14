@@ -57,13 +57,13 @@ The zip **must** contain `manifest.json` and the entry module at its root (not n
 | `id` | ✅ | `^[a-z0-9][a-z0-9_-]{1,40}$` | must be unique; reinstalling overwrites |
 | `name` | ✅ | non-empty string | display name in Start menu / Terminal |
 | `icon` | — | string | emoji or any single glyph |
-| `version` | — | string | free-form (`"1.0.0"`, `"2025-01-beta"`, …) |
+| `version` | ✅ | non-empty string | free-form (`"1.0.0"`, `"2025-01-beta"`, …) |
 | `author` | — | string | free-form |
 | `entry` | — | path inside zip | defaults to `index.js` |
-| `permissions` | — | string[] | declared permissions — informative at install time, still gated at runtime |
+| `permissions` | — | string[] | must be strings from the known-permission set in `sandbox.js:PERM_REQUIRED` — unknown values reject at install time. Still gated at runtime regardless of declaration. |
 | `allowOrigin` | — | boolean | opt-in: relax the iframe sandbox to `allow-scripts allow-same-origin allow-modals`. Required for `showDirectoryPicker` / FS Access API. See below. |
-| `category` | — | string | free-form grouping hint (e.g. `"games"`, `"tools"`) used by Start menu organisation |
-| `sdk` | — | integer (default `1`) | minimum host SDK version this package expects. See "SDK versioning" below. |
+| `category` | — | string | one of `info`, `games`, `tools`, `creativity`, `system`, `other`. Unknown values log a warning and fall back to `other`. |
+| `sdk` / `minSdk` | — | integer (default `1`) | minimum host SDK version this package expects. Install is **rejected** if the host SDK is older. See "SDK versioning" below. |
 
 Declared `permissions` are shown in the install modal so users know upfront what the package *might* ask for. It's not a grant — every capability is still prompted the first time it's actually used (iOS-style).
 
