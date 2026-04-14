@@ -46,7 +46,13 @@ function showApp() {
 
     // Initialize package registry (loads installed apps + commands from IndexedDB),
     // then install any bundled default packages missing from the registry.
+    // Profile gate: if a linked folder is present and readable, it will have
+    // already restored browser state and triggered a reload — in which case
+    // `reloading === true` and we skip further boot to avoid double work.
     (async () => {
+        let reloading = false;
+        try { reloading = await (window.__arutaProfileReady || Promise.resolve(false)); } catch {}
+        if (reloading) return;
         if (window.registry) await window.registry.bootstrap();
         if (window.defaults) await window.defaults.bootstrap();
     })();
