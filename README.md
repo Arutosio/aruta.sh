@@ -11,7 +11,7 @@ Live site: **[aruta.sh](https://aruta.sh)**
 - 🪟 Arcane-themed desktop OS — windows (drag, maximize, **resize from any edge or corner**), taskbar, start menu, system info
 - 🌓 Dark/light themes (defaults to **follow OS**, propagated live to every app iframe), accent colors, i18n (IT, EN, ES, JA, Elder Futhark runes)
 - ⌨️ Built-in Terminal with history and colored output
-- 📦 **Plugin packages** — drag-and-drop `.zip` install for apps (windowed) and commands (terminal). Bundled defaults include 🐍 Snake, 📜 Grimoire (folder-based notes/code editor), Oracle, Dice Roller, Timer, QR, and more
+- 📦 **Plugin packages** — drag-and-drop `.zip` install for apps (windowed) and commands (terminal). Bundled defaults include 📦 Package Store (browse + install from remote repos), 🐍 Snake, 📜 Grimoire (folder-based notes/code editor), Oracle, Dice Roller, Timer, QR, and more
 - 🔐 iOS-style runtime permissions, revocable per app
 - 💾 Full persistence — preferences in localStorage, packages & app data in IndexedDB
 - 🗂️ **Portable Profile** — link a folder for live disk sync (Chromium) or export/import a `.zip` (any browser). [docs/profile.md](./docs/profile.md)
