@@ -63,6 +63,7 @@ The zip **must** contain `manifest.json` and the entry module at its root (not n
 | `permissions` | — | string[] | declared permissions — informative at install time, still gated at runtime |
 | `allowOrigin` | — | boolean | opt-in: relax the iframe sandbox to `allow-scripts allow-same-origin`. Required for `showDirectoryPicker` / FS Access API. See below. |
 | `category` | — | string | free-form grouping hint (e.g. `"games"`, `"tools"`) used by Start menu organisation |
+| `sdk` | — | integer (default `1`) | minimum host SDK version this package expects. See "SDK versioning" below. |
 
 Declared `permissions` are shown in the install modal so users know upfront what the package *might* ask for. It's not a grant — every capability is still prompted the first time it's actually used (iOS-style).
 
@@ -223,6 +224,26 @@ When the flag is on:
 - The `ctx` permission gate still applies for documented capabilities — `allowOrigin` doesn't grant any `ctx.*` method automatically.
 
 Use only when you actually need it. The bundled `grimoire` package is the canonical example.
+
+## SDK versioning
+
+The host tells every app its SDK version at init time via `ctx.sdkVersion` (integer). The current host SDK is **1**.
+
+- Default — apps don't need to do anything. Omit `sdk` and you'll be treated as a v1 package.
+- **Pinning** — set `"sdk": N` in your manifest to declare the minimum host contract you expect. If the host is older than `N`, it logs a warning to the console but still mounts your app (so older hosts can at least try to run newer packages — they'll just hit missing surfaces).
+- **Branching** — inside your code, `ctx.sdkVersion` lets you feature-detect host capabilities without sniffing globals:
+
+    ```js
+    async mount(root, ctx) {
+        if (ctx.sdkVersion >= 2) {
+            // use newer ctx.* surface
+        } else {
+            // fallback for older hosts
+        }
+    }
+    ```
+
+Versions are bumped by the host **only on breaking changes** to the `ctx` contract or init payload. Purely additive surfaces don't bump the number.
 
 ## Theme contract
 

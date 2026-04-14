@@ -3,6 +3,11 @@
  * ║  Bridges ctx API across postMessage with permission gate  ║
  * ╚══════════════════════════════════════════════════════════╝ */
 
+/** Host-side SDK version. The ctx contract surface. Bump this only on a
+ *  breaking change to `ctx.*` / init-payload shape. Apps may declare a
+ *  minimum `sdk` in their manifest to opt into a newer contract. */
+const SDK_VERSION = 1;
+
 const _mounted = new Map(); // appId -> { iframe, channel }
 
 /**
@@ -137,6 +142,7 @@ html,body{margin:0;padding:0;width:100%;height:100%;background:transparent;color
                 }
                 const ctx = {
                     appId: d.manifest.id,
+                    sdkVersion: d.sdkVersion || 1,
                     asset: (p) => fileURLs[p] || fileURLs['assets/' + p] || null,
                     print: (s) => call('print', s),
                     clear: () => call('clear'),
@@ -191,6 +197,13 @@ async function mountApp(appId) {
     const manifest = window.registry.getManifest(appId);
     if (!manifest || manifest.type !== 'app') return false;
 
+    // SDK version gate: warn, don't block. Packages that absolutely need a
+    // newer host feature can branch on `ctx.sdkVersion` inside their code.
+    const requestedSDK = Number(manifest.sdk) || 1;
+    if (requestedSDK > SDK_VERSION) {
+        console.warn('[sandbox] ' + appId + ' requires SDK v' + requestedSDK + ', host is v' + SDK_VERSION);
+    }
+
     const win = document.getElementById('win-' + appId);
     if (!win) return false;
     const content = win.querySelector('.custom-app-content');
@@ -224,7 +237,7 @@ async function mountApp(appId) {
         if (!d || !d.__aruta_sdk) return;
         if (d.type === 'ready') {
             const theme = window.currentTheme || document.documentElement.dataset.theme || 'dark';
-            iframe.contentWindow.postMessage({ __aruta_sdk: true, type: 'init', manifest, files, theme }, '*');
+            iframe.contentWindow.postMessage({ __aruta_sdk: true, type: 'init', manifest, files, theme, sdkVersion: SDK_VERSION }, '*');
         } else if (d.type === 'call') {
             try {
                 const value = await _handleCall(appId, d.method, d.args || []);
