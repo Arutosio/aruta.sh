@@ -1,8 +1,9 @@
 :root {
-    --g: #ffc857; --p: #a78bfa; --bg: #0c0a1a;
+    /* Follow host theme tokens so --g/--p/--bg track light/dark automatically.
+       Fallbacks preserve the dark palette when the app is opened standalone. */
+    --g: var(--gold, #ffc857);
+    --p: var(--purple, #a78bfa);
     --mono: 'Courier New', 'Consolas', monospace;
-    /* Editor geometry — keep font-size × line-height constant so gutter,
-       active-line highlight and grid cells all line up to the same rhythm. */
     --ed-font:  14px;
     --ed-line:  22px;
     --ed-pad-y: 12px;
@@ -10,6 +11,11 @@
     --grid: rgba(167, 139, 250, 0.08);
     --grid-strong: rgba(167, 139, 250, 0.16);
     --active-line: rgba(255, 200, 87, 0.08);
+}
+[data-theme="light"] {
+    --grid:         rgba(139, 105, 20, 0.10);
+    --grid-strong:  rgba(139, 105, 20, 0.20);
+    --active-line:  rgba(139, 105, 20, 0.08);
 }
 * { box-sizing: border-box; }
 html, body, #root { margin: 0; width: 100%; height: 100%; overflow: hidden; }
@@ -538,11 +544,11 @@ body {
 [data-theme="light"] .toolbar .view-tabs { border-color: rgba(139,105,20,0.4); }
 [data-theme="light"] .toolbar .view-tabs button { color: var(--text); }
 [data-theme="light"] .toolbar .view-tabs button.active { background: var(--gold); color: var(--accent-contrast); }
-[data-theme="light"] .body { background: #f5efdc; }
+[data-theme="light"] .body { background: #fbf6e8; }
 [data-theme="light"] .editor .gutter { background: rgba(90,60,20,0.06); color: rgba(90,60,20,0.45); border-right-color: rgba(139,105,20,0.2); }
 [data-theme="light"] .editor .hl-layer { color: #2a1a08; }
 [data-theme="light"] .editor:not(.opt-hl-live) textarea { color: #2a1a08; }
-[data-theme="light"] .body .preview { background: #f5efdc; color: var(--text); }
+[data-theme="light"] .body .preview { background: #fbf6e8; color: var(--text); }
 [data-theme="light"] .settings-pane { color: var(--text); }
 [data-theme="light"] .settings-row { background: rgba(139,105,20,0.06); border-color: rgba(139,105,20,0.2); }
 [data-theme="light"] .settings-row:hover { border-color: rgba(139,105,20,0.4); }

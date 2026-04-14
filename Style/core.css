@@ -144,8 +144,8 @@
 }
 
 [data-theme="light"] {
-    --bg:          #f0e8d8;
-    --bg-grad:     radial-gradient(ellipse at 50% 30%, #f8f0e0 0%, #ece4d0 50%, #e0d4b8 100%);
+    --bg:          #fbf6e8;
+    --bg-grad:     radial-gradient(ellipse at 50% 30%, #fffdf4 0%, #f6efdc 50%, #ece3c8 100%);
     --card-border: rgba(139, 90, 43, 0.42);
     --card-glow:   rgba(139, 90, 43, 0.06);
     --gold:        #8b6914;
