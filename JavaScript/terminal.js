@@ -5,7 +5,7 @@
 const HISTORY_KEY = 'aruta_term_history';
 const HISTORY_MAX = 100;
 
-let _output, _input, _prompt;
+let _output, _input, _prompt, _overlay;
 let _history = [];
 let _historyIdx = -1;
 let _initialized = false;
@@ -250,6 +250,15 @@ function _onKey(e) {
     }
 }
 
+function _renderOverlay() {
+    if (!_overlay || !_input) return;
+    const value = _input.value;
+    _overlay.textContent = '';
+    if (!value) return;
+    const plain = document.createTextNode(value);
+    _overlay.appendChild(plain);
+}
+
 function initTerminal() {
     if (_initialized) return;
     const win = document.getElementById('win-terminal');
@@ -262,13 +271,17 @@ function initTerminal() {
             <div class="term-output" id="term-output"></div>
             <div class="term-inputline">
                 <span class="term-prompt" id="term-prompt">⚜ aruta:~$ </span>
-                <input class="term-input" id="term-input" type="text" autocomplete="off" spellcheck="false" autocapitalize="off">
+                <div class="term-input-wrap">
+                    <div class="term-overlay" id="term-overlay" aria-hidden="true"></div>
+                    <input class="term-input" id="term-input" type="text" autocomplete="off" spellcheck="false" autocapitalize="off">
+                </div>
             </div>
         </div>
     `;
     _output = content.querySelector('#term-output');
     _input = content.querySelector('#term-input');
     _prompt = content.querySelector('#term-prompt');
+    _overlay = content.querySelector('#term-overlay');
 
     _loadHistory();
     _historyIdx = _history.length;
@@ -278,6 +291,8 @@ function initTerminal() {
     termPrint('');
 
     _input.addEventListener('keydown', _onKey);
+    _input.addEventListener('input', _renderOverlay);
+    _renderOverlay();
     content.addEventListener('click', (e) => {
         if (e.target.tagName !== 'INPUT' && !window.getSelection()?.toString()) _input.focus();
     });
