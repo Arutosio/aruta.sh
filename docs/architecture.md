@@ -96,7 +96,7 @@ sequenceDiagram
     box rgba(58,42,15,0.55) 🏛 Host · aruta.sh
     participant Host as sandbox._handleCall
     participant Perm as permissions.request
-    participant IDB as aruta_app_&lt;id&gt; IDB
+    participant IDB as aruta_app_ID · IndexedDB
     end
 
     App->>+Boot: ctx.storage.set('k', v)
