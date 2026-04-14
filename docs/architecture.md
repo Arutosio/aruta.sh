@@ -26,7 +26,7 @@ flowchart TD
     H --> I[installer.initDragDrop]
     I --> U[User opens an app window]
     U --> V[sandbox.mountApp<br/>iframe srcdoc = IFRAME_BOOT]
-    V --> W[iframe ready -> host posts init<br/>{manifest, files, theme}]
+    V --> W["iframe ready → host posts init<br/>(manifest, files, theme)"]
     W --> X[iframe imports entry -> mount root, ctx]
     X <-->|postMessage __aruta_sdk| Y[host _handleCall<br/>permission gate]
     X -. theme change .-> BT[sandbox.broadcastTheme]
