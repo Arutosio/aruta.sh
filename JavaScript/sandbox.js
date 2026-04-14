@@ -44,6 +44,11 @@ const PERM_REQUIRED = {
     'clipboard.write': 'clipboard',
     installZip: 'install',
     listInstalled: 'install',
+    'repos.list': 'install',
+    'repos.add': 'install',
+    'repos.remove': 'install',
+    'repos.setEnabled': 'install',
+    'repos.update': 'install',
 };
 
 async function _handleCall(appId, method, args) {
@@ -98,6 +103,11 @@ async function _handleCall(appId, method, args) {
             const all = window.registry?.list() || [];
             return all.map(m => ({ id: m.id, name: m.name, version: m.version || null, type: m.type }));
         }
+        case 'repos.list':       return window.repos?.list() || [];
+        case 'repos.add':        return window.repos?.add(args[0], args[1]);
+        case 'repos.remove':     return !!window.repos?.remove(args[0]);
+        case 'repos.setEnabled': return !!window.repos?.setEnabled(args[0], args[1]);
+        case 'repos.update':     return window.repos?.update(args[0], args[1]);
         case 'i18n': return (window.i18n?.[window.currentLang] || {})[args[0]] || args[0];
         default: throw new Error('unknown_method:' + method);
     }
@@ -167,6 +177,13 @@ html,body{margin:0;padding:0;width:100%;height:100%;background:transparent;color
                     i18n: (k) => call('i18n', k),
                     installZip: (blob, opts) => call('installZip', blob, opts),
                     listInstalled: () => call('listInstalled'),
+                    repos: {
+                        list: () => call('repos.list'),
+                        add: (url, opts) => call('repos.add', url, opts),
+                        remove: (url) => call('repos.remove', url),
+                        setEnabled: (url, enabled) => call('repos.setEnabled', url, enabled),
+                        update: (url, patch) => call('repos.update', url, patch),
+                    },
                     permission: { request: (p) => call('permission.request', p) },
                 };
                 // sync theme from host before user CSS loads so the first paint
@@ -316,6 +333,31 @@ function _buildHostCtx(appId, files) {
         },
         i18n: (k) => (window.i18n?.[window.currentLang] || {})[k] || k,
         permission: { request: (p) => window.permissions.request(appId, p) },
+        installZip: async (blob, opts) => {
+            if (!(await window.permissions.request(appId, 'install'))) throw new Error('permission_denied:install');
+            const file = (typeof File !== 'undefined' && blob instanceof File)
+                ? blob
+                : new File([blob], (opts && opts.filename) || 'remote.zip', { type: blob.type || 'application/zip' });
+            const m = await window.installer.installFromFile(file);
+            if (!m) return null;
+            return { id: m.id, name: m.name, version: m.version, type: m.type };
+        },
+        uninstall: async (id) => {
+            if (!(await window.permissions.request(appId, 'install'))) throw new Error('permission_denied:install');
+            return window.registry?.uninstall ? await window.registry.uninstall(id) : false;
+        },
+        listInstalled: async () => {
+            if (!(await window.permissions.request(appId, 'install'))) throw new Error('permission_denied:install');
+            const all = window.registry?.list() || [];
+            return all.map(m => ({ id: m.id, name: m.name, version: m.version || null, type: m.type }));
+        },
+        repos: {
+            list:       async () => (await window.permissions.request(appId, 'install')) ? window.repos.list() : [],
+            add:        async (url, opts) => (await window.permissions.request(appId, 'install')) ? window.repos.add(url, opts) : null,
+            remove:     async (url) => (await window.permissions.request(appId, 'install')) ? window.repos.remove(url) : false,
+            setEnabled: async (url, en) => (await window.permissions.request(appId, 'install')) ? window.repos.setEnabled(url, en) : false,
+            update:     async (url, patch) => (await window.permissions.request(appId, 'install')) ? window.repos.update(url, patch) : null,
+        },
     };
     return { ctx, cleanup };
 }

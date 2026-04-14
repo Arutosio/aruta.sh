@@ -121,6 +121,29 @@ if (!allowed) { /* user said no */ }
 
 ---
 
+## Packages & repos — requires `install`
+
+### `ctx.installZip(blob: Blob, opts?: { filename?: string }): Promise<{id,name,version,type} | null>`
+Submit a `.zip` to the host installer. Always shows the install-confirm modal — denial / cancel resolves to `null`.
+
+### `ctx.listInstalled(): Promise<Array<{id, name, version, type}>>`
+Snapshot every installed package.
+
+### `ctx.repos.list(): Promise<Array<Repo>>`
+Snapshot of the system repository list. Each entry: `{ url, name, description, enabled, addedAt, lastFetched, etag, cachedIndex }`.
+
+### `ctx.repos.add(url: string, opts?: { name?, description?, enabled? }): Promise<Repo>`
+Add a repo. URL must be `http(s)://`. Throws on duplicates.
+
+### `ctx.repos.remove(url: string): Promise<boolean>`
+### `ctx.repos.setEnabled(url: string, enabled: boolean): Promise<boolean>`
+### `ctx.repos.update(url: string, patch: Partial<Repo>): Promise<Repo | null>`
+Whitelisted fields: `name`, `description`, `enabled`, `lastFetched`, `etag`, `cachedIndex`, `lastError`, `displayName`.
+
+> The repo list lives at the host level (`localStorage.aruta_repos`) and is shared between Package Store, the `pkg` CLI, and any future package that holds the `install` permission.
+
+---
+
 ## What's NOT in `ctx`
 
 Intentional omissions (to keep the surface small — you can still do these yourself inside your iframe / worker):
