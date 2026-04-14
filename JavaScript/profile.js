@@ -6,10 +6,18 @@
  * ║  ZipBackend: manual export/import for Firefox/Safari.     ║
  * ╚══════════════════════════════════════════════════════════╝ */
 (function () {
-    const LS_PREFIX        = 'aruta_';
+    // Route DB/key strings through the Storage facade so there's a single
+    // source of truth. Fall back to inline literals only if storage.js
+    // didn't load for some reason (defensive, not expected at runtime).
+    const SC = (window.Storage && window.Storage.constants) || {
+        PACKAGES_DB: 'aruta_packages',
+        APP_DB_PREFIX: 'aruta_app_',
+        LS_PREFIX: 'aruta_',
+    };
+    const LS_PREFIX        = SC.LS_PREFIX;
     const LS_EXCLUDE       = new Set(['aruta_summoned']);
-    const PACKAGES_DB      = 'aruta_packages';
-    const APP_DB_PREFIX    = 'aruta_app_';
+    const PACKAGES_DB      = SC.PACKAGES_DB;
+    const APP_DB_PREFIX    = SC.APP_DB_PREFIX;
     const PROFILE_DB       = 'aruta_profile';
     const PROFILE_DB_VER   = 1;
     const HANDLE_STORE     = 'handles';

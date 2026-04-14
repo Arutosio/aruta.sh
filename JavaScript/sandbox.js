@@ -3,6 +3,11 @@
  * ║  Bridges ctx API across postMessage with permission gate  ║
  * ╚══════════════════════════════════════════════════════════╝ */
 
+/** Host-side SDK version. The ctx contract surface. Bump this only on a
+ *  breaking change to `ctx.*` / init-payload shape. Apps may declare a
+ *  minimum `sdk` in their manifest to opt into a newer contract. */
+const SDK_VERSION = 1;
+
 const _mounted = new Map(); // appId -> { iframe, channel }
 
 /**
@@ -16,45 +21,12 @@ function broadcastTheme(v) {
     }
 }
 
-function _appStorageDB(appId) {
-    return window.db.openDB('aruta_app_' + appId, 1, (db) => {
-        if (!db.objectStoreNames.contains('kv')) db.createObjectStore('kv');
-    });
-}
-
-async function _appStorageGet(appId, key) {
-    const db = await _appStorageDB(appId);
-    return new Promise((res, rej) => {
-        const t = db.transaction('kv', 'readonly');
-        const r = t.objectStore('kv').get(key);
-        r.onsuccess = () => res(r.result === undefined ? null : r.result);
-        r.onerror = () => rej(r.error);
-    });
-}
-async function _appStorageSet(appId, key, value) {
-    const db = await _appStorageDB(appId);
-    return new Promise((res, rej) => {
-        const t = db.transaction('kv', 'readwrite');
-        t.objectStore('kv').put(value, key);
-        t.oncomplete = () => {
-            try { window.profile?.markDirty?.('app', appId); } catch {}
-            res(true);
-        };
-        t.onerror = () => rej(t.error);
-    });
-}
-async function _appStorageRemove(appId, key) {
-    const db = await _appStorageDB(appId);
-    return new Promise((res, rej) => {
-        const t = db.transaction('kv', 'readwrite');
-        t.objectStore('kv').delete(key);
-        t.oncomplete = () => {
-            try { window.profile?.markDirty?.('app', appId); } catch {}
-            res(true);
-        };
-        t.onerror = () => rej(t.error);
-    });
-}
+// Per-app KV is implemented in storage.js (window.Storage.appKV). These thin
+// wrappers route the host-side `ctx.storage.*` calls through the facade so
+// the DB name (`aruta_app_<id>`) lives in exactly one place.
+async function _appStorageGet(appId, key)         { return window.Storage.appKV.get(appId, key); }
+async function _appStorageSet(appId, key, value)  { return window.Storage.appKV.set(appId, key, value); }
+async function _appStorageRemove(appId, key)      { return window.Storage.appKV.remove(appId, key); }
 
 const PERM_REQUIRED = {
     print: 'terminal',
@@ -137,6 +109,7 @@ html,body{margin:0;padding:0;width:100%;height:100%;background:transparent;color
                 }
                 const ctx = {
                     appId: d.manifest.id,
+                    sdkVersion: d.sdkVersion || 1,
                     asset: (p) => fileURLs[p] || fileURLs['assets/' + p] || null,
                     print: (s) => call('print', s),
                     clear: () => call('clear'),
@@ -191,6 +164,13 @@ async function mountApp(appId) {
     const manifest = window.registry.getManifest(appId);
     if (!manifest || manifest.type !== 'app') return false;
 
+    // SDK version gate: warn, don't block. Packages that absolutely need a
+    // newer host feature can branch on `ctx.sdkVersion` inside their code.
+    const requestedSDK = Number(manifest.sdk) || 1;
+    if (requestedSDK > SDK_VERSION) {
+        console.warn('[sandbox] ' + appId + ' requires SDK v' + requestedSDK + ', host is v' + SDK_VERSION);
+    }
+
     const win = document.getElementById('win-' + appId);
     if (!win) return false;
     const content = win.querySelector('.custom-app-content');
@@ -224,7 +204,7 @@ async function mountApp(appId) {
         if (!d || !d.__aruta_sdk) return;
         if (d.type === 'ready') {
             const theme = window.currentTheme || document.documentElement.dataset.theme || 'dark';
-            iframe.contentWindow.postMessage({ __aruta_sdk: true, type: 'init', manifest, files, theme }, '*');
+            iframe.contentWindow.postMessage({ __aruta_sdk: true, type: 'init', manifest, files, theme, sdkVersion: SDK_VERSION }, '*');
         } else if (d.type === 'call') {
             try {
                 const value = await _handleCall(appId, d.method, d.args || []);
@@ -304,7 +284,7 @@ function _buildHostCtx(appId, files) {
 }
 
 async function closeAppStorage(appId) {
-    await window.db.closeDB('aruta_app_' + appId);
+    await window.db.closeDB((window.Storage?.constants.APP_DB_PREFIX || 'aruta_app_') + appId);
 }
 
 window.sandbox = { mount: mountApp, unmount: unmountApp, runCommand, closeAppStorage, broadcastTheme };
