@@ -75,6 +75,12 @@ function _loadHistory() {
     } catch { _history = []; }
 }
 
+// Load history at module load so programmatic `window.terminal.run(...)`
+// before initTerminal() still has access to prior session history.
+if (typeof localStorage !== 'undefined') {
+    try { _loadHistory(); } catch (_) {}
+}
+
 function _saveHistory() {
     try {
         localStorage.setItem(HISTORY_KEY, JSON.stringify(_history.slice(-HISTORY_MAX)));
@@ -328,6 +334,15 @@ function _expandHistory(line) {
 }
 
 async function termRun(line) {
+    // A pasted blob may contain newlines — run each non-empty line in order
+    // so "cmd1\ncmd2" pasted into the input dispatches both commands.
+    if (typeof line === 'string' && /\r?\n/.test(line)) {
+        const parts = line.split(/\r?\n/);
+        for (const p of parts) {
+            if (p.trim()) await termRun(p);
+        }
+        return;
+    }
     // History-expansion pass before parsing so `!!` resolves to a real command.
     const expanded = _expandHistory(line);
     if (expanded === null) {
@@ -398,6 +413,7 @@ function _exitReverseSearch(commit) {
 function _onKey(e) {
     // Reverse-i-search captures all keys while active.
     if (_revSearch) {
+        if (e.key === 'c' && e.ctrlKey) { _exitReverseSearch(false); e.preventDefault(); return; }
         if (e.key === 'Escape') { _exitReverseSearch(false); e.preventDefault(); return; }
         if (e.key === 'Enter') {
             _exitReverseSearch(true);
@@ -611,7 +627,6 @@ function initTerminal() {
     _prompt = content.querySelector('#term-prompt');
     _overlay = content.querySelector('#term-overlay');
 
-    _loadHistory();
     _historyIdx = _history.length;
 
     const t = window.t();

@@ -172,13 +172,13 @@ async function saveManifest(manifest, files) {
     // so without this the user would keep seeing the old sandboxed app.
     const previous = _manifests.get(manifest.id);
     const isUpdate = !!previous;
-    const ifameShapeChanged = isUpdate && (
+    const iframeShapeChanged = isUpdate && (
         previous.version    !== manifest.version    ||
         previous.allowOrigin !== manifest.allowOrigin ||
         previous.entry      !== manifest.entry      ||
         previous.type       !== manifest.type
     );
-    if (ifameShapeChanged) {
+    if (iframeShapeChanged) {
         try { window.sandbox?.unmount(manifest.id); } catch {}
         // If the window is currently visible, close it — better than leaving
         // the user staring at an empty frame. They'll reopen to get fresh.
@@ -262,7 +262,12 @@ async function uninstall(id) {
     unregisterAppFromOS(id);
     // Close any cached DB handle before deleting — deleteDatabase is blocked by open connections.
     try { await window.sandbox?.closeAppStorage?.(id); } catch {}
-    try { window.Storage?.deleteAppKV(id) ?? indexedDB.deleteDatabase('aruta_app_' + id); } catch {}
+    // Explicit await — previously the `??` chain could fire-and-forget the
+    // Storage promise while falling through to deleteDatabase, racing them.
+    try {
+        if (window.Storage?.deleteAppKV) await window.Storage.deleteAppKV(id);
+        else indexedDB.deleteDatabase('aruta_app_' + id);
+    } catch (_) {}
     // Drop any stored permission grants for this app — keeping them around
     // would pre-grant a reinstalled package with the same id.
     try { localStorage.removeItem('aruta_perms_' + id); } catch {}

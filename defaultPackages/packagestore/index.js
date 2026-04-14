@@ -3,13 +3,6 @@
  * ║  repositories. Repo = JSON index pointing to .zip files.  ║
  * ╚══════════════════════════════════════════════════════════╝ */
 
-const DEFAULT_REPO = {
-    url: 'https://raw.githubusercontent.com/Arutosio/aruta.sh-packages/main/index.json',
-    name: 'Official',
-    description: 'Curated bundle by Aruta',
-    enabled: false,
-};
-
 const PREFS_KEY = 'prefs';
 // Legacy storage key — only read once during migration to ctx.repos.
 const LEGACY_REPOS_KEY = 'repos';
