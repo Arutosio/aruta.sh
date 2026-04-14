@@ -72,7 +72,7 @@ sequenceDiagram
 | [`JavaScript/storage.js`](../JavaScript/storage.js) | Tiny facade centralising the storage key/DB strings: `Storage.constants` (`PACKAGES_DB`, `APP_DB_PREFIX`, `LS_PREFIX`), `Storage.ls` passthrough to `window.storage`, `Storage.registry.openDB()`, `Storage.appKV.{get,set,remove,dumpAll}`, `Storage.deleteAppKV`. Additive — does not replace `util.js` `window.storage` |
 | [`JavaScript/installer.js`](../JavaScript/installer.js) | Reads `.zip` (JSZip lazy-loaded from CDN), validates the manifest, shows install confirmation, sets correct MIME types on extracted Blobs, wires drag-drop overlay |
 | [`JavaScript/registry.js`](../JavaScript/registry.js) | IndexedDB `aruta_packages` (manifests + files) via `db.js`, `localStorage.aruta_installed_apps` cache for fast boot, registers custom apps in `WIN_META` + dynamically creates their window DOM + Start menu items |
-| [`JavaScript/sandbox.js`](../JavaScript/sandbox.js) | Apps → `<iframe sandbox="allow-scripts">` with `srcdoc` bootstrap, commands → blob-URL dynamic `import()`. Implements the `ctx` bridge (postMessage for apps, direct for commands) and the permission-gated method dispatcher. Per-app storage DB handles cached via `db.js` |
+| [`JavaScript/sandbox.js`](../JavaScript/sandbox.js) | Apps → `<iframe sandbox="allow-scripts allow-modals">` with `srcdoc` bootstrap, commands → blob-URL dynamic `import()`. Implements the `ctx` bridge (postMessage for apps, direct for commands) and the permission-gated method dispatcher. Per-app storage DB handles cached via `db.js` |
 | [`JavaScript/permissions.js`](../JavaScript/permissions.js) | Per-app grant store (backed by `window.storage`), runtime prompt modal (serialized so only one shows at a time), Settings → Permissions renderer |
 | [`JavaScript/os-windows.js`](../JavaScript/os-windows.js) | Window manager split out of `os.js`: `WIN_META`, taskbar tabs (`addWindowTab`/`removeWindowTab`/`updateActiveTab`), `openWindow`/`closeWindow`/`minimizeWindow`/`focusWindow`/`toggleMaximize`, `initWindowManager`, `initDrag`, `initResize`. Must load before the other `os-*.js` files — `registry.js` and the rest reach into these globals |
 | [`JavaScript/os.js`](../JavaScript/os.js) | OS shell: start menu, mobile swipe section switching, clock, tab title, bio typewriter. Coordinator that binds the `os-*.js` siblings together |
@@ -121,7 +121,7 @@ All the DB and key-prefix string literals live in `storage.js:Storage.constants`
 
 ## Sandbox lifecycle (apps)
 
-Iframe boot HTML is inlined in `sandbox.js:IFRAME_BOOT` via `srcdoc`. Because `sandbox="allow-scripts"` has no `allow-same-origin`, the iframe gets an opaque origin → fully isolated from the host DOM.
+Iframe boot HTML is inlined in `sandbox.js:IFRAME_BOOT` via `srcdoc`. The sandbox attribute is `allow-scripts allow-modals` by default; `allow-modals` is required or `prompt`/`alert`/`confirm` are silently blocked. Without `allow-same-origin` the iframe has an opaque origin → fully isolated from the host DOM.
 
 ```
 ┌──────────────────────────── Parent ────────────────────────────┐
@@ -255,7 +255,7 @@ Boot gate: `app.js:showApp()` awaits `window.__arutaProfileReady`. If a linked f
 
 ## Sandbox: `manifest.allowOrigin`
 
-By default the iframe is `sandbox="allow-scripts"` (opaque origin — fully isolated). A package can set `"allowOrigin": true` in its `manifest.json` to widen the sandbox to `allow-scripts allow-same-origin`. This is required for browser APIs that refuse to run in a null-origin frame — most notably the File System Access API (`showDirectoryPicker`), used by Grimoire's "real folder" backend.
+By default the iframe is `sandbox="allow-scripts allow-modals"` (opaque origin — fully isolated, but with modals enabled). A package can set `"allowOrigin": true` in its `manifest.json` to widen the sandbox to `allow-scripts allow-same-origin allow-modals`. This is required for browser APIs that refuse to run in a null-origin frame — most notably the File System Access API (`showDirectoryPicker`), used by Grimoire's "real folder" backend.
 
 The trade-off: an `allow-same-origin` iframe shares the host's origin, can reach `window.parent`, and shares `localStorage`. The install modal surfaces the flag so users can refuse trust before installation. See [packages.md](./packages.md#manifestalloworigin) for the author-facing notes.
 

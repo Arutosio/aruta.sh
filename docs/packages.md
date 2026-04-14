@@ -15,7 +15,7 @@ This doc covers **how to build your own package**. See also:
 
 | Type | Runs in | Has UI | Typical use |
 |---|---|---|---|
-| **app** | `<iframe sandbox="allow-scripts">` inside an OS window | yes | games, tools, mini-apps |
+| **app** | `<iframe sandbox="allow-scripts allow-modals">` inside an OS window | yes | games, tools, mini-apps |
 | **command** | main thread, invoked from the Terminal | no | shell utilities, automations |
 
 Both share the same zip format and the same `ctx` API.
@@ -61,7 +61,7 @@ The zip **must** contain `manifest.json` and the entry module at its root (not n
 | `author` | — | string | free-form |
 | `entry` | — | path inside zip | defaults to `index.js` |
 | `permissions` | — | string[] | declared permissions — informative at install time, still gated at runtime |
-| `allowOrigin` | — | boolean | opt-in: relax the iframe sandbox to `allow-scripts allow-same-origin`. Required for `showDirectoryPicker` / FS Access API. See below. |
+| `allowOrigin` | — | boolean | opt-in: relax the iframe sandbox to `allow-scripts allow-same-origin allow-modals`. Required for `showDirectoryPicker` / FS Access API. See below. |
 | `category` | — | string | free-form grouping hint (e.g. `"games"`, `"tools"`) used by Start menu organisation |
 | `sdk` | — | integer (default `1`) | minimum host SDK version this package expects. See "SDK versioning" below. |
 
@@ -204,9 +204,9 @@ Reinstalling an existing `id` replaces the package (update flow).
 
 ## `manifest.allowOrigin`
 
-Apps run in `<iframe sandbox="allow-scripts">` — opaque origin, fully isolated. A handful of browser APIs refuse to run in a null-origin frame; the most notable is the **File System Access API** (`showDirectoryPicker`, `showOpenFilePicker`, etc.), which the bundled `grimoire` app uses to open real folders on disk.
+Apps run in `<iframe sandbox="allow-scripts allow-modals">` — opaque origin, fully isolated, but with `prompt`/`alert`/`confirm` enabled (browsers block modals in sandboxed iframes by default). A handful of browser APIs refuse to run in a null-origin frame; the most notable is the **File System Access API** (`showDirectoryPicker`, `showOpenFilePicker`, etc.), which the bundled `grimoire` app uses to open real folders on disk.
 
-Set `"allowOrigin": true` in your manifest to widen the sandbox to `allow-scripts allow-same-origin`. The host shows this flag in the install modal so users can decide whether to trust the package with shared-origin access.
+Set `"allowOrigin": true` in your manifest to widen the sandbox to `allow-scripts allow-same-origin allow-modals`. The host shows this flag in the install modal so users can decide whether to trust the package with shared-origin access.
 
 ```json
 {

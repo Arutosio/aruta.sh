@@ -78,7 +78,7 @@ This is consistent with the Web Clipboard API and `fetch` — errors rather than
 
 ## Security boundary
 
-Apps run in an iframe with `sandbox="allow-scripts"` only — **no `allow-same-origin`**. That means:
+Apps run in an iframe with `sandbox="allow-scripts allow-modals"` (plus `allow-same-origin` if the package opts in via `allowOrigin: true`). `allow-modals` is added so `prompt`/`alert`/`confirm` work; browsers block them by default inside sandboxed iframes. That means:
 
 - They cannot read the host's `localStorage`, `cookies`, or `document`.
 - They cannot make same-origin `fetch` calls to aruta.sh APIs.
