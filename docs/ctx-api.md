@@ -86,6 +86,8 @@ Denied → throws `permission_denied:fetch`.
 ### `ctx.theme.get(): Promise<'dark' | 'light'>`
 ### `ctx.theme.set(theme: 'dark' | 'light'): Promise<void>`
 
+> **Automatic propagation (no permission needed):** the host always pushes the active theme to your iframe — once via the `init` payload before your CSS loads, and again every time the user (or the OS, when follow-OS mode is on) flips it. The bootstrap writes it onto your iframe's `<html data-theme="...">`, so a `:root[data-theme="light"] { … }` rule in your `style.css` is all you need to react. The `ctx.theme.*` permission only matters if you want to *read the value in JS* or *change* the host theme from your app. See [packages.md → Theme contract](./packages.md#theme-contract).
+
 ---
 
 ## Clipboard — requires `clipboard`

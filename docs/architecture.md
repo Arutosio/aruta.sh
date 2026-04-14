@@ -1,6 +1,65 @@
 # Architecture — Package System
 
-This is a contributor-facing overview of how apps and commands are wired internally. If you just want to *build* a package, see [packages.md](./packages.md).
+This is a contributor-facing overview of how apps and commands are wired internally. If you just want to *build* a package, see [packages.md](./packages.md). For the portable profile feature in particular, see [profile.md](./profile.md).
+
+---
+
+## Boot & runtime overview
+
+```mermaid
+flowchart TD
+    A[Browser load: index.html] --> B[profile.js IIFE]
+    B --> C{tryRestoreFromHandle<br/>handle persisted?}
+    C -- no --> E[core.js: theme + lang + fonts]
+    C -- yes / dormant --> E
+    C -- yes / granted + folder has data --> D[restore snapshot<br/>then location.reload]
+    D --> A
+    E --> E1{follow-OS theme?}
+    E1 -- yes --> E2[matchMedia<br/>prefers-color-scheme listener]
+    E1 -- no --> E3[saved aruta_theme]
+    E2 --> F[app.js: showApp]
+    E3 --> F
+    F --> F1[taskbar / start menu / windows<br/>initWindowManager + initResize]
+    F --> F2[await __arutaProfileReady]
+    F2 --> G[registry.bootstrap<br/>read aruta_packages IDB]
+    G --> H[defaults.bootstrap<br/>install bundled defaultPackages/*]
+    H --> I[installer.initDragDrop]
+    I --> U[User opens an app window]
+    U --> V[sandbox.mountApp<br/>iframe srcdoc = IFRAME_BOOT]
+    V --> W[iframe ready -> host posts init<br/>{manifest, files, theme}]
+    W --> X[iframe imports entry -> mount root, ctx]
+    X <-->|postMessage __aruta_sdk| Y[host _handleCall<br/>permission gate]
+    X -. theme change .-> BT[sandbox.broadcastTheme]
+    BT --> X
+    Y -.write.-> P[profile.markDirty]
+    G -.write.-> P
+    P --> P1[debounced flushDirty]
+    P1 --> P2[DiskBackend.writeAll<br/>folder mirror]
+```
+
+### Sandbox bridge — single ctx call
+
+```mermaid
+sequenceDiagram
+    participant App as App code (iframe)
+    participant Boot as IFRAME_BOOT proxy
+    participant Host as sandbox._handleCall
+    participant Perm as permissions.request
+    App->>Boot: ctx.storage.set('k', v)
+    Boot->>Host: postMessage {type:'call', id, method:'storage.set', args}
+    Host->>Perm: request(appId, 'storage')
+    alt first call
+        Perm-->>Perm: show modal (Allow/Always/Deny)
+    end
+    Perm-->>Host: granted | denied
+    alt granted
+        Host->>Host: real impl (IDB put)
+        Host-->>Boot: postMessage {type:'reply', id, value}
+    else denied
+        Host-->>Boot: postMessage {type:'reply', id, value:false}
+    end
+    Boot-->>App: Promise resolves
+```
 
 ---
 
@@ -15,14 +74,18 @@ This is a contributor-facing overview of how apps and commands are wired interna
 | [`JavaScript/sandbox.js`](../JavaScript/sandbox.js) | Apps → `<iframe sandbox="allow-scripts">` with `srcdoc` bootstrap, commands → blob-URL dynamic `import()`. Implements the `ctx` bridge (postMessage for apps, direct for commands) and the permission-gated method dispatcher. Per-app storage DB handles cached via `db.js` |
 | [`JavaScript/permissions.js`](../JavaScript/permissions.js) | Per-app grant store (backed by `window.storage`), runtime prompt modal (serialized so only one shows at a time), Settings → Permissions renderer |
 | [`JavaScript/terminal.js`](../JavaScript/terminal.js) | Shell UI, parser (quoted strings), history, built-in commands. Unknown names fall through to `registry.listCommands()` → `sandbox.runCommand()` |
-| [`JavaScript/defaults.js`](../JavaScript/defaults.js) | Auto-installs bundled `defaultPackages/*` on first boot. Packages fetched and installed in parallel (one burst, not a serial chain). Respects a blacklist so uninstalls persist |
+| [`JavaScript/defaults.js`](../JavaScript/defaults.js) | Auto-installs bundled `defaultPackages/*` on first boot. Packages fetched and installed in parallel (one burst, not a serial chain). Respects a blacklist so uninstalls persist. Re-runs when a default's `version` changes |
+| [`JavaScript/profile.js`](../JavaScript/profile.js) | Portable profile snapshot/restore. `DiskBackend` mirrors state to a folder via FS Access API (Chromium); `exportZip`/`importZip` work in any browser. Boot-gates registry/defaults via `window.__arutaProfileReady`. See [profile.md](./profile.md) |
+| [`JavaScript/zip.js`](../JavaScript/zip.js) | STORE-only zip codec (`encode`/`decode`). Used by `profile.js` and Grimoire's workspace export. No compression — keeps the file purely a transport container |
 
 Script load order in `index.html`:
 ```
 config.js  core.js  effects.js  desktop.js  content.js  extras.js
-os.js  permissions.js  registry.js  sandbox.js  installer.js  terminal.js
-app.js
+os.js  permissions.js  zip.js  profile.js  registry.js  sandbox.js
+installer.js  terminal.js  defaults.js  app.js
 ```
+
+`profile.js` runs an IIFE on load that sets `window.__arutaProfileReady` — a Promise that may resolve to `true` if a linked folder triggered a state restore + reload (in which case `app.js` aborts further bootstrap). See [profile.md](./profile.md).
 
 `app.js:showApp()` calls `registry.bootstrap()` (hydrate from IndexedDB) and `installer.initDragDrop()`.
 
@@ -38,6 +101,8 @@ app.js
 | localStorage | `aruta_installed_apps` | Fast index cache (id/name/icon/type/permissions) |
 | localStorage | `aruta_perms_<id>` | `{ permName: 'granted'\|'denied' }` |
 | localStorage | `aruta_term_history` | Terminal history (max 100) |
+| localStorage | `aruta_theme_follow_os` | `'false'` only when user has manually overridden follow-OS theme |
+| IndexedDB | `aruta_profile` / `handles` store | Persisted FS Access API directory handle for the linked profile folder |
 
 ### Wipe flows
 
@@ -145,6 +210,46 @@ Accessibility: a single `:focus-visible` rule covers every interactive element
 with a `2px solid var(--gold)` outline. Reduced-motion: if the OS asks, `app.js`
 disables parallax, click spells, and rotation at boot, and `<html>` receives
 `.is-reduced-motion` so CSS can also react.
+
+## Windowing — drag, maximize, resize
+
+`os.js:initWindowManager` creates one DOM node per window (built-in or custom). Each window gets:
+
+- A drag handle on the title bar (`initDrag`) — pointer events, switches the window to `position:fixed` on first drag.
+- Maximize / minimize / close buttons.
+- **Eight invisible resize handles** added by `initResize(win)` — 4 edges (`n`/`s`/`e`/`w`) + 4 corners (`nw`/`ne`/`sw`/`se`). Each handle uses `setPointerCapture` so the drag survives the cursor leaving the window or even the viewport. Min size is 240×160 px; the bottom edge clamps to `innerHeight - 68 px` (taskbar height). Resize is skipped while the window is maximized and is idempotent (`win._resizeWired` flag).
+
+Custom-app windows additionally host a `.custom-app-content` div which `sandbox.mountApp` populates with the iframe.
+
+## Theme propagation
+
+`core.js:toggleTheme` is the single mutation point. After flipping `data-theme` on `<html>` and persisting `aruta_theme`, it calls `window.sandbox.broadcastTheme(currentTheme)`, which postMessages every mounted iframe `{type:'theme', value}`. The in-iframe bootstrap (`IFRAME_BOOT`) listens for that envelope and writes it onto its own `<html>` `data-theme`, so apps that key off `[data-theme="light"]` selectors restyle live with no permission prompt.
+
+The initial theme is also embedded in the `init` payload (`{manifest, files, theme}`) so the *first* iframe paint already matches the host — no flash of the iframe's CSS default.
+
+### Follow-OS theme
+
+Default for new installs. `app.js` reads `localStorage.aruta_theme_follow_os` (treats absent as `true`), checks `prefers-color-scheme`, and registers a `matchMedia` `change` listener. While follow-OS is on, every system theme flip calls `toggleTheme({ keepFollowOS: true })` so the OS-driven change doesn't disable the very mode that triggered it. A manual click on the theme button calls `toggleTheme()` with no opts → flips follow-OS off so the user's explicit choice sticks.
+
+The Settings → Theme panel renders a "Follow OS" toggle that lets the user re-enable follow-OS after manual override.
+
+## Profile (portable state) hooks
+
+`profile.js` reads/writes the union of `aruta_*` localStorage keys, the `aruta_packages` IDB, and every `aruta_app_<id>` IDB. It can mirror that snapshot live to a folder picked via FS Access API or to/from a `.zip` (encoded by [`JavaScript/zip.js`](../JavaScript/zip.js), STORE-only).
+
+Hook points (each call enqueues a 400 ms-debounced full-snapshot write):
+
+- `util.js:storage.set/del` → `profile.markDirty('localStorage', key)`
+- `registry.js` install/uninstall paths → `profile.markDirty('manifests')` + `'file'`
+- `sandbox.js:_appStorageSet/Remove` → `profile.markDirty('app', appId)`
+
+Boot gate: `app.js:showApp()` awaits `window.__arutaProfileReady`. If a linked folder restored state successfully, the IIFE has already triggered `location.reload()` and the gate resolves `true` — bootstrap aborts to avoid double work. See [profile.md](./profile.md) for the full lifecycle.
+
+## Sandbox: `manifest.allowOrigin`
+
+By default the iframe is `sandbox="allow-scripts"` (opaque origin — fully isolated). A package can set `"allowOrigin": true` in its `manifest.json` to widen the sandbox to `allow-scripts allow-same-origin`. This is required for browser APIs that refuse to run in a null-origin frame — most notably the File System Access API (`showDirectoryPicker`), used by Grimoire's "real folder" backend.
+
+The trade-off: an `allow-same-origin` iframe shares the host's origin, can reach `window.parent`, and shares `localStorage`. The install modal surfaces the flag so users can refuse trust before installation. See [packages.md](./packages.md#manifestalloworigin) for the author-facing notes.
 
 ## Gotchas to remember
 

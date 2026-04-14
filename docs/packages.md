@@ -61,6 +61,8 @@ The zip **must** contain `manifest.json` and the entry module at its root (not n
 | `author` | — | string | free-form |
 | `entry` | — | path inside zip | defaults to `index.js` |
 | `permissions` | — | string[] | declared permissions — informative at install time, still gated at runtime |
+| `allowOrigin` | — | boolean | opt-in: relax the iframe sandbox to `allow-scripts allow-same-origin`. Required for `showDirectoryPicker` / FS Access API. See below. |
+| `category` | — | string | free-form grouping hint (e.g. `"games"`, `"tools"`) used by Start menu organisation |
 
 Declared `permissions` are shown in the install modal so users know upfront what the package *might* ask for. It's not a grant — every capability is still prompted the first time it's actually used (iOS-style).
 
@@ -198,6 +200,45 @@ Reinstalling an existing `id` replaces the package (update flow).
 - The host respects `prefers-reduced-motion` (parallax, click spells, circle rotation turn off) and sets `.is-reduced-motion` on `<html>` so your own CSS can follow suit: `@media (prefers-reduced-motion: reduce) { … }` works inside your sandbox too.
 - `<html>` also carries `.is-mobile` and `.is-touch` classes synced with the viewport / pointer type. Useful from inside your app when you want to match the host's layout decisions.
 - Keyboard focus shows a consistent gold outline on all interactive elements. If you add buttons in your app, simply leaving `:focus-visible` to the browser default is fine — the host style cascade doesn't reach inside your sandboxed iframe, but the convention is worth matching for visual parity.
+
+## `manifest.allowOrigin`
+
+Apps run in `<iframe sandbox="allow-scripts">` — opaque origin, fully isolated. A handful of browser APIs refuse to run in a null-origin frame; the most notable is the **File System Access API** (`showDirectoryPicker`, `showOpenFilePicker`, etc.), which the bundled `grimoire` app uses to open real folders on disk.
+
+Set `"allowOrigin": true` in your manifest to widen the sandbox to `allow-scripts allow-same-origin`. The host shows this flag in the install modal so users can decide whether to trust the package with shared-origin access.
+
+```json
+{
+    "type": "app",
+    "id": "myeditor",
+    "name": "My Editor",
+    "entry": "index.js",
+    "permissions": ["storage", "notifications"],
+    "allowOrigin": true
+}
+```
+
+When the flag is on:
+- The iframe shares the host's origin → it can access `localStorage`, reach `window.parent`, and use APIs that demand a non-opaque origin.
+- The `ctx` permission gate still applies for documented capabilities — `allowOrigin` doesn't grant any `ctx.*` method automatically.
+
+Use only when you actually need it. The bundled `grimoire` package is the canonical example.
+
+## Theme contract
+
+Every app iframe receives the host's current theme automatically:
+
+1. **At mount** — the `init` payload includes `theme: 'light' | 'dark'`. The bootstrap writes it to the iframe's `<html data-theme="...">` *before* your `style.css` loads, so your first paint matches the host.
+2. **On change** — when the user toggles the theme (or the OS theme flips while follow-OS is active), the host postMessages every mounted iframe and the bootstrap re-applies `data-theme`.
+
+You don't need any permission for this. To style for both themes:
+
+```css
+:root { color: #e8e2d4; background: #1a1206; }
+:root[data-theme="light"] { color: #2a1f10; background: #f7efe0; }
+```
+
+If you want to *read* the current theme programmatically or *change* it, use `ctx.theme.get()` / `ctx.theme.set()` — both gated by the `theme` permission. See [ctx-api.md](./ctx-api.md#theme--requires-theme).
 
 ## Limitations
 
