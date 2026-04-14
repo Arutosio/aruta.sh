@@ -48,6 +48,9 @@ async function installDefault(pkg) {
         others.map(async f => [f, await fetchBlob(base + f)])
     );
     const map = Object.fromEntries(entries);
+    // Tag manifest so UI (Package Store "Installed" view) can tell default
+    // / bundled packages apart from user-installed ones.
+    manifest._origin = 'default';
     await window.registry.saveManifest(manifest, map);
     // Default (system) packages ship trusted — auto-grant every permission
     // the manifest declares, so the user doesn't see a stream of prompts on

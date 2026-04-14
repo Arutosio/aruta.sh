@@ -126,7 +126,7 @@ async function _handleCall(appId, method, args) {
         }
         case 'listInstalled': {
             const all = window.registry?.list() || [];
-            return all.map(m => ({ id: m.id, name: m.name, version: m.version || null, type: m.type }));
+            return all.map(m => ({ id: m.id, name: m.name, icon: m.icon || null, version: m.version || null, type: m.type, _origin: m._origin || 'user' }));
         }
         case 'repos.list':       return window.repos?.list() || [];
         case 'repos.add':        return window.repos?.add(args[0], args[1]);
@@ -377,7 +377,7 @@ function _buildHostCtx(appId, files) {
         listInstalled: async () => {
             if (!(await window.permissions.request(appId, 'install'))) throw new Error('permission_denied:install');
             const all = window.registry?.list() || [];
-            return all.map(m => ({ id: m.id, name: m.name, version: m.version || null, type: m.type }));
+            return all.map(m => ({ id: m.id, name: m.name, icon: m.icon || null, version: m.version || null, type: m.type, _origin: m._origin || 'user' }));
         },
         repos: {
             list:       async () => (await window.permissions.request(appId, 'install')) ? window.repos.list() : [],
