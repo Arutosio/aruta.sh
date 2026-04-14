@@ -28,9 +28,23 @@ function loadIndex() {
 
 function saveIndex() {
     const arr = Array.from(_manifests.values()).map(m => ({
-        id: m.id, name: m.name, icon: m.icon, type: m.type, permissions: m.permissions || []
+        id: m.id, name: m.name, icon: m.icon, type: m.type, roles: Array.isArray(m.roles) ? m.roles.slice() : [], permissions: m.permissions || []
     }));
     try { localStorage.setItem(INDEX_KEY, JSON.stringify(arr)); } catch {}
+}
+
+function _normalize(m) {
+    // Legacy-safe pass-through when the host hasn't booted yet: if the
+    // sandbox helper is present, use it; otherwise do the minimal inline
+    // normalization so we never store a manifest without `roles`.
+    if (window.sandbox?.normalizeManifest) return window.sandbox.normalizeManifest(m);
+    if (!m || typeof m !== 'object') return m;
+    const out = { ...m };
+    if (!Array.isArray(out.roles) || out.roles.length === 0) {
+        out.roles = (out.type === 'app' || out.type === 'command') ? [out.type] : [];
+    }
+    if (!out.type && out.roles[0]) out.type = out.roles[0];
+    return out;
 }
 
 async function bootstrap() {
@@ -42,10 +56,11 @@ async function bootstrap() {
             r.onsuccess = () => res(r.result);
             r.onerror = () => rej(r.error);
         });
-        for (const m of all) {
+        for (const raw of all) {
+            const m = _normalize(raw);
             _manifests.set(m.id, m);
-            if (m.type === 'command') _commands.set(m.id, m);
-            if (m.type === 'app') { registerAppInOS(m); ensureAppWindow(m); }
+            if (m.roles.includes('command')) _commands.set(m.commandAlias || m.id, m);
+            if (m.roles.includes('app')) { registerAppInOS(m); ensureAppWindow(m); }
         }
         saveIndex();
         renderStartMenuItems();
@@ -96,7 +111,7 @@ function renderStartMenuItems() {
         buckets[b.cat].push({ ...b, builtin: true });
     }
     for (const m of _manifests.values()) {
-        if (m.type !== 'app') continue;
+        if (!m.roles?.includes('app')) continue;
         const cat = CATEGORY_ORDER.includes(m.category) ? m.category : 'other';
         buckets[cat].push({
             id: m.id,
@@ -165,18 +180,21 @@ function renderStartMenuItems() {
 }
 
 async function saveManifest(manifest, files) {
+    manifest = _normalize(manifest);
     // Detect update: if the id is already known and anything about the
-    // iframe-bound config changed (version, sandbox policy, entry, type),
+    // iframe-bound config changed (version, sandbox policy, entry, type/roles),
     // tear down the live iframe so the next openWindow remounts with the
     // fresh manifest. The sandbox attribute can't be edited after insertion,
     // so without this the user would keep seeing the old sandboxed app.
     const previous = _manifests.get(manifest.id);
     const isUpdate = !!previous;
+    const prevAppEntry = previous?.entriesResolved?.app || previous?.entry;
+    const curAppEntry  = manifest.entriesResolved?.app   || manifest.entry;
     const iframeShapeChanged = isUpdate && (
         previous.version    !== manifest.version    ||
         previous.allowOrigin !== manifest.allowOrigin ||
-        previous.entry      !== manifest.entry      ||
-        previous.type       !== manifest.type
+        prevAppEntry        !== curAppEntry         ||
+        (previous.roles || []).join(',') !== (manifest.roles || []).join(',')
     );
     if (iframeShapeChanged) {
         try { window.sandbox?.unmount(manifest.id); } catch {}
@@ -208,8 +226,16 @@ async function saveManifest(manifest, files) {
         t.onerror = () => rej(t.error);
     });
     _manifests.set(manifest.id, manifest);
-    if (manifest.type === 'command') _commands.set(manifest.id, manifest);
-    if (manifest.type === 'app') {
+    // Drop stale alias entries from a previous install of the same id (e.g.
+    // an update that changes commandAlias or removes the command role).
+    if (previous) {
+        const prevKey = previous.commandAlias || previous.id;
+        if (_commands.get(prevKey) && _commands.get(prevKey).id === manifest.id) {
+            _commands.delete(prevKey);
+        }
+    }
+    if (manifest.roles.includes('command')) _commands.set(manifest.commandAlias || manifest.id, manifest);
+    if (manifest.roles.includes('app')) {
         registerAppInOS(manifest);
         ensureAppWindow(manifest);
     }
@@ -259,6 +285,7 @@ async function uninstall(id) {
         t.onerror = () => rej(t.error);
     });
     _manifests.delete(id);
+    _commands.delete(m.commandAlias || id);
     _commands.delete(id);
     unregisterAppFromOS(id);
     // Close any cached DB handle before deleting — deleteDatabase is blocked by open connections.
@@ -332,5 +359,9 @@ window.registry = {
     list: () => Array.from(_manifests.values()),
     listCommands: () => Array.from(_commands.values()),
     getManifest: (id) => _manifests.get(id),
+    // Resolve a terminal token to a command manifest. Checks the alias map
+    // first (keyed by `commandAlias || id`) so `pkg` finds the `packagestore`
+    // package even though the package id is different.
+    getCommand: (name) => _commands.get(name),
     isInstalled: (id) => _manifests.has(id),
 };
