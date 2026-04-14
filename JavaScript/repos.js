@@ -115,8 +115,42 @@
     if (initial && initial.length) {
         _repos = initial;
     } else {
+        // Before seeding defaults, check for a one-shot legacy migration from
+        // the old packagestore private IDB kv store. If found, prefer that
+        // over the seed so the user keeps their custom repos. We still mark
+        // `_repos` with seed synchronously so callers never see `undefined`;
+        // the migration swaps in the real list once it resolves and emits.
         _repos = DEFAULT_SEED.map(r => ({ ...r }));
         _write();
+        _tryMigrateLegacyPackagestoreRepos();
+    }
+
+    // One-shot: copy legacy `repos` entry from `aruta_app_packagestore.kv`
+    // into `localStorage.aruta_repos` and drop it from IDB. Silent on miss.
+    function _tryMigrateLegacyPackagestoreRepos() {
+        try {
+            const req = indexedDB.open('aruta_app_packagestore');
+            req.onsuccess = () => {
+                const db = req.result;
+                if (!db.objectStoreNames.contains('kv')) { db.close(); return; }
+                try {
+                    const t = db.transaction('kv', 'readwrite');
+                    const store = t.objectStore('kv');
+                    const g = store.get('repos');
+                    g.onsuccess = () => {
+                        const legacy = g.result;
+                        if (Array.isArray(legacy) && legacy.length) {
+                            _repos = legacy;
+                            _write();
+                            _emit();
+                            try { store.delete('repos'); } catch (_) {}
+                        }
+                    };
+                    t.oncomplete = () => { try { db.close(); } catch (_) {} };
+                } catch (_) { try { db.close(); } catch (__) {} }
+            };
+            req.onerror = () => {};
+        } catch (_) {}
     }
 
     window.repos = { list, add, remove, setEnabled, update, onChange, offChange };

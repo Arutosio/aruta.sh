@@ -4,8 +4,6 @@
  * ╚══════════════════════════════════════════════════════════╝ */
 
 const PREFS_KEY = 'prefs';
-// Legacy storage key — only read once during migration to ctx.repos.
-const LEGACY_REPOS_KEY = 'repos';
 
 function escapeHTML(s) {
     return String(s ?? '').replace(/[&<>"']/g, c => (
@@ -69,44 +67,10 @@ export default {
         }
         async function savePrefs() { await ctx.storage.set(PREFS_KEY, state.prefs); }
 
-        async function migrateLegacyRepos() {
-            // One-time migration: copy any private `repos` entries into the
-            // system module, then drop the private key. After this point the
-            // app never writes to its private storage for repos again.
-            const legacy = await ctx.storage.get(LEGACY_REPOS_KEY);
-            if (!Array.isArray(legacy) || !legacy.length) return;
-            const systemList = (await ctx.repos.list()) || [];
-            const seen = new Set(systemList.map(r => r.url));
-            for (const r of legacy) {
-                if (!r || !r.url) continue;
-                if (seen.has(r.url)) {
-                    // Merge cached fields into the existing system entry.
-                    await ctx.repos.update(r.url, {
-                        name: r.name || r.displayName,
-                        description: r.description,
-                        enabled: !!r.enabled,
-                        lastFetched: r.lastFetched || null,
-                        etag: r.etag || null,
-                        cachedIndex: r.cachedIndex || null,
-                    });
-                } else {
-                    try {
-                        await ctx.repos.add(r.url, {
-                            name: r.name || r.displayName,
-                            description: r.description,
-                            enabled: !!r.enabled,
-                            lastFetched: r.lastFetched || null,
-                            etag: r.etag || null,
-                            cachedIndex: r.cachedIndex || null,
-                        });
-                    } catch (e) { console.warn('[packagestore] migrate add failed', e); }
-                }
-            }
-            await ctx.storage.remove(LEGACY_REPOS_KEY);
-        }
+        // Legacy migration now runs in JavaScript/repos.js at boot (one-shot,
+        // silent) so the package-store no longer has to do it at mount time.
 
         async function loadState() {
-            await migrateLegacyRepos();
             await reloadRepos();
             const prefs = await ctx.storage.get(PREFS_KEY);
             if (prefs && typeof prefs === 'object') state.prefs = { ...state.prefs, ...prefs };
