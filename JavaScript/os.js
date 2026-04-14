@@ -742,6 +742,8 @@ function initSettings() {
         });
     }
 
+    initProfileSettings();
+
     // Reset button — clears all aruta_ settings from localStorage
     const resetBtn = document.getElementById('settings-reset');
     if (resetBtn) {
@@ -1050,4 +1052,185 @@ function initSysInfo() {
             `<div class="sysinfo-row"><span class="sysinfo-label">${d.label}</span><span class="sysinfo-value ${d.cls}">${d.value}</span></div>`
         ).join('');
     }
+}
+
+/* ────────────────────────────────
+ * § PROFILE — Portable profile (link folder / export / import)
+ * ──────────────────────────────── */
+function initProfileSettings() {
+    if (!window.profile) return;
+    const statusEl   = document.getElementById('settings-profile-status');
+    const pickBtn    = document.getElementById('settings-profile-pick');
+    const reconnBtn  = document.getElementById('settings-profile-reconnect');
+    const unlinkBtn  = document.getElementById('settings-profile-unlink');
+    const exportBtn  = document.getElementById('settings-profile-export');
+    const importBtn  = document.getElementById('settings-profile-import');
+    const importFile = document.getElementById('settings-profile-import-file');
+    if (!pickBtn || !exportBtn || !importBtn) return;
+
+    const hasFSAPI = !!(window.showDirectoryPicker);
+
+    async function refreshStatus() {
+        const t = window.t();
+        const hasHandle = await window.profile.hasHandle();
+        const linked    = window.profile.isLinked();
+        const disc      = window.profile.isDisconnected();
+        const name      = window.profile.linkedName();
+
+        if (!hasFSAPI) {
+            pickBtn.style.display = 'none';
+            reconnBtn.style.display = 'none';
+            unlinkBtn.style.display = 'none';
+            if (statusEl) statusEl.textContent = t.settings_profile_zip_only || 'Use Export/Import .zip (folder sync requires Chromium).';
+            return;
+        }
+
+        if (linked && name) {
+            pickBtn.textContent = (t.settings_profile_change || 'Change folder…');
+            reconnBtn.style.display = 'none';
+            unlinkBtn.style.display = '';
+            if (statusEl) statusEl.textContent = (t.settings_profile_linked || 'Linked:') + ' ' + name;
+        } else if (hasHandle && disc) {
+            pickBtn.textContent = (t.settings_profile_pick || 'Pick folder…');
+            reconnBtn.style.display = '';
+            unlinkBtn.style.display = '';
+            if (statusEl) statusEl.textContent = (t.settings_profile_disconnected || 'Disconnected — reconnect to resume sync.') + (name ? ' (' + name + ')' : '');
+        } else {
+            pickBtn.textContent = (t.settings_profile_pick || 'Pick folder…');
+            reconnBtn.style.display = 'none';
+            unlinkBtn.style.display = 'none';
+            if (statusEl) statusEl.textContent = t.settings_profile_not_linked || 'Not linked';
+        }
+    }
+
+    pickBtn.addEventListener('click', async () => {
+        const t = window.t();
+        if (!hasFSAPI) {
+            showToast(t.settings_profile_zip_only || 'Folder linking requires Chromium — use Export/Import.', 'warning');
+            return;
+        }
+        let handle;
+        try {
+            handle = await window.showDirectoryPicker({ mode: 'readwrite' });
+        } catch { return; /* user cancelled */ }
+
+        // Peek: does the folder already hold a profile?
+        let existingMeta = null;
+        try {
+            // Minimal read probe via a transient DiskBackend (we reuse profile internals).
+            const probe = new (class {
+                constructor(h){ this.handle = h; }
+                async read() {
+                    try {
+                        const fh = await this.handle.getFileHandle('profile.json', { create: false });
+                        const f  = await fh.getFile();
+                        return JSON.parse(await f.text());
+                    } catch { return null; }
+                }
+            })(handle);
+            existingMeta = await probe.read();
+        } catch {}
+
+        if (existingMeta) {
+            const msg = (t.settings_profile_found_msg || 'This folder already contains a profile.')
+                + (existingMeta.updatedAt ? ' (' + existingMeta.updatedAt + ')' : '')
+                + '\n\n' + (t.settings_profile_found_prompt || 'Load profile FROM the folder (overwrites browser state), or overwrite the folder WITH current browser state?');
+            const confirmFn = window.showConfirm || ((m) => Promise.resolve(confirm(m)));
+            const loadFromFolder = await confirmFn(msg, {
+                type: 'warning',
+                okText: t.settings_profile_load_from_folder || 'Load from folder',
+                cancelText: t.settings_profile_overwrite_folder || 'Overwrite folder',
+            });
+            try {
+                if (loadFromFolder) {
+                    // Link without overwriting, then read folder and restore (which reloads).
+                    await window.profile.link(handle, { overwriteFolder: false });
+                    showToast(t.settings_profile_linked_toast || 'Profile linked — loading from folder…', 'success');
+                    // Trigger a full read+restore path by calling reconnect-equivalent:
+                    const snap = await window.profile.__readLinkedFolder?.();
+                    if (snap) { await window.profile.restore(snap); location.reload(); }
+                    else {
+                        // Fallback: reload and let tryRestoreFromHandle handle it.
+                        location.reload();
+                    }
+                } else {
+                    await window.profile.link(handle, { overwriteFolder: true });
+                    showToast(t.settings_profile_linked_toast || 'Profile linked — folder written.', 'success');
+                    refreshStatus();
+                }
+            } catch (e) {
+                console.warn(e);
+                showToast((t.settings_profile_link_failed || 'Link failed:') + ' ' + (e.message || e), 'error');
+            }
+            return;
+        }
+
+        // Fresh folder: just link and write.
+        try {
+            await window.profile.link(handle, { overwriteFolder: true });
+            showToast(t.settings_profile_linked_toast || 'Profile linked — folder written.', 'success');
+        } catch (e) {
+            console.warn(e);
+            showToast((t.settings_profile_link_failed || 'Link failed:') + ' ' + (e.message || e), 'error');
+        }
+        refreshStatus();
+    });
+
+    reconnBtn?.addEventListener('click', async () => {
+        const t = window.t();
+        const ok = await window.profile.reconnect();
+        if (ok) showToast(t.settings_profile_reconnected || 'Profile reconnected.', 'success');
+        else showToast(t.settings_profile_reconnect_failed || 'Reconnect denied.', 'warning');
+        refreshStatus();
+    });
+
+    unlinkBtn?.addEventListener('click', async () => {
+        const t = window.t();
+        const confirmFn = window.showConfirm || ((m) => Promise.resolve(confirm(m)));
+        const ok = await confirmFn(t.settings_profile_unlink_confirm || 'Unlink folder? Your local browser data is kept; only the sync connection is dropped.', {
+            type: 'warning',
+            okText: t.settings_profile_unlink || 'Unlink',
+            cancelText: t.confirm_cancel || 'Cancel',
+        });
+        if (!ok) return;
+        await window.profile.unlink();
+        showToast(t.settings_profile_unlinked || 'Profile unlinked.', 'info');
+        refreshStatus();
+    });
+
+    exportBtn.addEventListener('click', async () => {
+        const t = window.t();
+        try {
+            await window.profile.exportZip();
+            showToast(t.settings_profile_exported || 'Profile exported.', 'success');
+        } catch (e) {
+            console.warn(e);
+            showToast((t.settings_profile_export_failed || 'Export failed:') + ' ' + (e.message || e), 'error');
+        }
+    });
+
+    importBtn.addEventListener('click', () => importFile?.click());
+    importFile?.addEventListener('change', async (e) => {
+        const t = window.t();
+        const file = e.target.files && e.target.files[0];
+        e.target.value = '';
+        if (!file) return;
+        const confirmFn = window.showConfirm || ((m) => Promise.resolve(confirm(m)));
+        const ok = await confirmFn(t.settings_profile_import_confirm || 'Importing will REPLACE all current settings, apps, and app data. Continue?', {
+            type: 'warning',
+            okText: t.settings_profile_import_btn || 'Import',
+            cancelText: t.confirm_cancel || 'Cancel',
+        });
+        if (!ok) return;
+        try {
+            showToast(t.settings_profile_importing || 'Importing profile…', 'info', 1500);
+            await window.profile.importZip(file);
+            // importZip reloads on success.
+        } catch (err) {
+            console.warn(err);
+            showToast((t.settings_profile_import_failed || 'Import failed:') + ' ' + (err.message || err), 'error');
+        }
+    });
+
+    refreshStatus();
 }

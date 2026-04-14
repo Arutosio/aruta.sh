@@ -420,6 +420,7 @@
                         <button class="settings-cat" data-cat="language">🌐 <span data-i18n="settings_language">Language</span></button>
                         <button class="settings-cat" data-cat="sound">🔊 <span data-i18n="settings_sound">Sound</span></button>
                         <button class="settings-cat" data-cat="permissions">🔐 <span data-i18n="settings_permissions">Permissions</span></button>
+                        <button class="settings-cat" data-cat="profile">💾 <span data-i18n="settings_profile">Profile</span></button>
                         <button class="settings-cat" data-cat="reset">🔄 <span data-i18n="settings_reset">Reset</span></button>
                         <button class="settings-cat" data-cat="about">⚜ <span data-i18n="settings_about">About</span></button>
                     </nav>
@@ -532,6 +533,33 @@
                                 <button class="settings-reset-btn" id="settings-install-pkg" data-i18n="install_install">Install</button>
                             </div>
                             <div id="settings-perms-list"></div>
+                        </div>
+                        <!-- Portable Profile -->
+                        <div class="settings-page" data-page="profile">
+                            <h2 class="settings-page-title" data-i18n="settings_profile">Profile</h2>
+                            <div class="settings-row">
+                                <div class="settings-label"><span class="settings-icon">💾</span><div><strong data-i18n="settings_profile_status">Status</strong><br><small id="settings-profile-status" data-i18n="settings_profile_not_linked">Not linked</small></div></div>
+                            </div>
+                            <div class="settings-row">
+                                <div class="settings-label"><span class="settings-icon">📁</span><div><strong data-i18n="settings_profile_folder">Linked folder</strong><br><small data-i18n="settings_profile_folder_desc">Live-sync settings, apps and app data to a local folder (Chromium only).</small></div></div>
+                                <div style="display:flex;gap:.35rem;flex-wrap:wrap;">
+                                    <button class="settings-reset-btn" id="settings-profile-pick" data-i18n="settings_profile_pick">Pick folder…</button>
+                                    <button class="settings-reset-btn" id="settings-profile-reconnect" style="display:none;" data-i18n="settings_profile_reconnect">Reconnect</button>
+                                    <button class="settings-reset-btn settings-wipe-btn" id="settings-profile-unlink" style="display:none;" data-i18n="settings_profile_unlink">Unlink</button>
+                                </div>
+                            </div>
+                            <div class="settings-row">
+                                <div class="settings-label"><span class="settings-icon">⬇</span><div><strong data-i18n="settings_profile_export">Export .zip</strong><br><small data-i18n="settings_profile_export_desc">Download a snapshot of the current profile.</small></div></div>
+                                <button class="settings-reset-btn" id="settings-profile-export" data-i18n="settings_profile_export_btn">Export</button>
+                            </div>
+                            <div class="settings-row">
+                                <div class="settings-label"><span class="settings-icon">⬆</span><div><strong data-i18n="settings_profile_import">Import .zip</strong><br><small data-i18n="settings_profile_import_desc">Load a previously exported profile (replaces current state).</small></div></div>
+                                <button class="settings-reset-btn" id="settings-profile-import" data-i18n="settings_profile_import_btn">Import</button>
+                                <input type="file" id="settings-profile-import-file" accept=".zip,application/zip" style="display:none;">
+                            </div>
+                            <div class="settings-row">
+                                <div class="settings-label"><span class="settings-icon">ℹ️</span><div><small data-i18n="settings_profile_help">Copy the folder or .zip between devices to transfer your settings, installed apps, and app data.</small></div></div>
+                            </div>
                         </div>
                         <!-- Reset -->
                         <div class="settings-page" data-page="reset">
