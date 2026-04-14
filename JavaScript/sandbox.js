@@ -21,45 +21,12 @@ function broadcastTheme(v) {
     }
 }
 
-function _appStorageDB(appId) {
-    return window.db.openDB('aruta_app_' + appId, 1, (db) => {
-        if (!db.objectStoreNames.contains('kv')) db.createObjectStore('kv');
-    });
-}
-
-async function _appStorageGet(appId, key) {
-    const db = await _appStorageDB(appId);
-    return new Promise((res, rej) => {
-        const t = db.transaction('kv', 'readonly');
-        const r = t.objectStore('kv').get(key);
-        r.onsuccess = () => res(r.result === undefined ? null : r.result);
-        r.onerror = () => rej(r.error);
-    });
-}
-async function _appStorageSet(appId, key, value) {
-    const db = await _appStorageDB(appId);
-    return new Promise((res, rej) => {
-        const t = db.transaction('kv', 'readwrite');
-        t.objectStore('kv').put(value, key);
-        t.oncomplete = () => {
-            try { window.profile?.markDirty?.('app', appId); } catch {}
-            res(true);
-        };
-        t.onerror = () => rej(t.error);
-    });
-}
-async function _appStorageRemove(appId, key) {
-    const db = await _appStorageDB(appId);
-    return new Promise((res, rej) => {
-        const t = db.transaction('kv', 'readwrite');
-        t.objectStore('kv').delete(key);
-        t.oncomplete = () => {
-            try { window.profile?.markDirty?.('app', appId); } catch {}
-            res(true);
-        };
-        t.onerror = () => rej(t.error);
-    });
-}
+// Per-app KV is implemented in storage.js (window.Storage.appKV). These thin
+// wrappers route the host-side `ctx.storage.*` calls through the facade so
+// the DB name (`aruta_app_<id>`) lives in exactly one place.
+async function _appStorageGet(appId, key)         { return window.Storage.appKV.get(appId, key); }
+async function _appStorageSet(appId, key, value)  { return window.Storage.appKV.set(appId, key, value); }
+async function _appStorageRemove(appId, key)      { return window.Storage.appKV.remove(appId, key); }
 
 const PERM_REQUIRED = {
     print: 'terminal',
@@ -317,7 +284,7 @@ function _buildHostCtx(appId, files) {
 }
 
 async function closeAppStorage(appId) {
-    await window.db.closeDB('aruta_app_' + appId);
+    await window.db.closeDB((window.Storage?.constants.APP_DB_PREFIX || 'aruta_app_') + appId);
 }
 
 window.sandbox = { mount: mountApp, unmount: unmountApp, runCommand, closeAppStorage, broadcastTheme };

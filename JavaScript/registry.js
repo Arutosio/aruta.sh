@@ -3,7 +3,7 @@
  * ║  Keeps in-memory cache, syncs to IndexedDB and localStorage ║
  * ╚══════════════════════════════════════════════════════════╝ */
 
-const DB_NAME = 'aruta_packages';
+const DB_NAME = (window.Storage && window.Storage.constants.PACKAGES_DB) || 'aruta_packages';
 const DB_VERSION = 1;
 const INDEX_KEY = 'aruta_installed_apps';
 
@@ -257,7 +257,7 @@ async function uninstall(id) {
     unregisterAppFromOS(id);
     // Close any cached DB handle before deleting — deleteDatabase is blocked by open connections.
     try { await window.sandbox?.closeAppStorage?.(id); } catch {}
-    try { indexedDB.deleteDatabase('aruta_app_' + id); } catch {}
+    try { window.Storage?.deleteAppKV(id) ?? indexedDB.deleteDatabase('aruta_app_' + id); } catch {}
     // If this was a default package, remember so we don't auto-reinstall it.
     window.defaults?.markUninstalled(id);
     saveIndex();

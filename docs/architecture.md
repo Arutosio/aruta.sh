@@ -69,6 +69,7 @@ sequenceDiagram
 |---|---|
 | [`JavaScript/util.js`](../JavaScript/util.js) | Shared helpers: `window.t()` i18n accessor, `window.escapeHTML`, `window.storage.{get,set,del}` (JSON-aware, SecurityError-safe), `window.mq` with synced `is-mobile`/`is-touch`/`is-reduced-motion` classes on `<html>`, toast/confirm fallbacks |
 | [`JavaScript/db.js`](../JavaScript/db.js) | Shared IndexedDB helpers: cached `openDB(name, version, upgrade)`, `closeDB`, `txRun`, `rangeCollect`, `rangeDelete`. Used by both `registry.js` and `sandbox.js` |
+| [`JavaScript/storage.js`](../JavaScript/storage.js) | Tiny facade centralising the storage key/DB strings: `Storage.constants` (`PACKAGES_DB`, `APP_DB_PREFIX`, `LS_PREFIX`), `Storage.ls` passthrough to `window.storage`, `Storage.registry.openDB()`, `Storage.appKV.{get,set,remove,dumpAll}`, `Storage.deleteAppKV`. Additive — does not replace `util.js` `window.storage` |
 | [`JavaScript/installer.js`](../JavaScript/installer.js) | Reads `.zip` (JSZip lazy-loaded from CDN), validates the manifest, shows install confirmation, sets correct MIME types on extracted Blobs, wires drag-drop overlay |
 | [`JavaScript/registry.js`](../JavaScript/registry.js) | IndexedDB `aruta_packages` (manifests + files) via `db.js`, `localStorage.aruta_installed_apps` cache for fast boot, registers custom apps in `WIN_META` + dynamically creates their window DOM + Start menu items |
 | [`JavaScript/sandbox.js`](../JavaScript/sandbox.js) | Apps → `<iframe sandbox="allow-scripts">` with `srcdoc` bootstrap, commands → blob-URL dynamic `import()`. Implements the `ctx` bridge (postMessage for apps, direct for commands) and the permission-gated method dispatcher. Per-app storage DB handles cached via `db.js` |
@@ -80,9 +81,9 @@ sequenceDiagram
 
 Script load order in `index.html`:
 ```
-config.js  core.js  effects.js  desktop.js  content.js  extras.js
-os.js  permissions.js  zip.js  profile.js  registry.js  sandbox.js
-installer.js  terminal.js  defaults.js  app.js
+config.js  core.js  util.js  zip.js  db.js  storage.js  profile.js
+effects.js  desktop.js  content.js  extras.js  os.js  permissions.js
+registry.js  sandbox.js  installer.js  defaults.js  terminal.js  app.js
 ```
 
 `profile.js` runs an IIFE on load that sets `window.__arutaProfileReady` — a Promise that may resolve to `true` if a linked folder triggered a state restore + reload (in which case `app.js` aborts further bootstrap). See [profile.md](./profile.md).
@@ -92,6 +93,8 @@ installer.js  terminal.js  defaults.js  app.js
 ---
 
 ## Storage layout
+
+All the DB and key-prefix string literals live in `storage.js:Storage.constants` (`PACKAGES_DB`, `APP_DB_PREFIX`, `LS_PREFIX`). `registry.js`, `profile.js`, and `sandbox.js` read them from there instead of hardcoding. The facade also exposes `Storage.appKV.{get,set,remove,dumpAll}` as the canonical path for per-app KV reads/writes.
 
 | Where | Key / name | Purpose |
 |---|---|---|
