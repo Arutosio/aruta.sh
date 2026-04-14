@@ -349,3 +349,20 @@ Non-goals for v1: `cat`/file-content commands, Firefox virtual-workspace fallbac
 - The install dropzone has `pointer-events: none` but `dragover` still needs `preventDefault()` for drop to fire. Document-level listeners handle that.
 - `JSZip` is loaded from CDN lazily the first time the user installs something. If you want offline support, vendor it locally.
 - The iframe's default font is whatever the iframe CSS sets — the host's Google Fonts don't cross the origin. If you want your app to use them, link them in your `style.css`.
+
+---
+
+## Package Store → installer flow
+
+The default **Package Store** app is a thin sandboxed client over the existing installer. It reads user-added repo JSON files, diffs versions against `registry.list()` (via `ctx.listInstalled()`), and triggers installs through a new `ctx.installZip(blob)` bridge. Flow:
+
+```
+User clicks Install
+ → ctx.fetch(pkg.url, {binary:true})      // host returns Blob
+ → ctx.installZip(blob)                   // gated by `install` permission
+   → installer.installFromFile(File)      // unchanged pipeline
+     → JSZip validate + permission modal  // user confirms
+     → registry.saveManifest(...)
+```
+
+The trust boundary (install-confirm modal) is **never bypassed**: a third-party app with the `install` permission can submit zips but cannot approve them. `listInstalled` returns only `{id, name, version, type}` — file blobs stay host-side. See `JavaScript/sandbox.js` (`installZip`, `listInstalled` cases) and `defaultPackages/packagestore/index.js`.

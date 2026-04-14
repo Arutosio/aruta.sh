@@ -267,3 +267,58 @@ If you want to *read* the current theme programmatically or *change* it, use `ct
 - Dynamic `import()` inside the iframe requires correct MIME types; the installer sets them when unpacking — you don't need to do anything special.
 - You can't call host `window`/`document` directly from an app (it's a different origin). Use `ctx` for everything.
 - Commands *do* run in the main thread and have access to global JS, but you should still use `ctx` — capabilities go through the permission gate there too.
+
+---
+
+## Repository format (Package Store)
+
+The bundled **Package Store** app (System category) installs packages from user-added *repositories*. A repository is just a JSON file at a stable URL that lists packages and where to download each `.zip`.
+
+### Schema
+
+```json
+{
+    "name": "Official Aruta Packages",
+    "description": "Curated bundle by Aruta",
+    "packages": [
+        {
+            "id": "neat-app",
+            "name": "Neat App",
+            "icon": "🌟",
+            "version": "1.2.0",
+            "type": "app",
+            "category": "tools",
+            "author": "someone",
+            "description": "One-liner pitch.",
+            "url": "neat-app-1.2.0.zip",
+            "homepage": "https://example.com/neat-app",
+            "permissions": ["fetch"],
+            "allowOrigin": false,
+            "size": 12345
+        }
+    ]
+}
+```
+
+### Field rules
+
+| Field | Required | Notes |
+|---|---|---|
+| `name` | — | Repository display name |
+| `description` | — | Free-form; shown to users |
+| `packages` | ✅ | Array of package entries |
+| `packages[].id` | ✅ | Matches the install `id` the zip's `manifest.json` declares |
+| `packages[].name` | ✅ | Display name |
+| `packages[].version` | ✅ | Compared against installed version to flag updates |
+| `packages[].url` | ✅ | `.zip` location; **may be relative** to the repo JSON URL |
+| Everything else | — | Purely informational — the authoritative manifest is the one inside the `.zip` |
+
+### Hosting
+
+- **GitHub raw** — put `index.json` and the `.zip` files at the root of a repo, then point users at `https://raw.githubusercontent.com/<user>/<repo>/main/index.json`. Relative `url`s resolve automatically.
+- **Any static host** (S3, Netlify, a plain `www` folder) works — just serve the JSON with `Content-Type: application/json` and the zips with whatever type (the installer reads bytes, not headers).
+- Respect `ETag` / `Last-Modified` if you can: the Package Store sends `If-None-Match` on refresh for lightweight update checks.
+
+### Trust model
+
+The repo index is advisory. The *real* manifest lives inside the `.zip` and goes through the existing install-confirm modal — declared vs. actual permissions cannot be silently swapped. A rogue repo can only propose installs; the user still approves each one.
