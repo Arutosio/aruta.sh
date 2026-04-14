@@ -28,7 +28,7 @@ Anything not in this table has no permission gate (e.g. `ctx.asset`, `ctx.i18n`,
     - **Deny** → persisted as `denied`, future calls return `null`/`false` silently, no re-prompt
     - **Allow** → one-shot grant, next call asks again
     - **Always allow** → persisted as `granted`, never prompts again
-3. **Revocable** — Settings → 🔐 Permissions shows every installed package and every permission it has ever used or declared, with a toggle. Revoking flips the state back to *ask* (next call will prompt).
+3. **Revocable** — Settings → 🔐 Permissions shows every installed package and every permission it has ever used or declared, with a toggle. Revoking flips the state back to *ask* (next call will prompt). The Permissions page is permissions-only: install / update / uninstall moved to the **📦 Package Store** (and the `pkg` CLI).
 
 Grants are stored per-app in `localStorage.aruta_perms_<appId>` as JSON: `{ "storage": "granted", "fetch": "denied" }`.
 
