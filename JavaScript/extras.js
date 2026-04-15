@@ -193,11 +193,13 @@ function initShareButton() {
 }
 
 /* ────────────────────────────────
- * § EASTER EGG — ARCANE DUEL (7 clicks on magic circle)
- * Clicking the magic circle frame 7 times within 3 seconds
- * triggers the ArcaneDuel mini-game (if loaded).
+ * § EASTER EGG TRIGGER — 7 clicks on magic circle
+ * Keeps the trigger wired so we can hook it to something else
+ * later. Previously launched the Arcane Duel overlay; that game
+ * is now a bundled package (`defaultPackages/arcaneduel`) and is
+ * reached from the Start menu.
  * ──────────────────────────────── */
-(function initDuelTrigger() {
+(function initEasterEggTrigger() {
     let clicks = 0, timer = null;
     document.addEventListener('click', e => {
         if (e.target.closest('.magic-circle-frame')) {
@@ -206,7 +208,7 @@ function initShareButton() {
             timer = setTimeout(() => clicks = 0, 3000);
             if (clicks >= 7) {
                 clicks = 0;
-                if (typeof ArcaneDuel !== 'undefined') ArcaneDuel.start();
+                // Placeholder — wire a new easter egg here.
             }
         }
     });

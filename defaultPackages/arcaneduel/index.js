@@ -3,7 +3,8 @@
    UO-inspired: 7 elements x 3 spells, meditation, buffs/debuffs
    ============================================================ */
 
-const ArcaneDuel = (() => {
+export default {
+  async mount(root, sdk) {
 
     /* ════════════════════════════
        SPELL DATABASE — 3 per element + meditation
@@ -326,17 +327,15 @@ const ArcaneDuel = (() => {
                 </div>
             </div>
             <div class="duel-result" id="duel-result"></div>
-            <button class="duel-close" id="duel-close" title="Flee">&times;</button>
             <div class="duel-gcd-bar" id="duel-gcd-bar"></div>
         `;
-        document.body.appendChild(overlay);
+        root.appendChild(overlay);
 
         // Spell button clicks
         overlay.querySelectorAll('.duel-spell-btn:not(.duel-meditate-btn)').forEach(btn => {
             btn.addEventListener('click', () => castSpell(parseInt(btn.dataset.idx)));
         });
         document.getElementById('duel-meditate').addEventListener('click', toggleMeditate);
-        document.getElementById('duel-close').addEventListener('click', () => { closeGame(); running = false; if (gameLoop) gameLoop.running = false; });
     }
 
     /* ════════════════════════════
@@ -882,7 +881,24 @@ const ArcaneDuel = (() => {
     }
 
     /* ════════════════════════════
-       PUBLIC
+       MOUNT ENTRY + CLEANUP
     ════════════════════════════ */
-    return { start };
-})();
+    // Expose cleanup for unmount().
+    root.__arcaneDuelCleanup = () => {
+        running = false;
+        if (gameLoop) gameLoop.running = false;
+        try { window.removeEventListener('resize', resizeCanvas); } catch {}
+        try { document.removeEventListener('keydown', handleKey); } catch {}
+        try { document.removeEventListener('keydown', escHandler); } catch {}
+        if (overlay && overlay.parentNode) overlay.parentNode.removeChild(overlay);
+        overlay = null;
+    };
+
+    start();
+  },
+
+  async unmount(root, sdk) {
+    try { root.__arcaneDuelCleanup?.(); } catch {}
+    delete root.__arcaneDuelCleanup;
+  }
+};

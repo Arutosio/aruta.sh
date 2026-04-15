@@ -34,6 +34,7 @@ Auto-installed on first boot from `defaultPackages/` (uninstall sticks):
 | `snake` (app) | Responsive Snake with wrap-around edges |
 | `packagestore` (app + `pkg` cmd) | Package Manager app + apt-style `pkg` CLI |
 | `filemanager` (app) | File Explorer — browse virtual workspace, linked profile folder, external folders, and installed package files; preview + "Open in Grimoire" handoff |
+| `arcaneduel` (app) | Mini mage-arena duel: 7 elements × 3 spells, meditation, buffs/debuffs, shadow-mage AI |
 
 ---
 
