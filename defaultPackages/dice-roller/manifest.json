@@ -1,11 +1,11 @@
 {
-    "type": "app",
     "id": "dice-roller",
     "name": "Dice Roller",
     "icon": "🎲",
-    "version": "1.0.1",
+    "version": "1.0.2",
+    "minSdk": 2,
+    "roles": ["app"],
     "author": "Aruta",
-    "entry": "index.js",
     "category": "games",
     "permissions": ["storage"]
 }

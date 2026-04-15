@@ -1,11 +1,11 @@
 {
-    "type": "app",
     "id": "oracle",
     "name": "Oracle",
     "icon": "🔮",
-    "version": "1.0.1",
+    "version": "1.0.2",
+    "minSdk": 2,
+    "roles": ["app"],
     "author": "Aruta",
-    "entry": "index.js",
     "category": "tools",
     "permissions": ["fetch"]
 }

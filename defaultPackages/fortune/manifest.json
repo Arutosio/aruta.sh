@@ -1,10 +1,10 @@
 {
-    "type": "command",
     "id": "fortune",
     "name": "Fortune",
     "icon": "🔮",
-    "version": "1.0.0",
+    "version": "1.0.1",
+    "minSdk": 2,
+    "roles": ["command"],
     "author": "Aruta",
-    "entry": "index.js",
     "permissions": ["terminal"]
 }

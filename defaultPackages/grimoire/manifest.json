@@ -1,11 +1,11 @@
 {
-    "type": "app",
     "id": "grimoire",
     "name": "Grimoire",
     "icon": "📜",
-    "version": "1.8.7",
+    "version": "1.8.8",
+    "minSdk": 2,
+    "roles": ["app"],
     "author": "Aruta",
-    "entry": "index.js",
     "category": "tools",
     "allowOrigin": true,
     "permissions": ["storage"]
