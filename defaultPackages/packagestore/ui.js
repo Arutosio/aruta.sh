@@ -525,6 +525,13 @@ export default {
                     : '';
                 const uninstallBtn = isSelf
                     ? `<button class="ps-btn ps-act ps-btn-ghost ps-danger" disabled title="Core system package — cannot uninstall from here">🗑 Uninstall</button>`
+                    : isDefault
+                    // Default packages can be reinstalled on next boot; uninstalling
+                    // one from the generic Installed view is almost always a
+                    // mistake. Disable the button here and steer users to the
+                    // dedicated defaults flow (Settings → Defaults) for the
+                    // rare case where it's intentional.
+                    ? `<button class="ps-btn ps-act ps-btn-ghost ps-danger" disabled title="Default package — use the Defaults tab (Settings → Defaults) to uninstall.">🗑 Uninstall</button>`
                     : `<button class="ps-btn ps-act ps-btn-ghost ps-danger" data-action="uninstall-installed" data-id="${escapeHTML(m.id)}" title="Uninstall">🗑 Uninstall</button>`;
                 return `
                     <div class="ps-pkg ps-installed-row" data-id="${escapeHTML(m.id)}">
