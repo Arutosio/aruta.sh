@@ -437,13 +437,109 @@ class Player {
     }
 }
 
+// ── World-select screen ──────────────────────────────────
+// Shown before the game mounts. Returns the picked world id (or null
+// on cancel). Mutates the `worlds` array in place via `onChange`.
+function showWorldSelect(root, worlds, onChange) {
+    return new Promise((resolve) => {
+        function render() {
+            root.innerHTML = `
+                <div class="ua-select-shell">
+                    <h1 class="ua-select-title">⚔ Ultima Aruta</h1>
+                    <p class="ua-select-sub">Choose a realm to wander…</p>
+                    <div class="ua-select-list" id="ua-select-list">
+                        ${worlds.slice().sort((a,b) => (b.lastPlayed||0) - (a.lastPlayed||0)).map(w => `
+                            <div class="ua-select-row" data-id="${w.id}">
+                                <div class="ua-select-meta">
+                                    <div class="ua-select-name">${escapeHTML(w.name)}</div>
+                                    <div class="ua-select-info">Seed ${w.seed} · Last played ${w.lastPlayed ? new Date(w.lastPlayed).toLocaleString() : '—'}</div>
+                                </div>
+                                <div class="ua-select-actions">
+                                    <button class="ua-btn" data-act="play">▶ Play</button>
+                                    <button class="ua-btn ua-btn-danger" data-act="del">🗑</button>
+                                </div>
+                            </div>
+                        `).join('') || '<div class="ua-select-empty">No worlds yet — create one below.</div>'}
+                    </div>
+                    <div class="ua-select-new">
+                        <input type="text" id="ua-new-name" placeholder="World name" class="ua-input" maxlength="40">
+                        <input type="text" id="ua-new-seed" placeholder="Seed (optional)" class="ua-input" maxlength="12">
+                        <button class="ua-btn ua-btn-primary" id="ua-new-go">＋ Create new world</button>
+                    </div>
+                </div>
+            `;
+
+            root.querySelectorAll('.ua-select-row').forEach(row => {
+                const id = row.dataset.id;
+                row.querySelector('[data-act="play"]').addEventListener('click', () => {
+                    resolve(id);
+                });
+                row.querySelector('[data-act="del"]').addEventListener('click', async () => {
+                    if (!confirm('Delete world permanently? Save data will be lost.')) return;
+                    const i = worlds.findIndex(w => w.id === id);
+                    if (i >= 0) {
+                        worlds.splice(i, 1);
+                        await onChange(worlds);
+                        render();
+                    }
+                });
+            });
+
+            const $name = root.querySelector('#ua-new-name');
+            const $seed = root.querySelector('#ua-new-seed');
+            const $go   = root.querySelector('#ua-new-go');
+            $go.addEventListener('click', async () => {
+                const name = ($name.value || '').trim() || ('World ' + (worlds.length + 1));
+                let seed = ($seed.value || '').trim();
+                let seedNum;
+                if (seed && /^\d+$/.test(seed)) seedNum = Number(seed) >>> 0;
+                else if (seed) { let h = 2166136261; for (let i = 0; i < seed.length; i++) h = Math.imul(h ^ seed.charCodeAt(i), 16777619); seedNum = h >>> 0; }
+                else seedNum = (Math.random() * 0xffffffff) >>> 0;
+                const w = {
+                    id: 'w_' + Math.random().toString(36).slice(2, 9),
+                    name, seed: seedNum,
+                    createdAt: Date.now(), lastPlayed: Date.now(),
+                };
+                worlds.push(w);
+                await onChange(worlds);
+                resolve(w.id);
+            });
+        }
+
+        function escapeHTML(s) { return String(s).replace(/[&<>"']/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c])); }
+
+        render();
+    });
+}
+
 // ── Mount ────────────────────────────────────────────────
 export default {
     async mount(root, sdk) {
+        // ── World selection ──────────────────────────────
+        // Each "world" is an independent save slot: its own seed, player
+        // position, inventory, day/night clock, and world deltas.
+        let worlds = [];
+        try {
+            const w = await sdk.storage.get('worlds');
+            if (Array.isArray(w)) worlds = w;
+        } catch {}
+
+        const pickedWorldId = await showWorldSelect(root, worlds, async (newWorlds) => {
+            worlds = newWorlds;
+            await sdk.storage.set('worlds', worlds).catch(() => {});
+        });
+        if (!pickedWorldId) return; // user closed the window while selecting
+
+        const worldRow = worlds.find(w => w.id === pickedWorldId);
+        const worldId = pickedWorldId;
+        const STATE_KEY  = 'state_'        + worldId;
+        const INV_KEY    = 'inventory_'    + worldId;
+        const DELTA_KEY  = 'worldDeltas_'  + worldId;
+
         // ── Save/load ────────────────────────────────────
         let saved = null;
-        try { saved = await sdk.storage.get('state'); } catch {}
-        const seed = (saved && Number.isFinite(saved.seed)) ? saved.seed : (Math.random() * 0xffffffff) >>> 0;
+        try { saved = await sdk.storage.get(STATE_KEY); } catch {}
+        const seed = worldRow.seed >>> 0;
         const world = new World(seed);
 
         // Find a walkable starting cell near (0,0) if the seed gave water.
@@ -463,7 +559,7 @@ export default {
         // ── Inventory + world deltas ─────────────────────
         let inventory = { items: [] };
         try {
-            const inv = await sdk.storage.get('inventory');
+            const inv = await sdk.storage.get(INV_KEY);
             if (inv && Array.isArray(inv.items)) inventory = inv;
         } catch {}
         // Persistent mutations to the procedural world (things picked up,
@@ -471,7 +567,7 @@ export default {
         // generation — without this a reload would respawn picked items.
         let worldDeltas = { removed: {}, added: {} };
         try {
-            const d = await sdk.storage.get('worldDeltas');
+            const d = await sdk.storage.get(DELTA_KEY);
             if (d) worldDeltas = { removed: d.removed || {}, added: d.added || {} };
         } catch {}
         world._applyDeltas = (ch) => {
@@ -493,8 +589,8 @@ export default {
             return ch;
         };
 
-        function saveInventory()    { sdk.storage.set('inventory', inventory).catch(() => {}); }
-        function saveWorldDeltas()  { sdk.storage.set('worldDeltas', worldDeltas).catch(() => {}); }
+        function saveInventory()    { sdk.storage.set(INV_KEY,   inventory).catch(() => {}); }
+        function saveWorldDeltas()  { sdk.storage.set(DELTA_KEY, worldDeltas).catch(() => {}); }
 
         function removeWorldItem(wx, wy) {
             const cx = Math.floor(wx / CHUNK_SIZE), cy = Math.floor(wy / CHUNK_SIZE);
@@ -529,7 +625,7 @@ export default {
                 <canvas class="ua-canvas" id="ua-canvas"></canvas>
                 <canvas class="ua-minimap" id="ua-minimap" width="140" height="140"></canvas>
                 <div class="ua-hud" id="ua-hud"></div>
-                <div class="ua-help">Arrows / WASD move · <b>Space</b> interact · <b>I</b> inventory · Seed <b>${seed}</b></div>
+                <div class="ua-help">Arrows / WASD move · <b>Right-click + hold</b> walk · <b>Space</b> interact · <b>I</b> inventory · ${worldRow.name}</div>
                 <div class="ua-backpack" id="ua-backpack" style="display:none;">
                     <div class="ua-backpack-head">
                         <span class="ua-backpack-title">🎒 Backpack</span>
@@ -618,6 +714,34 @@ export default {
         }
         root.querySelector('#ua-backpack-close').addEventListener('click', toggleBackpack);
 
+        // Draggable backpack window — grab the title bar.
+        (function makeBackpackDraggable() {
+            const head = root.querySelector('.ua-backpack-head');
+            let dragging = false, dx = 0, dy = 0;
+            head.style.cursor = 'grab';
+            head.addEventListener('pointerdown', (ev) => {
+                if (ev.target.closest('.ua-backpack-close')) return;
+                dragging = true;
+                const rect = $pack.getBoundingClientRect();
+                dx = ev.clientX - rect.left;
+                dy = ev.clientY - rect.top;
+                // Remove the centering transform so left/top in px apply directly.
+                $pack.style.transform = 'none';
+                $pack.style.left = rect.left + 'px';
+                $pack.style.top  = rect.top  + 'px';
+                head.setPointerCapture?.(ev.pointerId);
+                head.style.cursor = 'grabbing';
+            });
+            head.addEventListener('pointermove', (ev) => {
+                if (!dragging) return;
+                $pack.style.left = (ev.clientX - dx) + 'px';
+                $pack.style.top  = (ev.clientY - dy) + 'px';
+            });
+            function stop() { dragging = false; head.style.cursor = 'grab'; }
+            head.addEventListener('pointerup', stop);
+            head.addEventListener('pointercancel', stop);
+        })();
+
         function renderBackpack() {
             $packBody.innerHTML = '';
             for (const it of inventory.items) {
@@ -705,12 +829,16 @@ export default {
         }
 
         canvas.addEventListener('pointerdown', (ev) => {
+            if (ev.button === 2) return; // right-click handled by mouseWalk below
             const rect = canvas.getBoundingClientRect();
             const { wx, wy } = canvasToWorldCell(ev.clientX - rect.left, ev.clientY - rect.top);
             const f = world.featureAt(wx, wy);
             if (!f || !f.item) return;
             const dist = Math.max(Math.abs(wx - player.wx), Math.abs(wy - player.wy));
             if (dist > 2) return;
+            // Auto-open the backpack so the drop target exists even if the
+            // user never pressed I first.
+            if ($pack.style.display === 'none') toggleBackpack();
             startDrag('world', { worldKey: f.itemKey, wx, wy }, ev.clientX, ev.clientY);
         });
 
@@ -737,18 +865,55 @@ export default {
         let rafId = 0;
         let saveTimer = 0;
 
+        // Mouse-walk (UO-style): right-click + hold to steer.
+        let mouseWalk = null; // { clientX, clientY } when active
+        canvas.addEventListener('contextmenu', (ev) => ev.preventDefault());
+        canvas.addEventListener('pointerdown', (ev) => {
+            if (ev.button === 2) {
+                ev.preventDefault();
+                canvas.setPointerCapture?.(ev.pointerId);
+                mouseWalk = { clientX: ev.clientX, clientY: ev.clientY };
+            }
+        });
+        canvas.addEventListener('pointermove', (ev) => {
+            if (mouseWalk) { mouseWalk.clientX = ev.clientX; mouseWalk.clientY = ev.clientY; }
+        });
+        function stopMouseWalk(ev) {
+            if (ev && ev.button !== 2) return;
+            mouseWalk = null;
+        }
+        canvas.addEventListener('pointerup', stopMouseWalk);
+        canvas.addEventListener('pointercancel', () => { mouseWalk = null; });
+
         function tryStepFromHeld() {
             if (player.moveT > 0) return;
-            // Movement maps: north = decrease y, south = +y, east = +x, west = -x
-            // In isometric with our formulas, "up" on screen corresponds to decreasing (x+y).
             let dx = 0, dy = 0;
             if (held.has('n')) { dx -= 1; dy -= 1; }
             if (held.has('s')) { dx += 1; dy += 1; }
             if (held.has('e')) { dx += 1; dy -= 1; }
             if (held.has('w')) { dx -= 1; dy += 1; }
-            // Normalize to one cardinal step (prefer axis-aligned).
-            if (dx !== 0 && dy !== 0) {
-                // Combine produced diagonal in world-space. That's fine — we allow diagonals.
+
+            // If right-mouse is held, steer toward the cursor. Compute the
+            // direction in screen space from the player's on-screen position
+            // to the cursor, then convert back to world delta via inverse iso.
+            if (!dx && !dy && mouseWalk) {
+                const rect = canvas.getBoundingClientRect();
+                const cx = mouseWalk.clientX - rect.left;
+                const cy = mouseWalk.clientY - rect.top;
+                const W = canvas.clientWidth, H = canvas.clientHeight;
+                const cam = camera(W, H, player.rx, player.ry);
+                const p = iso(player.wx, player.wy);
+                const px = p.x + cam.cx, py = p.y + cam.cy;
+                const vx = cx - px, vy = cy - py;
+                // Dead zone so tiny movements don't cause twitchy walking.
+                if (vx * vx + vy * vy < 22 * 22) return;
+                // Convert screen delta into world delta (inverse iso).
+                const a = vy * 2 / TILE_H;
+                const b = vx * 2 / TILE_W;
+                const wdx = (a + b) / 2;
+                const wdy = (a - b) / 2;
+                dx = Math.sign(wdx);
+                dy = Math.sign(wdy);
             }
             if (dx || dy) player.tryMove(Math.sign(dx), Math.sign(dy), world);
         }
@@ -936,7 +1101,9 @@ export default {
             saveTimer += dt;
             if (saveTimer > 2000) {
                 saveTimer = 0;
-                sdk.storage.set('state', { seed, px: player.wx, py: player.wy, timeOfDay }).catch(() => {});
+                sdk.storage.set(STATE_KEY, { seed, px: player.wx, py: player.wy, timeOfDay }).catch(() => {});
+                worldRow.lastPlayed = Date.now();
+                sdk.storage.set('worlds', worlds).catch(() => {});
             }
 
             rafId = requestAnimationFrame(loop);
