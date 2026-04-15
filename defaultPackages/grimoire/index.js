@@ -1253,5 +1253,41 @@ export default {
             showLauncher();
             await renderBody();
         }
+
+        // ── Handoff consumption (e.g. "Open in Grimoire" from File Explorer) ──
+        // Host writes { type:'file', name, content, mime } to localStorage
+        // under `aruta_handoff_grimoire` before opening our window. We consume
+        // it exactly once: route into the current virtual workspace (creating
+        // one if needed) and clear the key.
+        try {
+            const raw = localStorage.getItem('aruta_handoff_grimoire');
+            if (raw) {
+                localStorage.removeItem('aruta_handoff_grimoire');
+                const payload = JSON.parse(raw);
+                if (payload && payload.type === 'file' && typeof payload.name === 'string') {
+                    const content = typeof payload.content === 'string' ? payload.content : '';
+                    if (!(backend instanceof VirtualBackend)) {
+                        const existing = await ctx.storage.get('virtualFS');
+                        await openVirtualWorkspace(existing || { name: 'inbox', tree: { name: 'inbox', path: '', isDir: true, children: [] } });
+                    }
+                    // Unique filename if collision.
+                    let name = payload.name;
+                    const root = backend._tree;
+                    if (root.children.some(c => c.name === name)) {
+                        const dot = name.lastIndexOf('.');
+                        const base = dot > 0 ? name.slice(0, dot) : name;
+                        const ext  = dot > 0 ? name.slice(dot) : '';
+                        let n = 1;
+                        while (root.children.some(c => c.name === base + '-' + n + ext)) n++;
+                        name = base + '-' + n + ext;
+                    }
+                    const newPath = await backend.createFile('', name);
+                    await backend.writeFile(newPath, content);
+                    tree = await backend.list();
+                    renderFolderTree();
+                    ctx.toast?.('Opened ' + name + ' from File Explorer', 'info');
+                }
+            }
+        } catch (e) { console.warn('[grimoire] handoff failed', e); }
     }
 };

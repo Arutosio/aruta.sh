@@ -91,6 +91,14 @@ const PERM_REQUIRED = {
     'repos.update': 'install',
     'defaults.list': 'install',
     'defaults.restore': 'install',
+    'profile.isLinked': 'profile-fs',
+    'profile.list':     'profile-fs',
+    'profile.read':     'profile-fs',
+    'profile.write':    'profile-fs',
+    'profile.remove':   'profile-fs',
+    'install.listPackageFiles': 'install',
+    'install.readPackageFile':  'install',
+    handoff: 'windows',
 };
 
 async function _handleCall(appId, method, args) {
@@ -171,6 +179,45 @@ async function _handleCall(appId, method, args) {
             return { id: m.id, name: m.name, version: m.version, type: m.type, roles: m.roles };
         }
         case 'i18n': return (window.i18n?.[window.currentLang] || {})[args[0]] || args[0];
+        case 'profile.isLinked': return !!window.profile?.isLinked?.();
+        case 'profile.list':  return await window.profile.listFolder(String(args[0] || ''));
+        case 'profile.read':  return await window.profile.readFolderFile(String(args[0] || ''));
+        case 'profile.write': return await window.profile.writeFolderFile(String(args[0] || ''), args[1], args[2]);
+        case 'profile.remove': return await window.profile.removeFolderFile(String(args[0] || ''));
+        case 'install.listPackageFiles': {
+            const targetId = String(args[0] || '');
+            if (!targetId || !window.registry?.isInstalled(targetId)) return [];
+            const files = await window.registry.getFiles(targetId);
+            const out = [];
+            for (const [path, blob] of Object.entries(files || {})) {
+                out.push({ path, size: blob?.size || 0, mime: blob?.type || '' });
+            }
+            out.sort((a, b) => a.path.localeCompare(b.path));
+            return out;
+        }
+        case 'install.readPackageFile': {
+            const targetId = String(args[0] || '');
+            const path     = String(args[1] || '');
+            if (!targetId || !path) throw new Error('missing_args');
+            const files = await window.registry.getFiles(targetId);
+            const blob  = files?.[path];
+            if (!blob) throw new Error('not_found');
+            const bytes = new Uint8Array(await blob.arrayBuffer());
+            return { bytes, mime: blob.type || 'application/octet-stream' };
+        }
+        case 'handoff': {
+            const targetId = String(args[0] || '');
+            const payload  = args[1];
+            if (!targetId) throw new Error('missing_target');
+            if (!window.registry?.isInstalled(targetId)) throw new Error('target_not_installed');
+            let serialized;
+            try { serialized = JSON.stringify(payload); } catch { throw new Error('payload_not_serializable'); }
+            if (serialized.length > 2 * 1024 * 1024) throw new Error('payload_too_large');
+            try { localStorage.setItem('aruta_handoff_' + targetId, serialized); }
+            catch { throw new Error('handoff_storage_failed'); }
+            window.openWindow?.(targetId);
+            return true;
+        }
         default: throw new Error('unknown_method:' + method);
     }
 }
@@ -266,6 +313,18 @@ html,body{margin:0;padding:0;width:100%;height:100%;background:transparent;color
                         list: () => call('defaults.list'),
                         restore: (id) => call('defaults.restore', id),
                     },
+                    profile: {
+                        isLinked: () => call('profile.isLinked'),
+                        list:  (path) => call('profile.list',  path || ''),
+                        read:  (path) => call('profile.read',  path || ''),
+                        write: (path, bytes, mime) => call('profile.write', path || '', bytes, mime || ''),
+                        remove:(path) => call('profile.remove', path || ''),
+                    },
+                    install: {
+                        listFiles: (appId) => call('install.listPackageFiles', appId),
+                        readFile:  (appId, path) => call('install.readPackageFile', appId, path),
+                    },
+                    handoff: (appId, payload) => call('handoff', appId, payload),
                     permission: { request: (p) => call('permission.request', p) },
                 };
                 // sync theme from host before user CSS loads so the first paint

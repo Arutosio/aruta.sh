@@ -27,6 +27,23 @@
     // ── helpers ────────────────────────────────────────────
     function nowISO() { return new Date().toISOString(); }
 
+    function _mimeFromPath(path) {
+        const m = /\.([a-z0-9]+)$/i.exec(path || '');
+        const ext = m ? m[1].toLowerCase() : '';
+        const map = {
+            txt:'text/plain', md:'text/markdown', json:'application/json',
+            js:'text/javascript', mjs:'text/javascript', ts:'text/typescript',
+            css:'text/css', html:'text/html', xml:'application/xml',
+            yml:'text/yaml', yaml:'text/yaml', csv:'text/csv', log:'text/plain',
+            png:'image/png', jpg:'image/jpeg', jpeg:'image/jpeg', gif:'image/gif',
+            webp:'image/webp', svg:'image/svg+xml', ico:'image/x-icon',
+            mp4:'video/mp4', webm:'video/webm', mov:'video/quicktime',
+            mp3:'audio/mpeg', wav:'audio/wav', ogg:'audio/ogg',
+            zip:'application/zip', pdf:'application/pdf',
+        };
+        return map[ext] || 'application/octet-stream';
+    }
+
     /** True if window.crypto.subtle exists — used for the origin tag. */
     function originTag() { try { return location.origin || 'unknown'; } catch { return 'unknown'; } }
 
@@ -452,6 +469,30 @@
             await w.close();
         }
 
+        async _deleteFile(path) {
+            const parts = path.split('/');
+            const name  = parts.pop();
+            const dir   = await this._getDir(parts, false);
+            await dir.removeEntry(name);
+        }
+
+        async _listDir(path) {
+            const parts = path ? path.split('/').filter(Boolean) : [];
+            let dir = this.handle;
+            for (const p of parts) dir = await dir.getDirectoryHandle(p, { create: false });
+            const out = [];
+            for await (const [name, entry] of dir.entries()) {
+                if (entry.kind === 'file') {
+                    let size = 0;
+                    try { const f = await entry.getFile(); size = f.size; } catch {}
+                    out.push({ name, kind: 'file', size });
+                } else {
+                    out.push({ name, kind: 'dir' });
+                }
+            }
+            return out;
+        }
+
         async _readFile(path) {
             try {
                 const parts = path.split('/');
@@ -700,6 +741,28 @@
         hasHandle: async () => !!(await _getHandle().catch(() => null)),
         getLinkedHandle,
         isDisconnected: () => _disconnected,
+        // ── Raw folder I/O, used by the File Explorer app via ctx.profile.*
+        async listFolder(path) {
+            if (!_disk || _disconnected) throw new Error('profile_not_linked');
+            return _disk._listDir(path || '');
+        },
+        async readFolderFile(path) {
+            if (!_disk || _disconnected) throw new Error('profile_not_linked');
+            const bytes = await _disk._readFile(path);
+            if (!bytes) throw new Error('not_found');
+            return { bytes, mime: _mimeFromPath(path) };
+        },
+        async writeFolderFile(path, bytes, mime) {
+            if (!_disk || _disconnected) throw new Error('profile_not_linked');
+            const arr = bytes instanceof Uint8Array
+                ? bytes
+                : (typeof bytes === 'string' ? new TextEncoder().encode(bytes) : new Uint8Array(bytes || []));
+            await _disk._writeFile(path, arr);
+        },
+        async removeFolderFile(path) {
+            if (!_disk || _disconnected) throw new Error('profile_not_linked');
+            await _disk._deleteFile(path);
+        },
         /** Read the currently-linked folder and return a snapshot (or null). */
         __readLinkedFolder: async () => {
             if (!_disk) return null;

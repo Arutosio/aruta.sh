@@ -3,7 +3,7 @@
  * ╚══════════════════════════════════════════════════════════╝ */
 
 const PERM_KEY_PREFIX = 'aruta_perms_';
-const PERM_LIST = ['storage', 'notifications', 'windows', 'terminal', 'fetch', 'theme', 'clipboard'];
+const PERM_LIST = ['storage', 'notifications', 'windows', 'terminal', 'fetch', 'theme', 'clipboard', 'profile-fs'];
 
 function permLabel(perm) { return window.t()['perm_' + perm] || perm; }
 function permDesc(perm)  { return window.t()['perm_' + perm + '_desc'] || perm; }
