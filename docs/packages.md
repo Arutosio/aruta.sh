@@ -53,13 +53,16 @@ The zip **must** contain `manifest.json` and the entry module at its root (not n
 
 | Field | Required | Rules | Notes |
 |---|---|---|---|
-| `type` | ✅ | `"app"` \| `"command"` | |
+| `type` | ◐ | `"app"` \| `"command"` | legacy — still accepted. Modern manifests declare `roles` instead. |
+| `roles` | ◐ | `string[]` from `"app"`, `"command"` | modern replacement for `type`. At least one of `type` or `roles` must be present. A package can declare both roles to ship a hybrid app + CLI. SDK 2+ only. |
+| `entries` | — | `{ [role]: filename }` | optional per-role entry override. Keys must be a subset of `roles`. Falls back to `entry` / `index.js`. |
+| `commandAlias` | — | string | short name the terminal uses for this command (e.g. `"pkg"` for a package id like `"packagestore"`). Only meaningful when `roles` includes `"command"`. |
 | `id` | ✅ | `^[a-z0-9][a-z0-9_-]{1,40}$` | must be unique; reinstalling overwrites |
 | `name` | ✅ | non-empty string | display name in Start menu / Terminal |
 | `icon` | — | string | emoji or any single glyph |
 | `version` | ✅ | non-empty string | free-form (`"1.0.0"`, `"2025-01-beta"`, …) |
 | `author` | — | string | free-form |
-| `entry` | — | path inside zip | defaults to `index.js` |
+| `entry` | — | path inside zip | defaults to `index.js`. Shared fallback when `entries` is omitted. |
 | `permissions` | — | string[] | must be strings from the known-permission set in `sandbox.js:PERM_REQUIRED` — unknown values reject at install time. Still gated at runtime regardless of declaration. |
 | `allowOrigin` | — | boolean | opt-in: relax the iframe sandbox to `allow-scripts allow-same-origin allow-modals`. Required for `showDirectoryPicker` / FS Access API. See below. |
 | `category` | — | string | one of `info`, `games`, `tools`, `creativity`, `system`, `other`. Unknown values log a warning and fall back to `other`. |
@@ -138,9 +141,39 @@ export default {
 ```
 
 - `args` is a string array, already tokenized (quoted strings are respected: `greet "Stefano Aruta"` → `args[0] === 'Stefano Aruta'`).
-- Commands are invoked from the Terminal as `<id> [args...]`.
+- Commands are invoked from the Terminal as `<id> [args...]` — or as `<commandAlias> [args...]` when the manifest declares one.
 - `run()` can be async; the terminal waits for completion before showing the next prompt.
 - Built-in command names (`help`, `clear`, `install`, …) take precedence and cannot be shadowed.
+
+---
+
+## Multi-role packages
+
+A single package can declare **more than one role** by listing them in `roles`. Today the supported roles are `"app"` (windowed app in the desktop) and `"command"` (CLI entry reachable from the Terminal). The hybrid case — a package that ships both surfaces against the same id, storage, and permissions — is what the bundled **Package Manager** uses:
+
+```json
+{
+    "id": "packagestore",
+    "name": "Package Manager",
+    "icon": "📦",
+    "version": "2.0.0",
+    "minSdk": 2,
+    "roles": ["app", "command"],
+    "entries": { "app": "ui.js", "command": "cli.js" },
+    "commandAlias": "pkg",
+    "category": "system",
+    "permissions": ["fetch", "storage", "notifications", "install", "terminal"]
+}
+```
+
+Key points:
+
+- `roles` is the modern schema. Legacy manifests using `type: "app" | "command"` keep working forever — at boot they are normalized into `roles: [type]`, so every downstream check reads `roles.includes(...)`.
+- `entries.<role>` lets each role point at its own source file. Useful because app code runs inside a sandboxed iframe while command code runs on the host thread — mixing both into one file works but is fragile.
+- `commandAlias` separates the **package id** (technical, unique across the registry) from the **terminal verb** the user types. `packagestore` is the id; `pkg` is what you type.
+- Storage is shared: both roles open the same `aruta_app_<id>` IndexedDB, so settings persisted by the app show up in the CLI and vice versa.
+- Permissions are the union of everything either role needs. A hybrid package that calls `ctx.print` from its CLI must still declare `"terminal"` in `permissions`.
+- Hybrid packages require `minSdk: 2`. Older hosts reject install up-front instead of running half the package.
 
 ---
 
