@@ -242,6 +242,13 @@ html,body{margin:0;padding:0;width:100%;height:100%;background:transparent;color
 </style></head><body><div id="root"></div><script>
 (function(){
     const root = document.getElementById('root');
+    // Suppress the browser's native right-click menu inside app iframes too,
+    // except on editable fields where copy/paste/undo are expected.
+    document.addEventListener('contextmenu', (e) => {
+        const t = e.target;
+        if (t && t.closest && t.closest('input, textarea, [contenteditable="true"], [contenteditable=""]')) return;
+        e.preventDefault();
+    });
     const pending = new Map();
     let nextId = 1;
     function call(method, ...args) {

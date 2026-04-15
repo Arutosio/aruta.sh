@@ -114,6 +114,16 @@ function initStartMenu() {
  * menus / the magic portrait (they have their own behavior).
  * ──────────────────────────────── */
 function initDesktopContextMenu() {
+    // Site-wide: suppress the browser's native right-click menu so only
+    // aruta.sh's own menus show. Keep the native menu on editable fields
+    // (input, textarea, contenteditable) so copy / paste / undo still work.
+    document.addEventListener('contextmenu', (e) => {
+        const t = e.target;
+        if (!t || !t.closest) return;
+        if (t.closest('input, textarea, [contenteditable="true"], [contenteditable=""]')) return;
+        e.preventDefault();
+    });
+
     const desktop = document.getElementById('desktop');
     if (!desktop || !window.contextMenu) return;
     desktop.addEventListener('contextmenu', async (e) => {
