@@ -19,6 +19,12 @@ function tx(db, stores, mode) { return db.transaction(stores, mode); }
 const _manifests = new Map();
 const _commands = new Map();
 
+// Aliases owned by bundled hybrid packages. Only the canonical owner id is
+// allowed to claim its reserved alias — any third-party package trying to
+// squat on `pkg` / `roll` / `fortune` is rejected at saveManifest time.
+const RESERVED_OWNER = { pkg: 'packagestore', roll: 'dice-roller', fortune: 'oracle' };
+const RESERVED_ALIASES = new Set(Object.keys(RESERVED_OWNER));
+
 function loadIndex() {
     try {
         const raw = localStorage.getItem(INDEX_KEY);
@@ -181,6 +187,12 @@ function renderStartMenuItems() {
 
 async function saveManifest(manifest, files) {
     manifest = _normalize(manifest);
+    // Reject reserved commandAlias squatting up-front, before we touch IDB or
+    // the in-memory maps. Only the canonical owner id may claim the alias.
+    if (manifest.commandAlias && RESERVED_ALIASES.has(manifest.commandAlias)
+        && RESERVED_OWNER[manifest.commandAlias] !== manifest.id) {
+        throw new Error('reserved_alias:' + manifest.commandAlias);
+    }
     // Detect update: if the id is already known and anything about the
     // iframe-bound config changed (version, sandbox policy, entry, type/roles),
     // tear down the live iframe so the next openWindow remounts with the
@@ -234,7 +246,14 @@ async function saveManifest(manifest, files) {
             _commands.delete(prevKey);
         }
     }
-    if (manifest.roles.includes('command')) _commands.set(manifest.commandAlias || manifest.id, manifest);
+    if (manifest.roles.includes('command')) {
+        const key = manifest.commandAlias || manifest.id;
+        const existing = _commands.get(key);
+        if (existing && existing.id !== manifest.id) {
+            console.warn('[registry] commandAlias collision:', key, 'replacing', existing.id, 'with', manifest.id);
+        }
+        _commands.set(key, manifest);
+    }
     if (manifest.roles.includes('app')) {
         registerAppInOS(manifest);
         ensureAppWindow(manifest);

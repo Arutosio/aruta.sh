@@ -56,7 +56,7 @@ The zip **must** contain `manifest.json` and the entry module at its root (not n
 | `type` | ◐ | `"app"` \| `"command"` | legacy — still accepted. Modern manifests declare `roles` instead. |
 | `roles` | ◐ | `string[]` from `"app"`, `"command"` | modern replacement for `type`. At least one of `type` or `roles` must be present. A package can declare both roles to ship a hybrid app + CLI. SDK 2+ only. |
 | `entries` | — | `{ [role]: filename }` | optional per-role entry override. Keys must be a subset of `roles`. Falls back to `entry` / `index.js`. |
-| `commandAlias` | — | string | short name the terminal uses for this command (e.g. `"pkg"` for a package id like `"packagestore"`). Only meaningful when `roles` includes `"command"`. |
+| `commandAlias` | — | string | short name the terminal uses for this command (e.g. `"pkg"` for a package id like `"packagestore"`). Only meaningful when `roles` includes `"command"`. The aliases `pkg`, `roll`, `fortune` are **reserved** for their bundled-hybrid owners (`packagestore`, `dice-roller`, `oracle`) — any other package claiming them is rejected at install. Non-reserved collisions log a warning and the newer manifest wins. |
 | `id` | ✅ | `^[a-z0-9][a-z0-9_-]{1,40}$` | must be unique; reinstalling overwrites |
 | `name` | ✅ | non-empty string | display name in Start menu / Terminal |
 | `icon` | — | string | emoji or any single glyph |
