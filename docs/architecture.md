@@ -309,6 +309,16 @@ disables parallax, click spells, and rotation at boot, and `<html>` receives
 
 Custom-app windows additionally host a `.custom-app-content` div which `sandbox.mountApp` populates with the iframe.
 
+**Aero-style snap** (`applySnap` / `restoreFromSnap` / `updateSnapPreview` in `os-windows.js`): while `initDrag` is live, a golden preview overlay (`#win-snap-preview`) tracks the cursor. If the cursor enters a ~12 px strip along the left / right / top edge, releasing commits the window to that half of the desktop (or maximizes). A saved `_restoreRect` lets the next titlebar grab un-snap to the previous floating rect centered under the cursor. Snapped windows carry `.win-snapped` + `.win-snapped-left|right|max` and re-layout on viewport resize.
+
+## Right-click / context menus
+
+`JavaScript/contextmenu.js` owns a single floating `.ctx-menu` rendered at `document.body`. Any host code can call `window.contextMenu.show({x,y,items})` and await the chosen item id (or `null` on dismiss). Apps inside the sandbox call `ctx.contextMenu.show(...)`; the sandbox handler translates iframe-local coords to the viewport via `iframe.getBoundingClientRect()` before delegating, so menus can extend past the app's window. Dismissal is global: outside-click (capture phase), Escape, scroll, window blur, or the next `contextmenu` event.
+
+The native browser menu is suppressed site-wide — both on the host document and inside every sandboxed iframe (`sandbox.js:IFRAME_BOOT`) — except on `<input>`, `<textarea>`, and `contenteditable` elements where copy/paste/undo are expected. App-level right-click handlers should `ev.preventDefault()` before awaiting `ctx.contextMenu.show`, as usual.
+
+Host-provided menus today: desktop background (Appearance / Open Files / Refresh) and start-menu items (Open / About / Uninstall — the last only for user-installed packages).
+
 ## Theme propagation
 
 `core.js:toggleTheme` is the single mutation point. After flipping `data-theme` on `<html>` and persisting `aruta_theme`, it calls `window.sandbox.broadcastTheme(currentTheme)`, which postMessages every mounted iframe `{type:'theme', value}`. The in-iframe bootstrap (`IFRAME_BOOT`) listens for that envelope and writes it onto its own `<html>` `data-theme`, so apps that key off `[data-theme="light"]` selectors restyle live with no permission prompt.

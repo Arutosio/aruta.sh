@@ -194,6 +194,8 @@ Open a host-rendered context menu. Coordinates are iframe-local (`ev.clientX` / 
 
 Returns the chosen item's `id` as a string, or `null` if the user dismissed the menu (click outside, Escape, scroll, blur). No permission required — it's pure UI surface.
 
+> The browser's native right-click menu is suppressed inside app iframes (except on `<input>`, `<textarea>`, and `contenteditable` elements), so calling `ctx.contextMenu.show` is the expected replacement. Always `ev.preventDefault()` on your `contextmenu` listener before awaiting the call.
+
 ```js
 el.addEventListener('contextmenu', async (ev) => {
     ev.preventDefault();
