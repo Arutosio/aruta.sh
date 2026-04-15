@@ -19,6 +19,7 @@ const QUOTES = [
     ['Programs must be written for people to read, and only incidentally for machines to execute.', 'Harold Abelson'],
     ['A wizard is never late, nor is he early. He arrives precisely when he means to.', 'Gandalf'],
     ['Make it work, make it right, make it fast.', 'Kent Beck'],
+    ['The future is already here — it\u2019s just not evenly distributed.', 'William Gibson'],
 ];
 
 export default {
