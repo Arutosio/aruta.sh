@@ -223,7 +223,7 @@ Reinstalling an existing `id` replaces the package (update flow).
 
 Install, update and uninstall all flow through the **📦 Package Store** (System category) or the **`pkg`** CLI. Settings → 🔐 Permissions manages only per-app permission grants.
 
-- **📦 Package Store → Installed** — every installed package with uninstall + update-available actions. A "Show defaults" toggle reveals bundled system packages (hidden by default).
+- **📦 Package Store → Installed** — a single unified view for every installed package *and* every uninstalled default. Filter chips (`All` / `User` / `Defaults` / `Updates`) scope what's shown; each row carries the right action for its state (Uninstall, Update, or Reinstall-default).
 - **Settings → 🔐 Permissions** — per-permission toggles for each installed app/command. No install/uninstall UI here; use the Package Store.
 - **Terminal built-ins:**
     - `apps` — list installed apps
