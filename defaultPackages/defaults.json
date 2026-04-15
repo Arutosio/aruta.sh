@@ -13,6 +13,7 @@
         { "id": "snake",        "files": ["manifest.json", "index.js", "style.css"] },
         { "id": "packagestore", "files": ["manifest.json", "ui.js", "cli.js", "style.css"] },
         { "id": "filemanager",  "files": ["manifest.json", "index.js", "style.css"] },
-        { "id": "arcaneduel",   "files": ["manifest.json", "index.js", "style.css"] }
+        { "id": "arcaneduel",   "files": ["manifest.json", "index.js", "style.css"] },
+        { "id": "ultima-aruta", "files": ["manifest.json", "index.js", "style.css"] }
     ]
 }
