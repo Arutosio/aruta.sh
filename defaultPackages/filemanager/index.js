@@ -394,60 +394,18 @@ export default {
             return `<button class="fm-row-more" data-row-more title="More actions">⋯</button>`;
         }
 
-        let _popup = null;
-        function closePopup() {
-            if (_popup) { _popup.remove(); _popup = null; }
-            document.removeEventListener('click', _popupDocHandler, true);
-            document.removeEventListener('keydown', _popupKeyHandler, true);
-        }
-        function _popupDocHandler(ev) {
-            if (_popup && !_popup.contains(ev.target)) closePopup();
-        }
-        function _popupKeyHandler(ev) { if (ev.key === 'Escape') closePopup(); }
-
-        function openRowMenu(anchorBtn, it) {
-            closePopup();
+        async function openRowMenu(anchorBtn, it) {
             const writable = !!backend && backend.isWritable?.() && currentSource !== 'packages';
             const canHandoff = isTextLike(it.name, it.mime) && currentSource !== 'packages';
             const items = [];
-            items.push({ act: 'download', label: '⬇  Download' });
-            if (canHandoff) items.push({ act: 'openGrimoire', label: '📜  Open in Grimoire' });
-            if (writable) items.push({ sep: true });
-            if (writable) items.push({ act: 'rename', label: '✎  Rename' });
-            if (writable) items.push({ act: 'delete', label: '🗑  Delete', danger: true });
-
-            const pop = document.createElement('div');
-            pop.className = 'fm-popup';
-            pop.innerHTML = items.map(i => i.sep
-                ? `<div class="fm-popup-sep"></div>`
-                : `<div class="fm-popup-item${i.danger ? ' danger' : ''}" data-act="${i.act}">${i.label}</div>`
-            ).join('');
-            document.body.appendChild(pop);
-
-            // Position below-right of the anchor, clamp to viewport.
+            items.push({ id: 'download', label: 'Download', icon: '⬇' });
+            if (canHandoff) items.push({ id: 'openGrimoire', label: 'Open in Grimoire', icon: '📜' });
+            if (writable) items.push({ separator: true });
+            if (writable) items.push({ id: 'rename', label: 'Rename', icon: '✎' });
+            if (writable) items.push({ id: 'delete', label: 'Delete', icon: '🗑', danger: true });
             const r = anchorBtn.getBoundingClientRect();
-            const popW = pop.offsetWidth, popH = pop.offsetHeight;
-            let left = r.right - popW;
-            let top  = r.bottom + 4;
-            if (left < 4) left = 4;
-            if (top + popH > window.innerHeight - 4) top = r.top - popH - 4;
-            pop.style.left = left + 'px';
-            pop.style.top  = top  + 'px';
-
-            pop.querySelectorAll('[data-act]').forEach(el => {
-                el.addEventListener('click', async (ev) => {
-                    ev.stopPropagation();
-                    const act = el.dataset.act;
-                    closePopup();
-                    await runRowAction(act, it);
-                });
-            });
-            _popup = pop;
-            // Defer handler binding so the triggering click doesn't immediately close.
-            setTimeout(() => {
-                document.addEventListener('click', _popupDocHandler, true);
-                document.addEventListener('keydown', _popupKeyHandler, true);
-            }, 0);
+            const choice = await ctx.contextMenu.show({ x: r.right, y: r.bottom, items });
+            if (choice) await runRowAction(choice, it);
         }
 
         function renderEntries(items) {
@@ -466,6 +424,11 @@ export default {
             $tree.querySelectorAll('.fm-entry').forEach((el) => {
                 const idx = Number(el.dataset.idx);
                 const it = items[idx];
+                el.addEventListener('contextmenu', (ev) => {
+                    if (it.kind !== 'file') return;
+                    ev.preventDefault();
+                    openRowMenu(el, it);
+                });
                 el.addEventListener('click', async (ev) => {
                     const moreBtn = ev.target.closest('[data-row-more]');
                     if (moreBtn) {

@@ -473,6 +473,47 @@
 .os-window.win-snapped { border-radius: 0; }
 .os-window.win-snapped .win-resize { display: none; }
 
+/* Shared right-click / context menu (.ctx-menu) — rendered at document.body level */
+.ctx-menu {
+    position: fixed;
+    z-index: 10000;
+    min-width: 180px;
+    background: rgba(22, 18, 30, 0.98);
+    color: var(--text, #e8e6d9);
+    border: 1px solid rgba(255, 200, 87, 0.35);
+    border-radius: var(--radius-sm, 5px);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+    padding: 4px;
+    font-family: var(--font-body, 'Inter', system-ui, sans-serif);
+    font-size: var(--text-base, 13px);
+    animation: ctx-pop 120ms ease-out;
+}
+[data-theme="light"] .ctx-menu {
+    background: rgba(255, 252, 240, 0.98);
+    color: #2a241a;
+}
+@keyframes ctx-pop { from { opacity: 0; transform: scale(0.96); } to { opacity: 1; transform: scale(1); } }
+
+.ctx-menu .ctx-item {
+    display: flex; align-items: center; gap: 10px;
+    padding: 6px 12px;
+    border-radius: 3px;
+    cursor: pointer;
+    white-space: nowrap;
+    outline: none;
+}
+.ctx-menu .ctx-item:hover:not(.ctx-disabled),
+.ctx-menu .ctx-item.focus:not(.ctx-disabled) {
+    background: rgba(255, 200, 87, 0.18);
+}
+.ctx-menu .ctx-item.ctx-danger { color: #fb7185; }
+.ctx-menu .ctx-item.ctx-danger:hover:not(.ctx-disabled),
+.ctx-menu .ctx-item.ctx-danger.focus:not(.ctx-disabled) { background: rgba(251, 113, 133, 0.18); }
+.ctx-menu .ctx-item.ctx-disabled { opacity: 0.4; cursor: default; }
+.ctx-menu .ctx-icon { width: 18px; text-align: center; flex: none; opacity: 0.9; }
+.ctx-menu .ctx-label { flex: 1; }
+.ctx-menu .ctx-sep { height: 1px; background: rgba(255, 200, 87, 0.2); margin: 4px 2px; }
+
 /* Aero-style snap preview overlay shown while dragging near an edge */
 #win-snap-preview {
     position: fixed;

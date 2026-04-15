@@ -61,14 +61,87 @@ function initStartMenu() {
 
     // Close menu when clicking outside
     document.addEventListener('click', (e) => {
+        // Ignore clicks that are consumed by a floating context menu (the
+        // user is interacting with a right-click menu — don't collapse the
+        // start menu underneath).
+        if (e.target.closest && e.target.closest('.ctx-menu')) return;
         if (isOpen && !menu.contains(e.target) && !btn.contains(e.target)) {
             closeMenu();
+        }
+    });
+
+    // Right-click on a start item → per-app menu (Open / About / Uninstall)
+    menu.addEventListener('contextmenu', async (e) => {
+        const row = e.target.closest('.start-item');
+        if (!row || !menu.contains(row)) return;
+        e.preventDefault();
+        const id = row.dataset.window || '';
+        const manifest = window.registry?.getManifest?.(id);
+        const isBuiltin = !manifest || manifest._origin === 'default' || ['home','about','live','links','terminal','settings'].includes(id);
+
+        const items = [
+            { id: 'open',      label: 'Open',      icon: '↗' },
+            { id: 'about',     label: 'About',     icon: 'ⓘ' },
+        ];
+        if (!isBuiltin) items.push({ separator: true }, { id: 'uninstall', label: 'Uninstall', icon: '🗑', danger: true });
+
+        const choice = await window.contextMenu.show({ x: e.clientX, y: e.clientY, items });
+        if (choice === 'open') { openWindow(id); closeMenu(); }
+        else if (choice === 'about') {
+            const m = manifest || { id, name: row.textContent.trim(), version: '—' };
+            const v = m.version ? ' v' + m.version : '';
+            window.showToast?.((m.name || m.id) + v + ' — ' + (m.id || ''), 'info', 3000);
+        }
+        else if (choice === 'uninstall') {
+            const confirmFn = window.showConfirm || ((msg) => Promise.resolve(confirm(msg)));
+            const ok = await confirmFn('Uninstall "' + (manifest?.name || id) + '"?', { type: 'warning' });
+            if (!ok) return;
+            try { await window.registry?.uninstall(id); window.showToast?.('Uninstalled', 'success'); }
+            catch (err) { window.showToast?.('Uninstall failed: ' + (err.message || err), 'error'); }
         }
     });
 
     // Close menu on Escape
     document.addEventListener('keydown', (e) => {
         if (e.key === 'Escape' && isOpen) closeMenu();
+    });
+}
+
+/* ────────────────────────────────
+ * § DESKTOP CONTEXT MENU
+ * Right-click on the empty desktop background → Appearance,
+ * Open Files, Refresh. Skips clicks on windows / taskbar /
+ * menus / the magic portrait (they have their own behavior).
+ * ──────────────────────────────── */
+function initDesktopContextMenu() {
+    const desktop = document.getElementById('desktop');
+    if (!desktop || !window.contextMenu) return;
+    desktop.addEventListener('contextmenu', async (e) => {
+        // Bail if the event target is inside something interactive.
+        const skipSel = '.os-window, .taskbar, .start-menu, .portrait-img-wrap, .magic-circle-frame, .ctx-menu, input, textarea, [contenteditable="true"]';
+        if (e.target.closest && e.target.closest(skipSel)) return;
+        e.preventDefault();
+        const choice = await window.contextMenu.show({
+            x: e.clientX, y: e.clientY,
+            items: [
+                { id: 'appearance', label: 'Appearance settings', icon: '🎨' },
+                { id: 'files',      label: 'Open Files',          icon: '📁' },
+                { separator: true },
+                { id: 'refresh',    label: 'Refresh',             icon: '⟳' },
+            ],
+        });
+        if (choice === 'appearance') {
+            openWindow('settings');
+            // Defer: the settings panel exists after openWindow.
+            setTimeout(() => {
+                const btn = document.querySelector('.settings-cat[data-cat="appearance"]');
+                btn?.click();
+            }, 60);
+        } else if (choice === 'files') {
+            openWindow('filemanager');
+        } else if (choice === 'refresh') {
+            location.reload();
+        }
     });
 }
 

@@ -179,6 +179,20 @@ async function _handleCall(appId, method, args) {
             return { id: m.id, name: m.name, version: m.version, type: m.type, roles: m.roles };
         }
         case 'i18n': return (window.i18n?.[window.currentLang] || {})[args[0]] || args[0];
+        case 'contextMenu.show': {
+            if (!window.contextMenu?.show) return null;
+            const opts = args[0] || {};
+            // Translate iframe-local coords to the host viewport.
+            let x = Number(opts.x) || 0;
+            let y = Number(opts.y) || 0;
+            const iframe = _mounted.get(appId)?.iframe;
+            if (iframe) {
+                const r = iframe.getBoundingClientRect();
+                x += r.left; y += r.top;
+            }
+            const items = Array.isArray(opts.items) ? opts.items : [];
+            return await window.contextMenu.show({ x, y, items });
+        }
         case 'profile.isLinked': return !!window.profile?.isLinked?.();
         case 'profile.list':  return await window.profile.listFolder(String(args[0] || ''));
         case 'profile.read':  return await window.profile.readFolderFile(String(args[0] || ''));
@@ -325,6 +339,9 @@ html,body{margin:0;padding:0;width:100%;height:100%;background:transparent;color
                         readFile:  (appId, path) => call('install.readPackageFile', appId, path),
                     },
                     handoff: (appId, payload) => call('handoff', appId, payload),
+                    contextMenu: {
+                        show: (opts) => call('contextMenu.show', opts || {}),
+                    },
                     permission: { request: (p) => call('permission.request', p) },
                 };
                 // sync theme from host before user CSS loads so the first paint

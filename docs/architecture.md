@@ -142,12 +142,13 @@ sequenceDiagram
 | [`JavaScript/terminal.js`](../JavaScript/terminal.js) | Shell UI, parser (quoted strings), history, built-in commands. Unknown names fall through to `registry.listCommands()` → `sandbox.runCommand()` |
 | [`JavaScript/defaults.js`](../JavaScript/defaults.js) | Auto-installs bundled `defaultPackages/*` on first boot. Packages fetched and installed in parallel (one burst, not a serial chain). Respects a blacklist so uninstalls persist. Re-runs when a default's `version` changes |
 | [`JavaScript/profile.js`](../JavaScript/profile.js) | Portable profile snapshot/restore. `DiskBackend` mirrors state to a folder via FS Access API (Chromium); `exportZip`/`importZip` work in any browser. Boot-gates registry/defaults via `window.__arutaProfileReady`. See [profile.md](./profile.md) |
+| [`JavaScript/contextmenu.js`](../JavaScript/contextmenu.js) | Shared right-click / popup menu. `window.contextMenu.show({x,y,items})` renders a single floating menu at `document.body`, with viewport clamping, keyboard nav (↑↓ Enter Esc), ARIA roles, and auto-dismiss on outside-click / scroll / blur. Used by host code and by apps via `ctx.contextMenu.show` (host translates iframe-local coords to the viewport). |
 | [`JavaScript/appearance.js`](../JavaScript/appearance.js) | User-customizable look: background (image or looping video), hero portrait, and display name. Binaries live in IDB `aruta_appearance` (+ metadata in `localStorage.aruta_appearance_meta`); `profile.js` slurps both into the `appearance/` namespace of every snapshot so folder sync and .zip export carry them automatically. Applied to the DOM after the profile gate in `app.js` |
 | [`JavaScript/zip.js`](../JavaScript/zip.js) | STORE-only zip codec (`encode`/`decode`). Used by `profile.js` and Grimoire's workspace export. No compression — keeps the file purely a transport container |
 
 Script load order in `index.html`:
 ```
-config.js  core.js  util.js  zip.js  db.js  storage.js  profile.js  appearance.js
+config.js  core.js  util.js  zip.js  db.js  storage.js  profile.js  appearance.js  contextmenu.js
 effects.js  desktop.js  content.js  extras.js
 os-windows.js  os.js  os-settings.js  os-sysinfo.js
 permissions.js  registry.js  sandbox.js  installer.js  defaults.js  terminal.js  app.js

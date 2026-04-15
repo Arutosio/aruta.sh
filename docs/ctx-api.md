@@ -185,6 +185,32 @@ Today the only documented consumer is **Grimoire**, which accepts `{ type: 'file
 
 ---
 
+## Context menu — no permission
+
+### `ctx.contextMenu.show({ x, y, items }): Promise<string | null>`
+Open a host-rendered context menu. Coordinates are iframe-local (`ev.clientX` / `ev.clientY` of the triggering event); the host translates them to the viewport and can extend the menu beyond your window's bounds.
+
+`items` is an array of `{ id, label, icon?, danger?, disabled?, separator? }`. Items with `separator: true` render as dividers.
+
+Returns the chosen item's `id` as a string, or `null` if the user dismissed the menu (click outside, Escape, scroll, blur). No permission required — it's pure UI surface.
+
+```js
+el.addEventListener('contextmenu', async (ev) => {
+    ev.preventDefault();
+    const choice = await ctx.contextMenu.show({
+        x: ev.clientX, y: ev.clientY,
+        items: [
+            { id: 'rename', label: 'Rename', icon: '✎' },
+            { separator: true },
+            { id: 'delete', label: 'Delete', icon: '🗑', danger: true },
+        ],
+    });
+    if (choice === 'delete') { /* ... */ }
+});
+```
+
+---
+
 ## What's NOT in `ctx`
 
 Intentional omissions (to keep the surface small — you can still do these yourself inside your iframe / worker):

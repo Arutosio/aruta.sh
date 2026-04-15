@@ -40,6 +40,7 @@ function showApp() {
     updateTabTitle('home');
     initFireflies();
     initMagicCircleInteraction();
+    initDesktopContextMenu();
     initAmbientSound();
     initAchievements();
     initSysInfo();
