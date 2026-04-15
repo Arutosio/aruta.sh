@@ -3,6 +3,22 @@
  * ║  Magic Circle, Portrait, Title, Flying Letters          ║
  * ╚══════════════════════════════════════════════════════════╝ */
 
+/* § USER BACKGROUND (custom image/video, set via Appearance settings)
+ * Sits below .magic-bg so orbs/fog layer on top. User can disable
+ * the magic effects from the Performance panel to see it clean.
+ * ──────────────────────────────── */
+#user-bg-layer {
+    position: fixed; inset: 0;
+    z-index: -1; pointer-events: none; overflow: hidden;
+    background: transparent;
+}
+#user-bg-layer .user-bg-media {
+    position: absolute; inset: 0;
+    width: 100%; height: 100%;
+    object-fit: cover; object-position: center;
+    display: block;
+}
+
 /* § MAGIC BACKGROUND (GPU-only, no canvas)
  * Two radial gradient pseudo-elements that drift slowly
  * via CSS animations. Parallax offset via --px/--py custom

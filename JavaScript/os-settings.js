@@ -223,6 +223,7 @@ function initSettings() {
     }
 
     initProfileSettings();
+    initAppearanceCustom();
 
     // Reset button — clears all aruta_ settings from localStorage
     const resetBtn = document.getElementById('settings-reset');
@@ -250,6 +251,9 @@ function initSettings() {
             document.querySelectorAll('.settings-color-btn').forEach(b => b.classList.remove('active'));
             const goldBtn = document.querySelector('.settings-color-btn[data-accent="gold"]');
             if (goldBtn) goldBtn.classList.add('active');
+            // Reset appearance customizations (background, portrait, name)
+            window.appearance?.reset();
+            refreshAppearanceUI();
             const t = window.t();
             if (window.showToast) showToast(t.toast_reset_done || 'Settings restored to defaults', 'success');
         });
@@ -272,6 +276,7 @@ function initSettings() {
             // Delete IndexedDB: package registry + each app's private storage DB
             try {
                 indexedDB.deleteDatabase('aruta_packages');
+                indexedDB.deleteDatabase('aruta_appearance');
                 for (const id of appIds) indexedDB.deleteDatabase('aruta_app_' + id);
             } catch (e) { console.warn('indexedDB wipe failed', e); }
             if (window.showToast) showToast(t.toast_wipe_done || 'Local data wiped. Reloading…', 'warning', 1200);
@@ -590,4 +595,107 @@ function initProfileSettings() {
     });
 
     refreshStatus();
+}
+
+
+/* ────────────────────────────────
+ * § APPEARANCE CUSTOM — Background / Portrait / Display name
+ * Inputs live in the Appearance panel; persistence is handled by
+ * window.appearance (IDB `aruta_appearance` + LS `aruta_appearance_meta`).
+ * ──────────────────────────────── */
+function refreshAppearanceUI() {
+    if (!window.appearance) return;
+    const state = window.appearance.get();
+    const bgStatus = document.getElementById('settings-bg-status');
+    const portraitStatus = document.getElementById('settings-portrait-status');
+    const nameInput = document.getElementById('settings-name-input');
+    if (bgStatus) bgStatus.textContent = state.background
+        ? (state.background.filename || (state.background.kind === 'video' ? 'Video' : 'Image'))
+        : 'Default';
+    if (portraitStatus) portraitStatus.textContent = state.portrait
+        ? (state.portrait.filename || 'Image')
+        : 'Default';
+    if (nameInput) nameInput.value = state.name || '';
+}
+
+function initAppearanceCustom() {
+    if (!window.appearance) return;
+
+    const bgPick    = document.getElementById('settings-bg-pick');
+    const bgClear   = document.getElementById('settings-bg-clear');
+    const bgFile    = document.getElementById('settings-bg-file');
+    const portraitPick  = document.getElementById('settings-portrait-pick');
+    const portraitClear = document.getElementById('settings-portrait-clear');
+    const portraitFile  = document.getElementById('settings-portrait-file');
+    const nameInput = document.getElementById('settings-name-input');
+    const nameClear = document.getElementById('settings-name-clear');
+
+    function toastFor(res) {
+        if (res?.ok) return;
+        const t = (window.t && window.t()) || {};
+        if (res?.reason === 'too_big') {
+            const mb = Math.round((res.cap || 0) / (1024 * 1024));
+            window.showToast?.((t.toast_appearance_too_big || 'File too large — max ') + mb + ' MB', 'warning');
+        } else if (res?.reason === 'bad_type') {
+            window.showToast?.(t.toast_appearance_bad_type || 'Unsupported file type', 'warning');
+        } else if (res?.reason === 'image_only') {
+            window.showToast?.(t.toast_appearance_image_only || 'Portrait must be an image', 'warning');
+        } else {
+            window.showToast?.(t.toast_appearance_failed || 'Could not apply file', 'error');
+        }
+    }
+
+    if (bgPick && bgFile) {
+        bgPick.addEventListener('click', () => bgFile.click());
+        bgFile.addEventListener('change', async () => {
+            const f = bgFile.files?.[0];
+            bgFile.value = '';
+            if (!f) return;
+            const res = await window.appearance.setBackground(f);
+            toastFor(res);
+            refreshAppearanceUI();
+        });
+    }
+    if (bgClear) {
+        bgClear.addEventListener('click', async () => {
+            await window.appearance.setBackground(null);
+            refreshAppearanceUI();
+        });
+    }
+
+    if (portraitPick && portraitFile) {
+        portraitPick.addEventListener('click', () => portraitFile.click());
+        portraitFile.addEventListener('change', async () => {
+            const f = portraitFile.files?.[0];
+            portraitFile.value = '';
+            if (!f) return;
+            const res = await window.appearance.setPortrait(f);
+            toastFor(res);
+            refreshAppearanceUI();
+        });
+    }
+    if (portraitClear) {
+        portraitClear.addEventListener('click', async () => {
+            await window.appearance.setPortrait(null);
+            refreshAppearanceUI();
+        });
+    }
+
+    if (nameInput) {
+        let debounce = null;
+        nameInput.addEventListener('input', () => {
+            if (debounce) clearTimeout(debounce);
+            debounce = setTimeout(() => {
+                window.appearance.setName(nameInput.value);
+            }, 200);
+        });
+    }
+    if (nameClear && nameInput) {
+        nameClear.addEventListener('click', () => {
+            nameInput.value = '';
+            window.appearance.setName(null);
+        });
+    }
+
+    refreshAppearanceUI();
 }

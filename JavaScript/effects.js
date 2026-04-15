@@ -482,7 +482,9 @@ function flyingLettersInit() {
     if (!el || titleAnimated) return;
     titleAnimated = true;
 
-    const text = 'Aruta.sh';
+    // Use whatever text is currently in .char-name (may be a user-custom
+    // display name from Appearance settings). Fall back to the default.
+    const text = (el.textContent && el.textContent.trim()) || 'Aruta.sh';
     const runeColor = _isLight ? 'rgb(139, 105, 20)' : 'rgb(167, 139, 250)';
 
     el.textContent = '';

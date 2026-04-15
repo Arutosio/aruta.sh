@@ -53,6 +53,9 @@ function showApp() {
         let reloading = false;
         try { reloading = await (window.__arutaProfileReady || Promise.resolve(false)); } catch {}
         if (reloading) return;
+        // Apply user-customizable appearance (background/portrait/name) after the
+        // profile gate so folder-linked binaries are already in IDB.
+        try { await window.appearance?.apply(); } catch (e) { console.warn('[appearance] apply failed', e); }
         if (window.registry) await window.registry.bootstrap();
         if (window.defaults) await window.defaults.bootstrap();
     })();

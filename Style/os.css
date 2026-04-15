@@ -613,6 +613,21 @@
 }
 .settings-color-custom.active .custom-swatch { filter: drop-shadow(0 0 3px rgba(0, 0, 0, 0.9)); }
 
+/* Appearance: inline action rows (upload/reset buttons + text input + status) */
+.settings-actions {
+    display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+}
+.settings-status {
+    font-size: var(--text-sm); color: var(--text-dim);
+    max-width: 180px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.settings-input {
+    padding: 6px 12px; background: var(--input-bg);
+    border: 1px solid var(--input-border); border-radius: var(--radius-sm);
+    color: var(--input-text); font-family: inherit; font-size: var(--text-base);
+    min-width: 180px;
+}
+
 /* Language select in settings */
 .settings-select {
     padding: 6px 12px; background: var(--input-bg);

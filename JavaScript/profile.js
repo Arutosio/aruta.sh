@@ -181,6 +181,11 @@
             } catch (e) { console.warn('[profile] app dump failed', m.id, e); }
         }
 
+        // Appearance assets (background/portrait binaries).
+        let appearance = [];
+        try { appearance = (await window.appearance?.dumpForSnapshot?.()) || []; }
+        catch (e) { console.warn('[profile] appearance dump failed', e); }
+
         return {
             version:   PROFILE_VERSION,
             createdAt: nowISO(),
@@ -189,6 +194,7 @@
             localStorage: ls,
             registry: { manifests, files: filesArr },
             apps,
+            appearance,
         };
     }
 
@@ -215,7 +221,33 @@
         for (const [appId, kv] of Object.entries(snap.apps || {})) {
             out.set('apps/' + appId + '.json', JSON.stringify(kv, null, 2));
         }
+        // Appearance assets: binary per key + meta.json describing kind/mime/filename.
+        const appearance = snap.appearance || [];
+        if (appearance.length) {
+            const appMeta = [];
+            for (const a of appearance) {
+                const ext = _extFromMime(a.mime) || 'bin';
+                const path = 'appearance/' + a.key + '.' + ext;
+                out.set(path, a.bytes instanceof Uint8Array ? a.bytes : new Uint8Array(a.bytes || []));
+                appMeta.push({ key: a.key, kind: a.kind || '', mime: a.mime || '', filename: a.filename || '', path });
+            }
+            out.set('appearance/meta.json', JSON.stringify(appMeta, null, 2));
+        }
         return out;
+    }
+
+    function _extFromMime(mime) {
+        if (!mime) return '';
+        if (mime === 'video/mp4') return 'mp4';
+        if (mime === 'video/webm') return 'webm';
+        if (mime === 'image/png') return 'png';
+        if (mime === 'image/jpeg' || mime === 'image/jpg') return 'jpg';
+        if (mime === 'image/gif') return 'gif';
+        if (mime === 'image/webp') return 'webp';
+        if (mime === 'image/svg+xml') return 'svg';
+        // Fallback: strip subtype after last '/'
+        const m = /\/([a-z0-9.+-]+)$/i.exec(mime);
+        return m ? m[1].replace(/[^a-z0-9]/gi, '') : 'bin';
     }
 
     /** Re-hydrate a snapshot object from a Map<path, Uint8Array|string>. */
@@ -254,6 +286,16 @@
             try { apps[appId] = JSON.parse(asText(value)); } catch { apps[appId] = {}; }
         }
 
+        // Appearance assets: read meta.json for kind/mime, then pull bytes from path.
+        const appearance = [];
+        const appMeta = parseJSON('appearance/meta.json', []);
+        for (const m of appMeta) {
+            const raw = map.get(m.path);
+            if (raw == null) continue;
+            const bytes = (typeof raw === 'string') ? new TextEncoder().encode(raw) : raw;
+            appearance.push({ key: m.key, kind: m.kind || '', mime: m.mime || 'application/octet-stream', filename: m.filename || '', bytes });
+        }
+
         return {
             version: meta.version || 1,
             createdAt: meta.createdAt || nowISO(),
@@ -262,6 +304,7 @@
             localStorage: ls,
             registry: { manifests, files },
             apps,
+            appearance,
         };
     }
 
@@ -309,6 +352,13 @@
             };
             req.onerror = () => reject(req.error);
         });
+
+        // Rebuild aruta_appearance (background/portrait binaries).
+        try {
+            if (window.appearance?.restoreFromSnapshot) {
+                await window.appearance.restoreFromSnapshot(snap.appearance || []);
+            }
+        } catch (e) { console.warn('[profile] appearance restore failed', e); }
 
         // Rebuild each aruta_app_<id>
         for (const [appId, kv] of Object.entries(snap.apps || {})) {
@@ -466,6 +516,17 @@
             for (const p of appList) {
                 const b = await this._readFile(p);
                 if (b) map.set(p, b);
+            }
+            // Appearance meta + binaries
+            const appearanceMetaRaw = await this._readFile('appearance/meta.json');
+            if (appearanceMetaRaw) {
+                map.set('appearance/meta.json', appearanceMetaRaw);
+                const appearanceList = await this._listAll('appearance');
+                for (const p of appearanceList) {
+                    if (p === 'appearance/meta.json') continue;
+                    const b = await this._readFile(p);
+                    if (b) map.set(p, b);
+                }
             }
             return snapshotFromBinary(map);
         }

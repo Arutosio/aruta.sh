@@ -78,6 +78,9 @@
     <div class="cursor-dot"></div>
 </div>
 
+<!-- ░░ USER BACKGROUND (image/video set via Appearance settings) ░░ -->
+<div id="user-bg-layer" aria-hidden="true" style="display:none;"></div>
+
 <!-- ░░ CSS MAGIC BACKGROUND (no canvas, GPU only) ░░ -->
 <div class="magic-bg" aria-hidden="true">
     <svg class="bg-ring bg-ring-1" viewBox="0 0 900 900">
@@ -453,6 +456,31 @@
                                 </select>
                             </div>
                             <div class="settings-row">
+                                <div class="settings-label"><span class="settings-icon">🖼</span><div><strong data-i18n="settings_bg">Background</strong><br><small data-i18n="settings_bg_desc">Custom image or video loop (saved in your profile)</small></div></div>
+                                <div class="settings-actions">
+                                    <button class="settings-reset-btn" id="settings-bg-pick" data-i18n="settings_bg_pick">Upload…</button>
+                                    <button class="settings-reset-btn" id="settings-bg-clear" data-i18n="settings_bg_clear">Clear</button>
+                                    <span class="settings-status" id="settings-bg-status">Default</span>
+                                    <input type="file" id="settings-bg-file" accept="image/*,video/*" style="display:none;">
+                                </div>
+                            </div>
+                            <div class="settings-row">
+                                <div class="settings-label"><span class="settings-icon">🧙</span><div><strong data-i18n="settings_portrait">Portrait</strong><br><small data-i18n="settings_portrait_desc">Replace the hero portrait image</small></div></div>
+                                <div class="settings-actions">
+                                    <button class="settings-reset-btn" id="settings-portrait-pick" data-i18n="settings_portrait_pick">Upload…</button>
+                                    <button class="settings-reset-btn" id="settings-portrait-clear" data-i18n="settings_portrait_clear">Reset</button>
+                                    <span class="settings-status" id="settings-portrait-status">Default</span>
+                                    <input type="file" id="settings-portrait-file" accept="image/*" style="display:none;">
+                                </div>
+                            </div>
+                            <div class="settings-row">
+                                <div class="settings-label"><span class="settings-icon">✦</span><div><strong data-i18n="settings_name">Display name</strong><br><small data-i18n="settings_name_desc">Shown in hero and start menu</small></div></div>
+                                <div class="settings-actions">
+                                    <input type="text" id="settings-name-input" class="settings-input" maxlength="64" placeholder="Aruta.sh">
+                                    <button class="settings-reset-btn" id="settings-name-clear" data-i18n="settings_name_clear">Reset</button>
+                                </div>
+                            </div>
+                            <div class="settings-row">
                                 <div class="settings-label"><span class="settings-icon">🎨</span><div><strong data-i18n="settings_accent">Accent Color</strong><br><small data-i18n="settings_accent_desc">Choose your accent color</small></div></div>
                                 <div class="settings-colors" id="settings-accent">
                                     <button class="settings-color-btn active" data-accent="gold" style="background:#ffc857;" title="Gold"></button>
@@ -617,6 +645,7 @@
 <script src="JavaScript/storage.js"></script>
 <script src="JavaScript/repos.js"></script>
 <script src="JavaScript/profile.js"></script>
+<script src="JavaScript/appearance.js"></script>
 <script src="JavaScript/effects.js"></script>
 <script src="JavaScript/desktop.js"></script>
 <script src="JavaScript/content.js"></script>
