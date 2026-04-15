@@ -2,11 +2,7 @@
     "id": "packagestore",
     "name": "Package Manager",
     "icon": "📦",
-<<<<<<< HEAD
-    "version": "1.3.0",
-=======
     "version": "2.0.0",
->>>>>>> worktree-agent-a29eb430
     "author": "Aruta",
     "category": "system",
     "minSdk": 2,
