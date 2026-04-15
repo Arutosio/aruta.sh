@@ -9,7 +9,8 @@
 const TILE_W = 64;
 const TILE_H = 32;
 const CHUNK_SIZE = 32;
-const MOVE_MS = 140;
+const MOVE_MS = 220;
+const CREATURE_MOVE_MS = 600;
 
 // Biome palette: [topColor, bottomColor, passable]
 const BIOMES = {
@@ -163,6 +164,9 @@ class World {
                 const em = rule2.pool[Math.floor(rnd() * rule2.pool.length)];
                 creatures.push({
                     c: lc, r: lr,
+                    rc: lc, rr: lr,        // rendered (tweened) position
+                    fromC: lc, fromR: lr,  // tween start
+                    moveT: 0,               // ms remaining in current tween
                     emoji: em,
                     biome: bKey,
                     nextMoveAt: 800 + rnd() * 4000,
@@ -483,9 +487,9 @@ export default {
                 const [ccx, ccy] = key.split(',').map(Number);
                 const ch = world.getChunk(ccx, ccy);
                 for (const cr of ch.creatures) {
-                    const wx = ccx * CHUNK_SIZE + cr.c;
-                    const wy = ccy * CHUNK_SIZE + cr.r;
-                    if (wx < minX || wx > maxX || wy < minY || wy > maxY) continue;
+                    const wx = ccx * CHUNK_SIZE + cr.rc;
+                    const wy = ccy * CHUNK_SIZE + cr.rr;
+                    if (wx < minX - 1 || wx > maxX + 1 || wy < minY - 1 || wy > maxY + 1) continue;
                     sprites.push({ wx, wy, emoji: cr.emoji, size: SIZES[cr.emoji] || 22 });
                 }
             }
@@ -542,19 +546,29 @@ export default {
                     const ch = world.chunks.get((cx0 + dcx) + ',' + (cy0 + dcy));
                     if (!ch) continue;
                     for (const cr of ch.creatures) {
+                        // Advance an in-progress tween.
+                        if (cr.moveT > 0) {
+                            cr.moveT = Math.max(0, cr.moveT - dt);
+                            const t = 1 - (cr.moveT / CREATURE_MOVE_MS);
+                            cr.rc = cr.fromC + (cr.c - cr.fromC) * t;
+                            cr.rr = cr.fromR + (cr.r - cr.fromR) * t;
+                            continue;
+                        }
+                        cr.rc = cr.c; cr.rr = cr.r;
                         cr.timer += dt;
                         if (cr.timer < cr.nextMoveAt) continue;
                         cr.timer = 0;
                         cr.nextMoveAt = 1200 + Math.random() * 3500;
-                        // Try random cardinal step.
+                        // Try a random cardinal step.
                         const dirs = [[1,0],[-1,0],[0,1],[0,-1]];
                         const [dx, dy] = dirs[Math.floor(Math.random() * 4)];
                         const nc = cr.c + dx, nr = cr.r + dy;
                         if (nc < 0 || nc >= CHUNK_SIZE || nr < 0 || nr >= CHUNK_SIZE) continue;
                         if (ch.biomes[nr * CHUNK_SIZE + nc] !== cr.biome) continue;
-                        // Don't step onto blocking features.
                         if (ch.features.find(f => f.c === nc && f.r === nr && f.blocks)) continue;
+                        cr.fromC = cr.c; cr.fromR = cr.r;
                         cr.c = nc; cr.r = nr;
+                        cr.moveT = CREATURE_MOVE_MS;
                     }
                 }
             }
