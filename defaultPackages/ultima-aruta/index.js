@@ -63,7 +63,8 @@ const VILLAGE = {
     npcs:    ['🧙', '🧝', '🧑‍🌾', '🧑‍🍳', '⚔️'],
 };
 
-// Collectible items. Ground scatter + inventory slots.
+// Collectible items. Ground scatter + inventory slots. `slot` marks the item
+// as equippable into the paperdoll.
 const ITEMS = {
     gold:     { emoji: '🪙', name: 'Gold Coin' },
     gem:      { emoji: '💎', name: 'Gem' },
@@ -74,17 +75,63 @@ const ITEMS = {
     apple:    { emoji: '🍎', name: 'Apple' },
     herb:     { emoji: '🌿', name: 'Herb' },
     key:      { emoji: '🗝️', name: 'Old Key' },
-    sword:    { emoji: '⚔️', name: 'Shortsword' },
     potion:   { emoji: '🧪', name: 'Potion' },
     scroll:   { emoji: '📜', name: 'Scroll' },
+    // Equipables
+    sword:    { emoji: '⚔️', name: 'Shortsword',   slot: 'weapon' },
+    axe:      { emoji: '🪓', name: 'Hand Axe',      slot: 'weapon' },
+    bow:      { emoji: '🏹', name: 'Hunter Bow',    slot: 'weapon' },
+    dagger:   { emoji: '🗡️', name: 'Dagger',       slot: 'weapon' },
+    shield:   { emoji: '🛡️', name: 'Round Shield', slot: 'shield' },
+    helm:     { emoji: '⛑️', name: 'Iron Helm',    slot: 'head' },
+    crown:    { emoji: '👑', name: 'Crown',         slot: 'head' },
+    hat:      { emoji: '🎩', name: 'Mage Hat',      slot: 'head' },
+    armor:    { emoji: '🦺', name: 'Cuirass',       slot: 'chest' },
+    robe:     { emoji: '🥼', name: 'Robe',          slot: 'chest' },
+    gloves:   { emoji: '🧤', name: 'Gloves',        slot: 'hands' },
+    boots:    { emoji: '🥾', name: 'Boots',         slot: 'feet' },
+    sandals:  { emoji: '👡', name: 'Sandals',       slot: 'feet' },
+    cape:     { emoji: '🧣', name: 'Cape',          slot: 'cape' },
+    necklace: { emoji: '📿', name: 'Necklace',      slot: 'neck' },
+    ring:     { emoji: '💍', name: 'Ring',          slot: 'ring' },
+    spellbook:{ emoji: '📖', name: 'Spellbook',     slot: 'book' },
 };
-// Per-biome item scatter rates.
+// Per-biome item scatter rates. Equipment stays rare.
 const ITEM_DROPS = {
-    grass:  [{ key: 'flower', rate: 0.01 }, { key: 'berry',    rate: 0.006 }, { key: 'gold', rate: 0.002 }],
-    forest: [{ key: 'mushroom', rate: 0.008 }, { key: 'herb',  rate: 0.006 }, { key: 'apple', rate: 0.003 }],
-    sand:   [{ key: 'stone', rate: 0.004 }, { key: 'gem',      rate: 0.001 }],
-    snow:   [{ key: 'stone', rate: 0.003 }, { key: 'gem',      rate: 0.001 }],
+    grass:  [
+        { key: 'flower', rate: 0.01 }, { key: 'berry', rate: 0.006 }, { key: 'gold', rate: 0.002 },
+        { key: 'sword', rate: 0.0008 }, { key: 'dagger', rate: 0.0008 }, { key: 'shield', rate: 0.0006 },
+        { key: 'robe', rate: 0.0005 }, { key: 'ring', rate: 0.0003 },
+    ],
+    forest: [
+        { key: 'mushroom', rate: 0.008 }, { key: 'herb', rate: 0.006 }, { key: 'apple', rate: 0.003 },
+        { key: 'bow', rate: 0.0008 }, { key: 'axe', rate: 0.0006 }, { key: 'cape', rate: 0.0005 },
+        { key: 'spellbook', rate: 0.0005 }, { key: 'hat', rate: 0.0003 },
+    ],
+    sand:   [
+        { key: 'stone', rate: 0.004 }, { key: 'gem', rate: 0.001 },
+        { key: 'sandals', rate: 0.0006 }, { key: 'necklace', rate: 0.0004 }, { key: 'crown', rate: 0.00015 },
+    ],
+    snow:   [
+        { key: 'stone', rate: 0.003 }, { key: 'gem', rate: 0.001 },
+        { key: 'boots', rate: 0.0007 }, { key: 'helm', rate: 0.0005 }, { key: 'gloves', rate: 0.0005 },
+        { key: 'armor', rate: 0.0003 },
+    ],
 };
+
+// Paperdoll slot definitions — order shown in the UI, left → right, top → bottom.
+const SLOTS = [
+    { key: 'head',   label: '⛑️ Head'   },
+    { key: 'neck',   label: '📿 Neck'   },
+    { key: 'cape',   label: '🧣 Cape'   },
+    { key: 'chest',  label: '🦺 Chest'  },
+    { key: 'hands',  label: '🧤 Hands'  },
+    { key: 'ring',   label: '💍 Ring'   },
+    { key: 'weapon', label: '⚔️ Weapon' },
+    { key: 'shield', label: '🛡️ Shield'},
+    { key: 'feet',   label: '🥾 Feet'   },
+    { key: 'book',   label: '📖 Book'   },
+];
 
 // ── Seeded RNG (Mulberry32) ──────────────────────────────
 function mulberry32(a) {
@@ -535,6 +582,7 @@ export default {
         const STATE_KEY  = 'state_'        + worldId;
         const INV_KEY    = 'inventory_'    + worldId;
         const DELTA_KEY  = 'worldDeltas_'  + worldId;
+        const EQUIP_KEY  = 'equipment_'    + worldId;
 
         // ── Save/load ────────────────────────────────────
         let saved = null;
@@ -556,11 +604,16 @@ export default {
         // Day starts at noon on first load. Time advances with real-time dt.
         let timeOfDay = (typeof saved?.timeOfDay === 'number') ? saved.timeOfDay : 0.5;
 
-        // ── Inventory + world deltas ─────────────────────
+        // ── Inventory + equipment + world deltas ─────────
         let inventory = { items: [] };
+        let equipment = {}; // { head: itemRow, weapon: ..., ... }
         try {
             const inv = await sdk.storage.get(INV_KEY);
             if (inv && Array.isArray(inv.items)) inventory = inv;
+        } catch {}
+        try {
+            const eq = await sdk.storage.get(EQUIP_KEY);
+            if (eq && typeof eq === 'object') equipment = eq;
         } catch {}
         // Persistent mutations to the procedural world (things picked up,
         // things dropped by the player). Applied to each chunk after
@@ -591,6 +644,7 @@ export default {
 
         function saveInventory()    { sdk.storage.set(INV_KEY,   inventory).catch(() => {}); }
         function saveWorldDeltas()  { sdk.storage.set(DELTA_KEY, worldDeltas).catch(() => {}); }
+        function saveEquipment()    { sdk.storage.set(EQUIP_KEY, equipment).catch(() => {}); }
 
         function removeWorldItem(wx, wy) {
             const cx = Math.floor(wx / CHUNK_SIZE), cy = Math.floor(wy / CHUNK_SIZE);
@@ -629,9 +683,31 @@ export default {
                 <div class="ua-backpack" id="ua-backpack" style="display:none;">
                     <div class="ua-backpack-head">
                         <span class="ua-backpack-title">🎒 Backpack</span>
-                        <span class="ua-backpack-close" id="ua-backpack-close" title="Close (I)">×</span>
+                        <span class="ua-backpack-close" data-close="pack" title="Close (I)">×</span>
                     </div>
                     <div class="ua-backpack-body" id="ua-backpack-body"></div>
+                </div>
+                <div class="ua-paperdoll" id="ua-paperdoll" style="display:none;">
+                    <div class="ua-paperdoll-head">
+                        <span>👤 Paperdoll</span>
+                        <span class="ua-backpack-close" data-close="doll" title="Close (P)">×</span>
+                    </div>
+                    <div class="ua-paperdoll-body" id="ua-paperdoll-body">
+                        <div class="ua-doll-figure">🧙</div>
+                        <div class="ua-doll-slots" id="ua-doll-slots"></div>
+                    </div>
+                </div>
+                <div class="ua-stats" id="ua-stats" style="display:none;">
+                    <div class="ua-backpack-head">
+                        <span>📊 Stats</span>
+                        <span class="ua-backpack-close" data-close="stats" title="Close">×</span>
+                    </div>
+                    <div class="ua-stats-body" id="ua-stats-body"></div>
+                </div>
+                <div class="ua-hub" id="ua-hub">
+                    <button class="ua-hub-btn" data-hub="pack"   title="Backpack (I)">🎒</button>
+                    <button class="ua-hub-btn" data-hub="doll"   title="Paperdoll (P)">👤</button>
+                    <button class="ua-hub-btn" data-hub="stats"  title="Stats">📊</button>
                 </div>
                 <div class="ua-drag-ghost" id="ua-drag-ghost" style="display:none;"></div>
             </div>
@@ -668,6 +744,11 @@ export default {
             if (e.type === 'keydown' && (k === 'i' || k === 'b')) {
                 e.preventDefault();
                 toggleBackpack();
+                return;
+            }
+            if (e.type === 'keydown' && k === 'p') {
+                e.preventDefault();
+                togglePaperdoll();
             }
         }
 
@@ -707,12 +788,63 @@ export default {
         const $ghost = root.querySelector('#ua-drag-ghost');
         let dragState = null;
 
-        function toggleBackpack() {
-            const open = $pack.style.display !== 'none';
-            if (open) $pack.style.display = 'none';
-            else { $pack.style.display = ''; renderBackpack(); }
+        function toggleBackpack() { togglePanel('pack'); }
+        function togglePaperdoll() { togglePanel('doll'); }
+        // ── Paperdoll + HUB + stats windows ──────────────
+        const $doll     = root.querySelector('#ua-paperdoll');
+        const $dollBody = root.querySelector('#ua-doll-slots');
+        const $stats    = root.querySelector('#ua-stats');
+        const $statsBody= root.querySelector('#ua-stats-body');
+
+        function togglePanel(kind) {
+            const m = { pack: $pack, doll: $doll, stats: $stats };
+            const el = m[kind]; if (!el) return;
+            const open = el.style.display !== 'none';
+            if (open) el.style.display = 'none';
+            else { el.style.display = ''; if (kind === 'pack') renderBackpack(); if (kind === 'doll') renderPaperdoll(); if (kind === 'stats') renderStats(); }
         }
-        root.querySelector('#ua-backpack-close').addEventListener('click', toggleBackpack);
+        root.querySelectorAll('[data-close]').forEach(btn => btn.addEventListener('click', () => togglePanel(btn.dataset.close)));
+        root.querySelectorAll('.ua-hub-btn').forEach(btn => btn.addEventListener('click', () => togglePanel(btn.dataset.hub)));
+
+        function renderPaperdoll() {
+            $dollBody.innerHTML = SLOTS.map(s => `
+                <div class="ua-slot" data-slot="${s.key}">
+                    <div class="ua-slot-label">${s.label}</div>
+                    <div class="ua-slot-cell">${equipment[s.key] ? `<div class="ua-item ua-slot-item" data-slot-of="${s.key}">${equipment[s.key].emoji}</div>` : ''}</div>
+                </div>
+            `).join('');
+            // Wire equipped items for drag (equip → inventory or swap).
+            $dollBody.querySelectorAll('.ua-slot-item').forEach(el => {
+                el.addEventListener('pointerdown', (ev) => {
+                    ev.preventDefault();
+                    const slotKey = el.dataset.slotOf;
+                    const it = equipment[slotKey];
+                    if (!it) return;
+                    startDrag('equip', { invItem: it, fromSlot: slotKey }, ev.clientX, ev.clientY);
+                });
+            });
+        }
+        function renderStats() {
+            const bm = BIOMES[world.biomeAt(player.wx, player.wy)].name;
+            $statsBody.innerHTML = `
+                <div><b>${worldRow.name}</b></div>
+                <div>Seed <span style="color:#ffc857">${worldRow.seed}</span></div>
+                <div>Position: ${player.wx}, ${player.wy}</div>
+                <div>Biome: ${bm}</div>
+                <div>Inventory: ${inventory.items.length} items</div>
+                <div>Equipment: ${Object.keys(equipment).length} slots filled</div>
+                <div style="margin-top:10px"><button class="ua-btn ua-btn-danger" id="ua-back-to-menu">↩ Back to world menu</button></div>
+            `;
+            $statsBody.querySelector('#ua-back-to-menu').addEventListener('click', () => {
+                // Persist state then re-mount the shell.
+                sdk.storage.set(STATE_KEY, { seed, px: player.wx, py: player.wy, timeOfDay }).catch(() => {});
+                root.__uaCleanup?.();
+                // Reload by re-invoking mount — simplest way.
+                location.reload();
+            });
+        }
+
+        root.querySelector('#ua-backpack-close')?.addEventListener?.('click', toggleBackpack);
 
         // Draggable backpack window — grab the title bar.
         (function makeBackpackDraggable() {
@@ -778,69 +910,149 @@ export default {
             showGhost(emoji, pageX - 16, pageY - 16);
         }
 
+        function _dropTarget(ev) {
+            // What is under the pointer? Return one of 'pack' | 'doll:<slot>' | 'world' | null.
+            if ($pack.style.display !== 'none') {
+                const r = $packBody.getBoundingClientRect();
+                if (ev.clientX >= r.left && ev.clientX <= r.right && ev.clientY >= r.top && ev.clientY <= r.bottom) return { kind: 'pack', rect: r };
+            }
+            if ($doll.style.display !== 'none') {
+                for (const s of SLOTS) {
+                    const slotEl = $dollBody.querySelector(`.ua-slot[data-slot="${s.key}"] .ua-slot-cell`);
+                    if (!slotEl) continue;
+                    const r = slotEl.getBoundingClientRect();
+                    if (ev.clientX >= r.left && ev.clientX <= r.right && ev.clientY >= r.top && ev.clientY <= r.bottom) return { kind: 'doll', slot: s.key };
+                }
+            }
+            return { kind: 'world' };
+        }
+
         function endDrag(ev) {
             if (!dragState) return;
             hideGhost();
-            const bodyRect = $packBody.getBoundingClientRect();
-            const onBackpackBody = $pack.style.display !== 'none' &&
-                ev.clientX >= bodyRect.left && ev.clientX <= bodyRect.right &&
-                ev.clientY >= bodyRect.top  && ev.clientY <= bodyRect.bottom;
+            const target = _dropTarget(ev);
 
+            // ── From world ──────────────────────────────────
             if (dragState.source === 'world') {
-                if (onBackpackBody) {
-                    const key = dragState.worldKey;
-                    if (removeWorldItem(dragState.wx, dragState.wy)) {
-                        const def = ITEMS[key];
-                        inventory.items.push({
-                            id: 'it_' + Math.random().toString(36).slice(2, 9),
-                            key, emoji: def.emoji, name: def.name,
-                            x: Math.max(0, ev.clientX - bodyRect.left - 16),
-                            y: Math.max(0, ev.clientY - bodyRect.top  - 16),
-                        });
-                        saveInventory();
-                        renderBackpack();
+                const key = dragState.worldKey;
+                const def = ITEMS[key];
+                const picked = () => removeWorldItem(dragState.wx, dragState.wy);
+                if (target.kind === 'pack' && picked()) {
+                    const r = target.rect;
+                    inventory.items.push({
+                        id: 'it_' + Math.random().toString(36).slice(2, 9),
+                        key, emoji: def.emoji, name: def.name,
+                        x: Math.max(0, ev.clientX - r.left - 16),
+                        y: Math.max(0, ev.clientY - r.top  - 16),
+                    });
+                    saveInventory(); renderBackpack();
+                } else if (target.kind === 'doll' && def.slot === target.slot && picked()) {
+                    _equipTo(target.slot, {
+                        id: 'it_' + Math.random().toString(36).slice(2, 9),
+                        key, emoji: def.emoji, name: def.name,
+                    });
+                }
+                dragState = null;
+                return;
+            }
+
+            // ── From inventory ──────────────────────────────
+            if (dragState.source === 'inv') {
+                if (target.kind === 'pack') {
+                    const it = dragState.invItem;
+                    const r = target.rect;
+                    it.x = Math.max(0, ev.clientX - r.left - 16);
+                    it.y = Math.max(0, ev.clientY - r.top  - 16);
+                    saveInventory(); renderBackpack();
+                } else if (target.kind === 'doll' && ITEMS[dragState.invItem.key]?.slot === target.slot) {
+                    _equipTo(target.slot, dragState.invItem);
+                    inventory.items = inventory.items.filter(i => i.id !== dragState.invItem.id);
+                    saveInventory(); renderBackpack();
+                } else if (target.kind === 'world') {
+                    const cr = canvas.getBoundingClientRect();
+                    const { wx, wy } = canvasToWorldCell(ev.clientX - cr.left, ev.clientY - cr.top);
+                    const dist = Math.max(Math.abs(wx - player.wx), Math.abs(wy - player.wy));
+                    if (dist <= 2 && world.passable(wx, wy) && placeWorldItem(wx, wy, dragState.invItem.key)) {
+                        inventory.items = inventory.items.filter(i => i.id !== dragState.invItem.id);
+                        saveInventory(); renderBackpack();
                     }
                 }
                 dragState = null;
                 return;
             }
 
-            if (dragState.source === 'inv') {
-                if (onBackpackBody) {
-                    const it = dragState.invItem;
-                    it.x = Math.max(0, ev.clientX - bodyRect.left - 16);
-                    it.y = Math.max(0, ev.clientY - bodyRect.top  - 16);
-                    saveInventory();
-                    renderBackpack();
-                } else {
-                    const canvasRect = canvas.getBoundingClientRect();
-                    const cx = ev.clientX - canvasRect.left;
-                    const cy = ev.clientY - canvasRect.top;
-                    const { wx, wy } = canvasToWorldCell(cx, cy);
-                    const dist = Math.max(Math.abs(wx - player.wx), Math.abs(wy - player.wy));
-                    if (dist <= 2 && world.passable(wx, wy) && placeWorldItem(wx, wy, dragState.invItem.key)) {
-                        inventory.items = inventory.items.filter(i => i.id !== dragState.invItem.id);
-                        saveInventory();
-                        renderBackpack();
+            // ── From equipment slot ─────────────────────────
+            if (dragState.source === 'equip') {
+                const it = dragState.invItem;
+                const fromSlot = dragState.fromSlot;
+                if (target.kind === 'doll' && ITEMS[it.key]?.slot === target.slot) {
+                    equipment[fromSlot] = null;
+                    _equipTo(target.slot, it);
+                } else if (target.kind === 'pack' || target.kind === 'world') {
+                    // Unequip → backpack (or drop on world if far).
+                    delete equipment[fromSlot];
+                    if (target.kind === 'pack') {
+                        const r = target.rect;
+                        inventory.items.push({
+                            ...it,
+                            x: Math.max(0, ev.clientX - r.left - 16),
+                            y: Math.max(0, ev.clientY - r.top  - 16),
+                        });
+                        saveInventory(); renderBackpack();
+                    } else {
+                        const cr = canvas.getBoundingClientRect();
+                        const { wx, wy } = canvasToWorldCell(ev.clientX - cr.left, ev.clientY - cr.top);
+                        const dist = Math.max(Math.abs(wx - player.wx), Math.abs(wy - player.wy));
+                        if (dist <= 2 && world.passable(wx, wy)) placeWorldItem(wx, wy, it.key);
+                        else inventory.items.push(it);
+                        saveInventory(); renderBackpack();
                     }
+                    saveEquipment(); renderPaperdoll();
                 }
                 dragState = null;
             }
         }
 
+        function _equipTo(slotKey, itemRow) {
+            // If already equipped, the displaced item goes to the backpack.
+            const prev = equipment[slotKey];
+            equipment[slotKey] = itemRow;
+            if (prev && prev !== itemRow) {
+                inventory.items.push({ ...prev, x: 6, y: 6 });
+            }
+            saveEquipment(); saveInventory();
+            renderPaperdoll(); renderBackpack();
+        }
+
         canvas.addEventListener('pointerdown', (ev) => {
             if (ev.button === 2) return; // right-click handled by mouseWalk below
             const rect = canvas.getBoundingClientRect();
-            const { wx, wy } = canvasToWorldCell(ev.clientX - rect.left, ev.clientY - rect.top);
-            const f = world.featureAt(wx, wy);
-            if (!f || !f.item) return;
+            const cx = ev.clientX - rect.left, cy = ev.clientY - rect.top;
+            // Emoji render anchor is at the bottom of the tile, so the visible
+            // glyph hovers ~20–30 px above its logical cell. Probe the clicked
+            // cell and a small cluster just above it (wy-1, wx-1, wx+1) so a
+            // click on the *visible* sprite maps to its owner tile.
+            const hit = _findItemNear(cx, cy, world, canvasToWorldCell);
+            if (!hit) return;
+            const { wx, wy, feature: f } = hit;
             const dist = Math.max(Math.abs(wx - player.wx), Math.abs(wy - player.wy));
             if (dist > 2) return;
-            // Auto-open the backpack so the drop target exists even if the
-            // user never pressed I first.
             if ($pack.style.display === 'none') toggleBackpack();
             startDrag('world', { worldKey: f.itemKey, wx, wy }, ev.clientX, ev.clientY);
         });
+
+        function _findItemNear(cx, cy, world, c2w) {
+            const base = c2w(cx, cy);
+            // Scan a small neighbourhood around the clicked cell (prefer the
+            // tile just above since the emoji is anchored at the feet).
+            const offsets = [[0,-1],[-1,-1],[1,-1],[0,0],[-1,0],[1,0],[0,1],[0,-2],[-1,-2],[1,-2]];
+            for (const [dx, dy] of offsets) {
+                const wx = base.wx + dx, wy = base.wy + dy;
+                const f = world.featureAt(wx, wy);
+                if (f && f.item) return { wx, wy, feature: f };
+            }
+            return null;
+        }
 
         $packBody.addEventListener('pointerdown', (ev) => {
             const itemEl = ev.target.closest('.ua-item');
