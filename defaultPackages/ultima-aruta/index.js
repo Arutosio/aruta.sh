@@ -11,6 +11,21 @@ const TILE_H = 32;
 const CHUNK_SIZE = 32;
 const MOVE_MS = 220;
 const CREATURE_MOVE_MS = 600;
+const DAY_MS = 5 * 60 * 1000;  // full day cycle (5 minutes real time)
+
+// NPC dialog pool — picked deterministically per NPC.
+const DIALOGS = [
+    'Hail, wanderer. Safe travels beyond these walls.',
+    'Have ye seen the shadows grow longer at dusk?',
+    'The smith needs iron. Bring some if ye find any.',
+    "The forest whispers of old ruins eastward.",
+    'Gold buys bread; courage buys tales.',
+    'Stay out of the deep caves. Nothing good lives there.',
+    'A traveller once told me the sea hides an island of spires.',
+    'Do not trust mushrooms that glow.',
+    'At night the fae dance in forest clearings.',
+    'I dreamt of a dragon last night. Wasn\'t friendly.',
+];
 
 // Biome palette: [topColor, bottomColor, passable]
 const BIOMES = {
@@ -142,6 +157,22 @@ class World {
             this._maybePlaceVillage(cx, cy, biomes, features, rnd);
         }
 
+        // ── Dungeon entrance placement ─────────────────────
+        // ~3% of chunks get a dungeon — a cave mouth on mountain-adjacent
+        // grass/forest, or a ruined arch on any forest cell.
+        if (rnd() < 0.03) {
+            for (let attempts = 0; attempts < 20; attempts++) {
+                const lc = Math.floor(rnd() * CHUNK_SIZE);
+                const lr = Math.floor(rnd() * CHUNK_SIZE);
+                const b = biomes[lr * CHUNK_SIZE + lc];
+                if (b !== 'grass' && b !== 'forest' && b !== 'sand') continue;
+                if (features.find(f => f.c === lc && f.r === lr)) continue;
+                const emoji = rnd() < 0.5 ? '🕳️' : '🏚️';
+                features.push({ c: lc, r: lr, emoji, dungeon: true, dungeonId: (this.seed ^ (cx * 31) ^ (cy * 17) ^ lc ^ lr * 911) >>> 0 });
+                break;
+            }
+        }
+
         // ── Ambient creatures ──────────────────────────────
         // Creature positions are stored in chunk-local coords; world coord
         // reads add the chunk origin. We also track a per-creature random-
@@ -225,7 +256,12 @@ class World {
                 const c = oc + (Math.floor(rnd() * 3) - 1);
                 const r = or + 1 + Math.floor(rnd() * 2);
                 if (features.find(f => f.c === c && f.r === r)) continue;
-                features.push({ c, r, emoji: VILLAGE.npcs[Math.floor(rnd() * VILLAGE.npcs.length)], npc: true });
+                features.push({
+                    c, r,
+                    emoji: VILLAGE.npcs[Math.floor(rnd() * VILLAGE.npcs.length)],
+                    npc: true,
+                    dialog: DIALOGS[Math.floor(rnd() * DIALOGS.length)],
+                });
             }
             return; // stamp one village per chunk
         }
@@ -264,6 +300,26 @@ class World {
         const ch = this.getChunk(cx, cy);
         return ch.features.find(f => f.c === lx && f.r === ly) || null;
     }
+}
+
+// ── Day/night tint ───────────────────────────────────────
+// timeOfDay: 0..1, with 0 = midnight, 0.25 = dawn, 0.5 = noon, 0.75 = dusk.
+function _dayNightTint(t) {
+    // Bell curve around noon — darkest at midnight.
+    const night  = Math.max(0, Math.cos(t * Math.PI * 2));      // 1 at noon, -1 at midnight
+    const dark   = Math.max(0, -night);                         // 0..1 (night factor)
+    const dusk   = Math.max(0, Math.sin((t - 0.5) * Math.PI * 2)); // peaks at 0.75 (dusk)
+    const dawn   = Math.max(0, Math.sin((t - 0.25) * Math.PI * 2)); // peaks at 0.5 → shift
+    // Use simpler sin-based bands.
+    const r = 0.04, g = 0.06, b = 0.18;
+    // Alpha peaks at ~0.55 at midnight, 0 at noon.
+    const a = Math.min(0.55, dark * 0.55);
+    // Warm tint near dusk (t∈[0.65, 0.85]) and dawn (t∈[0.15, 0.35]).
+    let tintR = r, tintG = g, tintB = b;
+    const warm = (t > 0.66 && t < 0.85) || (t > 0.15 && t < 0.34);
+    if (warm) { tintR = 0.5; tintG = 0.25; tintB = 0.10; }
+    if (a <= 0.02) return null;
+    return `rgba(${Math.round(tintR * 255)}, ${Math.round(tintG * 255)}, ${Math.round(tintB * 255)}, ${a.toFixed(3)})`;
 }
 
 // ── Color helpers ────────────────────────────────────────
@@ -364,6 +420,8 @@ export default {
             }
         }
         const player = new Player(startX, startY);
+        // Day starts at noon on first load. Time advances with real-time dt.
+        let timeOfDay = (typeof saved?.timeOfDay === 'number') ? saved.timeOfDay : 0.5;
 
         // ── DOM ──────────────────────────────────────────
         root.innerHTML = `
@@ -371,7 +429,7 @@ export default {
                 <canvas class="ua-canvas" id="ua-canvas"></canvas>
                 <canvas class="ua-minimap" id="ua-minimap" width="140" height="140"></canvas>
                 <div class="ua-hud" id="ua-hud"></div>
-                <div class="ua-help">Arrows / WASD to move · Seed <b>${seed}</b></div>
+                <div class="ua-help">Arrows / WASD to move · <b>Space</b> interact · Seed <b>${seed}</b></div>
             </div>
         `;
         const canvas = root.querySelector('#ua-canvas');
@@ -393,9 +451,43 @@ export default {
             const k = e.key.toLowerCase();
             const MAP = { arrowup:'n', w:'n', arrowdown:'s', s:'s', arrowleft:'w', a:'w', arrowright:'e', d:'e' };
             const dir = MAP[k];
-            if (!dir) return;
-            e.preventDefault();
-            if (e.type === 'keydown') held.add(dir); else held.delete(dir);
+            if (dir) {
+                e.preventDefault();
+                if (e.type === 'keydown') held.add(dir); else held.delete(dir);
+                return;
+            }
+            if (e.type === 'keydown' && (k === ' ' || k === 'enter' || k === 'e')) {
+                e.preventDefault();
+                tryInteract();
+            }
+        }
+
+        // ── Interaction: SPACE/E talks to an adjacent NPC or enters a
+        // dungeon when the player is standing on (or beside) its tile.
+        function tryInteract() {
+            // Check the 9 cells centred on the player.
+            for (let dy = -1; dy <= 1; dy++) {
+                for (let dx = -1; dx <= 1; dx++) {
+                    const f = world.featureAt(player.wx + dx, player.wy + dy);
+                    if (!f) continue;
+                    if (f.npc) { showDialogBubble(f.emoji, f.dialog || DIALOGS[0]); return; }
+                    if (f.dungeon && dx === 0 && dy === 0) {
+                        showDialogBubble('🕳️', 'You stand before a dark entrance. The depths beckon… (dungeon #' + f.dungeonId.toString(36) + ')');
+                        return;
+                    }
+                }
+            }
+        }
+
+        function showDialogBubble(icon, text) {
+            let b = root.querySelector('#ua-dialog');
+            if (b) b.remove();
+            b = document.createElement('div');
+            b.id = 'ua-dialog';
+            b.className = 'ua-dialog';
+            b.innerHTML = `<span class="ua-dialog-icon">${icon}</span><span class="ua-dialog-text">${text.replace(/[<>&]/g, c=>({ '<':'&lt;','>':'&gt;','&':'&amp;' }[c]))}</span>`;
+            root.querySelector('.ua-shell').appendChild(b);
+            setTimeout(() => { b.classList.add('ua-dialog-out'); setTimeout(() => b.remove(), 500); }, 4500);
         }
         document.addEventListener('keydown', onKey);
         document.addEventListener('keyup', onKey);
@@ -470,6 +562,8 @@ export default {
                 '🦀': 18, '🦎': 18, '🐟': 20, '🐠': 20, '🐺': 24,
                 // NPCs
                 '🧙': 30, '🧝': 28, '🧑‍🌾': 28, '🧑‍🍳': 28, '⚔️': 26,
+                // Dungeons
+                '🕳️': 40, '🏚️': 46,
             };
             const sprites = [];
             // Visible chunks for creature sampling.
@@ -498,6 +592,13 @@ export default {
             for (const s of sprites) {
                 const p = iso(s.wx, s.wy);
                 drawEmoji(ctx, p.x + cam.cx - TILE_W / 2, p.y + cam.cy, s.emoji, s.size);
+            }
+
+            // ── Day/night tint overlay ─────────────────────
+            const tint = _dayNightTint(timeOfDay);
+            if (tint) {
+                ctx.fillStyle = tint;
+                ctx.fillRect(0, 0, W, H);
             }
         }
 
@@ -535,7 +636,12 @@ export default {
 
         function updateHUD() {
             const biome = BIOMES[world.biomeAt(player.wx, player.wy)].name;
-            $hud.innerHTML = `📍 <b>${player.wx}, ${player.wy}</b> · ${biome}`;
+            const hours = Math.floor(timeOfDay * 24);
+            const mins  = Math.floor((timeOfDay * 24 * 60) % 60);
+            const hh = String(hours).padStart(2, '0');
+            const mm = String(mins).padStart(2, '0');
+            const phase = timeOfDay < 0.25 ? '🌑' : timeOfDay < 0.42 ? '🌅' : timeOfDay < 0.66 ? '☀️' : timeOfDay < 0.83 ? '🌇' : '🌙';
+            $hud.innerHTML = `📍 <b>${player.wx}, ${player.wy}</b> · ${biome} · ${phase} <b>${hh}:${mm}</b>`;
         }
 
         function tickCreatures(dt) {
@@ -583,11 +689,14 @@ export default {
             updateHUD();
             renderMinimap();
 
+            // Advance time-of-day (wraps 0..1 over DAY_MS).
+            timeOfDay = (timeOfDay + dt / DAY_MS) % 1;
+
             // Save every ~2s.
             saveTimer += dt;
             if (saveTimer > 2000) {
                 saveTimer = 0;
-                sdk.storage.set('state', { seed, px: player.wx, py: player.wy }).catch(() => {});
+                sdk.storage.set('state', { seed, px: player.wx, py: player.wy, timeOfDay }).catch(() => {});
             }
 
             rafId = requestAnimationFrame(loop);
