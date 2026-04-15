@@ -30,6 +30,23 @@ const FEATURES = {
     snow:   [{ emoji: '🌲', rate: 0.06 }, { emoji: '⛄', rate: 0.005 }],
 };
 
+// Ambient creatures per biome (as wandering entities, not static features).
+// Counts are per-chunk spawn targets.
+const CREATURES = {
+    grass:  { count: 3, pool: ['🐑', '🐇', '🦊', '🦌'] },
+    forest: { count: 4, pool: ['🦌', '🐗', '🦉', '🦝'] },
+    sand:   { count: 1, pool: ['🦀', '🦎'] },
+    water:  { count: 3, pool: ['🐟', '🐠'] },
+    snow:   { count: 1, pool: ['🦌', '🐺'] },
+};
+
+// Village building palette.
+const VILLAGE = {
+    houses:  ['🏠', '🏡', '🛖'],
+    centers: ['⛪', '🏛️', '🏰'],
+    npcs:    ['🧙', '🧝', '🧑‍🌾', '🧑‍🍳', '⚔️'],
+};
+
 // ── Seeded RNG (Mulberry32) ──────────────────────────────
 function mulberry32(a) {
     return function () {
@@ -117,7 +134,97 @@ class World {
             }
         }
 
-        return { cx, cy, biomes, features };
+        // ── Village placement ──────────────────────────────
+        // ~8% of chunks get a village. Find the largest flat grass patch
+        // around the chunk center; if big enough, carve a small settlement.
+        if (rnd() < 0.08) {
+            this._maybePlaceVillage(cx, cy, biomes, features, rnd);
+        }
+
+        // ── Ambient creatures ──────────────────────────────
+        // Creature positions are stored in chunk-local coords; world coord
+        // reads add the chunk origin. We also track a per-creature random-
+        // walk timer so the AI ticks independently per creature.
+        const creatures = [];
+        const rule = null; // picked per-cell below via biome
+        // Spawn up to N creatures in this chunk based on the dominant biomes.
+        const biomeCount = {};
+        for (const b of biomes) biomeCount[b] = (biomeCount[b] || 0) + 1;
+        for (const [bKey, rule2] of Object.entries(CREATURES)) {
+            if ((biomeCount[bKey] || 0) < 20) continue;
+            const target = rule2.count;
+            let placed = 0, attempts = 0;
+            while (placed < target && attempts < 40) {
+                attempts++;
+                const lc = Math.floor(rnd() * N), lr = Math.floor(rnd() * N);
+                if (biomes[lr * N + lc] !== bKey) continue;
+                // Don't spawn on a blocking feature tile.
+                if (features.find(f => f.c === lc && f.r === lr && f.blocks)) continue;
+                const em = rule2.pool[Math.floor(rnd() * rule2.pool.length)];
+                creatures.push({
+                    c: lc, r: lr,
+                    emoji: em,
+                    biome: bKey,
+                    nextMoveAt: 800 + rnd() * 4000,
+                    timer: 0,
+                });
+                placed++;
+            }
+        }
+
+        return { cx, cy, biomes, features, creatures };
+    }
+
+    /** Try to find a ~5×5 mostly-grass patch near the chunk centre and
+     *  stamp a small village (houses around a central landmark) + NPCs. */
+    _maybePlaceVillage(cx, cy, biomes, features, rnd) {
+        const N = CHUNK_SIZE;
+        const centerC = Math.floor(N / 2), centerR = Math.floor(N / 2);
+        // Probe offsets spiralling out from centre.
+        const probes = [];
+        for (let dr = -8; dr <= 8; dr++) for (let dc = -8; dc <= 8; dc++) probes.push([dc, dr]);
+        probes.sort((a, b) => (a[0] * a[0] + a[1] * a[1]) - (b[0] * b[0] + b[1] * b[1]));
+        for (const [dc, dr] of probes) {
+            const oc = centerC + dc, or = centerR + dr;
+            if (oc < 2 || or < 2 || oc > N - 3 || or > N - 3) continue;
+            // Check 5×5 area is mostly grass (no mountain/water).
+            let grass = 0, bad = 0;
+            for (let r = or - 2; r <= or + 2; r++) {
+                for (let c = oc - 2; c <= oc + 2; c++) {
+                    const b = biomes[r * N + c];
+                    if (b === 'grass' || b === 'forest') grass++;
+                    else if (!BIOMES[b].passable) bad++;
+                }
+            }
+            if (bad > 0 || grass < 20) continue;
+
+            // Clear any existing features in the 5×5 area so the village
+            // gets a clean footprint.
+            for (let i = features.length - 1; i >= 0; i--) {
+                const f = features[i];
+                if (f.c >= oc - 2 && f.c <= oc + 2 && f.r >= or - 2 && f.r <= or + 2) features.splice(i, 1);
+            }
+
+            // Landmark at the centre.
+            const landmark = VILLAGE.centers[Math.floor(rnd() * VILLAGE.centers.length)];
+            features.push({ c: oc, r: or, emoji: landmark, blocks: true, village: true });
+
+            // 4 houses at the cardinal +2 cells (skip diagonals for visibility).
+            const houseSpots = [[-2,0],[2,0],[0,-2],[0,2]];
+            for (const [hc, hr] of houseSpots) {
+                if (rnd() < 0.15) continue; // slight variety
+                features.push({ c: oc + hc, r: or + hr, emoji: VILLAGE.houses[Math.floor(rnd() * VILLAGE.houses.length)], blocks: true, village: true });
+            }
+            // 1-2 NPCs near the centre.
+            const npcCount = 1 + Math.floor(rnd() * 2);
+            for (let i = 0; i < npcCount; i++) {
+                const c = oc + (Math.floor(rnd() * 3) - 1);
+                const r = or + 1 + Math.floor(rnd() * 2);
+                if (features.find(f => f.c === c && f.r === r)) continue;
+                features.push({ c, r, emoji: VILLAGE.npcs[Math.floor(rnd() * VILLAGE.npcs.length)], npc: true });
+            }
+            return; // stamp one village per chunk
+        }
     }
 
     _classify(elev, moist) {
@@ -138,7 +245,12 @@ class World {
         return this.getChunk(cx, cy).biomes[ly * CHUNK_SIZE + lx];
     }
 
-    passable(wx, wy) { return BIOMES[this.biomeAt(wx, wy)].passable; }
+    passable(wx, wy) {
+        if (!BIOMES[this.biomeAt(wx, wy)].passable) return false;
+        const f = this.featureAt(wx, wy);
+        if (f && f.blocks) return false;
+        return true;
+    }
 
     featureAt(wx, wy) {
         const cx = Math.floor(wx / CHUNK_SIZE);
@@ -148,6 +260,12 @@ class World {
         const ch = this.getChunk(cx, cy);
         return ch.features.find(f => f.c === lx && f.r === ly) || null;
     }
+}
+
+// ── Color helpers ────────────────────────────────────────
+function _hexToRgb(hex) {
+    const h = hex.replace('#', '');
+    return [parseInt(h.slice(0,2), 16), parseInt(h.slice(2,4), 16), parseInt(h.slice(4,6), 16)];
 }
 
 // ── Isometric projection ─────────────────────────────────
@@ -247,6 +365,7 @@ export default {
         root.innerHTML = `
             <div class="ua-shell">
                 <canvas class="ua-canvas" id="ua-canvas"></canvas>
+                <canvas class="ua-minimap" id="ua-minimap" width="140" height="140"></canvas>
                 <div class="ua-hud" id="ua-hud"></div>
                 <div class="ua-help">Arrows / WASD to move · Seed <b>${seed}</b></div>
             </div>
@@ -339,15 +458,38 @@ export default {
                 '🌲': 40, '🌳': 40, '🌴': 38,
                 '🪨': 18, '🌿': 18, '🌾': 20, '🍄': 16,
                 '⛄': 28,
+                // Structures
+                '⛪': 48, '🏛️': 50, '🏰': 52,
+                '🏠': 42, '🏡': 42, '🛖': 40,
+                // Creatures
+                '🐑': 22, '🐇': 18, '🦊': 22, '🦌': 26, '🐗': 24, '🦉': 18, '🦝': 22,
+                '🦀': 18, '🦎': 18, '🐟': 20, '🐠': 20, '🐺': 24,
+                // NPCs
+                '🧙': 30, '🧝': 28, '🧑‍🌾': 28, '🧑‍🍳': 28, '⚔️': 26,
             };
             const sprites = [];
+            // Visible chunks for creature sampling.
+            const seenChunks = new Set();
             for (let y = minY; y <= maxY; y++) {
                 for (let x = minX; x <= maxX; x++) {
                     const f = world.featureAt(x, y);
                     if (f) sprites.push({ wx: x, wy: y, emoji: f.emoji, size: SIZES[f.emoji] || 26 });
+                    const ccx = Math.floor(x / CHUNK_SIZE), ccy = Math.floor(y / CHUNK_SIZE);
+                    seenChunks.add(ccx + ',' + ccy);
                 }
             }
-            sprites.push({ wx: player.rx, wy: player.ry, emoji: player.emoji, size: 30, isPlayer: true });
+            // Draw creatures from visible chunks.
+            for (const key of seenChunks) {
+                const [ccx, ccy] = key.split(',').map(Number);
+                const ch = world.getChunk(ccx, ccy);
+                for (const cr of ch.creatures) {
+                    const wx = ccx * CHUNK_SIZE + cr.c;
+                    const wy = ccy * CHUNK_SIZE + cr.r;
+                    if (wx < minX || wx > maxX || wy < minY || wy > maxY) continue;
+                    sprites.push({ wx, wy, emoji: cr.emoji, size: SIZES[cr.emoji] || 22 });
+                }
+            }
+            sprites.push({ wx: player.rx, wy: player.ry, emoji: player.emoji, size: 32, isPlayer: true });
             sprites.sort((a, b) => (a.wx + a.wy) - (b.wx + b.wy) || a.wx - b.wx);
             for (const s of sprites) {
                 const p = iso(s.wx, s.wy);
@@ -355,17 +497,77 @@ export default {
             }
         }
 
+        // ── Minimap ────────────────────────────────────────
+        const $mini = root.querySelector('#ua-minimap');
+        const miniCtx = $mini.getContext('2d');
+        const MINI_RADIUS = 70; // cells per half-axis → 140×140 total
+        let miniElapsed = 0;
+        function renderMinimap() {
+            miniElapsed += 16; // coarse throttle; function called once per frame
+            if (miniElapsed < 250) return;
+            miniElapsed = 0;
+            miniCtx.fillStyle = '#0a0d18';
+            miniCtx.fillRect(0, 0, 140, 140);
+            const img = miniCtx.getImageData(0, 0, 140, 140);
+            const data = img.data;
+            const pw = player.wx, pyw = player.wy;
+            for (let py = 0; py < 140; py++) {
+                for (let px = 0; px < 140; px++) {
+                    const wx = pw + (px - 70);
+                    const wy = pyw + (py - 70);
+                    const b = BIOMES[world.biomeAt(wx, wy)];
+                    const rgb = _hexToRgb(b.color1);
+                    const i = (py * 140 + px) * 4;
+                    data[i] = rgb[0]; data[i + 1] = rgb[1]; data[i + 2] = rgb[2]; data[i + 3] = 255;
+                }
+            }
+            miniCtx.putImageData(img, 0, 0);
+            // Player dot.
+            miniCtx.fillStyle = '#ffc857';
+            miniCtx.fillRect(69, 69, 3, 3);
+            miniCtx.strokeStyle = 'rgba(0,0,0,0.6)';
+            miniCtx.strokeRect(68.5, 68.5, 4, 4);
+        }
+
         function updateHUD() {
             const biome = BIOMES[world.biomeAt(player.wx, player.wy)].name;
             $hud.innerHTML = `📍 <b>${player.wx}, ${player.wy}</b> · ${biome}`;
+        }
+
+        function tickCreatures(dt) {
+            // Wander creatures only in chunks near the player (keeps cost low).
+            const cx0 = Math.floor(player.wx / CHUNK_SIZE), cy0 = Math.floor(player.wy / CHUNK_SIZE);
+            for (let dcy = -1; dcy <= 1; dcy++) {
+                for (let dcx = -1; dcx <= 1; dcx++) {
+                    const ch = world.chunks.get((cx0 + dcx) + ',' + (cy0 + dcy));
+                    if (!ch) continue;
+                    for (const cr of ch.creatures) {
+                        cr.timer += dt;
+                        if (cr.timer < cr.nextMoveAt) continue;
+                        cr.timer = 0;
+                        cr.nextMoveAt = 1200 + Math.random() * 3500;
+                        // Try random cardinal step.
+                        const dirs = [[1,0],[-1,0],[0,1],[0,-1]];
+                        const [dx, dy] = dirs[Math.floor(Math.random() * 4)];
+                        const nc = cr.c + dx, nr = cr.r + dy;
+                        if (nc < 0 || nc >= CHUNK_SIZE || nr < 0 || nr >= CHUNK_SIZE) continue;
+                        if (ch.biomes[nr * CHUNK_SIZE + nc] !== cr.biome) continue;
+                        // Don't step onto blocking features.
+                        if (ch.features.find(f => f.c === nc && f.r === nr && f.blocks)) continue;
+                        cr.c = nc; cr.r = nr;
+                    }
+                }
+            }
         }
 
         function loop(now) {
             const dt = Math.min(50, now - last); last = now;
             tryStepFromHeld();
             player.update(dt);
+            tickCreatures(dt);
             render();
             updateHUD();
+            renderMinimap();
 
             // Save every ~2s.
             saveTimer += dt;
