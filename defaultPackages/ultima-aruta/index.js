@@ -335,11 +335,16 @@ export default {
             }
 
             // PASS 2 — features + player, depth-sorted by wx+wy then wx.
+            const SIZES = {
+                '🌲': 40, '🌳': 40, '🌴': 38,
+                '🪨': 18, '🌿': 18, '🌾': 20, '🍄': 16,
+                '⛄': 28,
+            };
             const sprites = [];
             for (let y = minY; y <= maxY; y++) {
                 for (let x = minX; x <= maxX; x++) {
                     const f = world.featureAt(x, y);
-                    if (f) sprites.push({ wx: x, wy: y, emoji: f.emoji, size: 26 });
+                    if (f) sprites.push({ wx: x, wy: y, emoji: f.emoji, size: SIZES[f.emoji] || 26 });
                 }
             }
             sprites.push({ wx: player.rx, wy: player.ry, emoji: player.emoji, size: 30, isPlayer: true });
