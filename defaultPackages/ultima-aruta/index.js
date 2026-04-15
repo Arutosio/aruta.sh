@@ -353,11 +353,11 @@ class World {
 
     _classify(elev, moist) {
         if (elev < 0.28) return 'deep';
-        if (elev < 0.36) return 'water';
-        if (elev < 0.40) return 'sand';
+        if (elev < 0.34) return 'water';
+        if (elev < 0.44) return 'sand';    // wider beach band so shorelines are reachable
         if (elev > 0.78) return 'snow';
         if (elev > 0.68) return 'mountain';
-        if (moist > 0.55 && elev > 0.45) return 'forest';
+        if (moist > 0.55 && elev > 0.47) return 'forest';
         return 'grass';
     }
 
@@ -370,10 +370,26 @@ class World {
     }
 
     passable(wx, wy) {
-        if (!BIOMES[this.biomeAt(wx, wy)].passable) return false;
-        const f = this.featureAt(wx, wy);
-        if (f && f.blocks) return false;
-        return true;
+        const b = this.biomeAt(wx, wy);
+        if (BIOMES[b].passable) {
+            const f = this.featureAt(wx, wy);
+            if (f && f.blocks) return false;
+            return true;
+        }
+        // Wade rule: a shallow-water tile (not deep) is still reachable if at
+        // least one of its 4 world-neighbours is solid land. Lets the player
+        // hug the shoreline UO-style.
+        if (b === 'water') {
+            const neighbours = [[1,0],[-1,0],[0,1],[0,-1]];
+            for (const [dx, dy] of neighbours) {
+                const nb = this.biomeAt(wx + dx, wy + dy);
+                if (BIOMES[nb].passable) {
+                    const f = this.featureAt(wx + dx, wy + dy);
+                    if (!f || !f.blocks) return true;
+                }
+            }
+        }
+        return false;
     }
 
     featureAt(wx, wy) {
@@ -1193,7 +1209,7 @@ export default {
             // PASS 2 — features + player, depth-sorted by wx+wy then wx.
             const SIZES = {
                 // Scenery
-                '🌲': 34, '🌳': 34, '🌴': 32,
+                '🌲': 46, '🌳': 46, '🌴': 42,
                 '🪨': 14, '🌿': 14, '🌾': 16, '🍄': 14,
                 '⛄': 24,
                 // Structures
