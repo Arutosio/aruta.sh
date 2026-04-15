@@ -127,6 +127,10 @@ export default {
             }
             const p = (async () => {
                 await refreshInstalled();
+                // Also refresh the defaults list so uninstalled defaults appear
+                // in the unified Installed view as Reinstall rows (otherwise a
+                // just-uninstalled default would silently vanish).
+                try { await refreshDefaults(); } catch (_) {}
                 if (typeof renderAll === 'function') renderAll();
             })();
             state._installChangeInFlight = p;
