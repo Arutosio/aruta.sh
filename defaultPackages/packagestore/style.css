@@ -91,9 +91,19 @@ body {
     font-size: 0.85rem;
 }
 .ps-installed-search:focus { outline: none; border-color: var(--g); }
-.ps-tag-default {
+.ps-tag-default,
+.ps-chip-default {
     background: rgba(255, 200, 87, 0.18);
     color: var(--g);
+}
+.ps-chip-uninstalled {
+    background: rgba(255, 255, 255, 0.06);
+    color: rgba(255, 228, 160, 0.55);
+    font-style: italic;
+}
+[data-theme="light"] .ps-chip-uninstalled {
+    background: rgba(90, 60, 20, 0.08);
+    color: rgba(90, 60, 20, 0.6);
 }
 .ps-tag-update {
     background: rgba(251, 146, 60, 0.22);
