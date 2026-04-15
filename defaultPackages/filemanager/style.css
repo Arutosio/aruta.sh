@@ -15,7 +15,29 @@ body, #root {
     width: 100%; height: 100%;
     background: rgba(14, 12, 20, 0.55);
     color: inherit;
+    position: relative;
 }
+/* Narrow viewport: hide the preview column; toolbar toggle surfaces it as overlay. */
+.fm-shell.fm-narrow { grid-template-columns: 140px 1fr; }
+.fm-shell.fm-narrow .fm-preview { display: none; }
+.fm-shell.fm-narrow.fm-preview-open .fm-preview {
+    display: block;
+    position: absolute;
+    top: 48px; right: 0; bottom: 0;
+    width: min(92%, 420px);
+    background: rgba(14, 12, 20, 0.96);
+    border-left: 1px solid rgba(255, 200, 87, 0.35);
+    box-shadow: -8px 0 24px rgba(0, 0, 0, 0.4);
+    z-index: 20;
+}
+[data-theme="light"] .fm-shell.fm-narrow.fm-preview-open .fm-preview { background: rgba(255, 252, 240, 0.98); }
+.fm-shell.fm-narrow.fm-preview-open .fm-preview::before {
+    content: '✕';
+    position: absolute; top: 6px; right: 10px;
+    cursor: pointer; opacity: 0.7; font-size: 14px;
+}
+.fm-toggle-preview { display: none; }
+.fm-shell.fm-narrow .fm-toggle-preview { display: inline-block; }
 [data-theme="light"] .fm-shell {
     background: rgba(250, 246, 235, 0.65);
 }
@@ -88,7 +110,28 @@ body, #root {
 .fm-entry.active { background: rgba(255, 200, 87, 0.18); }
 .fm-entry-icon { font-size: 14px; width: 18px; text-align: center; opacity: 0.85; }
 .fm-entry-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.fm-entry-meta { font-size: 11px; opacity: 0.5; }
+.fm-entry-meta { font-size: 11px; opacity: 0.5; margin-right: 6px; }
+
+.fm-row-actions {
+    display: flex; gap: 2px;
+    opacity: 0;
+    transition: opacity 120ms;
+}
+.fm-entry:hover .fm-row-actions,
+.fm-entry.active .fm-row-actions { opacity: 1; }
+/* On touch devices hover never fires — always show. */
+@media (hover: none) { .fm-row-actions { opacity: 1; } }
+.fm-row-act {
+    background: transparent;
+    border: 1px solid rgba(255, 200, 87, 0.18);
+    color: inherit;
+    padding: 2px 6px;
+    border-radius: 3px;
+    font-size: 11px;
+    line-height: 1;
+    cursor: pointer;
+}
+.fm-row-act:hover { background: rgba(255, 200, 87, 0.18); border-color: rgba(255, 200, 87, 0.5); }
 .fm-empty {
     padding: 20px;
     color: #999;

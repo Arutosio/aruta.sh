@@ -283,6 +283,7 @@ export default {
                     <button class="fm-btn" data-act="refresh">⟳</button>
                     <span class="fm-spacer"></span>
                     <span class="fm-breadcrumb" id="fm-crumb">/</span>
+                    <button class="fm-btn fm-toggle-preview" data-act="togglePreview" title="Toggle preview">👁</button>
                 </div>
                 <aside class="fm-sources" id="fm-sources">
                     ${SOURCES.map(s => `<div class="fm-source" data-source="${s.id}"><span class="fm-source-icon">${s.icon}</span>${s.label}</div>`).join('')}
@@ -383,12 +384,25 @@ export default {
             }
         }
 
+        function rowActionsHTML(it, writable) {
+            if (it.kind !== 'file') return '';
+            const canHandoff = isTextLike(it.name, it.mime) && currentSource !== 'packages';
+            const btns = [];
+            btns.push(`<button class="fm-row-act" data-row-act="download" title="Download">⬇</button>`);
+            if (canHandoff) btns.push(`<button class="fm-row-act" data-row-act="openGrimoire" title="Open in Grimoire">📜</button>`);
+            if (writable) btns.push(`<button class="fm-row-act" data-row-act="rename" title="Rename">✎</button>`);
+            if (writable) btns.push(`<button class="fm-row-act" data-row-act="delete" title="Delete">🗑</button>`);
+            return `<span class="fm-row-actions">${btns.join('')}</span>`;
+        }
+
         function renderEntries(items) {
+            const writable = !!backend && backend.isWritable?.() && currentSource !== 'packages';
             return items.map((it, i) => `
                 <div class="fm-entry" data-idx="${i}">
                     <span class="fm-entry-icon">${it.kind === 'dir' ? '📁' : '📄'}</span>
                     <span class="fm-entry-name">${escapeHTML(it.name)}</span>
                     <span class="fm-entry-meta">${it.kind === 'file' ? fmtSize(it.size) : ''}</span>
+                    ${rowActionsHTML(it, writable)}
                 </div>
             `).join('');
         }
@@ -397,7 +411,9 @@ export default {
             $tree.querySelectorAll('.fm-entry').forEach((el) => {
                 const idx = Number(el.dataset.idx);
                 const it = items[idx];
-                el.addEventListener('click', async () => {
+                el.addEventListener('click', async (ev) => {
+                    // Row-action buttons handle their own clicks; don't navigate.
+                    if (ev.target.closest('.fm-row-act')) return;
                     $tree.querySelectorAll('.fm-entry').forEach(e => e.classList.remove('active'));
                     el.classList.add('active');
                     if (it.kind === 'dir') {
@@ -406,13 +422,56 @@ export default {
                     } else {
                         selected = it;
                         await renderPreview();
+                        // On narrow layouts, auto-open the preview overlay.
+                        if (root.querySelector('.fm-shell').classList.contains('fm-narrow')) {
+                            root.querySelector('.fm-shell').classList.add('fm-preview-open');
+                        }
                     }
                 });
-                el.addEventListener('contextmenu', (ev) => {
-                    ev.preventDefault();
-                    showContextMenu(ev, it);
+                el.querySelectorAll('.fm-row-act').forEach(btn => {
+                    btn.addEventListener('click', async (ev) => {
+                        ev.stopPropagation();
+                        const act = btn.dataset.rowAct;
+                        await runRowAction(act, it);
+                    });
                 });
             });
+        }
+
+        async function runRowAction(act, it) {
+            const path = cwd ? cwd + '/' + it.name : it.name;
+            if (act === 'rename') {
+                const n = prompt('New name:', it.name);
+                if (!n || n === it.name) return;
+                try { await backend.rename(path, n); await refresh(); resetPreview(); }
+                catch (e) { ctx.toast?.('Rename failed: ' + (e.message || e), 'error'); }
+                return;
+            }
+            if (act === 'delete') {
+                if (!confirm(`Delete "${it.name}"?`)) return;
+                try { await backend.deleteNode(path); await refresh(); resetPreview(); }
+                catch (e) { ctx.toast?.('Delete failed: ' + (e.message || e), 'error'); }
+                return;
+            }
+            // Download / openGrimoire need to read the file first.
+            let data;
+            try { data = await backend.readFile(path); }
+            catch (e) { ctx.toast?.('Read failed: ' + (e.message || e), 'error'); return; }
+            const mime = data.mime || mimeFromName(it.name);
+            if (act === 'download') {
+                const url = URL.createObjectURL(new Blob([data.bytes], { type: mime }));
+                const a = document.createElement('a');
+                a.href = url; a.download = it.name;
+                document.body.appendChild(a); a.click(); a.remove();
+                setTimeout(() => URL.revokeObjectURL(url), 2000);
+            } else if (act === 'openGrimoire') {
+                const text = new TextDecoder().decode(data.bytes);
+                try { await ctx.handoff('grimoire', { type: 'file', name: it.name, content: text, mime }); }
+                catch (e) {
+                    if (String(e.message).includes('payload_too_large')) ctx.toast?.('File too large for handoff', 'warning');
+                    else ctx.toast?.('Handoff failed: ' + (e.message || e), 'error');
+                }
+            }
         }
 
         // ── Preview ────────────────────────────────────────────
@@ -451,56 +510,11 @@ export default {
                 body = `<em>Binary file — no inline preview.</em>`;
             }
 
-            const canHandoff = isText && ctx.handoff && currentSource !== 'packages';
-            const writable = backend.isWritable?.() && currentSource !== 'packages';
-
             $preview.innerHTML = `
                 <div class="fm-preview-title">${escapeHTML(name)}</div>
                 <div class="fm-preview-meta">${escapeHTML(mime)} · ${size}</div>
                 <div class="fm-preview-body">${body}</div>
-                <div class="fm-preview-actions">
-                    <button class="fm-btn" data-pact="download">⬇ Download</button>
-                    ${canHandoff ? `<button class="fm-btn" data-pact="openGrimoire">📜 Open in Grimoire</button>` : ''}
-                    ${writable ? `<button class="fm-btn" data-pact="delete">🗑 Delete</button>` : ''}
-                    ${writable ? `<button class="fm-btn" data-pact="rename">Rename</button>` : ''}
-                </div>
             `;
-            $preview.querySelectorAll('[data-pact]').forEach(b => {
-                b.addEventListener('click', () => handlePreviewAction(b.dataset.pact, data, path, mime));
-            });
-        }
-
-        async function handlePreviewAction(act, data, path, mime) {
-            const name = selected.name;
-            if (act === 'download') {
-                const url = URL.createObjectURL(new Blob([data.bytes], { type: mime }));
-                const a = document.createElement('a');
-                a.href = url; a.download = name;
-                document.body.appendChild(a); a.click(); a.remove();
-                setTimeout(() => URL.revokeObjectURL(url), 2000);
-            } else if (act === 'openGrimoire') {
-                const text = new TextDecoder().decode(data.bytes);
-                try {
-                    await ctx.handoff('grimoire', { type: 'file', name, content: text, mime });
-                } catch (e) {
-                    if (String(e.message).includes('payload_too_large')) ctx.toast?.('File too large for handoff', 'warning');
-                    else ctx.toast?.('Handoff failed: ' + (e.message || e), 'error');
-                }
-            } else if (act === 'delete') {
-                if (!confirm(`Delete "${name}"?`)) return;
-                try { await backend.deleteNode(path); resetPreview(); await refresh(); }
-                catch (e) { ctx.toast?.('Delete failed: ' + (e.message || e), 'error'); }
-            } else if (act === 'rename') {
-                const n = prompt('New name:', name);
-                if (!n || n === name) return;
-                try { await backend.rename(path, n); await refresh(); resetPreview(); }
-                catch (e) { ctx.toast?.('Rename failed: ' + (e.message || e), 'error'); }
-            }
-        }
-
-        function showContextMenu(ev, it) {
-            // Minimal: right-click just selects.
-            ev.target.closest('.fm-entry')?.click();
         }
 
         // ── Toolbar actions ────────────────────────────────────
@@ -539,6 +553,32 @@ export default {
             await refresh();
         });
 
+        // Preview overlay toggle (narrow layouts).
+        const $shell = root.querySelector('.fm-shell');
+        root.querySelector('[data-act="togglePreview"]').addEventListener('click', () => {
+            $shell.classList.toggle('fm-preview-open');
+        });
+        // Click the ✕ pseudo-element area at the top-right of the overlay preview.
+        root.querySelector('#fm-preview').addEventListener('click', (ev) => {
+            if (!$shell.classList.contains('fm-narrow')) return;
+            const r = ev.currentTarget.getBoundingClientRect();
+            if (ev.clientY - r.top < 22 && r.right - ev.clientX < 28) {
+                $shell.classList.remove('fm-preview-open');
+            }
+        });
+
+        // Responsive: collapse preview when the window is narrow.
+        const NARROW_PX = 720;
+        const ro = new ResizeObserver((entries) => {
+            for (const e of entries) {
+                const w = e.contentRect.width;
+                $shell.classList.toggle('fm-narrow', w < NARROW_PX);
+                if (w >= NARROW_PX) $shell.classList.remove('fm-preview-open');
+            }
+        });
+        ro.observe($shell);
+        root.__fmRO = ro;
+
         // ── Boot ───────────────────────────────────────────────
         root.querySelectorAll('.fm-source').forEach(el => {
             el.addEventListener('click', () => selectSource(el.dataset.source));
@@ -547,7 +587,7 @@ export default {
     },
 
     async unmount(root, ctx) {
-        // Best-effort: revoke any lingering preview URL.
+        try { root.__fmRO?.disconnect(); } catch {}
         const previews = root.querySelectorAll('img[src^="blob:"], video[src^="blob:"], audio[src^="blob:"]');
         previews.forEach(el => { try { URL.revokeObjectURL(el.src); } catch {} });
     }
