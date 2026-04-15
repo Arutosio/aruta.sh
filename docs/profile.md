@@ -18,6 +18,10 @@ registry/
   files.meta.json                ← MIME map for the file blobs
   files/<appId>/<path>           ← raw package file bytes
 apps/<appId>.json                ← per-app kv storage (ctx.storage)
+appearance/                      ← user-customized look (optional)
+  meta.json                      ← kind/mime/filename per asset
+  background.<ext>               ← custom desktop background (image or video)
+  portrait.<ext>                 ← custom hero portrait
 ```
 
 There are two backends:
@@ -81,6 +85,7 @@ The reload-after-restore is intentional. It keeps the boot path simple — every
 | `localStorage` | Every key starting with `aruta_` (theme, language, font, achievements, perms, terminal history, registry cache, …) |
 | `aruta_packages` IDB | All installed package manifests + every file blob |
 | `aruta_app_<id>` IDB | Each app's private `ctx.storage` kv store |
+| `aruta_appearance` IDB | Custom background and portrait binaries set from Settings → Appearance |
 
 ## What's NOT stored
 

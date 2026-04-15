@@ -142,11 +142,12 @@ sequenceDiagram
 | [`JavaScript/terminal.js`](../JavaScript/terminal.js) | Shell UI, parser (quoted strings), history, built-in commands. Unknown names fall through to `registry.listCommands()` → `sandbox.runCommand()` |
 | [`JavaScript/defaults.js`](../JavaScript/defaults.js) | Auto-installs bundled `defaultPackages/*` on first boot. Packages fetched and installed in parallel (one burst, not a serial chain). Respects a blacklist so uninstalls persist. Re-runs when a default's `version` changes |
 | [`JavaScript/profile.js`](../JavaScript/profile.js) | Portable profile snapshot/restore. `DiskBackend` mirrors state to a folder via FS Access API (Chromium); `exportZip`/`importZip` work in any browser. Boot-gates registry/defaults via `window.__arutaProfileReady`. See [profile.md](./profile.md) |
+| [`JavaScript/appearance.js`](../JavaScript/appearance.js) | User-customizable look: background (image or looping video), hero portrait, and display name. Binaries live in IDB `aruta_appearance` (+ metadata in `localStorage.aruta_appearance_meta`); `profile.js` slurps both into the `appearance/` namespace of every snapshot so folder sync and .zip export carry them automatically. Applied to the DOM after the profile gate in `app.js` |
 | [`JavaScript/zip.js`](../JavaScript/zip.js) | STORE-only zip codec (`encode`/`decode`). Used by `profile.js` and Grimoire's workspace export. No compression — keeps the file purely a transport container |
 
 Script load order in `index.html`:
 ```
-config.js  core.js  util.js  zip.js  db.js  storage.js  profile.js
+config.js  core.js  util.js  zip.js  db.js  storage.js  profile.js  appearance.js
 effects.js  desktop.js  content.js  extras.js
 os-windows.js  os.js  os-settings.js  os-sysinfo.js
 permissions.js  registry.js  sandbox.js  installer.js  defaults.js  terminal.js  app.js
@@ -181,6 +182,8 @@ All the DB and key-prefix string literals live in `storage.js:Storage.constants`
 | localStorage | `aruta_theme_follow_os` | `'false'` only when user has manually overridden follow-OS theme |
 | localStorage | `aruta_repos` | System repo list managed by `repos.js` (Package Store + `pkg` CLI consume it) |
 | IndexedDB | `aruta_profile` / `handles` store | Persisted FS Access API directory handle for the linked profile folder |
+| IndexedDB | `aruta_appearance` / `assets` store | Custom background + hero portrait binaries (keyed by `'background'` / `'portrait'`); managed by `appearance.js` |
+| localStorage | `aruta_appearance_meta` | JSON blob with `{ name, background:{kind,mime,filename}, portrait:{mime,filename} }` — lightweight metadata to pair with the IDB binaries |
 
 ### Wipe flows
 
