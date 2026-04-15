@@ -51,6 +51,19 @@ function validateManifest(m) {
     } else if (!TYPES.includes(m.type)) {
         return 'type must be "app" or "command" (or declare roles[])';
     }
+    // When a manifest declares BOTH roles[] and type, they must agree:
+    // `type` has to appear in `roles`. A mismatch is almost always a copy-paste
+    // bug and would silently confuse downstream role checks.
+    if (Array.isArray(m.roles) && typeof m.type === 'string') {
+        if (!m.roles.includes(m.type)) {
+            return 'type "' + m.type + '" must be included in roles array';
+        }
+        if (m.roles.length > 1) {
+            // Legacy `type` paired with modern multi-role `roles` — valid but
+            // discouraged. `type` should be dropped from hybrid manifests.
+            console.warn('[installer] manifest declares both roles[] and type; prefer roles-only for hybrid packages (' + m.id + ')');
+        }
+    }
     if (!m.name || typeof m.name !== 'string') return 'name is required';
     if (m.entry && typeof m.entry !== 'string') return 'entry must be a string';
     if (m.entries != null) {
