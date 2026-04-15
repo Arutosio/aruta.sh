@@ -100,6 +100,29 @@ async function bootstrapDefaults() {
         );
     }
     await Promise.all(pending);
+
+    // Prune orphaned default packages: any installed manifest still tagged
+    // _origin:'default' whose id no longer appears in defaults.json (and that
+    // the user hasn't explicitly blacklisted) is a stale bundled package from
+    // a previous site release — remove it now that fresh defaults are in.
+    // User-reinstalled packages (_origin:'user') are untouched.
+    const currentIds = new Set(index.packages.map(p => p.id));
+    try {
+        const installed = window.registry.list();
+        for (const m of installed) {
+            if (m._origin !== 'default') continue;
+            if (currentIds.has(m.id)) continue;
+            if (blacklist.has(m.id)) continue;
+            try {
+                await window.registry.uninstall(m.id);
+                console.info('[defaults] pruned orphan default:', m.id);
+            } catch (e) {
+                console.warn('[defaults] prune failed for', m.id, e);
+            }
+        }
+    } catch (e) {
+        console.warn('[defaults] prune scan failed', e);
+    }
 }
 
 function markUninstalled(id) {

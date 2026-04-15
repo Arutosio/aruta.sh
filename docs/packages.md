@@ -183,6 +183,8 @@ The default package set ships three hybrids so the Start-menu app and the Termin
 - `dice-roller` + `roll` — visual Dice Roller (app) with the `roll` CLI (alias).
 - `oracle` + `fortune` — Oracle (app) with the `fortune` CLI (alias).
 
+On boot, the defaults loader also **prunes orphan defaults** — any installed manifest still tagged `_origin: "default"` whose id no longer appears in `defaults.json` is uninstalled automatically (unless the user explicitly blacklisted it by uninstalling it manually). User-installed packages (`_origin: "user"`) are never touched, even if they share an id with a removed default.
+
 ---
 
 ## Packaging & installing
