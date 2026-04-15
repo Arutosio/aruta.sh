@@ -22,7 +22,7 @@ A tiny command that prints a decorated greeting and fires a success toast. Good 
 **manifest.json**
 ```json
 {
-    "type": "command",
+    "roles": ["command"],
     "id": "greet",
     "name": "Greet",
     "icon": "✨",
@@ -58,7 +58,7 @@ The id is `arcane-snake` (not `snake`) so it doesn't collide with the bundled de
 **manifest.json**
 ```json
 {
-    "type": "app",
+    "roles": ["app"],
     "id": "arcane-snake",
     "name": "Arcane Snake",
     "icon": "🐍",
@@ -71,6 +71,47 @@ The id is `arcane-snake` (not `snake`) so it doesn't collide with the bundled de
 ```
 
 **Install flow**: drop `arcane-snake.zip` on the desktop → confirm → 🐍 appears in the Start menu → open it. First time you eat food and beat your high score, the storage permission prompt appears.
+
+---
+
+## `greet-hybrid` — one package, both surfaces
+
+A **hybrid** package declares multiple `roles` and ships a separate entry file per role. The app and the CLI share the same id, storage, and permissions — so a setting saved in the UI is visible to the command, and vice versa. See [`docs/packages.md`](./packages.md) for the full schema.
+
+**manifest.json**
+```json
+{
+    "roles": ["app", "command"],
+    "id": "greet-hybrid",
+    "name": "Greet",
+    "icon": "👋",
+    "version": "1.0.0",
+    "author": "Aruta",
+    "minSdk": 2,
+    "entries": { "app": "ui.js", "command": "cli.js" },
+    "commandAlias": "greet",
+    "permissions": ["terminal", "notifications"]
+}
+```
+
+**ui.js** — windowed app, a button that toasts hello:
+```js
+export default {
+    mount(root, ctx) {
+        root.innerHTML = `<button>Wave</button>`;
+        root.querySelector('button').onclick = () => ctx.toast('👋 hello from the app');
+    }
+};
+```
+
+**cli.js** — terminal verb `greet <name>`:
+```js
+export default {
+    async run(args, ctx) { await ctx.print('Hello, ' + (args[0] || 'world') + '!'); }
+};
+```
+
+After install, 👋 Greet appears in the Start menu **and** `greet Aruta` works in the Terminal. The bundled `packagestore` / `pkg`, `dice-roller` / `roll`, and `oracle` / `fortune` packages all follow this pattern.
 
 ---
 

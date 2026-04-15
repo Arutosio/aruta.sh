@@ -11,7 +11,7 @@ Live site: **[aruta.sh](https://aruta.sh)**
 - 🪟 Arcane-themed desktop OS — windows (drag, maximize, **resize from any edge or corner**), taskbar, start menu, system info
 - 🌓 Dark/light themes (defaults to **follow OS**, propagated live to every app iframe), accent colors, i18n (IT, EN, ES, JA, Elder Futhark runes)
 - ⌨️ Built-in Terminal with history and colored output
-- 📦 **Plugin packages** — drag-and-drop `.zip` install for apps (windowed) and commands (terminal). Bundled defaults include 📦 Package Store (browse + install from remote repos), 🐍 Snake, 📜 Grimoire (folder-based notes/code editor), Oracle, Dice Roller, Timer, QR, and more
+- 📦 **Plugin packages** — drag-and-drop `.zip` install for apps (windowed), commands (terminal), or **hybrids** that ship both at once. Bundled defaults include 📦 Package Manager (`pkg` CLI, browse + install from remote repos), 🎲 Dice Roller (`roll` CLI), 🔮 Oracle (`fortune` CLI), 🐍 Snake, 📜 Grimoire (folder-based notes/code editor), Timer, QR, and more
 - 🔐 iOS-style runtime permissions, revocable per app
 - 💾 Full persistence — preferences in localStorage, packages & app data in IndexedDB
 - 🗂️ **Portable Profile** — link a folder for live disk sync (Chromium) or export/import a `.zip` (any browser). [docs/profile.md](./docs/profile.md)
@@ -34,9 +34,11 @@ Start at [`docs/README.md`](./docs/README.md) for the full index (incl. the bund
 **Minimal command package** (`mypackage.zip` containing `manifest.json` + `index.js`):
 
 ```json
-{ "type": "command", "id": "hi", "name": "Hi", "entry": "index.js",
+{ "roles": ["command"], "id": "hi", "name": "Hi", "entry": "index.js",
   "permissions": ["terminal"] }
 ```
+
+(Legacy `"type": "command"` / `"type": "app"` manifests still install — they're auto-normalized to `roles` at boot.)
 ```js
 export default {
     async run(args, ctx) { await ctx.print('Hello, ' + (args[0] || 'world') + '!'); }
