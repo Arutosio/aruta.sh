@@ -10,7 +10,7 @@ Every app and command receives a `ctx` object. All protected methods are async a
 Your package id (the one from `manifest.json`).
 
 ### `ctx.sdkVersion: number`
-Integer host SDK version (currently `1`). Apps can branch on this to feature-detect newer host surfaces without sniffing globals. A package can pin a minimum via `manifest.sdk`; the host warns but still mounts if it's older. See [SDK versioning](./packages.md#sdk-versioning).
+Integer host SDK version (currently `2`). Apps can branch on this to feature-detect newer host surfaces without sniffing globals. A package can pin a minimum via `manifest.minSdk` / `manifest.sdk`; install is rejected if the host is older. `ctx.sdkVersion >= 2` means the host supports hybrid packages — manifests with `roles: ["app", "command"]`, per-role `entries`, and `commandAlias`. See [SDK versioning](./packages.md#sdk-versioning) and [multi-role packages](./packages.md#multi-role-packages).
 
 ### `ctx.asset(path: string): string | null`
 Returns a blob URL for a file inside your zip. Useful for `<img src>`, `<audio src>`, etc. If `path` starts with `assets/` the leading segment can be omitted:

@@ -227,6 +227,12 @@ Iframe boot HTML is inlined in `sandbox.js:IFRAME_BOOT` via `srcdoc`. The sandbo
 
 ---
 
+## Roles
+
+A package declares one or more roles (`"app"`, `"command"`) in its manifest. Every host-side branch that used to read `manifest.type === 'app'` / `'command'` now reads `manifest.roles.includes(...)`, which makes hybrid packages (app + CLI under one id, storage, and permission set) a first-class shape. Legacy `type` manifests are normalized into `roles: [type]` at boot. See [packages.md](./packages.md#multi-role-packages).
+
+---
+
 ## Commands
 
 Commands have no UI, so running them in an iframe would add startup cost for no security benefit. Instead:

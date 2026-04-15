@@ -21,6 +21,7 @@ function loadJSZip() {
 
 const ID_RE = /^[a-z0-9][a-z0-9_-]{1,40}$/;
 const TYPES = ['app', 'command'];
+const KNOWN_ROLES = ['app', 'command'];
 const KNOWN_CATEGORIES = ['info', 'games', 'tools', 'creativity', 'system', 'other'];
 
 function _knownPermissions() {
@@ -36,9 +37,33 @@ function validateManifest(m) {
     if (!m || typeof m !== 'object') return 'manifest is not an object';
     if (!ID_RE.test(m.id || '')) return 'invalid id (a-z, 0-9, _-, 2-41 chars)';
     if (!m.version || typeof m.version !== 'string') return 'version is required (non-empty string)';
-    if (!TYPES.includes(m.type)) return 'type must be "app" or "command"';
+    // Role validation: modern manifests declare `roles: [...]`, legacy ones
+    // declare `type: "app"|"command"`. Accept either, reject if neither is
+    // valid or if any role string is unknown.
+    if (Array.isArray(m.roles)) {
+        if (m.roles.length === 0) return 'roles must be a non-empty array';
+        for (const r of m.roles) {
+            if (typeof r !== 'string') return 'roles entries must be strings';
+            if (!KNOWN_ROLES.includes(r)) return 'unknown role: "' + r + '"';
+        }
+    } else if (m.roles != null) {
+        return 'roles must be an array';
+    } else if (!TYPES.includes(m.type)) {
+        return 'type must be "app" or "command" (or declare roles[])';
+    }
     if (!m.name || typeof m.name !== 'string') return 'name is required';
     if (m.entry && typeof m.entry !== 'string') return 'entry must be a string';
+    if (m.entries != null) {
+        if (typeof m.entries !== 'object' || Array.isArray(m.entries)) return 'entries must be an object';
+        const declaredRoles = Array.isArray(m.roles) ? m.roles : (TYPES.includes(m.type) ? [m.type] : []);
+        for (const [k, v] of Object.entries(m.entries)) {
+            if (!declaredRoles.includes(k)) return 'entries key "' + k + '" is not a declared role';
+            if (!v || typeof v !== 'string') return 'entries["' + k + '"] must be a non-empty string';
+        }
+    }
+    if (m.commandAlias != null) {
+        if (typeof m.commandAlias !== 'string' || !m.commandAlias) return 'commandAlias must be a non-empty string';
+    }
     if (m.permissions != null) {
         if (!Array.isArray(m.permissions)) return 'permissions must be an array';
         const known = _knownPermissions();
@@ -74,8 +99,11 @@ async function _confirmInstall(manifest, isUpdate) {
     const titleTpl = isUpdate ? (t.install_update_title || 'Update {name}?') : (t.install_title || 'Install {name}?');
     const title = titleTpl.replace('{name}', manifest.name);
     const permsList = (manifest.permissions || []).map(p => '• ' + (window.permissions?.label(p) || p)).join('\n');
+    const rolesLabel = Array.isArray(manifest.roles) && manifest.roles.length
+        ? manifest.roles.join(' + ')
+        : (manifest.type || '—');
     const body = (t.install_body || 'Type: {type}\nID: {id}\nVersion: {version}\nAuthor: {author}\n\nDeclared permissions:\n{perms}')
-        .replace('{type}', manifest.type)
+        .replace('{type}', rolesLabel)
         .replace('{id}', manifest.id)
         .replace('{version}', manifest.version || '—')
         .replace('{author}', manifest.author || '—')
@@ -141,8 +169,18 @@ async function installFromFile(file, opts) {
         throw new Error(err);
     }
 
-    const entryPath = manifest.entry || 'index.js';
-    if (!zip.file(entryPath)) throw new Error('entry not found: ' + entryPath);
+    // Verify every declared role has a resolvable entry inside the zip.
+    // `entries[role]` wins, then the shared `entry`, then `index.js` default.
+    const rolesToCheck = Array.isArray(manifest.roles) && manifest.roles.length
+        ? manifest.roles
+        : (TYPES.includes(manifest.type) ? [manifest.type] : []);
+    const checkedPaths = new Set();
+    for (const role of rolesToCheck) {
+        const p = (manifest.entries && manifest.entries[role]) || manifest.entry || 'index.js';
+        if (checkedPaths.has(p)) continue;
+        checkedPaths.add(p);
+        if (!zip.file(p)) throw new Error('entry not found: ' + p);
+    }
 
     // Sandbox-originated installs of allowOrigin packages need an explicit
     // extra gesture — a sandboxed app should not be able to hand the user a

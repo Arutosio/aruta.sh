@@ -148,7 +148,8 @@ const BUILTINS = {
                 termPrint('');
                 termPrint(t.term_help_custom || 'Installed commands:', 'term-info');
                 for (const c of customCmds) {
-                    termPrintHTML(`  <span class="term-key">${_escape(c.id.padEnd(max + 2))}</span><span class="term-muted">${_escape(c.name || '')}</span>`);
+                    const key = c.commandAlias || c.id;
+                    termPrintHTML(`  <span class="term-key">${_escape(key.padEnd(max + 2))}</span><span class="term-muted">${_escape(c.name || '')}</span>`);
                 }
             }
         }
@@ -158,7 +159,7 @@ const BUILTINS = {
     apps:  {
         desc: 'List installed apps',
         run() {
-            const apps = (window.registry?.list() || []).filter(m => m.type === 'app');
+            const apps = (window.registry?.list() || []).filter(m => m.roles?.includes('app'));
             if (!apps.length) { termPrint('(no apps installed)', 'term-dim'); return; }
             for (const a of apps) {
                 termPrintHTML(`${a.icon || '📦'} <span class="term-key">${_escape(a.id.padEnd(20))}</span><span class="term-muted">${_escape(a.name)}</span>`);
@@ -171,7 +172,10 @@ const BUILTINS = {
             const cs = window.registry?.listCommands() || [];
             if (!cs.length) { termPrint('(no commands installed)', 'term-dim'); return; }
             for (const c of cs) {
-                termPrintHTML(`<span class="term-success">⚡</span> <span class="term-key">${_escape(c.id.padEnd(20))}</span><span class="term-muted">${_escape(c.name)}</span>`);
+                // Prefer the terminal alias (commandAlias) over the package id
+                // — that's the name the user actually types.
+                const key = c.commandAlias || c.id;
+                termPrintHTML(`<span class="term-success">⚡</span> <span class="term-key">${_escape(key.padEnd(20))}</span><span class="term-muted">${_escape(c.name)}</span>`);
             }
         }
     },
@@ -370,14 +374,17 @@ async function termRun(line) {
         catch (e) { termPrint('error: ' + (e.message || e), 'term-error'); }
         return;
     }
+    // Commands can be invoked by alias (commandAlias) or by package id.
+    const cmdManifest = window.registry?.getCommand?.(parsed.name)
+        || (window.registry?.isInstalled(parsed.name) ? window.registry.getManifest(parsed.name) : null);
+    if (cmdManifest && cmdManifest.roles?.includes('command')) {
+        try { await window.sandbox.runCommand(cmdManifest.id, parsed.args); }
+        catch (e) { termPrint('error: ' + (e.message || e), 'term-error'); }
+        return;
+    }
     if (window.registry?.isInstalled(parsed.name)) {
         const m = window.registry.getManifest(parsed.name);
-        if (m.type === 'command') {
-            try { await window.sandbox.runCommand(parsed.name, parsed.args); }
-            catch (e) { termPrint('error: ' + (e.message || e), 'term-error'); }
-            return;
-        }
-        if (m.type === 'app') {
+        if (m.roles?.includes('app')) {
             if (typeof openWindow === 'function') openWindow(parsed.name);
             return;
         }
@@ -513,7 +520,15 @@ function _knownCommands() {
     const set = new Set(Object.keys(BUILTINS));
     try {
         const list = window.registry?.list?.() || [];
-        for (const m of list) if (m && m.id) set.add(m.id);
+        for (const m of list) {
+            if (!m || !m.id) continue;
+            // Apps are openable by id; commands answer to their alias (if any)
+            // or their id. Include all reachable tokens so the tab-completer
+            // and "ok/bad" highlight match terminal dispatch.
+            if (m.roles?.includes('app')) set.add(m.id);
+            if (m.roles?.includes('command')) set.add(m.commandAlias || m.id);
+            if (!m.roles) set.add(m.id); // ultra-legacy safety net
+        }
     } catch {}
     return set;
 }

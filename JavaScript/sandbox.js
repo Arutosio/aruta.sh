@@ -6,7 +6,35 @@
 /** Host-side SDK version. The ctx contract surface. Bump this only on a
  *  breaking change to `ctx.*` / init-payload shape. Apps may declare a
  *  minimum `sdk` in their manifest to opt into a newer contract. */
-const SDK_VERSION = 1;
+const SDK_VERSION = 2;
+
+/**
+ * Normalize a manifest so downstream code can rely on `roles` being an array.
+ * Legacy manifests with `type: "app"|"command"` get promoted to `roles: [type]`.
+ * Also resolves the per-role entry file via `entries[role] ?? entry ?? 'index.js'`,
+ * cached on `entriesResolved` for quick lookup by `mountApp` / `runCommand`.
+ */
+function normalizeManifest(m) {
+    if (!m || typeof m !== 'object') return m;
+    const out = { ...m };
+    if (!Array.isArray(out.roles) || out.roles.length === 0) {
+        if (out.type === 'app' || out.type === 'command') {
+            out.roles = [out.type];
+        } else {
+            out.roles = [];
+        }
+    }
+    // Back-compat: ensure `type` mirrors the primary role so any legacy
+    // consumer that still reads `m.type` keeps working during the transition.
+    if (!out.type && out.roles[0]) out.type = out.roles[0];
+    const defaultEntry = out.entry || 'index.js';
+    const resolved = {};
+    for (const role of out.roles) {
+        resolved[role] = (out.entries && out.entries[role]) || defaultEntry;
+    }
+    out.entriesResolved = resolved;
+    return out;
+}
 
 const _mounted = new Map(); // appId -> { iframe, channel }
 
@@ -111,7 +139,7 @@ async function _handleCall(appId, method, args) {
             // add an extra consent prompt if the package requests allowOrigin.
             const m = await window.installer.installFromFile(file, { sandboxOrigin: true, callerAppId: appId });
             if (!m) return null; // user cancelled
-            return { id: m.id, name: m.name, version: m.version, type: m.type };
+            return { id: m.id, name: m.name, version: m.version, type: m.type, roles: m.roles };
         }
         case 'uninstall': {
             const targetId = String(args[0] || '');
@@ -126,7 +154,11 @@ async function _handleCall(appId, method, args) {
         }
         case 'listInstalled': {
             const all = window.registry?.list() || [];
+<<<<<<< HEAD
             return all.map(m => ({ id: m.id, name: m.name, icon: m.icon || null, version: m.version || null, type: m.type, _origin: m._origin || 'user' }));
+=======
+            return all.map(m => ({ id: m.id, name: m.name, icon: m.icon || null, version: m.version || null, type: m.type, roles: Array.isArray(m.roles) ? m.roles.slice() : (m.type ? [m.type] : []), _origin: m._origin || 'user' }));
+>>>>>>> worktree-agent-a29eb430
         }
         case 'repos.list':       return window.repos?.list() || [];
         case 'repos.add':        return window.repos?.add(args[0], args[1]);
@@ -225,7 +257,7 @@ html,body{margin:0;padding:0;width:100%;height:100%;background:transparent;color
                     link.href = fileURLs['style.css'];
                     document.head.appendChild(link);
                 }
-                const entryPath = d.manifest.entry || 'index.js';
+                const entryPath = (d.manifest.entriesResolved && d.manifest.entriesResolved.app) || d.manifest.entry || 'index.js';
                 const mod = await import(fileURLs[entryPath]);
                 const exp = mod.default || mod;
                 if (typeof exp.mount === 'function') await exp.mount(root, ctx);
@@ -242,7 +274,7 @@ html,body{margin:0;padding:0;width:100%;height:100%;background:transparent;color
 
 async function mountApp(appId) {
     const manifest = window.registry.getManifest(appId);
-    if (!manifest || manifest.type !== 'app') return false;
+    if (!manifest || !Array.isArray(manifest.roles) || !manifest.roles.includes('app')) return false;
 
     // SDK version gate: warn, don't block. Packages that absolutely need a
     // newer host feature can branch on `ctx.sdkVersion` inside their code.
@@ -313,9 +345,10 @@ function unmountApp(appId) {
 
 async function runCommand(commandId, args) {
     const manifest = window.registry.getManifest(commandId);
-    if (!manifest || manifest.type !== 'command') throw new Error('not_a_command');
+    if (!manifest || !Array.isArray(manifest.roles) || !manifest.roles.includes('command')) throw new Error('not_a_command');
     const files = await window.registry.getFiles(commandId);
-    const entry = files[manifest.entry || 'index.js'];
+    const entryPath = (manifest.entriesResolved && manifest.entriesResolved.command) || manifest.entry || 'index.js';
+    const entry = files[entryPath];
     if (!entry) throw new Error('entry_missing');
 
     const entryURL = URL.createObjectURL(entry);
@@ -368,7 +401,7 @@ function _buildHostCtx(appId, files) {
                 : new File([blob], (opts && opts.filename) || 'remote.zip', { type: blob.type || 'application/zip' });
             const m = await window.installer.installFromFile(file);
             if (!m) return null;
-            return { id: m.id, name: m.name, version: m.version, type: m.type };
+            return { id: m.id, name: m.name, version: m.version, type: m.type, roles: m.roles };
         },
         uninstall: async (id) => {
             if (!(await window.permissions.request(appId, 'install'))) throw new Error('permission_denied:install');
@@ -377,7 +410,11 @@ function _buildHostCtx(appId, files) {
         listInstalled: async () => {
             if (!(await window.permissions.request(appId, 'install'))) throw new Error('permission_denied:install');
             const all = window.registry?.list() || [];
+<<<<<<< HEAD
             return all.map(m => ({ id: m.id, name: m.name, icon: m.icon || null, version: m.version || null, type: m.type, _origin: m._origin || 'user' }));
+=======
+            return all.map(m => ({ id: m.id, name: m.name, icon: m.icon || null, version: m.version || null, type: m.type, roles: Array.isArray(m.roles) ? m.roles.slice() : (m.type ? [m.type] : []), _origin: m._origin || 'user' }));
+>>>>>>> worktree-agent-a29eb430
         },
         repos: {
             list:       async () => (await window.permissions.request(appId, 'install')) ? window.repos.list() : [],
@@ -394,4 +431,4 @@ async function closeAppStorage(appId) {
     await window.db.closeDB((window.Storage?.constants.APP_DB_PREFIX || 'aruta_app_') + appId);
 }
 
-window.sandbox = { mount: mountApp, unmount: unmountApp, runCommand, closeAppStorage, broadcastTheme, broadcastInstallChange, SDK_VERSION, PERM_REQUIRED, isMounted: (id) => _mounted.has(id) };
+window.sandbox = { mount: mountApp, unmount: unmountApp, runCommand, closeAppStorage, broadcastTheme, broadcastInstallChange, SDK_VERSION, PERM_REQUIRED, normalizeManifest, isMounted: (id) => _mounted.has(id) };

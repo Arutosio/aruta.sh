@@ -1,11 +1,17 @@
 {
-    "type": "app",
     "id": "packagestore",
-    "name": "Package Store",
+    "name": "Package Manager",
     "icon": "📦",
+<<<<<<< HEAD
     "version": "1.3.0",
+=======
+    "version": "2.0.0",
+>>>>>>> worktree-agent-a29eb430
     "author": "Aruta",
-    "entry": "index.js",
     "category": "system",
-    "permissions": ["fetch", "storage", "notifications", "install"]
+    "minSdk": 2,
+    "roles": ["app", "command"],
+    "entries": { "app": "ui.js", "command": "cli.js" },
+    "commandAlias": "pkg",
+    "permissions": ["fetch", "storage", "notifications", "install", "terminal"]
 }
