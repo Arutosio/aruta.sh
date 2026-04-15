@@ -283,10 +283,9 @@ html,body{margin:0;padding:0;width:100%;height:100%;background:transparent;color
                 const mod = await import(fileURLs[entryPath]);
                 const exp = mod.default || mod;
                 if (typeof exp.mount === 'function') await exp.mount(root, ctx);
-                // Stash the module and ctx so a later `teardown` message can
-                // invoke exp.unmount?.(root, ctx) before the host removes the
-                // iframe. This gives apps a chance to detach document-level
-                // listeners etc.
+                // Stash the module and ctx so a later teardown message can
+                // invoke exp.unmount(root, ctx) before the host removes the
+                // iframe — lets apps detach document-level listeners.
                 window.__arutaApp = { exp, root, ctx };
                 parent.postMessage({ __aruta_sdk: true, type: 'mounted' }, '*');
             } catch (err) {
