@@ -2,7 +2,7 @@
     "id": "packagestore",
     "name": "Package Manager",
     "icon": "📦",
-    "version": "2.1.1",
+    "version": "2.2.0",
     "author": "Aruta",
     "category": "system",
     "minSdk": 2,

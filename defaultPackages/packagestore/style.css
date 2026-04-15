@@ -91,8 +91,7 @@ body {
     font-size: 0.85rem;
 }
 .ps-installed-search:focus { outline: none; border-color: var(--g); }
-.ps-tag-default,
-.ps-chip-default {
+.ps-tag-default {
     background: rgba(255, 200, 87, 0.18);
     color: var(--g);
 }
@@ -234,6 +233,41 @@ body {
     user-select: none;
 }
 .ps-chip input { accent-color: var(--g); }
+
+/* Segmented filter chips (unified Installed view) */
+.ps-filter-chips {
+    display: inline-flex;
+    border: 1px solid rgba(255, 200, 87, 0.28);
+    border-radius: 999px;
+    padding: 2px;
+    gap: 2px;
+    background: rgba(0, 0, 0, 0.18);
+}
+.ps-filter-chip {
+    background: transparent;
+    border: 0;
+    color: inherit;
+    font: inherit;
+    font-size: 0.78rem;
+    padding: 0.18rem 0.65rem;
+    border-radius: 999px;
+    cursor: pointer;
+    opacity: 0.75;
+    transition: background 0.12s, color 0.12s, opacity 0.12s;
+}
+.ps-filter-chip:hover { opacity: 1; background: rgba(255, 200, 87, 0.08); }
+.ps-filter-chip.is-active {
+    background: var(--g);
+    color: #1a0f00;
+    opacity: 1;
+    font-weight: 600;
+}
+[data-theme="light"] .ps-filter-chips { border-color: rgba(139, 105, 20, 0.35); }
+[data-theme="light"] .ps-filter-chip.is-active {
+    background: var(--gold);
+    color: var(--accent-contrast, #2a1a08);
+}
+
 .ps-count {
     margin-left: auto;
     font-size: 0.75rem;

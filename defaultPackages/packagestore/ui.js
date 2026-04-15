@@ -52,16 +52,15 @@ export default {
     async mount(root, ctx) {
         const state = {
             repos: [],
-            prefs: { sortBy: 'name', showOnlyUpdates: false, showOnlyInstalled: false, showDefaults: false },
+            prefs: { sortBy: 'name', showOnlyUpdates: false, showOnlyInstalled: false, filter: 'all' },
             installed: new Map(), // id -> version
             installedFull: [], // full manifest list (id, name, icon, version, type, _origin)
             filter: '',
             category: '',
             selectedPkg: null,
             busy: new Set(), // package ids currently installing
-            view: 'browse', // 'browse' | 'installed' | 'defaults'
+            view: 'browse', // 'browse' | 'installed'
             installedFilter: '',
-            defaultsFilter: '',
             defaultsList: [], // [{id,name,icon,version,installed,blacklisted}]
             defaultsBusy: new Set(),
             // Cache of default-package ids derived locally from installedFull.
@@ -422,11 +421,6 @@ export default {
                             <span class="ps-nav-lbl">Installed</span>
                             <span class="ps-nav-count ps-nav-installed-count"></span>
                         </button>
-                        <button class="ps-nav-item" data-view="defaults">
-                            <span class="ps-nav-ic">⭐</span>
-                            <span class="ps-nav-lbl">Defaults</span>
-                            <span class="ps-nav-count ps-nav-defaults-count"></span>
-                        </button>
                     </nav>
                     <div class="ps-side-head">
                         <span class="ps-side-title">Sources</span>
@@ -456,17 +450,15 @@ export default {
                 <section class="ps-main ps-main-installed" hidden>
                     <div class="ps-toolbar">
                         <input type="search" class="ps-installed-search" placeholder="Search installed…" />
-                        <label class="ps-chip"><input type="checkbox" class="ps-show-defaults" /> Show defaults</label>
+                        <div class="ps-filter-chips" role="tablist" aria-label="Filter">
+                            <button class="ps-filter-chip is-active" data-filter="all" role="tab">All</button>
+                            <button class="ps-filter-chip" data-filter="user" role="tab">User</button>
+                            <button class="ps-filter-chip" data-filter="defaults" role="tab">Defaults</button>
+                            <button class="ps-filter-chip" data-filter="updates" role="tab">Updates</button>
+                        </div>
                         <span class="ps-installed-count"></span>
                     </div>
                     <div class="ps-installed-list"></div>
-                </section>
-                <section class="ps-main ps-main-defaults" hidden>
-                    <div class="ps-toolbar">
-                        <input type="search" class="ps-defaults-search" placeholder="Search defaults…" />
-                        <span class="ps-defaults-count"></span>
-                    </div>
-                    <div class="ps-defaults-list"></div>
                 </section>
                 <aside class="ps-details"></aside>
             </div>
@@ -488,91 +480,124 @@ export default {
         const $navInstalledCount = root.querySelector('.ps-nav-installed-count');
         const $installedList = root.querySelector('.ps-installed-list');
         const $installedSearch = root.querySelector('.ps-installed-search');
-        const $showDefaults = root.querySelector('.ps-show-defaults');
         const $installedCount = root.querySelector('.ps-installed-count');
-        const $mainDefaults = root.querySelector('.ps-main-defaults');
-        const $defaultsList = root.querySelector('.ps-defaults-list');
-        const $defaultsSearch = root.querySelector('.ps-defaults-search');
-        const $defaultsCount = root.querySelector('.ps-defaults-count');
-        const $navDefaultsCount = root.querySelector('.ps-nav-defaults-count');
+        const $filterChips = root.querySelectorAll('.ps-filter-chip');
 
         function setView(v) {
             state.view = v;
             $navItems.forEach(n => n.classList.toggle('is-active', n.dataset.view === v));
             $mainBrowse.hidden = v !== 'browse';
             $mainInstalled.hidden = v !== 'installed';
-            $mainDefaults.hidden = v !== 'defaults';
             // details pane is only useful in Browse (needs repo-pkg data).
             $details.hidden = v !== 'browse';
             if (v === 'installed') renderInstalled();
-            if (v === 'defaults') refreshDefaults();
         }
 
         function findRepoPkg(id) {
             return getAllPackages().find(x => x.pkg.id === id) || null;
         }
 
+        // Build the unified row list: every installed package + every
+        // uninstalled default. Rows are normalized to a common shape so the
+        // row template doesn't have to branch on origin.
+        function unifiedRows() {
+            const byId = new Map();
+            for (const m of state.installedFull || []) {
+                byId.set(m.id, {
+                    id: m.id,
+                    name: m.name || m.id,
+                    icon: m.icon,
+                    version: m.version,
+                    roles: rolesLabel(m),
+                    installed: true,
+                    isDefault: m._origin === 'default' || state.defaultIds.has(m.id),
+                });
+            }
+            for (const d of state.defaultsList || []) {
+                if (d.installed) continue;
+                if (byId.has(d.id)) continue;
+                byId.set(d.id, {
+                    id: d.id,
+                    name: d.name || d.id,
+                    icon: d.icon,
+                    version: d.version,
+                    roles: '',
+                    installed: false,
+                    isDefault: true,
+                });
+            }
+            return Array.from(byId.values())
+                .sort((a, b) => (a.name || a.id).localeCompare(b.name || b.id));
+        }
+
+        function rowHasUpdate(row) {
+            if (!row.installed) return false;
+            const rp = findRepoPkg(row.id);
+            return !!(rp && cmpVersion(rp.pkg.version, row.version) > 0);
+        }
+
         function renderInstalled() {
             const q = state.installedFilter.trim().toLowerCase();
-            const show = state.prefs.showDefaults;
-            const rows = (state.installedFull || []).filter(m => {
-                if (!show && m._origin === 'default') return false;
+            const filter = state.prefs.filter || 'all';
+            const all = unifiedRows();
+            const rows = all.filter(r => {
+                if (filter === 'user' && r.isDefault) return false;
+                if (filter === 'defaults' && !r.isDefault) return false;
+                if (filter === 'updates' && !rowHasUpdate(r)) return false;
                 if (q) {
-                    const hay = (m.name + ' ' + m.id + ' ' + rolesLabel(m)).toLowerCase();
+                    const hay = (r.name + ' ' + r.id + ' ' + (r.roles || '')).toLowerCase();
                     if (!hay.includes(q)) return false;
                 }
                 return true;
-            }).sort((a, b) => (a.name || a.id).localeCompare(b.name || b.id));
+            });
 
-            const totalInstalled = state.installedFull.length;
-            const shownTotal = state.prefs.showDefaults
-                ? totalInstalled
-                : state.installedFull.filter(m => m._origin !== 'default').length;
-            $installedCount.textContent = rows.length + ' of ' + shownTotal + ' shown'
-                + (totalInstalled !== shownTotal ? ' (' + (totalInstalled - shownTotal) + ' defaults hidden)' : '');
+            $installedCount.textContent = rows.length + ' of ' + all.length + ' shown';
+            $filterChips.forEach(c => c.classList.toggle('is-active', c.dataset.filter === filter));
 
             if (!rows.length) {
-                $installedList.innerHTML = '<div class="ps-empty">No installed packages match.</div>';
+                $installedList.innerHTML = '<div class="ps-empty">No packages match.</div>';
                 return;
             }
 
-            $installedList.innerHTML = rows.map(m => {
-                const repoPkg = findRepoPkg(m.id);
-                const hasUpdate = repoPkg && cmpVersion(repoPkg.pkg.version, m.version) > 0;
-                const busy = state.busy.has(m.id);
-                const isSelf = SELF_IDS.has(m.id);
-                const isDefault = m._origin === 'default';
-                const updateBtn = hasUpdate && !busy
-                    ? `<button class="ps-btn ps-act ps-act-update" data-action="update" data-id="${escapeHTML(m.id)}">↑ Update → v${escapeHTML(repoPkg.pkg.version)}</button>`
+            $installedList.innerHTML = rows.map(r => {
+                const repoPkg = r.installed ? findRepoPkg(r.id) : null;
+                const hasUpdate = !!(repoPkg && cmpVersion(repoPkg.pkg.version, r.version) > 0);
+                const busy = state.busy.has(r.id) || state.defaultsBusy.has(r.id);
+                const isSelf = SELF_IDS.has(r.id);
+                let actions = '';
+                if (!r.installed) {
+                    // Uninstalled default → Reinstall
+                    actions = `<button class="ps-btn ps-act ps-btn-primary" data-action="reinstall-default" data-id="${escapeHTML(r.id)}" ${busy ? 'disabled' : ''}>${busy ? 'Reinstalling…' : '⟳ Reinstall'}</button>`;
+                } else {
+                    const updateBtn = hasUpdate && !busy
+                        ? `<button class="ps-btn ps-act ps-act-update" data-action="update" data-id="${escapeHTML(r.id)}">↑ Update → v${escapeHTML(repoPkg.pkg.version)}</button>`
+                        : '';
+                    const uninstallBtn = isSelf
+                        ? `<button class="ps-btn ps-act ps-btn-ghost ps-danger" disabled title="Core system package — cannot uninstall from here">🗑 Uninstall</button>`
+                        : `<button class="ps-btn ps-act ps-btn-ghost ps-danger" data-action="uninstall-installed" data-id="${escapeHTML(r.id)}" title="Uninstall">🗑 Uninstall</button>`;
+                    actions = updateBtn + uninstallBtn;
+                }
+                const statusChip = !r.installed
+                    ? '<span class="ps-tag ps-chip-uninstalled">Uninstalled</span>'
                     : '';
-                const uninstallBtn = isSelf
-                    ? `<button class="ps-btn ps-act ps-btn-ghost ps-danger" disabled title="Core system package — cannot uninstall from here">🗑 Uninstall</button>`
-                    : isDefault
-                    // Default packages can be reinstalled on next boot; uninstalling
-                    // one from the generic Installed view is almost always a
-                    // mistake. Disable the button here and steer users to the
-                    // dedicated defaults flow (Settings → Defaults) for the
-                    // rare case where it's intentional.
-                    ? `<button class="ps-btn ps-act ps-btn-ghost ps-danger" disabled title="Default package — use the Defaults tab (Settings → Defaults) to uninstall.">🗑 Uninstall</button>`
-                    : `<button class="ps-btn ps-act ps-btn-ghost ps-danger" data-action="uninstall-installed" data-id="${escapeHTML(m.id)}" title="Uninstall">🗑 Uninstall</button>`;
                 return `
-                    <div class="ps-pkg ps-installed-row" data-id="${escapeHTML(m.id)}">
-                        <span class="ps-pkg-icon">${escapeHTML(m.icon || '📦')}</span>
+                    <div class="ps-pkg ps-installed-row" data-id="${escapeHTML(r.id)}">
+                        <span class="ps-pkg-icon">${escapeHTML(r.icon || '📦')}</span>
                         <div class="ps-pkg-main">
                             <div class="ps-pkg-title">
-                                <strong>${escapeHTML(m.name || m.id)}</strong>
-                                <span class="ps-pkg-ver">v${escapeHTML(m.version || '—')}</span>
-                                ${isDefault ? '<span class="ps-tag ps-tag-default">default</span>' : ''}
+                                <strong>${escapeHTML(r.name)}</strong>
+                                ${r.version ? `<span class="ps-pkg-ver">v${escapeHTML(r.version)}</span>` : ''}
+                                ${r.isDefault ? '<span class="ps-tag ps-tag-default">default</span>' : ''}
+                                ${statusChip}
                                 ${hasUpdate ? `<span class="ps-tag ps-tag-update">↑ update ${escapeHTML(repoPkg.pkg.version)}</span>` : ''}
                             </div>
                             <div class="ps-pkg-meta">
-                                <span class="ps-meta">${escapeHTML(rolesLabel(m))}</span>
-                                <span class="ps-meta">id: ${escapeHTML(m.id)}</span>
+                                ${r.roles ? `<span class="ps-meta">${escapeHTML(r.roles)}</span>` : ''}
+                                <span class="ps-meta">id: ${escapeHTML(r.id)}</span>
                             </div>
                         </div>
                         <div class="ps-pkg-actions">
-                            ${updateBtn}
-                            ${uninstallBtn}
+                            ${actions}
                         </div>
                     </div>
                 `;
@@ -597,7 +622,10 @@ export default {
             }
         }
 
-        // ── Defaults view ─────────────────────────────────────
+        // ── Defaults (internal) ───────────────────────────────
+        // Pulls the full defaults list so the unified Installed view can
+        // surface uninstalled-default rows with a Reinstall action. No
+        // dedicated view any more — everything renders through renderInstalled().
         async function refreshDefaults() {
             try {
                 state.defaultsList = await ctx.defaults.list() || [];
@@ -605,14 +633,14 @@ export default {
                 console.warn('[packagestore] defaults.list failed', e);
                 state.defaultsList = [];
             }
-            renderDefaults();
+            if (state.view === 'installed') renderInstalled();
             renderNavCounts();
         }
 
         async function reinstallDefault(id) {
             if (state.defaultsBusy.has(id)) return;
             state.defaultsBusy.add(id);
-            renderDefaults();
+            renderInstalled();
             try {
                 const m = await ctx.defaults.restore(id);
                 ctx.toast('Reinstalled ' + (m?.name || id), 'success');
@@ -628,63 +656,6 @@ export default {
                 await refreshDefaults();
                 renderAll();
             }
-        }
-
-        function defaultsUninstalledCount() {
-            return state.defaultsList.filter(d => !d.installed).length;
-        }
-
-        function renderDefaults() {
-            const q = state.defaultsFilter.trim().toLowerCase();
-            const rows = state.defaultsList.filter(d => {
-                if (!q) return true;
-                return (d.name + ' ' + d.id).toLowerCase().includes(q);
-            }).sort((a, b) => {
-                // Uninstalled first (the actionable rows), then alpha.
-                if (a.installed !== b.installed) return a.installed ? 1 : -1;
-                return (a.name || a.id).localeCompare(b.name || b.id);
-            });
-
-            const total = state.defaultsList.length;
-            const uninstalledN = defaultsUninstalledCount();
-            $defaultsCount.textContent = rows.length + ' of ' + total + ' shown · '
-                + uninstalledN + ' uninstalled';
-
-            if (!rows.length) {
-                $defaultsList.innerHTML = '<div class="ps-empty">No defaults match.</div>';
-                return;
-            }
-
-            $defaultsList.innerHTML = rows.map(d => {
-                const busy = state.defaultsBusy.has(d.id);
-                const isSelf = SELF_IDS.has(d.id);
-                const chip = d.installed
-                    ? '<span class="ps-tag ps-chip-default">Installed</span>'
-                    : '<span class="ps-tag ps-chip-uninstalled">Uninstalled</span>';
-                const action = d.installed
-                    ? (isSelf
-                        ? '<button class="ps-btn ps-act ps-btn-ghost ps-danger" disabled title="Core system package — cannot uninstall from here">🗑 Uninstall</button>'
-                        : `<button class="ps-btn ps-act ps-btn-ghost ps-danger" data-action="uninstall-default" data-id="${escapeHTML(d.id)}" title="Uninstall">🗑 Uninstall</button>`)
-                    : `<button class="ps-btn ps-act ps-btn-primary" data-action="reinstall-default" data-id="${escapeHTML(d.id)}" ${busy ? 'disabled' : ''}>${busy ? 'Reinstalling…' : '⟳ Reinstall'}</button>`;
-                return `
-                    <div class="ps-pkg ps-default-row" data-id="${escapeHTML(d.id)}">
-                        <span class="ps-pkg-icon">${escapeHTML(d.icon || '📦')}</span>
-                        <div class="ps-pkg-main">
-                            <div class="ps-pkg-title">
-                                <strong>${escapeHTML(d.name || d.id)}</strong>
-                                ${d.version ? `<span class="ps-pkg-ver">v${escapeHTML(d.version)}</span>` : ''}
-                                ${chip}
-                            </div>
-                            <div class="ps-pkg-meta">
-                                <span class="ps-meta">id: ${escapeHTML(d.id)}</span>
-                            </div>
-                        </div>
-                        <div class="ps-pkg-actions">
-                            ${action}
-                        </div>
-                    </div>
-                `;
-            }).join('');
         }
 
         function renderRepos() {
@@ -844,22 +815,21 @@ export default {
 
         function renderNavCounts() {
             const browseN = getAllPackages().length;
-            const installedN = state.prefs.showDefaults
-                ? state.installedFull.length
-                : state.installedFull.filter(m => m._origin !== 'default').length;
             if ($navBrowseCount) $navBrowseCount.textContent = browseN ? '(' + browseN + ')' : '';
             if ($navInstalledCount) {
-                const updates = state.installedFull.filter(m => {
-                    const rp = findRepoPkg(m.id);
-                    return rp && cmpVersion(rp.pkg.version, m.version) > 0;
+                // Count rows visible under the current filter (unified model:
+                // installed + uninstalled defaults).
+                const visibleN = unifiedRows().filter(r => {
+                    const f = state.prefs.filter || 'all';
+                    if (f === 'user' && r.isDefault) return false;
+                    if (f === 'defaults' && !r.isDefault) return false;
+                    if (f === 'updates' && !rowHasUpdate(r)) return false;
+                    return true;
                 }).length;
+                const updates = unifiedRows().filter(rowHasUpdate).length;
                 $navInstalledCount.textContent = updates
-                    ? '(' + installedN + ' · ↑' + updates + ')'
-                    : '(' + installedN + ')';
-            }
-            if ($navDefaultsCount) {
-                const n = defaultsUninstalledCount();
-                $navDefaultsCount.textContent = n ? '(' + n + ')' : '';
+                    ? '(' + visibleN + ' · ↑' + updates + ')'
+                    : '(' + visibleN + ')';
             }
         }
 
@@ -870,7 +840,6 @@ export default {
             renderDetails();
             renderNavCounts();
             if (state.view === 'installed') renderInstalled();
-            if (state.view === 'defaults') renderDefaults();
         }
 
         // ── Wire events ───────────────────────────────────────
@@ -959,26 +928,15 @@ export default {
             state.installedFilter = $installedSearch.value;
             renderInstalled();
         });
-        $showDefaults.addEventListener('change', async () => {
-            state.prefs.showDefaults = $showDefaults.checked;
-            await savePrefs();
-            renderInstalled();
-            renderNavCounts();
-        });
-        $defaultsSearch.addEventListener('input', () => {
-            state.defaultsFilter = $defaultsSearch.value;
-            renderDefaults();
-        });
-        $defaultsList.addEventListener('click', async (e) => {
-            const btn = e.target.closest('button[data-action]');
-            if (!btn) return;
-            const id = btn.dataset.id;
-            const action = btn.dataset.action;
-            if (action === 'reinstall-default') {
-                await reinstallDefault(id);
-            } else if (action === 'uninstall-default') {
-                await uninstallById(id);
-            }
+        $filterChips.forEach(chip => {
+            chip.addEventListener('click', async () => {
+                const f = chip.dataset.filter || 'all';
+                if (state.prefs.filter === f) return;
+                state.prefs.filter = f;
+                await savePrefs();
+                renderInstalled();
+                renderNavCounts();
+            });
         });
 
         $installedList.addEventListener('click', async (e) => {
@@ -993,6 +951,8 @@ export default {
                 if (found) await installPackage(found.pkg);
                 await refreshInstalled();
                 renderAll();
+            } else if (action === 'reinstall-default') {
+                await reinstallDefault(id);
             }
         });
 
@@ -1001,7 +961,8 @@ export default {
         $sort.value = state.prefs.sortBy;
         $onlyUpd.checked = !!state.prefs.showOnlyUpdates;
         $onlyInst.checked = !!state.prefs.showOnlyInstalled;
-        $showDefaults.checked = !!state.prefs.showDefaults;
+        // Reflect the persisted filter on the chip group (defaults to 'all').
+        $filterChips.forEach(c => c.classList.toggle('is-active', c.dataset.filter === (state.prefs.filter || 'all')));
         renderAll();
         // Pull the defaults list once so the sidebar badge ("Defaults (N)") is
         // accurate even before the user opens that view.
