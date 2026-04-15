@@ -33,6 +33,7 @@ Auto-installed on first boot from `defaultPackages/` (uninstall sticks):
 | `grimoire` (app) | Folder-based notes/code editor — real folders via FS Access (Chromium) or virtual workspaces (any browser); zip export/import |
 | `snake` (app) | Responsive Snake with wrap-around edges |
 | `packagestore` (app + `pkg` cmd) | Package Manager app + apt-style `pkg` CLI |
+| `filemanager` (app) | File Explorer — browse virtual workspace, linked profile folder, external folders, and installed package files; preview + "Open in Grimoire" handoff |
 
 ---
 

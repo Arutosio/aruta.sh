@@ -15,6 +15,7 @@ aruta.sh uses an **iOS-style runtime permission model**: no capability is grante
 | `fetch` | `ctx.fetch` — HTTP requests to external URLs |
 | `theme` | `ctx.theme.get/set` — read and switch the UI theme |
 | `clipboard` | `ctx.clipboard.read/write` — read/write system clipboard |
+| `profile-fs` | `ctx.profile.list/read/write/remove` — read and write the folder the user linked via Settings → Profile. Fails with `profile_not_linked` when no folder is connected. Used primarily by the File Explorer app. |
 | `install` | `ctx.installZip(blob)` submits a `.zip` to the host installer, `ctx.listInstalled()` enumerates installed packages (id + version), `ctx.uninstall(id)` removes an installed package (refuses to self-uninstall), `ctx.repos.*` reads/mutates the system repository list (sources used by Package Store and the `pkg` CLI), and `ctx.defaults.list()` / `ctx.defaults.restore(id)` inspect and reinstall bundled default packages the user previously uninstalled. The user still sees the standard install-confirm modal for every install — this permission gates *submission*, not approval. Uninstalls are immediate; the calling app is expected to prompt the user first. |
 
 Anything not in this table has no permission gate (e.g. `ctx.asset`, `ctx.i18n`, DOM access inside your own iframe).

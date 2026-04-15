@@ -150,6 +150,41 @@ Reinstall a default package the user previously uninstalled. Removes the id from
 
 ---
 
+### `ctx.install.listFiles(appId: string): Promise<Array<{path, size, mime}>>`
+Enumerate the files of an installed package. Returns `[]` if the id isn't installed.
+
+### `ctx.install.readFile(appId: string, path: string): Promise<{bytes: Uint8Array, mime: string}>`
+Read a single file from an installed package's zip. Throws `not_found` if absent.
+
+---
+
+## Profile folder — requires `profile-fs`
+
+Browse and mutate the FS Access folder the user linked via **Settings → Profile**. Writes go through the same DiskBackend that powers profile sync. Fails with `profile_not_linked` when no folder is connected.
+
+### `ctx.profile.isLinked(): Promise<boolean>`
+
+### `ctx.profile.list(path: string): Promise<Array<{name, kind: 'file'|'dir', size?: number}>>`
+
+### `ctx.profile.read(path: string): Promise<{bytes: Uint8Array, mime: string}>`
+
+### `ctx.profile.write(path: string, bytes: Uint8Array|string, mime?: string): Promise<void>`
+
+### `ctx.profile.remove(path: string): Promise<void>`
+
+---
+
+## Handoff — requires `windows`
+
+### `ctx.handoff(appId: string, payload: any): Promise<boolean>`
+Pass a small JSON-serializable payload to another installed app and open its window. The host writes the payload to `localStorage.aruta_handoff_<appId>` and calls `openWindow(appId)`. The target app is expected to consume and clear the key on mount.
+
+Payload cap: ~2 MB (throws `payload_too_large`). Target must be installed (throws `target_not_installed`).
+
+Today the only documented consumer is **Grimoire**, which accepts `{ type: 'file', name, content, mime }` and injects the file into the user's virtual workspace.
+
+---
+
 ## What's NOT in `ctx`
 
 Intentional omissions (to keep the surface small — you can still do these yourself inside your iframe / worker):
