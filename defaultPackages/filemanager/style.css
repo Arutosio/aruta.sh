@@ -112,26 +112,46 @@ body, #root {
 .fm-entry-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .fm-entry-meta { font-size: 11px; opacity: 0.5; margin-right: 6px; }
 
-.fm-row-actions {
-    display: flex; gap: 2px;
-    opacity: 0;
-    transition: opacity 120ms;
-}
-.fm-entry:hover .fm-row-actions,
-.fm-entry.active .fm-row-actions { opacity: 1; }
-/* On touch devices hover never fires — always show. */
-@media (hover: none) { .fm-row-actions { opacity: 1; } }
-.fm-row-act {
+.fm-row-more {
     background: transparent;
-    border: 1px solid rgba(255, 200, 87, 0.18);
+    border: 1px solid rgba(255, 200, 87, 0.25);
     color: inherit;
-    padding: 2px 6px;
+    padding: 1px 7px;
     border-radius: 3px;
-    font-size: 11px;
-    line-height: 1;
+    font-size: 12px; line-height: 1;
     cursor: pointer;
+    margin-left: 4px;
+    opacity: 0.55;
 }
-.fm-row-act:hover { background: rgba(255, 200, 87, 0.18); border-color: rgba(255, 200, 87, 0.5); }
+.fm-entry:hover .fm-row-more,
+.fm-entry.active .fm-row-more { opacity: 1; }
+.fm-row-more:hover { background: rgba(255, 200, 87, 0.18); border-color: rgba(255, 200, 87, 0.5); opacity: 1; }
+
+.fm-popup {
+    position: fixed;
+    z-index: 999;
+    min-width: 160px;
+    background: rgba(22, 18, 30, 0.98);
+    border: 1px solid rgba(255, 200, 87, 0.35);
+    border-radius: 5px;
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.45);
+    padding: 4px;
+    font-size: 13px;
+}
+[data-theme="light"] .fm-popup {
+    background: rgba(255, 252, 240, 0.98);
+    color: #2a241a;
+}
+.fm-popup-item {
+    display: flex; align-items: center; gap: 8px;
+    padding: 6px 10px;
+    cursor: pointer;
+    border-radius: 3px;
+}
+.fm-popup-item:hover { background: rgba(255, 200, 87, 0.15); }
+.fm-popup-item.danger { color: #fb7185; }
+.fm-popup-item.danger:hover { background: rgba(251, 113, 133, 0.18); }
+.fm-popup-sep { height: 1px; background: rgba(255, 200, 87, 0.18); margin: 4px 2px; }
 .fm-empty {
     padding: 20px;
     color: #999;

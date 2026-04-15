@@ -2,7 +2,7 @@
     "id": "filemanager",
     "name": "Files",
     "icon": "📁",
-    "version": "1.1.0",
+    "version": "1.2.0",
     "minSdk": 2,
     "roles": ["app"],
     "author": "Aruta",

@@ -386,13 +386,68 @@ export default {
 
         function rowActionsHTML(it, writable) {
             if (it.kind !== 'file') return '';
+            // Hide the menu entirely when there's nothing actionable.
             const canHandoff = isTextLike(it.name, it.mime) && currentSource !== 'packages';
-            const btns = [];
-            btns.push(`<button class="fm-row-act" data-row-act="download" title="Download">⬇</button>`);
-            if (canHandoff) btns.push(`<button class="fm-row-act" data-row-act="openGrimoire" title="Open in Grimoire">📜</button>`);
-            if (writable) btns.push(`<button class="fm-row-act" data-row-act="rename" title="Rename">✎</button>`);
-            if (writable) btns.push(`<button class="fm-row-act" data-row-act="delete" title="Delete">🗑</button>`);
-            return `<span class="fm-row-actions">${btns.join('')}</span>`;
+            if (!canHandoff && !writable && currentSource === 'packages') {
+                // Packages still offer Download — keep the menu.
+            }
+            return `<button class="fm-row-more" data-row-more title="More actions">⋯</button>`;
+        }
+
+        let _popup = null;
+        function closePopup() {
+            if (_popup) { _popup.remove(); _popup = null; }
+            document.removeEventListener('click', _popupDocHandler, true);
+            document.removeEventListener('keydown', _popupKeyHandler, true);
+        }
+        function _popupDocHandler(ev) {
+            if (_popup && !_popup.contains(ev.target)) closePopup();
+        }
+        function _popupKeyHandler(ev) { if (ev.key === 'Escape') closePopup(); }
+
+        function openRowMenu(anchorBtn, it) {
+            closePopup();
+            const writable = !!backend && backend.isWritable?.() && currentSource !== 'packages';
+            const canHandoff = isTextLike(it.name, it.mime) && currentSource !== 'packages';
+            const items = [];
+            items.push({ act: 'download', label: '⬇  Download' });
+            if (canHandoff) items.push({ act: 'openGrimoire', label: '📜  Open in Grimoire' });
+            if (writable) items.push({ sep: true });
+            if (writable) items.push({ act: 'rename', label: '✎  Rename' });
+            if (writable) items.push({ act: 'delete', label: '🗑  Delete', danger: true });
+
+            const pop = document.createElement('div');
+            pop.className = 'fm-popup';
+            pop.innerHTML = items.map(i => i.sep
+                ? `<div class="fm-popup-sep"></div>`
+                : `<div class="fm-popup-item${i.danger ? ' danger' : ''}" data-act="${i.act}">${i.label}</div>`
+            ).join('');
+            document.body.appendChild(pop);
+
+            // Position below-right of the anchor, clamp to viewport.
+            const r = anchorBtn.getBoundingClientRect();
+            const popW = pop.offsetWidth, popH = pop.offsetHeight;
+            let left = r.right - popW;
+            let top  = r.bottom + 4;
+            if (left < 4) left = 4;
+            if (top + popH > window.innerHeight - 4) top = r.top - popH - 4;
+            pop.style.left = left + 'px';
+            pop.style.top  = top  + 'px';
+
+            pop.querySelectorAll('[data-act]').forEach(el => {
+                el.addEventListener('click', async (ev) => {
+                    ev.stopPropagation();
+                    const act = el.dataset.act;
+                    closePopup();
+                    await runRowAction(act, it);
+                });
+            });
+            _popup = pop;
+            // Defer handler binding so the triggering click doesn't immediately close.
+            setTimeout(() => {
+                document.addEventListener('click', _popupDocHandler, true);
+                document.addEventListener('keydown', _popupKeyHandler, true);
+            }, 0);
         }
 
         function renderEntries(items) {
@@ -412,8 +467,12 @@ export default {
                 const idx = Number(el.dataset.idx);
                 const it = items[idx];
                 el.addEventListener('click', async (ev) => {
-                    // Row-action buttons handle their own clicks; don't navigate.
-                    if (ev.target.closest('.fm-row-act')) return;
+                    const moreBtn = ev.target.closest('[data-row-more]');
+                    if (moreBtn) {
+                        ev.stopPropagation();
+                        openRowMenu(moreBtn, it);
+                        return;
+                    }
                     $tree.querySelectorAll('.fm-entry').forEach(e => e.classList.remove('active'));
                     el.classList.add('active');
                     if (it.kind === 'dir') {
@@ -422,18 +481,10 @@ export default {
                     } else {
                         selected = it;
                         await renderPreview();
-                        // On narrow layouts, auto-open the preview overlay.
                         if (root.querySelector('.fm-shell').classList.contains('fm-narrow')) {
                             root.querySelector('.fm-shell').classList.add('fm-preview-open');
                         }
                     }
-                });
-                el.querySelectorAll('.fm-row-act').forEach(btn => {
-                    btn.addEventListener('click', async (ev) => {
-                        ev.stopPropagation();
-                        const act = btn.dataset.rowAct;
-                        await runRowAction(act, it);
-                    });
                 });
             });
         }
@@ -588,6 +639,8 @@ export default {
 
     async unmount(root, ctx) {
         try { root.__fmRO?.disconnect(); } catch {}
+        // Any popup is mounted on document.body; remove the latest if still open.
+        document.querySelectorAll('.fm-popup').forEach(p => p.remove());
         const previews = root.querySelectorAll('img[src^="blob:"], video[src^="blob:"], audio[src^="blob:"]');
         previews.forEach(el => { try { URL.revokeObjectURL(el.src); } catch {} });
     }
