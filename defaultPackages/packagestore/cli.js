@@ -37,6 +37,16 @@ function pad(s, n) {
     return s.length >= n ? s : s + ' '.repeat(n - s.length);
 }
 
+// Hybrid-aware role label: prefer `roles` joined with `+`, fall back to
+// legacy `type`, then to a generic `app`. Truncate long labels to keep
+// the list columns readable.
+function rolesLabel(m) {
+    let label;
+    if (m && Array.isArray(m.roles) && m.roles.length) label = m.roles.join(' + ');
+    else label = (m && m.type) || 'app';
+    return label.length > 18 ? label.slice(0, 17) + '…' : label;
+}
+
 function isURL(s) { return /^https?:\/\//i.test(String(s || '').trim()); }
 
 async function fetchRepoIndex(ctx, repo) {
@@ -127,10 +137,10 @@ async function cmdHelp(ctx) {
 async function cmdList(ctx) {
     const all = await ctx.listInstalled();
     if (!all || !all.length) { await ctx.print('No packages installed.'); return; }
-    await ctx.print(pad('ID', 22) + pad('NAME', 24) + pad('VERSION', 12) + 'TYPE');
-    await ctx.print('─'.repeat(64));
+    await ctx.print(pad('ID', 22) + pad('NAME', 24) + pad('VERSION', 12) + 'ROLES');
+    await ctx.print('─'.repeat(78));
     for (const m of all) {
-        await ctx.print(pad(m.id, 22) + pad(m.name || '', 24) + pad(m.version || '—', 12) + (m.type || ''));
+        await ctx.print(pad(m.id, 22) + pad(m.name || '', 24) + pad(m.version || '—', 12) + rolesLabel(m));
     }
     await ctx.print('');
     await ctx.print(all.length + ' package' + (all.length === 1 ? '' : 's') + ' installed.');

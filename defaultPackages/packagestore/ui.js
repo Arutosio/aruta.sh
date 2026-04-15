@@ -11,6 +11,13 @@ function escapeHTML(s) {
     ));
 }
 
+// Hybrid-aware role label: prefer the modern `roles` array joined with `+`,
+// fall back to the legacy `type` string, then to a generic `app` label.
+function rolesLabel(m) {
+    if (m && Array.isArray(m.roles) && m.roles.length) return m.roles.join(' + ');
+    return (m && m.type) || 'app';
+}
+
 function resolveURL(base, maybeRelative) {
     try { return new URL(maybeRelative, base).toString(); }
     catch { return maybeRelative; }
@@ -459,7 +466,7 @@ export default {
             const rows = (state.installedFull || []).filter(m => {
                 if (!show && m._origin === 'default') return false;
                 if (q) {
-                    const hay = (m.name + ' ' + m.id + ' ' + (m.type || '')).toLowerCase();
+                    const hay = (m.name + ' ' + m.id + ' ' + rolesLabel(m)).toLowerCase();
                     if (!hay.includes(q)) return false;
                 }
                 return true;
@@ -500,7 +507,7 @@ export default {
                                 ${hasUpdate ? `<span class="ps-tag ps-tag-update">↑ update ${escapeHTML(repoPkg.pkg.version)}</span>` : ''}
                             </div>
                             <div class="ps-pkg-meta">
-                                <span class="ps-meta">${escapeHTML(m.type || 'app')}</span>
+                                <span class="ps-meta">${escapeHTML(rolesLabel(m))}</span>
                                 <span class="ps-meta">id: ${escapeHTML(m.id)}</span>
                             </div>
                         </div>
@@ -657,7 +664,7 @@ export default {
                     <div class="ps-det-icon">${escapeHTML(pkg.icon || '📦')}</div>
                     <div class="ps-det-title">
                         <strong>${escapeHTML(pkg.name || pkg.id)}</strong>
-                        <small>v${escapeHTML(pkg.version || '—')}${pkg.type ? ' · ' + escapeHTML(pkg.type) : ''}</small>
+                        <small>v${escapeHTML(pkg.version || '—')}${(Array.isArray(pkg.roles) && pkg.roles.length) || pkg.type ? ' · ' + escapeHTML(rolesLabel(pkg)) : ''}</small>
                     </div>
                 </div>
                 ${pkg.description ? `<p class="ps-det-desc">${escapeHTML(pkg.description)}</p>` : ''}
