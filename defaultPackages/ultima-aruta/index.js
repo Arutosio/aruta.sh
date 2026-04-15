@@ -6,8 +6,8 @@
  * ╚══════════════════════════════════════════════════════════╝ */
 
 // ── Constants ────────────────────────────────────────────
-const TILE_W = 64;
-const TILE_H = 32;
+const TILE_W = 48;
+const TILE_H = 24;
 const CHUNK_SIZE = 32;
 const MOVE_MS = 220;
 const CREATURE_MOVE_MS = 600;
@@ -449,9 +449,10 @@ function drawTile(ctx, sx, sy, biome) {
 function drawEmoji(ctx, sx, sy, emoji, size = 28) {
     ctx.font = size + "px 'Apple Color Emoji', 'Segoe UI Emoji', 'Noto Color Emoji', sans-serif";
     ctx.textAlign = 'center';
-    ctx.textBaseline = 'alphabetic';
-    // Place the emoji so its "feet" sit near the tile center, slightly up for perspective.
-    ctx.fillText(emoji, sx + TILE_W / 2, sy + TILE_H + 2);
+    ctx.textBaseline = 'middle';
+    // Anchor at the tile's geometric centre (UO-style: entities stand ON the
+    // tile, not at the junction between four of them).
+    ctx.fillText(emoji, sx + TILE_W / 2, sy + TILE_H / 2);
 }
 
 // ── Player ───────────────────────────────────────────────
