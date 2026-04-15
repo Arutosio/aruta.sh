@@ -59,8 +59,11 @@ export default {
             category: '',
             selectedPkg: null,
             busy: new Set(), // package ids currently installing
-            view: 'browse', // 'browse' | 'installed'
+            view: 'browse', // 'browse' | 'installed' | 'defaults'
             installedFilter: '',
+            defaultsFilter: '',
+            defaultsList: [], // [{id,name,icon,version,installed,blacklisted}]
+            defaultsBusy: new Set(),
         };
         const SELF_IDS = new Set(['packagestore', 'pkg']);
 
@@ -103,6 +106,10 @@ export default {
         // terminal, another iframe). Re-query + re-render so our rows stay in sync.
         document.addEventListener('aruta:installChanged', async () => {
             await refreshInstalled();
+            // Defaults state can also flip (an uninstall blacklists, a restore
+            // un-blacklists). Re-pull when this view is active or any time so
+            // the sidebar badge stays accurate.
+            try { state.defaultsList = await ctx.defaults.list() || state.defaultsList; } catch {}
             if (typeof renderAll === 'function') renderAll();
         });
 
@@ -389,6 +396,11 @@ export default {
                             <span class="ps-nav-lbl">Installed</span>
                             <span class="ps-nav-count ps-nav-installed-count"></span>
                         </button>
+                        <button class="ps-nav-item" data-view="defaults">
+                            <span class="ps-nav-ic">⭐</span>
+                            <span class="ps-nav-lbl">Defaults</span>
+                            <span class="ps-nav-count ps-nav-defaults-count"></span>
+                        </button>
                     </nav>
                     <div class="ps-side-head">
                         <span class="ps-side-title">Sources</span>
@@ -423,6 +435,13 @@ export default {
                     </div>
                     <div class="ps-installed-list"></div>
                 </section>
+                <section class="ps-main ps-main-defaults" hidden>
+                    <div class="ps-toolbar">
+                        <input type="search" class="ps-defaults-search" placeholder="Search defaults…" />
+                        <span class="ps-defaults-count"></span>
+                    </div>
+                    <div class="ps-defaults-list"></div>
+                </section>
                 <aside class="ps-details"></aside>
             </div>
         `;
@@ -445,15 +464,22 @@ export default {
         const $installedSearch = root.querySelector('.ps-installed-search');
         const $showDefaults = root.querySelector('.ps-show-defaults');
         const $installedCount = root.querySelector('.ps-installed-count');
+        const $mainDefaults = root.querySelector('.ps-main-defaults');
+        const $defaultsList = root.querySelector('.ps-defaults-list');
+        const $defaultsSearch = root.querySelector('.ps-defaults-search');
+        const $defaultsCount = root.querySelector('.ps-defaults-count');
+        const $navDefaultsCount = root.querySelector('.ps-nav-defaults-count');
 
         function setView(v) {
             state.view = v;
             $navItems.forEach(n => n.classList.toggle('is-active', n.dataset.view === v));
             $mainBrowse.hidden = v !== 'browse';
             $mainInstalled.hidden = v !== 'installed';
+            $mainDefaults.hidden = v !== 'defaults';
             // details pane is only useful in Browse (needs repo-pkg data).
             $details.hidden = v !== 'browse';
             if (v === 'installed') renderInstalled();
+            if (v === 'defaults') refreshDefaults();
         }
 
         function findRepoPkg(id) {
@@ -536,6 +562,96 @@ export default {
                 await refreshInstalled();
                 renderAll();
             }
+        }
+
+        // ── Defaults view ─────────────────────────────────────
+        async function refreshDefaults() {
+            try {
+                state.defaultsList = await ctx.defaults.list() || [];
+            } catch (e) {
+                console.warn('[packagestore] defaults.list failed', e);
+                state.defaultsList = [];
+            }
+            renderDefaults();
+            renderNavCounts();
+        }
+
+        async function reinstallDefault(id) {
+            if (state.defaultsBusy.has(id)) return;
+            state.defaultsBusy.add(id);
+            renderDefaults();
+            try {
+                const m = await ctx.defaults.restore(id);
+                ctx.toast('Reinstalled ' + (m?.name || id), 'success');
+            } catch (e) {
+                console.warn('[packagestore] defaults.restore failed', e);
+                ctx.toast(String(e.message || e), 'error');
+            } finally {
+                state.defaultsBusy.delete(id);
+                // installChanged broadcast will refresh installed; re-list defaults
+                // explicitly so the chip flips immediately even if the broadcast
+                // arrives a tick later.
+                await refreshInstalled();
+                await refreshDefaults();
+                renderAll();
+            }
+        }
+
+        function defaultsUninstalledCount() {
+            return state.defaultsList.filter(d => !d.installed).length;
+        }
+
+        function renderDefaults() {
+            const q = state.defaultsFilter.trim().toLowerCase();
+            const rows = state.defaultsList.filter(d => {
+                if (!q) return true;
+                return (d.name + ' ' + d.id).toLowerCase().includes(q);
+            }).sort((a, b) => {
+                // Uninstalled first (the actionable rows), then alpha.
+                if (a.installed !== b.installed) return a.installed ? 1 : -1;
+                return (a.name || a.id).localeCompare(b.name || b.id);
+            });
+
+            const total = state.defaultsList.length;
+            const uninstalledN = defaultsUninstalledCount();
+            $defaultsCount.textContent = rows.length + ' of ' + total + ' shown · '
+                + uninstalledN + ' uninstalled';
+
+            if (!rows.length) {
+                $defaultsList.innerHTML = '<div class="ps-empty">No defaults match.</div>';
+                return;
+            }
+
+            $defaultsList.innerHTML = rows.map(d => {
+                const busy = state.defaultsBusy.has(d.id);
+                const isSelf = SELF_IDS.has(d.id);
+                const chip = d.installed
+                    ? '<span class="ps-tag ps-chip-default">Installed</span>'
+                    : '<span class="ps-tag ps-chip-uninstalled">Uninstalled</span>';
+                const action = d.installed
+                    ? (isSelf
+                        ? '<button class="ps-btn ps-act ps-btn-ghost ps-danger" disabled title="Core system package — cannot uninstall from here">🗑 Uninstall</button>'
+                        : `<button class="ps-btn ps-act ps-btn-ghost ps-danger" data-action="uninstall-default" data-id="${escapeHTML(d.id)}" title="Uninstall">🗑 Uninstall</button>`)
+                    : `<button class="ps-btn ps-act ps-btn-primary" data-action="reinstall-default" data-id="${escapeHTML(d.id)}" ${busy ? 'disabled' : ''}>${busy ? 'Reinstalling…' : '⟳ Reinstall'}</button>`;
+                return `
+                    <div class="ps-pkg ps-default-row" data-id="${escapeHTML(d.id)}">
+                        <span class="ps-pkg-icon">${escapeHTML(d.icon || '📦')}</span>
+                        <div class="ps-pkg-main">
+                            <div class="ps-pkg-title">
+                                <strong>${escapeHTML(d.name || d.id)}</strong>
+                                ${d.version ? `<span class="ps-pkg-ver">v${escapeHTML(d.version)}</span>` : ''}
+                                ${chip}
+                            </div>
+                            <div class="ps-pkg-meta">
+                                <span class="ps-meta">id: ${escapeHTML(d.id)}</span>
+                            </div>
+                        </div>
+                        <div class="ps-pkg-actions">
+                            ${action}
+                        </div>
+                    </div>
+                `;
+            }).join('');
         }
 
         function renderRepos() {
@@ -708,6 +824,10 @@ export default {
                     ? '(' + installedN + ' · ↑' + updates + ')'
                     : '(' + installedN + ')';
             }
+            if ($navDefaultsCount) {
+                const n = defaultsUninstalledCount();
+                $navDefaultsCount.textContent = n ? '(' + n + ')' : '';
+            }
         }
 
         function renderAll() {
@@ -717,6 +837,7 @@ export default {
             renderDetails();
             renderNavCounts();
             if (state.view === 'installed') renderInstalled();
+            if (state.view === 'defaults') renderDefaults();
         }
 
         // ── Wire events ───────────────────────────────────────
@@ -811,6 +932,22 @@ export default {
             renderInstalled();
             renderNavCounts();
         });
+        $defaultsSearch.addEventListener('input', () => {
+            state.defaultsFilter = $defaultsSearch.value;
+            renderDefaults();
+        });
+        $defaultsList.addEventListener('click', async (e) => {
+            const btn = e.target.closest('button[data-action]');
+            if (!btn) return;
+            const id = btn.dataset.id;
+            const action = btn.dataset.action;
+            if (action === 'reinstall-default') {
+                await reinstallDefault(id);
+            } else if (action === 'uninstall-default') {
+                await uninstallById(id);
+            }
+        });
+
         $installedList.addEventListener('click', async (e) => {
             const btn = e.target.closest('button[data-action]');
             if (!btn) return;
@@ -833,6 +970,9 @@ export default {
         $onlyInst.checked = !!state.prefs.showOnlyInstalled;
         $showDefaults.checked = !!state.prefs.showDefaults;
         renderAll();
+        // Pull the defaults list once so the sidebar badge ("Defaults (N)") is
+        // accurate even before the user opens that view.
+        refreshDefaults().catch(e => console.warn('[packagestore] defaults boot', e));
         // auto-refresh enabled repos on first open
         refreshAllRepos().then(() => renderAll()).catch(e => console.warn(e));
     }

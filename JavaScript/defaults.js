@@ -9,6 +9,19 @@ const DEFAULTS_URL = 'defaultPackages/defaults.json';
 const SEEN_KEY = 'aruta_defaults_seen';
 const BLACKLIST_KEY = 'aruta_defaults_uninstalled';
 
+let _indexCache = null;          // memoized defaults.json (the parsed object)
+const _manifestCache = new Map(); // id -> last fetched manifest (for name/icon)
+
+async function loadIndex() {
+    if (_indexCache) return _indexCache;
+    try {
+        const r = await fetch(DEFAULTS_URL, { cache: 'no-cache' });
+        if (!r.ok) return null;
+        _indexCache = await r.json();
+        return _indexCache;
+    } catch { return null; }
+}
+
 function readList(key) {
     try { return JSON.parse(localStorage.getItem(key) || '[]'); } catch { return []; }
 }
@@ -39,8 +52,9 @@ async function installDefault(pkg) {
     // all the JS/CSS on every boot.
     const manifestBlob = await fetchBlob(base + 'manifest.json');
     const manifest = JSON.parse(await manifestBlob.text());
+    _manifestCache.set(pkg.id, manifest);
     const installed = window.registry.getManifest(pkg.id);
-    if (installed && installed.version === manifest.version) return null;
+    if (installed && installed.version === manifest.version) return installed;
 
     // Install / update. Fetch remaining files in parallel.
     const others = pkg.files.filter(f => f !== 'manifest.json');
@@ -67,14 +81,7 @@ async function installDefault(pkg) {
 
 async function bootstrapDefaults() {
     if (!window.registry) return;
-    let index;
-    try {
-        const r = await fetch(DEFAULTS_URL, { cache: 'no-cache' });
-        if (!r.ok) return;
-        index = await r.json();
-    } catch {
-        return; // offline or missing — skip silently
-    }
+    const index = await loadIndex();
     if (!index || !Array.isArray(index.packages)) return;
 
     const seen = new Set(readList(SEEN_KEY));
@@ -133,4 +140,53 @@ function markUninstalled(id) {
     writeList(BLACKLIST_KEY, Array.from(bl));
 }
 
-window.defaults = { bootstrap: bootstrapDefaults, markUninstalled };
+function isBlacklisted(id) {
+    return new Set(readList(BLACKLIST_KEY)).has(id);
+}
+
+/**
+ * Snapshot every default package (from defaults.json) with its current
+ * install / blacklist state. Used by the Package Store "Defaults" view to
+ * surface user-removed defaults for one-click reinstall.
+ */
+async function listDefaults() {
+    const index = await loadIndex();
+    if (!index || !Array.isArray(index.packages)) return [];
+    const blacklist = new Set(readList(BLACKLIST_KEY));
+    return index.packages.map(pkg => {
+        const installedManifest = window.registry?.getManifest?.(pkg.id);
+        const cached = _manifestCache.get(pkg.id);
+        const name = installedManifest?.name || cached?.name || pkg.id;
+        const icon = installedManifest?.icon || cached?.icon || null;
+        const version = installedManifest?.version || cached?.version || null;
+        return {
+            id: pkg.id,
+            name,
+            icon,
+            version,
+            installed: !!installedManifest,
+            blacklisted: blacklist.has(pkg.id),
+        };
+    });
+}
+
+/**
+ * Reinstall a default package the user previously uninstalled. Removes the
+ * id from the blacklist and runs the same installer the boot path uses.
+ */
+async function restoreDefault(id) {
+    const index = await loadIndex();
+    const pkg = index?.packages?.find(p => p.id === id);
+    if (!pkg) throw new Error('not_a_default:' + id);
+    const bl = new Set(readList(BLACKLIST_KEY));
+    if (bl.delete(id)) writeList(BLACKLIST_KEY, Array.from(bl));
+    return await installDefault(pkg);
+}
+
+window.defaults = {
+    bootstrap: bootstrapDefaults,
+    markUninstalled,
+    isBlacklisted,
+    list: listDefaults,
+    restore: restoreDefault,
+};

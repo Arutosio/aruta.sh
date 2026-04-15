@@ -142,6 +142,12 @@ Whitelisted fields: `name`, `description`, `enabled`, `lastFetched`, `etag`, `ca
 
 > The repo list lives at the host level (`localStorage.aruta_repos`) and is shared between Package Store, the `pkg` CLI, and any future package that holds the `install` permission.
 
+### `ctx.defaults.list(): Promise<Array<{id, name, icon, version, installed, blacklisted}>>`
+Snapshot every package shipped in `defaultPackages/defaults.json` with its current state — `installed` (present in the registry) and `blacklisted` (the user has uninstalled it, so the boot path will skip it on next reload).
+
+### `ctx.defaults.restore(id: string): Promise<{id,name,version,type,roles} | null>`
+Reinstall a default package the user previously uninstalled. Removes the id from the blacklist and runs the bundled installer. Throws `not_a_default:<id>` if the id isn't in `defaults.json`.
+
 ---
 
 ## What's NOT in `ctx`

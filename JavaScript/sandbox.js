@@ -89,6 +89,8 @@ const PERM_REQUIRED = {
     'repos.remove': 'install',
     'repos.setEnabled': 'install',
     'repos.update': 'install',
+    'defaults.list': 'install',
+    'defaults.restore': 'install',
 };
 
 async function _handleCall(appId, method, args) {
@@ -161,6 +163,13 @@ async function _handleCall(appId, method, args) {
         case 'repos.remove':     return !!window.repos?.remove(args[0]);
         case 'repos.setEnabled': return !!window.repos?.setEnabled(args[0], args[1]);
         case 'repos.update':     return window.repos?.update(args[0], args[1]);
+        case 'defaults.list':    return window.defaults?.list ? await window.defaults.list() : [];
+        case 'defaults.restore': {
+            if (!window.defaults?.restore) throw new Error('defaults_unavailable');
+            const m = await window.defaults.restore(String(args[0] || ''));
+            if (!m) return null;
+            return { id: m.id, name: m.name, version: m.version, type: m.type, roles: m.roles };
+        }
         case 'i18n': return (window.i18n?.[window.currentLang] || {})[args[0]] || args[0];
         default: throw new Error('unknown_method:' + method);
     }
@@ -239,6 +248,10 @@ html,body{margin:0;padding:0;width:100%;height:100%;background:transparent;color
                         remove: (url) => call('repos.remove', url),
                         setEnabled: (url, enabled) => call('repos.setEnabled', url, enabled),
                         update: (url, patch) => call('repos.update', url, patch),
+                    },
+                    defaults: {
+                        list: () => call('defaults.list'),
+                        restore: (id) => call('defaults.restore', id),
                     },
                     permission: { request: (p) => call('permission.request', p) },
                 };
@@ -414,6 +427,10 @@ function _buildHostCtx(appId, files) {
             remove:     async (url) => (await window.permissions.request(appId, 'install')) ? window.repos.remove(url) : false,
             setEnabled: async (url, en) => (await window.permissions.request(appId, 'install')) ? window.repos.setEnabled(url, en) : false,
             update:     async (url, patch) => (await window.permissions.request(appId, 'install')) ? window.repos.update(url, patch) : null,
+        },
+        defaults: {
+            list:    async () => (await window.permissions.request(appId, 'install')) ? (window.defaults?.list ? window.defaults.list() : []) : [],
+            restore: async (id) => (await window.permissions.request(appId, 'install')) ? (window.defaults?.restore ? window.defaults.restore(id) : null) : null,
         },
     };
     return { ctx, cleanup };
