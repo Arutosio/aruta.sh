@@ -63,6 +63,29 @@ const VILLAGE = {
     npcs:    ['🧙', '🧝', '🧑‍🌾', '🧑‍🍳', '⚔️'],
 };
 
+// Collectible items. Ground scatter + inventory slots.
+const ITEMS = {
+    gold:     { emoji: '🪙', name: 'Gold Coin' },
+    gem:      { emoji: '💎', name: 'Gem' },
+    berry:    { emoji: '🍓', name: 'Wild Berry' },
+    mushroom: { emoji: '🍄', name: 'Mushroom' },
+    stone:    { emoji: '🪨', name: 'Stone' },
+    flower:   { emoji: '🌸', name: 'Flower' },
+    apple:    { emoji: '🍎', name: 'Apple' },
+    herb:     { emoji: '🌿', name: 'Herb' },
+    key:      { emoji: '🗝️', name: 'Old Key' },
+    sword:    { emoji: '⚔️', name: 'Shortsword' },
+    potion:   { emoji: '🧪', name: 'Potion' },
+    scroll:   { emoji: '📜', name: 'Scroll' },
+};
+// Per-biome item scatter rates.
+const ITEM_DROPS = {
+    grass:  [{ key: 'flower', rate: 0.01 }, { key: 'berry',    rate: 0.006 }, { key: 'gold', rate: 0.002 }],
+    forest: [{ key: 'mushroom', rate: 0.008 }, { key: 'herb',  rate: 0.006 }, { key: 'apple', rate: 0.003 }],
+    sand:   [{ key: 'stone', rate: 0.004 }, { key: 'gem',      rate: 0.001 }],
+    snow:   [{ key: 'stone', rate: 0.003 }, { key: 'gem',      rate: 0.001 }],
+};
+
 // ── Seeded RNG (Mulberry32) ──────────────────────────────
 function mulberry32(a) {
     return function () {
@@ -145,6 +168,20 @@ class World {
                     for (const f of feats) {
                         acc += f.rate;
                         if (roll < acc) { features.push({ c, r, emoji: f.emoji }); break; }
+                    }
+                }
+
+                // Loose item scatter — independent of the scenic feature roll.
+                const drops = ITEM_DROPS[biome];
+                if (drops && BIOMES[biome].passable) {
+                    const roll = rnd();
+                    let acc = 0;
+                    for (const d of drops) {
+                        acc += d.rate;
+                        if (roll < acc) {
+                            features.push({ c, r, emoji: ITEMS[d.key].emoji, item: true, itemKey: d.key });
+                            break;
+                        }
                     }
                 }
             }
@@ -423,13 +460,84 @@ export default {
         // Day starts at noon on first load. Time advances with real-time dt.
         let timeOfDay = (typeof saved?.timeOfDay === 'number') ? saved.timeOfDay : 0.5;
 
+        // ── Inventory + world deltas ─────────────────────
+        let inventory = { items: [] };
+        try {
+            const inv = await sdk.storage.get('inventory');
+            if (inv && Array.isArray(inv.items)) inventory = inv;
+        } catch {}
+        // Persistent mutations to the procedural world (things picked up,
+        // things dropped by the player). Applied to each chunk after
+        // generation — without this a reload would respawn picked items.
+        let worldDeltas = { removed: {}, added: {} };
+        try {
+            const d = await sdk.storage.get('worldDeltas');
+            if (d) worldDeltas = { removed: d.removed || {}, added: d.added || {} };
+        } catch {}
+        world._applyDeltas = (ch) => {
+            const key = ch.cx + ',' + ch.cy;
+            const rem = worldDeltas.removed[key];
+            if (rem) ch.features = ch.features.filter(f => !rem.some(r => r.c === f.c && r.r === f.r && r.key === f.itemKey));
+            const add = worldDeltas.added[key];
+            if (add) {
+                for (const a of add) {
+                    if (!ch.features.find(f => f.c === a.c && f.r === a.r)) ch.features.push({ c: a.c, r: a.r, emoji: ITEMS[a.key].emoji, item: true, itemKey: a.key });
+                }
+            }
+        };
+        // Patch getChunk to apply deltas on generation.
+        const _origGen = world._generate.bind(world);
+        world._generate = (cx, cy) => {
+            const ch = _origGen(cx, cy);
+            world._applyDeltas(ch);
+            return ch;
+        };
+
+        function saveInventory()    { sdk.storage.set('inventory', inventory).catch(() => {}); }
+        function saveWorldDeltas()  { sdk.storage.set('worldDeltas', worldDeltas).catch(() => {}); }
+
+        function removeWorldItem(wx, wy) {
+            const cx = Math.floor(wx / CHUNK_SIZE), cy = Math.floor(wy / CHUNK_SIZE);
+            const lc = ((wx % CHUNK_SIZE) + CHUNK_SIZE) % CHUNK_SIZE;
+            const lr = ((wy % CHUNK_SIZE) + CHUNK_SIZE) % CHUNK_SIZE;
+            const ch = world.getChunk(cx, cy);
+            const idx = ch.features.findIndex(f => f.c === lc && f.r === lr && f.item);
+            if (idx < 0) return null;
+            const f = ch.features[idx];
+            ch.features.splice(idx, 1);
+            const key = cx + ',' + cy;
+            (worldDeltas.removed[key] = worldDeltas.removed[key] || []).push({ c: lc, r: lr, key: f.itemKey });
+            saveWorldDeltas();
+            return f.itemKey;
+        }
+        function placeWorldItem(wx, wy, itemKey) {
+            const cx = Math.floor(wx / CHUNK_SIZE), cy = Math.floor(wy / CHUNK_SIZE);
+            const lc = ((wx % CHUNK_SIZE) + CHUNK_SIZE) % CHUNK_SIZE;
+            const lr = ((wy % CHUNK_SIZE) + CHUNK_SIZE) % CHUNK_SIZE;
+            const ch = world.getChunk(cx, cy);
+            if (ch.features.find(f => f.c === lc && f.r === lr)) return false;
+            ch.features.push({ c: lc, r: lr, emoji: ITEMS[itemKey].emoji, item: true, itemKey });
+            const key = cx + ',' + cy;
+            (worldDeltas.added[key] = worldDeltas.added[key] || []).push({ c: lc, r: lr, key: itemKey });
+            saveWorldDeltas();
+            return true;
+        }
+
         // ── DOM ──────────────────────────────────────────
         root.innerHTML = `
             <div class="ua-shell">
                 <canvas class="ua-canvas" id="ua-canvas"></canvas>
                 <canvas class="ua-minimap" id="ua-minimap" width="140" height="140"></canvas>
                 <div class="ua-hud" id="ua-hud"></div>
-                <div class="ua-help">Arrows / WASD to move · <b>Space</b> interact · Seed <b>${seed}</b></div>
+                <div class="ua-help">Arrows / WASD move · <b>Space</b> interact · <b>I</b> inventory · Seed <b>${seed}</b></div>
+                <div class="ua-backpack" id="ua-backpack" style="display:none;">
+                    <div class="ua-backpack-head">
+                        <span class="ua-backpack-title">🎒 Backpack</span>
+                        <span class="ua-backpack-close" id="ua-backpack-close" title="Close (I)">×</span>
+                    </div>
+                    <div class="ua-backpack-body" id="ua-backpack-body"></div>
+                </div>
+                <div class="ua-drag-ghost" id="ua-drag-ghost" style="display:none;"></div>
             </div>
         `;
         const canvas = root.querySelector('#ua-canvas');
@@ -459,6 +567,11 @@ export default {
             if (e.type === 'keydown' && (k === ' ' || k === 'enter' || k === 'e')) {
                 e.preventDefault();
                 tryInteract();
+                return;
+            }
+            if (e.type === 'keydown' && (k === 'i' || k === 'b')) {
+                e.preventDefault();
+                toggleBackpack();
             }
         }
 
@@ -491,6 +604,133 @@ export default {
         }
         document.addEventListener('keydown', onKey);
         document.addEventListener('keyup', onKey);
+
+        // ── Backpack + drag-drop ─────────────────────────
+        const $pack = root.querySelector('#ua-backpack');
+        const $packBody = root.querySelector('#ua-backpack-body');
+        const $ghost = root.querySelector('#ua-drag-ghost');
+        let dragState = null;
+
+        function toggleBackpack() {
+            const open = $pack.style.display !== 'none';
+            if (open) $pack.style.display = 'none';
+            else { $pack.style.display = ''; renderBackpack(); }
+        }
+        root.querySelector('#ua-backpack-close').addEventListener('click', toggleBackpack);
+
+        function renderBackpack() {
+            $packBody.innerHTML = '';
+            for (const it of inventory.items) {
+                const el = document.createElement('div');
+                el.className = 'ua-item';
+                el.style.left = (it.x || 6) + 'px';
+                el.style.top  = (it.y || 6) + 'px';
+                el.textContent = it.emoji;
+                el.title = it.name;
+                el.dataset.id = it.id;
+                $packBody.appendChild(el);
+            }
+        }
+
+        function showGhost(emoji, x, y) {
+            $ghost.textContent = emoji;
+            $ghost.style.display = '';
+            $ghost.style.left = x + 'px';
+            $ghost.style.top  = y + 'px';
+        }
+        function hideGhost() { $ghost.style.display = 'none'; $ghost.textContent = ''; }
+
+        function canvasToWorldCell(canvasX, canvasY) {
+            const W = canvas.clientWidth, H = canvas.clientHeight;
+            const cam = camera(W, H, player.rx, player.ry);
+            const a = (canvasY - cam.cy) * 2 / TILE_H;
+            const b = (canvasX - cam.cx) * 2 / TILE_W;
+            return { wx: Math.round((a + b) / 2), wy: Math.round((a - b) / 2) };
+        }
+
+        function startDrag(source, data, pageX, pageY) {
+            dragState = { source, ...data };
+            const emoji = source === 'inv' ? data.invItem.emoji : ITEMS[data.worldKey].emoji;
+            showGhost(emoji, pageX - 16, pageY - 16);
+        }
+
+        function endDrag(ev) {
+            if (!dragState) return;
+            hideGhost();
+            const bodyRect = $packBody.getBoundingClientRect();
+            const onBackpackBody = $pack.style.display !== 'none' &&
+                ev.clientX >= bodyRect.left && ev.clientX <= bodyRect.right &&
+                ev.clientY >= bodyRect.top  && ev.clientY <= bodyRect.bottom;
+
+            if (dragState.source === 'world') {
+                if (onBackpackBody) {
+                    const key = dragState.worldKey;
+                    if (removeWorldItem(dragState.wx, dragState.wy)) {
+                        const def = ITEMS[key];
+                        inventory.items.push({
+                            id: 'it_' + Math.random().toString(36).slice(2, 9),
+                            key, emoji: def.emoji, name: def.name,
+                            x: Math.max(0, ev.clientX - bodyRect.left - 16),
+                            y: Math.max(0, ev.clientY - bodyRect.top  - 16),
+                        });
+                        saveInventory();
+                        renderBackpack();
+                    }
+                }
+                dragState = null;
+                return;
+            }
+
+            if (dragState.source === 'inv') {
+                if (onBackpackBody) {
+                    const it = dragState.invItem;
+                    it.x = Math.max(0, ev.clientX - bodyRect.left - 16);
+                    it.y = Math.max(0, ev.clientY - bodyRect.top  - 16);
+                    saveInventory();
+                    renderBackpack();
+                } else {
+                    const canvasRect = canvas.getBoundingClientRect();
+                    const cx = ev.clientX - canvasRect.left;
+                    const cy = ev.clientY - canvasRect.top;
+                    const { wx, wy } = canvasToWorldCell(cx, cy);
+                    const dist = Math.max(Math.abs(wx - player.wx), Math.abs(wy - player.wy));
+                    if (dist <= 2 && world.passable(wx, wy) && placeWorldItem(wx, wy, dragState.invItem.key)) {
+                        inventory.items = inventory.items.filter(i => i.id !== dragState.invItem.id);
+                        saveInventory();
+                        renderBackpack();
+                    }
+                }
+                dragState = null;
+            }
+        }
+
+        canvas.addEventListener('pointerdown', (ev) => {
+            const rect = canvas.getBoundingClientRect();
+            const { wx, wy } = canvasToWorldCell(ev.clientX - rect.left, ev.clientY - rect.top);
+            const f = world.featureAt(wx, wy);
+            if (!f || !f.item) return;
+            const dist = Math.max(Math.abs(wx - player.wx), Math.abs(wy - player.wy));
+            if (dist > 2) return;
+            startDrag('world', { worldKey: f.itemKey, wx, wy }, ev.clientX, ev.clientY);
+        });
+
+        $packBody.addEventListener('pointerdown', (ev) => {
+            const itemEl = ev.target.closest('.ua-item');
+            if (!itemEl) return;
+            const id = itemEl.dataset.id;
+            const it = inventory.items.find(i => i.id === id);
+            if (!it) return;
+            ev.preventDefault();
+            startDrag('inv', { invItem: it }, ev.clientX, ev.clientY);
+        });
+
+        function onPointerMove(ev) {
+            if (!dragState) return;
+            showGhost($ghost.textContent, ev.clientX - 16, ev.clientY - 16);
+        }
+        function onPointerUp(ev) { endDrag(ev); }
+        document.addEventListener('pointermove', onPointerMove);
+        document.addEventListener('pointerup', onPointerUp);
 
         // ── Game loop ────────────────────────────────────
         let last = performance.now();
@@ -708,6 +948,8 @@ export default {
             cancelAnimationFrame(rafId);
             document.removeEventListener('keydown', onKey);
             document.removeEventListener('keyup', onKey);
+            document.removeEventListener('pointermove', onPointerMove);
+            document.removeEventListener('pointerup', onPointerUp);
             try { ro.disconnect(); } catch {}
         };
     },

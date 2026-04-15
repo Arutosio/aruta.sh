@@ -38,6 +38,82 @@ html, body, #root {
     pointer-events: none;
 }
 
+/* ── Backpack / inventory ─────────────────────────────── */
+.ua-backpack {
+    position: absolute;
+    top: 50%; left: 50%; transform: translate(-50%, -50%);
+    width: 340px; height: 280px;
+    background:
+        radial-gradient(circle at 20% 10%, rgba(255, 220, 160, 0.08), transparent 60%),
+        linear-gradient(180deg, #4a341f, #2a1c10);
+    border: 3px solid #2a1a0c;
+    border-radius: 12px;
+    box-shadow:
+        inset 0 2px 6px rgba(255, 210, 140, 0.1),
+        inset 0 -8px 20px rgba(0,0,0,0.5),
+        0 10px 30px rgba(0,0,0,0.55);
+    z-index: 400;
+    display: flex; flex-direction: column;
+    overflow: hidden;
+    user-select: none;
+}
+.ua-backpack-head {
+    height: 28px;
+    padding: 0 10px;
+    display: flex; justify-content: space-between; align-items: center;
+    background: linear-gradient(180deg, #6b4a2a, #442a16);
+    border-bottom: 2px solid #2a1a0c;
+    color: #ffd38a;
+    font-family: 'Cinzel', Georgia, serif;
+    font-size: 13px;
+    letter-spacing: 0.08em;
+}
+.ua-backpack-close {
+    cursor: pointer;
+    opacity: 0.8;
+    font-size: 16px;
+    padding: 0 6px;
+}
+.ua-backpack-close:hover { opacity: 1; color: #fff; }
+.ua-backpack-body {
+    flex: 1;
+    position: relative;
+    background:
+        repeating-linear-gradient(45deg, rgba(255, 220, 160, 0.03) 0 3px, transparent 3px 6px),
+        linear-gradient(180deg, #2a1c10, #1a0e05);
+    overflow: hidden;
+}
+.ua-backpack-body::before {
+    content: '';
+    position: absolute; inset: 6px;
+    border: 1px dashed rgba(255, 220, 160, 0.15);
+    border-radius: 6px;
+    pointer-events: none;
+}
+.ua-item {
+    position: absolute;
+    width: 32px; height: 32px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 22px;
+    cursor: grab;
+    user-select: none;
+    border-radius: 4px;
+    transition: background 120ms;
+}
+.ua-item:hover { background: rgba(255, 220, 160, 0.1); }
+.ua-item:active { cursor: grabbing; }
+
+.ua-drag-ghost {
+    position: fixed;
+    pointer-events: none;
+    font-size: 26px;
+    z-index: 9999;
+    width: 32px; height: 32px;
+    display: flex; align-items: center; justify-content: center;
+    filter: drop-shadow(0 3px 4px rgba(0,0,0,0.6));
+    transform: scale(1.1);
+}
+
 .ua-dialog {
     position: absolute; bottom: 52px; left: 50%; transform: translateX(-50%);
     min-width: 260px; max-width: 440px;
