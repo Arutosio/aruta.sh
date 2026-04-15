@@ -469,6 +469,27 @@
 /* Hide resize handles when maximized */
 .os-window.win-maximized .win-resize { display: none; }
 
+/* Snapped windows (left/right/max halves) hide resize handles too */
+.os-window.win-snapped { border-radius: 0; }
+.os-window.win-snapped .win-resize { display: none; }
+
+/* Aero-style snap preview overlay shown while dragging near an edge */
+#win-snap-preview {
+    position: fixed;
+    display: none;
+    pointer-events: none;
+    z-index: 9998;
+    background: rgba(255, 200, 87, 0.12);
+    border: 2px solid rgba(255, 200, 87, 0.6);
+    box-shadow: inset 0 0 40px rgba(255, 200, 87, 0.15);
+    border-radius: 4px;
+    transition: left 90ms, top 90ms, width 90ms, height 90ms;
+}
+[data-theme="light"] #win-snap-preview {
+    background: rgba(170, 120, 20, 0.10);
+    border-color: rgba(170, 120, 20, 0.55);
+}
+
 /* Suppress transitions during an active resize */
 .os-window.win-resizing {
     transition: none !important;

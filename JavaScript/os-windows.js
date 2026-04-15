@@ -299,6 +299,110 @@ function toggleMaximize(win) {
     }
 }
 
+/* ────────────────────────────────
+ * § WINDOW SNAP — Aero-style drag-to-edge snapping
+ * Dragging a window's titlebar near the top = maximize,
+ * near the left/right edges = half-screen snap. A preview
+ * overlay hints at where it will land; drop applies. Starting
+ * a drag on a snapped window un-snaps first.
+ * ──────────────────────────────── */
+const TASKBAR_H = 68;
+
+function _snapPreviewEl() {
+    let el = document.getElementById('win-snap-preview');
+    if (!el) {
+        el = document.createElement('div');
+        el.id = 'win-snap-preview';
+        el.setAttribute('aria-hidden', 'true');
+        document.body.appendChild(el);
+    }
+    return el;
+}
+function updateSnapPreview(zone) {
+    const el = _snapPreviewEl();
+    if (!zone) { el.style.display = 'none'; return; }
+    const h = window.innerHeight - TASKBAR_H;
+    if (zone === 'max') {
+        el.style.left = '0'; el.style.top = TASKBAR_H + 'px';
+        el.style.width = '100vw'; el.style.height = h + 'px';
+    } else if (zone === 'left') {
+        el.style.left = '0'; el.style.top = TASKBAR_H + 'px';
+        el.style.width = '50vw'; el.style.height = h + 'px';
+    } else if (zone === 'right') {
+        el.style.left = '50vw'; el.style.top = TASKBAR_H + 'px';
+        el.style.width = '50vw'; el.style.height = h + 'px';
+    }
+    el.style.display = 'block';
+}
+function hideSnapPreview() {
+    const el = document.getElementById('win-snap-preview');
+    if (el) el.style.display = 'none';
+}
+
+/** Apply a snap state to a window. Saves current rect for restore. */
+function applySnap(win, zone) {
+    // Save a restore rect if we don't already have one (back-to-back snaps
+    // shouldn't overwrite the floating rect).
+    if (!win._snapState) {
+        const rect = win.getBoundingClientRect();
+        win._restoreRect = {
+            left: rect.left + 'px',
+            top:  rect.top  + 'px',
+            width:  rect.width  + 'px',
+            height: rect.height + 'px',
+            position: 'fixed',
+            transform: 'none',
+        };
+    }
+    win._snapState = zone;
+    win.classList.add('win-snapped');
+    win.classList.toggle('win-snapped-left',  zone === 'left');
+    win.classList.toggle('win-snapped-right', zone === 'right');
+    win.classList.toggle('win-snapped-max',   zone === 'max');
+    // Lay out explicitly — easier to reason about than relying on CSS calc.
+    const h = (window.innerHeight - TASKBAR_H) + 'px';
+    win.style.position = 'fixed';
+    win.style.transform = 'none';
+    win.style.top = TASKBAR_H + 'px';
+    win.style.height = h;
+    win.style.margin = '0';
+    if (zone === 'max') {
+        win.style.left = '0'; win.style.width = '100vw';
+    } else if (zone === 'left') {
+        win.style.left = '0'; win.style.width = '50vw';
+    } else if (zone === 'right') {
+        win.style.left = '50vw'; win.style.width = '50vw';
+    }
+}
+
+/** Restore a snapped window to its floating rect, centered under cursor. */
+function restoreFromSnap(win, cursorX, cursorY) {
+    const r = win._restoreRect;
+    win.classList.remove('win-snapped', 'win-snapped-left', 'win-snapped-right', 'win-snapped-max');
+    win._snapState = null;
+    if (!r) return;
+    // Re-anchor so the cursor stays on the titlebar after restore.
+    const w = parseFloat(r.width)  || 520;
+    const h = parseFloat(r.height) || 360;
+    let left = (cursorX != null ? cursorX - w / 2 : parseFloat(r.left) || 100);
+    let top  = (cursorY != null ? cursorY - 20    : parseFloat(r.top)  || TASKBAR_H + 20);
+    left = Math.max(0, Math.min(window.innerWidth - 80,  left));
+    top  = Math.max(TASKBAR_H, Math.min(window.innerHeight - 40, top));
+    win.style.position = 'fixed';
+    win.style.transform = 'none';
+    win.style.left = left + 'px';
+    win.style.top  = top  + 'px';
+    win.style.width  = w + 'px';
+    win.style.height = h + 'px';
+}
+
+/** Re-layout any snapped windows when the viewport changes size. */
+window.addEventListener('resize', () => {
+    document.querySelectorAll('.os-window.win-snapped').forEach(win => {
+        if (win._snapState) applySnap(win, win._snapState);
+    });
+});
+
 /**
  * Initialize drag behavior on a window's titlebar
  * @param {HTMLElement} win — the window element
@@ -307,10 +411,18 @@ function toggleMaximize(win) {
 function initDrag(win, handle) {
     let startX, startY, origX, origY;
     let dragging = false;
+    let pendingSnap = null; // 'left' | 'right' | 'max' | null
 
     function onDown(e) {
         if (e.target.closest('.win-btn')) return;
         if (win.classList.contains('win-maximized')) return;
+
+        // If window is currently snapped, un-snap to a floating rect near cursor
+        // so the drag feels natural (Windows behavior: grab unsnaps).
+        if (win._snapState) {
+            const touch = e.touches ? e.touches[0] : e;
+            restoreFromSnap(win, touch.clientX, touch.clientY);
+        }
 
         dragging = true;
         win.classList.add('win-dragging');
@@ -357,12 +469,26 @@ function initDrag(win, handle) {
 
         win.style.left = newX + 'px';
         win.style.top = newY + 'px';
+
+        // Snap-zone detection by cursor position (not window edges).
+        const SNAP = 12;
+        let zone = null;
+        if (touch.clientY <= taskbarH + SNAP) zone = 'max';
+        else if (touch.clientX <= SNAP) zone = 'left';
+        else if (touch.clientX >= window.innerWidth - SNAP) zone = 'right';
+        pendingSnap = zone;
+        updateSnapPreview(zone);
     }
 
     function onUp() {
         if (!dragging) return;
         dragging = false;
         win.classList.remove('win-dragging');
+        hideSnapPreview();
+        if (pendingSnap) {
+            applySnap(win, pendingSnap);
+            pendingSnap = null;
+        }
     }
 
     handle.addEventListener('mousedown', onDown);
