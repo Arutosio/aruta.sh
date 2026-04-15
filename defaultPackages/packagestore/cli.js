@@ -255,8 +255,14 @@ async function cmdRemove(ctx, target) {
         await ctx.print('! Refusing to uninstall pkg from itself. Use Settings → Permissions.');
         return;
     }
-    if (target === 'packagestore' && window?.sandbox?.isMounted?.('packagestore')) {
-        await ctx.print('! Package Store is currently open — close it first, then retry.');
+    // The old check used `window.sandbox.isMounted(...)`, but the sandbox
+    // object lives on the host window — it's not reachable from inside the
+    // iframe this command runs in, so that branch was always falsy. Use
+    // `ctx.appId` instead: if we're being invoked from within the Package
+    // Store itself, refuse with a friendlier message. (The host also enforces
+    // this via sandbox.js `self_uninstall_refused`; this is just a pre-check.)
+    if (target === 'packagestore' && ctx.appId === 'packagestore') {
+        await ctx.print('! Package Store cannot uninstall itself. Use Settings → Permissions.');
         return;
     }
     const installed = await ctx.listInstalled() || [];

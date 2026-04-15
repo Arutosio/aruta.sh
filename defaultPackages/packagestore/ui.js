@@ -64,6 +64,13 @@ export default {
             defaultsFilter: '',
             defaultsList: [], // [{id,name,icon,version,installed,blacklisted}]
             defaultsBusy: new Set(),
+            // Cache of default-package ids derived locally from installedFull.
+            // Kept as a Set so the install-change broadcast handler can update
+            // counts/rows without hitting any permission-gated host API.
+            defaultIds: new Set(),
+            // Serialize install-change broadcast handlers so rapid sequential
+            // events don't stomp each other's async refresh.
+            _installChangeInFlight: null,
         };
         const SELF_IDS = new Set(['packagestore', 'pkg']);
 
@@ -97,21 +104,40 @@ export default {
                 state.installed.clear();
                 state.installedFull = list || [];
                 for (const m of list || []) state.installed.set(m.id, m.version);
+                // Derive default ids locally from the (already permission-gated)
+                // listInstalled payload — `_origin === 'default'` is authoritative,
+                // so we do NOT need a second ctx.defaults.list() call in the
+                // broadcast path. This avoids the permission-prompt loop that
+                // fired on every `aruta:installChanged`.
+                state.defaultIds = new Set(
+                    (list || []).filter(m => m._origin === 'default').map(m => m.id)
+                );
             } catch (e) {
                 console.warn('[packagestore] listInstalled failed', e);
             }
         }
 
         // Host fires this when an install/uninstall happens anywhere (Settings,
-        // terminal, another iframe). Re-query + re-render so our rows stay in sync.
-        document.addEventListener('aruta:installChanged', async () => {
-            await refreshInstalled();
-            // Defaults state can also flip (an uninstall blacklists, a restore
-            // un-blacklists). Re-pull when this view is active or any time so
-            // the sidebar badge stays accurate.
-            try { state.defaultsList = await ctx.defaults.list() || state.defaultsList; } catch {}
-            if (typeof renderAll === 'function') renderAll();
-        });
+        // terminal, another iframe). Re-query + re-render so our rows stay in
+        // sync. We serialize concurrent handlers so rapid sequential events
+        // don't stomp each other's async work, and we derive default state
+        // locally (no extra permission-gated calls).
+        async function onInstallChanged() {
+            if (state._installChangeInFlight) {
+                try { await state._installChangeInFlight; } catch (_) {}
+            }
+            const p = (async () => {
+                await refreshInstalled();
+                if (typeof renderAll === 'function') renderAll();
+            })();
+            state._installChangeInFlight = p;
+            try { await p; }
+            finally {
+                if (state._installChangeInFlight === p) state._installChangeInFlight = null;
+            }
+        }
+        state._onInstallChanged = onInstallChanged;
+        document.addEventListener('aruta:installChanged', onInstallChanged);
 
         // ── Network ───────────────────────────────────────────
         async function fetchRepo(repo) {
@@ -521,6 +547,13 @@ export default {
                     : '';
                 const uninstallBtn = isSelf
                     ? `<button class="ps-btn ps-act ps-btn-ghost ps-danger" disabled title="Core system package — cannot uninstall from here">🗑 Uninstall</button>`
+                    : isDefault
+                    // Default packages can be reinstalled on next boot; uninstalling
+                    // one from the generic Installed view is almost always a
+                    // mistake. Disable the button here and steer users to the
+                    // dedicated defaults flow (Settings → Defaults) for the
+                    // rare case where it's intentional.
+                    ? `<button class="ps-btn ps-act ps-btn-ghost ps-danger" disabled title="Default package — use the Defaults tab (Settings → Defaults) to uninstall.">🗑 Uninstall</button>`
                     : `<button class="ps-btn ps-act ps-btn-ghost ps-danger" data-action="uninstall-installed" data-id="${escapeHTML(m.id)}" title="Uninstall">🗑 Uninstall</button>`;
                 return `
                     <div class="ps-pkg ps-installed-row" data-id="${escapeHTML(m.id)}">
@@ -975,5 +1008,19 @@ export default {
         refreshDefaults().catch(e => console.warn('[packagestore] defaults boot', e));
         // auto-refresh enabled repos on first open
         refreshAllRepos().then(() => renderAll()).catch(e => console.warn(e));
-    }
+
+        // Stash state on root so unmount() can find it if the host calls
+        // unmount after teardown notification. (Vanilla, no framework.)
+        root.__packagestoreState = state;
+    },
+    // Called by the host (sandbox IFRAME_BOOT `teardown` message) before the
+    // iframe is removed. Detaches the install-change listener so we don't
+    // accumulate handlers across remounts.
+    async unmount(root /*, ctx */) {
+        const state = root && root.__packagestoreState;
+        if (state && state._onInstallChanged) {
+            document.removeEventListener('aruta:installChanged', state._onInstallChanged);
+            state._onInstallChanged = null;
+        }
+    },
 };
