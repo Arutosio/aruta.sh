@@ -938,6 +938,14 @@ export default {
                 const key = dragState.worldKey;
                 const def = ITEMS[key];
                 const picked = () => removeWorldItem(dragState.wx, dragState.wy);
+                // Detect drop on the player's own tile (or any tile within 1),
+                // which acts as a shortcut for "put in backpack".
+                let droppedOnPlayer = false;
+                if (target.kind === 'world') {
+                    const cr = canvas.getBoundingClientRect();
+                    const { wx, wy } = canvasToWorldCell(ev.clientX - cr.left, ev.clientY - cr.top);
+                    droppedOnPlayer = Math.max(Math.abs(wx - player.wx), Math.abs(wy - player.wy)) <= 1;
+                }
                 if (target.kind === 'pack' && picked()) {
                     const r = target.rect;
                     inventory.items.push({
@@ -952,6 +960,16 @@ export default {
                         id: 'it_' + Math.random().toString(36).slice(2, 9),
                         key, emoji: def.emoji, name: def.name,
                     });
+                } else if (droppedOnPlayer && picked()) {
+                    // Auto-pickup into backpack at a free-looking spot near the top-left.
+                    inventory.items.push({
+                        id: 'it_' + Math.random().toString(36).slice(2, 9),
+                        key, emoji: def.emoji, name: def.name,
+                        x: 6 + (inventory.items.length % 7) * 36,
+                        y: 6 + Math.floor(inventory.items.length / 7) * 36,
+                    });
+                    saveInventory();
+                    if ($pack.style.display !== 'none') renderBackpack();
                 }
                 dragState = null;
                 return;
@@ -1038,7 +1056,6 @@ export default {
             const { wx, wy, feature: f } = hit;
             const dist = Math.max(Math.abs(wx - player.wx), Math.abs(wy - player.wy));
             if (dist > 2) return;
-            if ($pack.style.display === 'none') toggleBackpack();
             startDrag('world', { worldKey: f.itemKey, wx, wy }, ev.clientX, ev.clientY);
         });
 
@@ -1125,8 +1142,14 @@ export default {
                 const b = vx * 2 / TILE_W;
                 const wdx = (a + b) / 2;
                 const wdy = (a - b) / 2;
-                dx = Math.sign(wdx);
-                dy = Math.sign(wdy);
+                // Snap to one of the 8 compass directions. If one axis is
+                // much smaller than the other (ratio < 0.4), treat it as 0
+                // so the player can walk along a pure world-axis (which in
+                // screen space reads as a diagonal NE/NW/SE/SW).
+                const absX = Math.abs(wdx), absY = Math.abs(wdy);
+                const bigger = Math.max(absX, absY);
+                dx = absX >= bigger * 0.4 ? Math.sign(wdx) : 0;
+                dy = absY >= bigger * 0.4 ? Math.sign(wdy) : 0;
             }
             if (dx || dy) player.tryMove(Math.sign(dx), Math.sign(dy), world);
         }
@@ -1169,19 +1192,28 @@ export default {
 
             // PASS 2 — features + player, depth-sorted by wx+wy then wx.
             const SIZES = {
-                '🌲': 40, '🌳': 40, '🌴': 38,
-                '🪨': 18, '🌿': 18, '🌾': 20, '🍄': 16,
-                '⛄': 28,
+                // Scenery
+                '🌲': 34, '🌳': 34, '🌴': 32,
+                '🪨': 14, '🌿': 14, '🌾': 16, '🍄': 14,
+                '⛄': 24,
                 // Structures
-                '⛪': 48, '🏛️': 50, '🏰': 52,
-                '🏠': 42, '🏡': 42, '🛖': 40,
+                '⛪': 44, '🏛️': 44, '🏰': 46,
+                '🏠': 38, '🏡': 38, '🛖': 36,
                 // Creatures
                 '🐑': 22, '🐇': 18, '🦊': 22, '🦌': 26, '🐗': 24, '🦉': 18, '🦝': 22,
                 '🦀': 18, '🦎': 18, '🐟': 20, '🐠': 20, '🐺': 24,
                 // NPCs
-                '🧙': 30, '🧝': 28, '🧑‍🌾': 28, '🧑‍🍳': 28, '⚔️': 26,
+                '🧙': 28, '🧝': 26, '🧑‍🌾': 26, '🧑‍🍳': 26,
+                // Pickup items (small, ground-level objects)
+                '🪙': 12, '💎': 14, '🍓': 12, '🍎': 14, '🌸': 12,
+                '🗝️': 14, '🧪': 14, '📜': 14,
+                // Equipment
+                '⚔️': 20, '🪓': 20, '🏹': 22, '🗡️': 18, '🛡️': 22,
+                '⛑️': 20, '👑': 18, '🎩': 20, '🦺': 22, '🥼': 22,
+                '🧤': 16, '🥾': 18, '👡': 16, '🧣': 18, '📿': 16,
+                '💍': 12, '📖': 20,
                 // Dungeons
-                '🕳️': 40, '🏚️': 46,
+                '🕳️': 32, '🏚️': 38,
             };
             const sprites = [];
             // Visible chunks for creature sampling.
