@@ -1,11 +1,13 @@
 {
-    "type": "app",
     "id": "packagestore",
-    "name": "Package Store",
+    "name": "Package Manager",
     "icon": "📦",
-    "version": "1.2.2",
+    "version": "2.0.0",
     "author": "Aruta",
-    "entry": "index.js",
     "category": "system",
-    "permissions": ["fetch", "storage", "notifications", "install"]
+    "minSdk": 2,
+    "roles": ["app", "command"],
+    "entries": { "app": "ui.js", "command": "cli.js" },
+    "commandAlias": "pkg",
+    "permissions": ["fetch", "storage", "notifications", "install", "terminal"]
 }
