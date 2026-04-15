@@ -54,6 +54,13 @@ export default {
             busy: new Set(), // package ids currently installing
             view: 'browse', // 'browse' | 'installed'
             installedFilter: '',
+            // Cache of default-package ids derived locally from installedFull.
+            // Kept as a Set so the install-change broadcast handler can update
+            // counts/rows without hitting any permission-gated host API.
+            defaultIds: new Set(),
+            // Serialize install-change broadcast handlers so rapid sequential
+            // events don't stomp each other's async refresh.
+            _installChangeInFlight: null,
         };
         const SELF_IDS = new Set(['packagestore', 'pkg']);
 
@@ -87,17 +94,47 @@ export default {
                 state.installed.clear();
                 state.installedFull = list || [];
                 for (const m of list || []) state.installed.set(m.id, m.version);
+                // Derive default ids locally from the (already permission-gated)
+                // listInstalled payload — `_origin === 'default'` is authoritative,
+                // so we do NOT need a second ctx.defaults.list() call in the
+                // broadcast path. This avoids the permission-prompt loop that
+                // fired on every `aruta:installChanged`.
+                state.defaultIds = new Set(
+                    (list || []).filter(m => m._origin === 'default').map(m => m.id)
+                );
             } catch (e) {
                 console.warn('[packagestore] listInstalled failed', e);
             }
         }
 
         // Host fires this when an install/uninstall happens anywhere (Settings,
-        // terminal, another iframe). Re-query + re-render so our rows stay in sync.
-        document.addEventListener('aruta:installChanged', async () => {
-            await refreshInstalled();
-            if (typeof renderAll === 'function') renderAll();
-        });
+        // terminal, another iframe). Re-query + re-render so our rows stay in
+        // sync. We serialize concurrent handlers so rapid sequential events
+        // don't stomp each other's async work, and we derive default state
+        // locally (no extra permission-gated calls).
+        async function onInstallChanged() {
+            if (state._installChangeInFlight) {
+                // Chain onto the in-flight promise so the last caller wins
+                // without starting a second concurrent refresh cycle.
+                try { await state._installChangeInFlight; } catch (_) {}
+            }
+            const p = (async () => {
+                await refreshInstalled();
+                if (typeof renderAll === 'function') renderAll();
+            })();
+            state._installChangeInFlight = p;
+            try { await p; }
+            finally {
+                if (state._installChangeInFlight === p) state._installChangeInFlight = null;
+            }
+        }
+        // Stored on state so `unmount(root, ctx)` can detach the listener
+        // cleanly when the host tears down the iframe (see sandbox.js
+        // IFRAME_BOOT teardown message). Iframe unload will GC the listener
+        // anyway, but an explicit removal avoids leaks if the host ever
+        // shares a document across mounts.
+        state._onInstallChanged = onInstallChanged;
+        document.addEventListener('aruta:installChanged', onInstallChanged);
 
         // ── Network ───────────────────────────────────────────
         async function fetchRepo(repo) {
@@ -828,5 +865,19 @@ export default {
         renderAll();
         // auto-refresh enabled repos on first open
         refreshAllRepos().then(() => renderAll()).catch(e => console.warn(e));
-    }
+
+        // Stash state on root so unmount() can find it if the host calls
+        // unmount after teardown notification. (Vanilla, no framework.)
+        root.__packagestoreState = state;
+    },
+    // Called by the host (sandbox IFRAME_BOOT `teardown` message) before the
+    // iframe is removed. Detaches the install-change listener so we don't
+    // accumulate handlers across remounts.
+    async unmount(root /*, ctx */) {
+        const state = root && root.__packagestoreState;
+        if (state && state._onInstallChanged) {
+            document.removeEventListener('aruta:installChanged', state._onInstallChanged);
+            state._onInstallChanged = null;
+        }
+    },
 };

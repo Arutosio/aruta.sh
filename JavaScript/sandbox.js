@@ -194,6 +194,19 @@ html,body{margin:0;padding:0;width:100%;height:100%;background:transparent;color
             if (d.value) document.documentElement.dataset.theme = d.value;
         } else if (d.type === 'install-change') {
             try { document.dispatchEvent(new Event('aruta:installChanged')); } catch (_) {}
+        } else if (d.type === 'teardown') {
+            // Host is about to remove the iframe. Give the app module a
+            // chance to detach listeners. Best-effort; swallow errors so
+            // unmount can't block iframe removal host-side.
+            try {
+                const app = window.__arutaApp;
+                if (app && app.exp && typeof app.exp.unmount === 'function') {
+                    await app.exp.unmount(app.root, app.ctx);
+                }
+            } catch (err) {
+                console.warn('[sandbox iframe] unmount threw', err);
+            }
+            try { parent.postMessage({ __aruta_sdk: true, type: 'teardown-ack' }, '*'); } catch (_) {}
         } else if (d.type === 'init') {
             try {
                 const fileURLs = {};
@@ -257,6 +270,11 @@ html,body{margin:0;padding:0;width:100%;height:100%;background:transparent;color
                 const mod = await import(fileURLs[entryPath]);
                 const exp = mod.default || mod;
                 if (typeof exp.mount === 'function') await exp.mount(root, ctx);
+                // Stash the module and ctx so a later `teardown` message can
+                // invoke exp.unmount?.(root, ctx) before the host removes the
+                // iframe. This gives apps a chance to detach document-level
+                // listeners etc.
+                window.__arutaApp = { exp, root, ctx };
                 parent.postMessage({ __aruta_sdk: true, type: 'mounted' }, '*');
             } catch (err) {
                 root.innerHTML = '<pre style="color:#fb7185;padding:1rem;white-space:pre-wrap;">' + (err.stack || err.message || err) + '</pre>';
@@ -334,6 +352,13 @@ async function mountApp(appId) {
 function unmountApp(appId) {
     const m = _mounted.get(appId);
     if (!m) return;
+    // Notify the iframe so it can invoke exp.unmount(root, ctx) and detach
+    // any document-level listeners (e.g. packagestore's install-change
+    // handler). Fire-and-forget: we don't wait for ack because iframe removal
+    // must stay synchronous for existing callers.
+    try {
+        m.iframe.contentWindow?.postMessage({ __aruta_sdk: true, type: 'teardown' }, '*');
+    } catch (_) {}
     window.removeEventListener('message', m.onMsg);
     m.iframe.remove();
     _mounted.delete(appId);
