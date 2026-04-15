@@ -22,18 +22,17 @@ Auto-installed on first boot from `defaultPackages/` (uninstall sticks):
 
 | App / command | Description |
 |---|---|
-| `roll` (cmd) | Dice notation roller (`roll 2d6+3`) |
 | `rune` (cmd) | Draw an Elder Futhark rune with meaning |
-| `fortune` (cmd) | Random arcane fortune |
 | `weather` (cmd) | `weather <city>` via wttr.in |
 | `timer` (app) | Countdown timer with toasts |
 | `qr` (app) | QR code generator |
 | `whoami` (cmd) | Print user/origin/agent info |
 | `clip` (app) | Clipboard log |
-| `oracle` (app) | Themed answer-the-question oracle |
-| `dice-roller` (app) | Visual dice roller |
+| `oracle` (app + `fortune` cmd) | Themed oracle app; `fortune` CLI prints a random quote |
+| `dice-roller` (app + `roll` cmd) | Visual dice roller app; `roll 2d6+3` CLI via dice notation |
 | `grimoire` (app) | Folder-based notes/code editor — real folders via FS Access (Chromium) or virtual workspaces (any browser); zip export/import |
 | `snake` (app) | Responsive Snake with wrap-around edges |
+| `packagestore` (app + `pkg` cmd) | Package Manager app + apt-style `pkg` CLI |
 
 ---
 

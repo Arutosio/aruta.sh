@@ -175,6 +175,14 @@ Key points:
 - Permissions are the union of everything either role needs. A hybrid package that calls `ctx.print` from its CLI must still declare `"terminal"` in `permissions`.
 - Hybrid packages require `minSdk: 2`. Older hosts reject install up-front instead of running half the package.
 
+### Bundled hybrids
+
+The default package set ships three hybrids so the Start-menu app and the Terminal verb stay in sync by construction:
+
+- `packagestore` + `pkg` — Package Manager (app) with the `pkg` CLI (alias).
+- `dice-roller` + `roll` — visual Dice Roller (app) with the `roll` CLI (alias).
+- `oracle` + `fortune` — Oracle (app) with the `fortune` CLI (alias).
+
 ---
 
 ## Packaging & installing
