@@ -194,6 +194,7 @@ class World {
     _generate(cx, cy) {
         const N = CHUNK_SIZE;
         const biomes = new Array(N * N);
+        const elevations = new Float32Array(N * N);
         const features = [];
         const rnd = mulberry32(this.seed ^ (cx * 73856093) ^ (cy * 19349663));
 
@@ -206,6 +207,7 @@ class World {
                 const moist = fbm2D(wx / 60, wy / 60, this.seed + 9999, 3, 0.5);
                 const biome = this._classify(elev, moist);
                 biomes[r * N + c] = biome;
+                elevations[r * N + c] = elev;
 
                 // Feature roll
                 const feats = FEATURES[biome];
@@ -291,7 +293,7 @@ class World {
             }
         }
 
-        return { cx, cy, biomes, features, creatures };
+        return { cx, cy, biomes, elevations, features, creatures };
     }
 
     /** Try to find a ~5×5 mostly-grass patch near the chunk centre and
@@ -393,6 +395,14 @@ class World {
         return false;
     }
 
+    elevAt(wx, wy) {
+        const cx = Math.floor(wx / CHUNK_SIZE);
+        const cy = Math.floor(wy / CHUNK_SIZE);
+        const lx = ((wx % CHUNK_SIZE) + CHUNK_SIZE) % CHUNK_SIZE;
+        const ly = ((wy % CHUNK_SIZE) + CHUNK_SIZE) % CHUNK_SIZE;
+        return this.getChunk(cx, cy).elevations[ly * CHUNK_SIZE + lx];
+    }
+
     featureAt(wx, wy) {
         const cx = Math.floor(wx / CHUNK_SIZE);
         const cy = Math.floor(wy / CHUNK_SIZE);
@@ -444,23 +454,84 @@ function camera(canvasW, canvasH, pwx, pwy) {
 }
 
 // ── Rendering ────────────────────────────────────────────
-function drawTile(ctx, sx, sy, biome) {
+const ELEV_PX = 18; // max pixel lift for highest elevation
+
+function drawTile(ctx, sx, sy, biome, elev = 0.5) {
     const b = BIOMES[biome];
     const hx = TILE_W / 2, hy = TILE_H / 2;
-    const g = ctx.createLinearGradient(sx, sy, sx, sy + TILE_H);
-    g.addColorStop(0, b.color1); g.addColorStop(1, b.color2);
+    // Elevation offset: higher tiles render higher on screen.
+    const lift = (elev - 0.35) * ELEV_PX;
+    const ty = sy - lift;
+
+    // Brightness shift: low tiles slightly darker, high tiles brighter.
+    const bright = 0.85 + elev * 0.3; // range ~0.85–1.15
+
+    const g = ctx.createLinearGradient(sx, ty, sx, ty + TILE_H);
+    g.addColorStop(0, _adjustBright(b.color1, bright));
+    g.addColorStop(1, _adjustBright(b.color2, bright));
     ctx.fillStyle = g;
     ctx.beginPath();
-    ctx.moveTo(sx + hx, sy);
-    ctx.lineTo(sx + TILE_W, sy + hy);
-    ctx.lineTo(sx + hx, sy + TILE_H);
-    ctx.lineTo(sx, sy + hy);
+    ctx.moveTo(sx + hx, ty);
+    ctx.lineTo(sx + TILE_W, ty + hy);
+    ctx.lineTo(sx + hx, ty + TILE_H);
+    ctx.lineTo(sx, ty + hy);
     ctx.closePath();
     ctx.fill();
-    // Subtle edge shading for depth.
-    ctx.strokeStyle = 'rgba(0,0,0,0.12)';
-    ctx.lineWidth = 1;
+    ctx.strokeStyle = 'rgba(0,0,0,0.10)';
+    ctx.lineWidth = 0.5;
     ctx.stroke();
+}
+
+/** Draw south-east "wall" face when this tile is elevated above its
+ *  neighbours — gives a cliff / depth impression. */
+function drawTileDepth(ctx, sx, sy, elev, elevS, elevE) {
+    const lift = (elev - 0.35) * ELEV_PX;
+    const ty = sy - lift;
+    const hx = TILE_W / 2, hy = TILE_H / 2;
+
+    // South face (bottom-right edge → tile below).
+    const sLift = (elevS - 0.35) * ELEV_PX;
+    const diff = lift - sLift;
+    if (diff > 1.5) {
+        const tyS = sy - sLift;
+        ctx.fillStyle = 'rgba(0,0,0,0.22)';
+        ctx.beginPath();
+        ctx.moveTo(sx + hx, ty + TILE_H);
+        ctx.lineTo(sx + TILE_W, ty + hy);
+        ctx.lineTo(sx + TILE_W, tyS + hy);
+        ctx.lineTo(sx + hx, tyS + TILE_H);
+        ctx.closePath();
+        ctx.fill();
+    }
+    // East face (bottom-left edge).
+    const eLift = (elevE - 0.35) * ELEV_PX;
+    const diffE = lift - eLift;
+    if (diffE > 1.5) {
+        const tyE = sy - eLift;
+        ctx.fillStyle = 'rgba(0,0,0,0.30)';
+        ctx.beginPath();
+        ctx.moveTo(sx + hx, ty + TILE_H);
+        ctx.lineTo(sx, ty + hy);
+        ctx.lineTo(sx, tyE + hy);
+        ctx.lineTo(sx + hx, tyE + TILE_H);
+        ctx.closePath();
+        ctx.fill();
+    }
+}
+
+function _adjustBright(hex, factor) {
+    const h = hex.replace('#', '');
+    const r = Math.min(255, Math.round(parseInt(h.slice(0,2), 16) * factor));
+    const g = Math.min(255, Math.round(parseInt(h.slice(2,4), 16) * factor));
+    const b = Math.min(255, Math.round(parseInt(h.slice(4,6), 16) * factor));
+    return '#' + ((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1);
+}
+
+function drawShadow(ctx, sx, sy) {
+    ctx.fillStyle = 'rgba(0,0,0,0.22)';
+    ctx.beginPath();
+    ctx.ellipse(sx + TILE_W / 2, sy + TILE_H / 2 + 2, 10, 4, 0, 0, Math.PI * 2);
+    ctx.fill();
 }
 
 function drawEmoji(ctx, sx, sy, emoji, size = 28) {
@@ -1206,14 +1277,18 @@ export default {
             const minY = Math.min(tl.wy, tr.wy, bl.wy, br.wy) - 1;
             const maxY = Math.max(tl.wy, tr.wy, bl.wy, br.wy) + 1;
 
-            // PASS 1 — tiles (front-to-back by wx+wy ascending). Group by chunk
-            // so each cell only needs one biome lookup.
+            // PASS 1 — tiles with elevation height + depth walls.
             for (let y = minY; y <= maxY; y++) {
                 for (let x = minX; x <= maxX; x++) {
                     const p = iso(x, y);
                     const sx = p.x + cam.cx - TILE_W / 2;
                     const sy = p.y + cam.cy;
-                    drawTile(ctx, sx, sy, world.biomeAt(x, y));
+                    const elev = world.elevAt(x, y);
+                    drawTile(ctx, sx, sy, world.biomeAt(x, y), elev);
+                    // Depth walls — south-east face when higher than neighbours.
+                    const elevS = world.elevAt(x + 1, y);  // south in iso
+                    const elevE = world.elevAt(x, y + 1);  // east in iso
+                    drawTileDepth(ctx, sx, sy, elev, elevS, elevE);
                 }
             }
 
@@ -1268,7 +1343,12 @@ export default {
             sprites.sort((a, b) => (a.wx + a.wy) - (b.wx + b.wy) || a.wx - b.wx);
             for (const s of sprites) {
                 const p = iso(s.wx, s.wy);
-                drawEmoji(ctx, p.x + cam.cx - TILE_W / 2, p.y + cam.cy, s.emoji, s.size);
+                const sx = p.x + cam.cx - TILE_W / 2;
+                const elev = world.elevAt(Math.round(s.wx), Math.round(s.wy));
+                const lift = (elev - 0.35) * ELEV_PX;
+                const sy = p.y + cam.cy - lift;
+                drawShadow(ctx, sx, sy);
+                drawEmoji(ctx, sx, sy, s.emoji, s.size);
             }
 
             // ── Day/night tint overlay ─────────────────────
