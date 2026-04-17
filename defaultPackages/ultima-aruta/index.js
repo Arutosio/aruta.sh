@@ -216,7 +216,7 @@ const SPRITE_SIZES = {
     '🧤': 16, '🥾': 18, '👡': 16, '🧣': 18, '📿': 16,
     '💍': 12, '📖': 20,
     '🕳️': 32, '🏚️': 38, '🪜': 30, '🧰': 24,
-    '💀': 26, '👻': 24, '🦇': 20, '🕷️': 22,
+    '💀': 26, '👻': 24, '🦇': 20, '🕷️': 22, '⛰️': 36,
     '🐻': 28, '🐍': 20, '🐉': 42, '🐸': 16,
 };
 /* ╔══════════════════════════════════════════════════════════╗
@@ -261,14 +261,20 @@ function generateDungeon(dungeonId) {
         const ly = lastRoom.y + Math.floor(rnd() * lastRoom.h);
         if (biomes[ly * N + lx] === 'cave_floor') biomes[ly * N + lx] = 'lava';
     }
+    // Treasure chests — at least 1 per room (except the exit room).
+    // Last room has guaranteed rare loot.
+    const commonPool = ['gold', 'gold', 'gold', 'gem', 'potion', 'herb', 'berry', 'scroll'];
+    const rarePool   = ['sword', 'shield', 'helm', 'armor', 'bow', 'spellbook', 'crown', 'ring', 'necklace'];
     for (let i = 1; i < rooms.length; i++) {
-        if (rnd() < 0.5) {
+        const chestCount = i === rooms.length - 1 ? 2 : (rnd() < 0.7 ? 1 : 0);
+        for (let j = 0; j < chestCount; j++) {
             const tc = rooms[i].x + Math.floor(rnd() * rooms[i].w);
             const tr = rooms[i].y + Math.floor(rnd() * rooms[i].h);
-            if (biomes[tr * N + tc] === 'cave_floor' && !features.find(f => f.c === tc && f.r === tr)) {
-                const pool = ['gold', 'gold', 'gold', 'gem', 'potion', 'sword', 'shield', 'helm', 'armor', 'spellbook'];
-                features.push({ c: tc, r: tr, emoji: '🧰', item: true, itemKey: pool[Math.floor(rnd() * pool.length)], chest: true });
-            }
+            if (biomes[tr * N + tc] !== 'cave_floor') continue;
+            if (features.find(f => f.c === tc && f.r === tr)) continue;
+            const isRare = i === rooms.length - 1 || rnd() < 0.25;
+            const pool = isRare ? rarePool : commonPool;
+            features.push({ c: tc, r: tr, emoji: '🧰', item: true, itemKey: pool[Math.floor(rnd() * pool.length)], chest: true });
         }
     }
     for (let i = 1; i < rooms.length; i++) {
@@ -403,19 +409,43 @@ class World {
             this._maybePlaceVillage(cx, cy, biomes, features, rnd);
         }
 
-        // ── Dungeon entrance placement ─────────────────────
-        // ~3% of chunks get a dungeon — a cave mouth on mountain-adjacent
-        // grass/forest, or a ruined arch on any forest cell.
-        if (rnd() < 0.03) {
-            for (let attempts = 0; attempts < 20; attempts++) {
-                const lc = Math.floor(rnd() * CHUNK_SIZE);
-                const lr = Math.floor(rnd() * CHUNK_SIZE);
-                const b = biomes[lr * CHUNK_SIZE + lc];
-                if (b !== 'grass' && b !== 'forest' && b !== 'sand') continue;
+        // ── Dungeon / crypt entrance placement ──────────────
+        // ~6% of chunks get a dungeon. Priority: mountain foothills (cave
+        // entrance at the base of a mountain). Fallback: forest crypt.
+        if (rnd() < 0.06) {
+            let placed = false;
+            const N2 = CHUNK_SIZE;
+            // Pass 1: find a passable cell adjacent to a mountain tile.
+            for (let attempts = 0; attempts < 30 && !placed; attempts++) {
+                const lc = Math.floor(rnd() * N2);
+                const lr = Math.floor(rnd() * N2);
+                const b = biomes[lr * N2 + lc];
+                if (!BIOMES[b]?.passable) continue;
                 if (features.find(f => f.c === lc && f.r === lr)) continue;
-                const emoji = rnd() < 0.5 ? '🕳️' : '🏚️';
-                features.push({ c: lc, r: lr, emoji, dungeon: true, dungeonId: (this.seed ^ (cx * 31) ^ (cy * 17) ^ lc ^ lr * 911) >>> 0 });
-                break;
+                // Check if any neighbour is mountain.
+                let nearMtn = false;
+                for (const [dx, dy] of [[1,0],[-1,0],[0,1],[0,-1]]) {
+                    const nc = lc + dx, nr = lr + dy;
+                    if (nc >= 0 && nc < N2 && nr >= 0 && nr < N2 && biomes[nr * N2 + nc] === 'mountain') nearMtn = true;
+                }
+                if (!nearMtn) continue;
+                features.push({ c: lc, r: lr, emoji: '⛰️', dungeon: true,
+                    dungeonId: (this.seed ^ (cx * 31) ^ (cy * 17) ^ lc ^ lr * 911) >>> 0 });
+                placed = true;
+            }
+            // Pass 2 fallback: forest crypt.
+            if (!placed) {
+                for (let attempts = 0; attempts < 20; attempts++) {
+                    const lc = Math.floor(rnd() * N2);
+                    const lr = Math.floor(rnd() * N2);
+                    const b = biomes[lr * N2 + lc];
+                    if (b !== 'forest' && b !== 'grass') continue;
+                    if (features.find(f => f.c === lc && f.r === lr)) continue;
+                    const emoji = rnd() < 0.5 ? '🕳️' : '🏚️';
+                    features.push({ c: lc, r: lr, emoji, dungeon: true,
+                        dungeonId: (this.seed ^ (cx * 31) ^ (cy * 17) ^ lc ^ lr * 911) >>> 0 });
+                    break;
+                }
             }
         }
 
@@ -2571,7 +2601,7 @@ export default {
                     const f = world.featureAt(wx, wy);
                     if (f && f.merchant) text = `${f.emoji} Merchant · Press Space to trade`;
                     else if (f && f.npc) text = `${f.emoji} NPC · Press Space to talk`;
-                    else if (f && f.dungeon) text = `${f.emoji} Dungeon entrance`;
+                    else if (f && f.dungeon) text = `${f.emoji} ${f.emoji === '⛰️' ? 'Mountain cave' : 'Dungeon entrance'} · Press Space to enter`;
                 }
             }
             if (text && text !== _tooltip) {
