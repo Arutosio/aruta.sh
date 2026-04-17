@@ -30,9 +30,12 @@ const BIOMES = {
     deep:     { color1: '#123864', color2: '#0a1e3d', passable: false, name: 'Deep Water' },
     water:    { color1: '#2a7abc', color2: '#1d5a92', passable: false, name: 'Water' },
     sand:     { color1: '#e0cc8a', color2: '#c4ad66', passable: true,  name: 'Beach' },
+    swamp:    { color1: '#4a6e3a', color2: '#384e2a', passable: true,  name: 'Swamp' },
     grass:    { color1: '#5ca14b', color2: '#427a35', passable: true,  name: 'Plain' },
+    savanna:  { color1: '#a8b44a', color2: '#8a9636', passable: true,  name: 'Savanna' },
     forest:   { color1: '#2d6a2a', color2: '#1f4c1c', passable: true,  name: 'Forest' },
     mountain: { color1: '#7a6e5b', color2: '#554b3d', passable: false, name: 'Mountain' },
+    tundra:   { color1: '#9a9a8a', color2: '#7a7a6a', passable: true,  name: 'Tundra' },
     snow:     { color1: '#e8e8f0', color2: '#b4b8cc', passable: true,  name: 'Snow' },
 };
 
@@ -43,13 +46,17 @@ const DUNGEON_BIOMES = {
     exit:       { color1: '#406040', color2: '#304830', passable: true,  name: 'Exit' },
 };
 
+// Merged lookup for both overworld + dungeon biomes (used by the renderer).
 const ALL_BIOMES = { ...BIOMES, ...DUNGEON_BIOMES };
 
 const FEATURES = {
-    sand:   [{ emoji: '🌴', rate: 0.02 }, { emoji: '🪨', rate: 0.01 }],
-    grass:  [{ emoji: '🌳', rate: 0.03 }, { emoji: '🌿', rate: 0.04 }, { emoji: '🌾', rate: 0.02 }, { emoji: '🪨', rate: 0.005 }],
-    forest: [{ emoji: '🌲', rate: 0.35 }, { emoji: '🌳', rate: 0.12 }, { emoji: '🍄', rate: 0.01 }, { emoji: '🪨', rate: 0.01 }],
-    snow:   [{ emoji: '🌲', rate: 0.06 }, { emoji: '⛄', rate: 0.005 }],
+    sand:    [{ emoji: '🌴', rate: 0.02 }, { emoji: '🪨', rate: 0.01 }],
+    swamp:   [{ emoji: '🌿', rate: 0.08 }, { emoji: '🍄', rate: 0.04 }, { emoji: '🌳', rate: 0.02 }],
+    grass:   [{ emoji: '🌳', rate: 0.03 }, { emoji: '🌿', rate: 0.04 }, { emoji: '🌾', rate: 0.02 }, { emoji: '🪨', rate: 0.005 }],
+    savanna: [{ emoji: '🌾', rate: 0.06 }, { emoji: '🌳', rate: 0.01 }, { emoji: '🪨', rate: 0.008 }],
+    forest:  [{ emoji: '🌲', rate: 0.35 }, { emoji: '🌳', rate: 0.12 }, { emoji: '🍄', rate: 0.01 }, { emoji: '🪨', rate: 0.01 }],
+    tundra:  [{ emoji: '🪨', rate: 0.03 }, { emoji: '🌿', rate: 0.01 }],
+    snow:    [{ emoji: '🌲', rate: 0.06 }, { emoji: '⛄', rate: 0.005 }],
 };
 
 const CREATURE_DEFS = {
@@ -72,14 +79,18 @@ const CREATURE_DEFS = {
     '🐻': { ai: 'neutral',    hp: 50, dmg: 9,  xp: 14, loot: [{ key: 'herb', rate: 0.4 }, { key: 'gold', rate: 0.3 }] },
     '🐍': { ai: 'aggressive', hp: 22, dmg: 6,  xp: 7,  loot: [{ key: 'potion', rate: 0.15 }] },
     '🐉': { ai: 'aggressive', hp: 120, dmg: 18, xp: 50, loot: [{ key: 'gem', rate: 0.8 }, { key: 'crown', rate: 0.2 }, { key: 'spellbook', rate: 0.15 }] },
+    '🐸': { ai: 'passive',   hp: 8,   dmg: 0,  xp: 1,  loot: [{ key: 'herb', rate: 0.3 }] },
 };
 
 const CREATURES = {
-    grass:  { count: 3, pool: ['🐑', '🐇', '🦊', '🦌'] },
-    forest: { count: 4, pool: ['🦌', '🐗', '🦉', '🦝', '🐻', '🐍'] },
-    sand:   { count: 1, pool: ['🦀', '🦎'] },
-    water:  { count: 3, pool: ['🐟', '🐠'] },
-    snow:   { count: 1, pool: ['🦌', '🐺', '🐻'] },
+    grass:    { count: 3, pool: ['🐑', '🐇', '🦊', '🦌'] },
+    savanna:  { count: 2, pool: ['🐇', '🦎', '🐍'] },
+    forest:   { count: 4, pool: ['🦌', '🐗', '🦉', '🦝', '🐻', '🐍'] },
+    swamp:    { count: 2, pool: ['🐍', '🦎', '🐸'] },
+    sand:     { count: 1, pool: ['🦀', '🦎'] },
+    water:    { count: 3, pool: ['🐟', '🐠'] },
+    tundra:   { count: 1, pool: ['🐺', '🐻'] },
+    snow:     { count: 1, pool: ['🦌', '🐺', '🐻'] },
     mountain: { count: 1, pool: ['🐉'] },
 };
 
@@ -206,7 +217,7 @@ const SPRITE_SIZES = {
     '💍': 12, '📖': 20,
     '🕳️': 32, '🏚️': 38, '🪜': 30, '🧰': 24,
     '💀': 26, '👻': 24, '🦇': 20, '🕷️': 22,
-    '🐻': 28, '🐍': 20, '🐉': 42,
+    '🐻': 28, '🐍': 20, '🐉': 42, '🐸': 16,
 };
 /* ╔══════════════════════════════════════════════════════════╗
  * ║  ULTIMA ARUTA — engine.js                                  ║
@@ -529,11 +540,16 @@ class World {
     _classify(elev, moist) {
         if (elev < 0.25) return 'deep';
         if (elev < 0.32) return 'water';
-        if (elev < 0.38) return 'sand';
-        if (elev > 0.80) return 'snow';
-        if (elev > 0.70) return 'mountain';
-        if (moist > 0.50 && elev > 0.42) return 'forest';
-        return 'grass';
+        if (elev < 0.35) return 'sand';          // narrow beach strip
+        if (elev > 0.82) return 'snow';
+        if (elev > 0.75) return 'tundra';
+        if (elev > 0.68) return 'mountain';
+        // Moisture-driven biomes on land (0.35–0.68 elevation).
+        if (moist > 0.58) return 'forest';        // wet → dense forest
+        if (moist > 0.48 && elev > 0.40) return 'forest'; // moderately wet + inland
+        if (moist < 0.30) return 'savanna';       // dry → savanna
+        if (moist > 0.42 && elev < 0.40) return 'swamp'; // wet + low → swamp
+        return 'grass';                           // default: plains
     }
 
     biomeAt(wx, wy) {
@@ -1185,6 +1201,14 @@ export default {
                     </div>
                     <div class="ua-stats-body" id="ua-stats-body"></div>
                 </div>
+                <div class="ua-magic" id="ua-magic" style="display:none;">
+                    <div class="ua-backpack-head"><span>📖 Spellbook</span><span class="ua-backpack-close" data-close="magic">×</span></div>
+                    <div class="ua-magic-body" id="ua-magic-body"></div>
+                </div>
+                <div class="ua-help-panel" id="ua-help-panel" style="display:none;">
+                    <div class="ua-backpack-head"><span>❓ Guide</span><span class="ua-backpack-close" data-close="help">×</span></div>
+                    <div class="ua-help-body" id="ua-help-body"></div>
+                </div>
                 <div class="ua-craft" id="ua-craft" style="display:none;">
                     <div class="ua-backpack-head"><span>🔨 Craft</span><span class="ua-backpack-close" data-close="craft">×</span></div>
                     <div class="ua-craft-body" id="ua-craft-body"></div>
@@ -1193,7 +1217,9 @@ export default {
                     <button class="ua-hub-btn" data-hub="pack"   title="Backpack (I)">🎒</button>
                     <button class="ua-hub-btn" data-hub="doll"   title="Paperdoll (P)">👤</button>
                     <button class="ua-hub-btn" data-hub="craft"  title="Craft (C)">🔨</button>
+                    <button class="ua-hub-btn" data-hub="magic"  title="Spellbook (K)">📖</button>
                     <button class="ua-hub-btn" data-hub="stats"  title="Stats">📊</button>
+                    <button class="ua-hub-btn" data-hub="help"   title="Guide (H)">❓</button>
                 </div>
                 <div class="ua-drag-ghost" id="ua-drag-ghost" style="display:none;"></div>
             </div>
@@ -1240,6 +1266,16 @@ export default {
             if (e.type === 'keydown' && k === 'c') {
                 e.preventDefault();
                 togglePanel('craft');
+                return;
+            }
+            if (e.type === 'keydown' && k === 'k') {
+                e.preventDefault();
+                togglePanel('magic');
+                return;
+            }
+            if (e.type === 'keydown' && k === 'h') {
+                e.preventDefault();
+                togglePanel('help');
             }
         }
 
@@ -1438,12 +1474,117 @@ export default {
             });
         }
 
+        // ── Spells ────────────────────────────────────────
+        const SPELLS = [
+            { name: 'Heal',       icon: '❤️', mana: 15, cooldown: 2000, target: 'self',  effect: (p) => { p.hp = Math.min(p.maxHp, p.hp + 20); addFloater(p.wx, p.wy, '+20 HP', '#60ff60'); } },
+            { name: 'Fireball',   icon: '🔥', mana: 20, cooldown: 1500, target: 'enemy', dmg: 18 },
+            { name: 'Lightning',  icon: '⚡', mana: 25, cooldown: 2000, target: 'enemy', dmg: 25 },
+            { name: 'Cure',       icon: '💚', mana: 10, cooldown: 1000, target: 'self',  effect: (p) => { p.hp = Math.min(p.maxHp, p.hp + 8); p.stamina = Math.min(p.maxStamina, p.stamina + 20); addFloater(p.wx, p.wy, 'Cured!', '#60ff60'); } },
+            { name: 'Mana Shield',icon: '🛡️', mana: 30, cooldown: 5000, target: 'self',  effect: (p) => { p.hp = Math.min(p.maxHp, p.hp + 5); p.maxHp += 5; addFloater(p.wx, p.wy, '+5 max HP', '#80c0ff'); } },
+        ];
+        let spellCooldowns = SPELLS.map(() => 0);
+
+        function castSpell(idx) {
+            const spell = SPELLS[idx];
+            if (!spell) return;
+            if (!equipment.book) { addFloater(player.wx, player.wy, 'No spellbook equipped!', '#ffaa00'); return; }
+            if (player.mana < spell.mana) { addFloater(player.wx, player.wy, 'Not enough mana', '#4080e0'); return; }
+            if (spellCooldowns[idx] > 0) { addFloater(player.wx, player.wy, 'Cooldown...', '#aaa'); return; }
+            player.mana -= spell.mana;
+            spellCooldowns[idx] = spell.cooldown;
+            _sfx(520, 0.1, 'triangle', 0.06);
+
+            if (spell.target === 'self' && spell.effect) {
+                spell.effect(player);
+            } else if (spell.target === 'enemy' && spell.dmg) {
+                // Hit nearest creature within 5 tiles.
+                let best = null, bestDist = 6;
+                const cx0 = Math.floor(player.wx / CHUNK_SIZE), cy0 = Math.floor(player.wy / CHUNK_SIZE);
+                const sources = _dungeon
+                    ? [{ creatures: _dungeon.map.creatures, ox: 0, oy: 0 }]
+                    : (() => { const s = []; for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) { const ch = world.chunks.get((cx0+dx)+','+(cy0+dy)); if (ch) s.push({ creatures: ch.creatures, ox: (cx0+dx)*CHUNK_SIZE, oy: (cy0+dy)*CHUNK_SIZE }); } return s; })();
+                for (const src of sources) for (const cr of src.creatures) {
+                    if (cr.dead) continue;
+                    const d = Math.max(Math.abs(src.ox + cr.c - player.wx), Math.abs(src.oy + cr.r - player.wy));
+                    if (d < bestDist) { bestDist = d; best = { cr, src }; }
+                }
+                if (best) {
+                    best.cr.hp = Math.max(0, best.cr.hp - spell.dmg);
+                    addFloater(best.src.ox + best.cr.c, best.src.oy + best.cr.r, '-' + spell.dmg + ' ' + spell.icon, '#ff4040');
+                    sfxHit();
+                    if (best.cr.ai === 'neutral') best.cr.ai = 'aggressive';
+                    if (best.cr.hp <= 0) {
+                        const chCx = Math.floor((best.src.ox + best.cr.c) / CHUNK_SIZE);
+                        const chCy = Math.floor((best.src.oy + best.cr.r) / CHUNK_SIZE);
+                        killCreature(best.cr, chCx, chCy);
+                    }
+                } else {
+                    addFloater(player.wx, player.wy, 'No target!', '#aaa');
+                    player.mana += spell.mana; spellCooldowns[idx] = 0; // refund
+                }
+            }
+        }
+
+        const $magic     = root.querySelector('#ua-magic');
+        const $magicBody = root.querySelector('#ua-magic-body');
+        const $helpPanel = root.querySelector('#ua-help-panel');
+        const $helpBody  = root.querySelector('#ua-help-body');
+
+        function renderMagic() {
+            $magicBody.innerHTML = SPELLS.map((s, i) => {
+                const cd = spellCooldowns[i] > 0 ? ` (${(spellCooldowns[i]/1000).toFixed(1)}s)` : '';
+                const canCast = equipment.book && player.mana >= s.mana && spellCooldowns[i] <= 0;
+                return `<div class="ua-shop-row">
+                    <span>${s.icon} <b>${s.name}</b></span>
+                    <span style="font-size:11px;opacity:0.7">${s.mana} MP${cd}</span>
+                    <button class="ua-btn" data-spell="${i}" ${canCast ? '' : 'disabled'}>${s.target === 'self' ? 'Cast' : 'Attack'}</button>
+                </div>`;
+            }).join('') + (equipment.book ? '' : '<div style="padding:8px;opacity:0.6;font-size:12px;">Equip a 📖 Spellbook to cast spells.</div>');
+            $magicBody.querySelectorAll('[data-spell]').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    castSpell(Number(btn.dataset.spell));
+                    renderMagic();
+                });
+            });
+        }
+
+        function renderHelp() {
+            $helpBody.innerHTML = `
+                <div style="padding:12px;font-size:13px;line-height:1.7;">
+                    <b>Controls</b><br>
+                    WASD / Arrows — move<br>
+                    Right-click + hold — walk toward cursor<br>
+                    Left-click creature — attack (melee / bow)<br>
+                    Space / E — interact (NPC, merchant, dungeon)<br>
+                    Double-click item in bag — consume food/potion<br><br>
+                    <b>Panels</b><br>
+                    I / B — Backpack · P — Paperdoll · C — Craft<br>
+                    K — Spellbook · H — This guide<br><br>
+                    <b>Combat</b><br>
+                    Click a creature to attack. Damage = base + weapon bonus.<br>
+                    Bow 🏹 has range 3; melee range 1.5.<br>
+                    Stamina ⚡ drains on move (2) and attack (8).<br>
+                    Below 5 stamina you can't attack. Regen 6/s standing, 2/s walking.<br><br>
+                    <b>Magic</b><br>
+                    Equip a 📖 Spellbook, then press K to open the spell panel.<br>
+                    Spells cost mana 💧 and have cooldowns.<br><br>
+                    <b>Night</b><br>
+                    Vision shrinks. Neutral creatures turn aggressive.<br>
+                    Stock potions and stay near villages!<br><br>
+                    <b>Dungeons</b><br>
+                    Step on 🕳️/🏚️ and press Space to enter.<br>
+                    Stronger enemies + treasure chests 🧰 inside.<br>
+                    Find the 🪜 ladder to exit.
+                </div>
+            `;
+        }
+
         function togglePanel(kind) {
-            const m = { pack: $pack, doll: $doll, stats: $stats, craft: $craft };
+            const m = { pack: $pack, doll: $doll, stats: $stats, craft: $craft, magic: $magic, help: $helpPanel };
             const el = m[kind]; if (!el) return;
             const open = el.style.display !== 'none';
             if (open) el.style.display = 'none';
-            else { el.style.display = ''; if (kind === 'pack') renderBackpack(); if (kind === 'doll') renderPaperdoll(); if (kind === 'stats') renderStats(); if (kind === 'craft') renderCraft(); }
+            else { el.style.display = ''; if (kind === 'pack') renderBackpack(); if (kind === 'doll') renderPaperdoll(); if (kind === 'stats') renderStats(); if (kind === 'craft') renderCraft(); if (kind === 'magic') renderMagic(); if (kind === 'help') renderHelp(); }
         }
         root.querySelectorAll('[data-close]').forEach(btn => btn.addEventListener('click', () => togglePanel(btn.dataset.close)));
         root.querySelectorAll('.ua-hub-btn').forEach(btn => btn.addEventListener('click', () => togglePanel(btn.dataset.hub)));
@@ -2338,6 +2479,10 @@ export default {
 
         function tickCombat(dt) {
             if (player.attackCooldown > 0) player.attackCooldown -= dt;
+            // Spell cooldowns.
+            for (let i = 0; i < spellCooldowns.length; i++) {
+                if (spellCooldowns[i] > 0) spellCooldowns[i] = Math.max(0, spellCooldowns[i] - dt);
+            }
             // Auto-attack: keep swinging at the target if still alive + in range.
             if (_autoTarget && !_autoTarget.dead) {
                 attackCreature(_autoTarget);
