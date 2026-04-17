@@ -13,6 +13,25 @@ const MOVE_MS = 220;
 const CREATURE_MOVE_MS = 600;
 const DAY_MS = 5 * 60 * 1000;  // full day cycle (5 minutes real time)
 
+// Merchant stock — items for sale with gold cost.
+const MERCHANT_STOCK = [
+    { key: 'potion',    price: 15 },
+    { key: 'scroll',    price: 12 },
+    { key: 'berry',     price: 3 },
+    { key: 'apple',     price: 5 },
+    { key: 'herb',      price: 4 },
+    { key: 'sword',     price: 40 },
+    { key: 'shield',    price: 35 },
+    { key: 'helm',      price: 30 },
+    { key: 'armor',     price: 50 },
+    { key: 'boots',     price: 20 },
+    { key: 'bow',       price: 45 },
+    { key: 'ring',      price: 25 },
+    { key: 'spellbook', price: 55 },
+];
+// Sell prices = ~30% of buy price.
+const SELL_RATIO = 0.3;
+
 // NPC dialog pool — picked deterministically per NPC.
 const DIALOGS = [
     'Hail, wanderer. Safe travels beyond these walls.',
@@ -357,7 +376,7 @@ class World {
                 if (rnd() < 0.15) continue; // slight variety
                 features.push({ c: oc + hc, r: or + hr, emoji: VILLAGE.houses[Math.floor(rnd() * VILLAGE.houses.length)], blocks: true, village: true });
             }
-            // 1-2 NPCs near the centre.
+            // 1-2 dialog NPCs near the centre.
             const npcCount = 1 + Math.floor(rnd() * 2);
             for (let i = 0; i < npcCount; i++) {
                 const c = oc + (Math.floor(rnd() * 3) - 1);
@@ -369,6 +388,11 @@ class World {
                     npc: true,
                     dialog: DIALOGS[Math.floor(rnd() * DIALOGS.length)],
                 });
+            }
+            // 1 merchant per village (always present).
+            const mc = oc + 1, mr = or - 1;
+            if (!features.find(f => f.c === mc && f.r === mr)) {
+                features.push({ c: mc, r: mr, emoji: '🧑‍💼', npc: true, merchant: true });
             }
             return; // stamp one village per chunk
         }
@@ -974,6 +998,7 @@ export default {
                 for (let dx = -1; dx <= 1; dx++) {
                     const f = world.featureAt(player.wx + dx, player.wy + dy);
                     if (!f) continue;
+                    if (f.merchant) { showShop(); return; }
                     if (f.npc) { showDialogBubble(f.emoji, f.dialog || DIALOGS[0]); return; }
                     if (f.dungeon && dx === 0 && dy === 0) {
                         showDialogBubble('🕳️', 'You stand before a dark entrance. The depths beckon… (dungeon #' + f.dungeonId.toString(36) + ')');
@@ -981,6 +1006,97 @@ export default {
                     }
                 }
             }
+        }
+
+        // ── Merchant shop UI ──────────────────────────────
+        function showShop() {
+            let shopEl = root.querySelector('#ua-shop');
+            if (shopEl) { shopEl.remove(); return; } // toggle off
+            shopEl = document.createElement('div');
+            shopEl.id = 'ua-shop';
+            shopEl.className = 'ua-shop';
+            function goldCount() { return inventory.items.filter(i => i.key === 'gold').length; }
+            function renderShop() {
+                const gold = goldCount();
+                shopEl.innerHTML = `
+                    <div class="ua-backpack-head"><span>🧑‍💼 Merchant</span><span class="ua-backpack-close" id="ua-shop-close">×</span></div>
+                    <div class="ua-shop-gold">🪙 Your gold: <b>${gold}</b></div>
+                    <div class="ua-shop-section"><b>Buy</b></div>
+                    <div class="ua-shop-list">
+                        ${MERCHANT_STOCK.map(s => {
+                            const def = ITEMS[s.key];
+                            return `<div class="ua-shop-row">
+                                <span>${def.emoji} ${def.name}</span>
+                                <span class="ua-shop-price">${s.price}🪙</span>
+                                <button class="ua-btn ua-shop-buy" data-key="${s.key}" data-price="${s.price}" ${gold < s.price ? 'disabled' : ''}>Buy</button>
+                            </div>`;
+                        }).join('')}
+                    </div>
+                    <div class="ua-shop-section"><b>Sell</b></div>
+                    <div class="ua-shop-list">
+                        ${inventory.items.filter(i => i.key !== 'gold').map(i => {
+                            const def = ITEMS[i.key] || {};
+                            const buyPrice = MERCHANT_STOCK.find(s => s.key === i.key)?.price;
+                            const sellPrice = buyPrice ? Math.max(1, Math.floor(buyPrice * SELL_RATIO)) : 1;
+                            return `<div class="ua-shop-row">
+                                <span>${def.emoji || '?'} ${def.name || i.key}</span>
+                                <span class="ua-shop-price">${sellPrice}🪙</span>
+                                <button class="ua-btn ua-shop-sell" data-id="${i.id}" data-sell="${sellPrice}">Sell</button>
+                            </div>`;
+                        }).join('') || '<div style="opacity:0.5;padding:6px;">Nothing to sell.</div>'}
+                    </div>
+                `;
+                shopEl.querySelector('#ua-shop-close').addEventListener('click', () => shopEl.remove());
+                shopEl.querySelectorAll('.ua-shop-buy').forEach(btn => {
+                    btn.addEventListener('click', () => {
+                        const key = btn.dataset.key;
+                        const price = Number(btn.dataset.price);
+                        if (goldCount() < price) return;
+                        // Remove gold coins.
+                        let removed = 0;
+                        inventory.items = inventory.items.filter(i => {
+                            if (i.key === 'gold' && removed < price) { removed++; return false; }
+                            return true;
+                        });
+                        // Add purchased item.
+                        const def = ITEMS[key];
+                        inventory.items.push({
+                            id: 'it_' + Math.random().toString(36).slice(2, 9),
+                            key, emoji: def.emoji, name: def.name,
+                            x: 6 + (inventory.items.length % 7) * 36,
+                            y: 6 + Math.floor(inventory.items.length / 7) * 36,
+                        });
+                        saveInventory();
+                        addFloater(player.wx, player.wy, '-' + price + '🪙', '#ffaa00');
+                        _sfx(880, 0.06, 'sine', 0.04);
+                        renderShop();
+                        if ($pack.style.display !== 'none') renderBackpack();
+                    });
+                });
+                shopEl.querySelectorAll('.ua-shop-sell').forEach(btn => {
+                    btn.addEventListener('click', () => {
+                        const id = btn.dataset.id;
+                        const sell = Number(btn.dataset.sell);
+                        inventory.items = inventory.items.filter(i => i.id !== id);
+                        // Add gold coins.
+                        for (let g = 0; g < sell; g++) {
+                            inventory.items.push({
+                                id: 'it_' + Math.random().toString(36).slice(2, 9),
+                                key: 'gold', emoji: '🪙', name: 'Gold Coin',
+                                x: 6 + (inventory.items.length % 7) * 36,
+                                y: 6 + Math.floor(inventory.items.length / 7) * 36,
+                            });
+                        }
+                        saveInventory();
+                        addFloater(player.wx, player.wy, '+' + sell + '🪙', '#ffc857');
+                        _sfx(660, 0.06, 'sine', 0.04);
+                        renderShop();
+                        if ($pack.style.display !== 'none') renderBackpack();
+                    });
+                });
+            }
+            root.querySelector('.ua-shell').appendChild(shopEl);
+            renderShop();
         }
 
         function showDialogBubble(icon, text) {
@@ -1486,7 +1602,7 @@ export default {
                 '🐑': 22, '🐇': 18, '🦊': 22, '🦌': 26, '🐗': 24, '🦉': 18, '🦝': 22,
                 '🦀': 18, '🦎': 18, '🐟': 20, '🐠': 20, '🐺': 24,
                 // NPCs
-                '🧙': 28, '🧝': 26, '🧑‍🌾': 26, '🧑‍🍳': 26,
+                '🧙': 28, '🧝': 26, '🧑‍🌾': 26, '🧑‍🍳': 26, '🧑‍💼': 28,
                 // Pickup items (small, ground-level objects)
                 '🪙': 12, '💎': 14, '🍓': 12, '🍎': 14, '🌸': 12,
                 '🗝️': 14, '🧪': 14, '📜': 14,
@@ -1518,8 +1634,11 @@ export default {
                     const wx = ccx * CHUNK_SIZE + cr.rc;
                     const wy = ccy * CHUNK_SIZE + cr.rr;
                     if (wx < minX - 1 || wx > maxX + 1 || wy < minY - 1 || wy > maxY + 1) continue;
+                    const isNight = _nightFactor(timeOfDay) > 0.5;
+                    const effAI = (isNight && cr.ai === 'neutral') ? 'aggressive' : cr.ai;
+                    const aggro = effAI === 'aggressive' && Math.max(Math.abs(wx - player.wx), Math.abs(wy - player.wy)) <= 6;
                     sprites.push({ wx, wy, emoji: cr.emoji, size: SIZES[cr.emoji] || 22,
-                                   hp: cr.hp, maxHp: cr.maxHp, isCreature: true });
+                                   hp: cr.hp, maxHp: cr.maxHp, isCreature: true, aggro });
                 }
             }
             sprites.push({ wx: player.rx, wy: player.ry, emoji: player.emoji, size: 32, isPlayer: true, flash: _playerFlash });
@@ -1540,6 +1659,15 @@ export default {
                     ctx.fill();
                 }
                 drawEmoji(ctx, sx, sy, s.emoji, s.size);
+                // Aggro indicator — pulsing red triangle above hostile creatures.
+                if (s.aggro) {
+                    const pulse = 0.5 + 0.5 * Math.sin(_renderTime * 0.008);
+                    ctx.fillStyle = `rgba(255,50,50,${(0.5 + pulse * 0.5).toFixed(2)})`;
+                    const ax = sx + TILE_W / 2, ay = sy - 6;
+                    ctx.beginPath();
+                    ctx.moveTo(ax, ay - 6); ctx.lineTo(ax - 4, ay); ctx.lineTo(ax + 4, ay);
+                    ctx.closePath(); ctx.fill();
+                }
                 // HP bar above damaged creatures.
                 if (s.isCreature && s.hp < s.maxHp) {
                     const bw = 24, bh = 3;
@@ -1560,6 +1688,25 @@ export default {
             drawFogOfWar(ctx, W, H,
                 pScreen.x + cam.cx, pScreen.y + cam.cy + TILE_H / 2 - pLift,
                 timeOfDay);
+
+            // ── Player stat bars (top-left, below HUD) ─────
+            const barX = 8, barY = H - 28, barW = 120, barH = 5, barGap = 8;
+            function drawBar(y, pct, color) {
+                ctx.fillStyle = 'rgba(0,0,0,0.5)';
+                ctx.fillRect(barX - 1, y - 1, barW + 2, barH + 2);
+                ctx.fillStyle = color;
+                ctx.fillRect(barX, y, barW * Math.max(0, pct), barH);
+            }
+            drawBar(barY,              player.hp / player.maxHp,           '#e04040');
+            drawBar(barY - barH - barGap, player.mana / player.maxMana,     '#4080e0');
+            drawBar(barY - (barH + barGap) * 2, player.stamina / player.maxStamina, '#e0c040');
+            // Labels.
+            ctx.font = "9px 'Inter', sans-serif";
+            ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+            ctx.fillStyle = '#fff';
+            ctx.fillText('HP',  barX + barW + 4, barY + barH / 2);
+            ctx.fillText('MP',  barX + barW + 4, barY - barH - barGap + barH / 2);
+            ctx.fillText('SP',  barX + barW + 4, barY - (barH + barGap) * 2 + barH / 2);
 
             // ── Floating combat text ────────────────────────
             ctx.font = "bold 11px 'Inter', sans-serif";
@@ -1723,6 +1870,57 @@ export default {
             const staminaRate = moving ? 2 : 6;
             if (player.stamina < player.maxStamina) player.stamina = Math.min(player.maxStamina, player.stamina + staminaRate * dt / 1000);
         }
+
+        // ── Hover tooltip ─────────────────────────────────
+        let _tooltip = null;
+        canvas.addEventListener('mousemove', (ev) => {
+            const rect = canvas.getBoundingClientRect();
+            const { wx, wy } = canvasToWorldCell(ev.clientX - rect.left, ev.clientY - rect.top);
+            let text = null;
+            // Check creatures.
+            const cx0 = Math.floor(wx / CHUNK_SIZE), cy0 = Math.floor(wy / CHUNK_SIZE);
+            outer: for (let dcy = -1; dcy <= 1; dcy++) for (let dcx = -1; dcx <= 1; dcx++) {
+                const ch = world.chunks.get((cx0+dcx)+','+(cy0+dcy));
+                if (!ch) continue;
+                for (const cr of ch.creatures) {
+                    if (cr.dead) continue;
+                    const cwx = (cx0+dcx) * CHUNK_SIZE + cr.c, cwy = (cy0+dcy) * CHUNK_SIZE + cr.r;
+                    if (Math.abs(cwx - wx) <= 1 && Math.abs(cwy - wy) <= 1) {
+                        const def = CREATURE_DEFS[cr.emoji] || {};
+                        const aiLabel = cr.ai === 'aggressive' ? '⚠ Hostile' : cr.ai === 'passive' ? 'Passive' : 'Neutral';
+                        text = `${cr.emoji} ${aiLabel} · HP ${Math.round(cr.hp)}/${cr.maxHp}`;
+                        break outer;
+                    }
+                }
+            }
+            // Check features (items, NPCs, dungeons).
+            if (!text) {
+                const hit = _findItemNear(ev.clientX - rect.left, ev.clientY - rect.top, world, canvasToWorldCell);
+                if (hit) {
+                    const def = ITEMS[hit.feature.itemKey];
+                    text = `${hit.feature.emoji} ${def ? def.name : 'Item'}`;
+                    if (def && def.use) {
+                        const parts = [];
+                        if (def.use.hp) parts.push('+' + def.use.hp + ' HP');
+                        if (def.use.mana) parts.push('+' + def.use.mana + ' MP');
+                        if (def.use.stamina) parts.push('+' + def.use.stamina + ' SP');
+                        if (parts.length) text += ' (' + parts.join(', ') + ')';
+                    }
+                } else {
+                    const f = world.featureAt(wx, wy);
+                    if (f && f.merchant) text = `${f.emoji} Merchant · Press Space to trade`;
+                    else if (f && f.npc) text = `${f.emoji} NPC · Press Space to talk`;
+                    else if (f && f.dungeon) text = `${f.emoji} Dungeon entrance`;
+                }
+            }
+            if (text && text !== _tooltip) {
+                _tooltip = text;
+                canvas.title = text;
+            } else if (!text && _tooltip) {
+                _tooltip = null;
+                canvas.title = '';
+            }
+        });
 
         // ── Click-to-attack ──────────────────────────────
         canvas.addEventListener('click', (ev) => {
