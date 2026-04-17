@@ -182,7 +182,9 @@ export default {
     async mount(root, sdk) {
         // ── Load data + engine modules ────────────────────
         _loadData(await import(sdk.asset('data.js')));
-        _loadEngine(await import(sdk.asset('engine.js')));
+        const _eng = await import(sdk.asset('engine.js'));
+        _eng.setup(D);   // feed constants into engine's internal refs
+        _loadEngine(_eng);
 
         // ── World selection ──────────────────────────────
         // Each "world" is an independent save slot: its own seed, player
