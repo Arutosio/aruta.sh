@@ -561,10 +561,10 @@ function _nightFactor(t) {
     return Math.max(0, -noon); // 0..1
 }
 
-/** Vision radius in tiles. Day = 18 tiles, night = 6. Always bounded. */
+/** Vision radius in tiles. Day = 12 tiles, night = 5. Tighter for close cam. */
 function _visionRadius(t) {
     const nf = _nightFactor(t);
-    return 18 - nf * 12; // 18 day → 6 night
+    return 12 - nf * 7; // 12 day → 5 night
 }
 
 /** Vision radius fog — ALWAYS active. Daytime shows a wide clear area
@@ -625,7 +625,7 @@ function camera(canvasW, canvasH, pwx, pwy) {
 // Perspective scale: tiles/sprites near the bottom of the screen (close)
 // appear larger; those near the top (far) appear smaller. Returns a
 // multiplier centred on 1.0 at the viewport middle.
-const PERSP_STRENGTH = 0.35; // 0 = no perspective, 1 = extreme
+const PERSP_STRENGTH = 0.65; // 0 = no perspective, 1 = extreme
 function perspScale(screenY, viewH) {
     const norm = (screenY / viewH) - 0.5; // -0.5 (top) to +0.5 (bottom)
     return 1.0 + norm * PERSP_STRENGTH;   // ~0.825 at top, ~1.175 at bottom
@@ -1142,7 +1142,7 @@ export default {
         // area (~18 tiles wide) regardless of the window size. CSS stretches
         // the canvas to fill; `image-rendering: pixelated` on the canvas
         // element keeps it crisp.
-        const VIEW_W = 800, VIEW_H = 540;
+        const VIEW_W = 560, VIEW_H = 380;
         canvas.width = VIEW_W;
         canvas.height = VIEW_H;
         canvas.style.imageRendering = 'pixelated';
