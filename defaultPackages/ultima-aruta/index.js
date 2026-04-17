@@ -343,9 +343,12 @@ class World {
             for (let c = 0; c < N; c++) {
                 const wx = cx * N + c;
                 const wy = cy * N + r;
-                // Two noise fields: elevation + moisture. Scale is the "zoom".
-                const elev = fbm2D(wx / 40, wy / 40, this.seed, 4, 0.5);
-                const moist = fbm2D(wx / 60, wy / 60, this.seed + 9999, 3, 0.5);
+                // Two noise fields: elevation + moisture.
+                // Large-scale continental shelf (low freq) + local detail (high freq).
+                const continental = fbm2D(wx / 200, wy / 200, this.seed + 777, 2, 0.5);
+                const detail      = fbm2D(wx / 50,  wy / 50,  this.seed, 4, 0.5);
+                const elev = continental * 0.6 + detail * 0.4;
+                const moist = fbm2D(wx / 120, wy / 120, this.seed + 9999, 3, 0.5);
                 const biome = this._classify(elev, moist);
                 biomes[r * N + c] = biome;
                 elevations[r * N + c] = elev;
@@ -505,12 +508,12 @@ class World {
     }
 
     _classify(elev, moist) {
-        if (elev < 0.28) return 'deep';
-        if (elev < 0.34) return 'water';
-        if (elev < 0.44) return 'sand';    // wider beach band so shorelines are reachable
-        if (elev > 0.78) return 'snow';
-        if (elev > 0.68) return 'mountain';
-        if (moist > 0.55 && elev > 0.47) return 'forest';
+        if (elev < 0.25) return 'deep';
+        if (elev < 0.32) return 'water';
+        if (elev < 0.38) return 'sand';
+        if (elev > 0.80) return 'snow';
+        if (elev > 0.70) return 'mountain';
+        if (moist > 0.50 && elev > 0.42) return 'forest';
         return 'grass';
     }
 
@@ -972,15 +975,30 @@ export default {
         const seed = worldRow.seed >>> 0;
         const world = new World(seed);
 
-        // Find a walkable starting cell near (0,0) if the seed gave water.
+        // Find a walkable starting cell. Spiral outward from (0,0) looking
+        // for a grass tile surrounded by other grass (= continental interior,
+        // not a tiny island). The wider search radius ensures we land on a
+        // proper landmass even when (0,0) is deep ocean.
         let startX = saved?.px ?? 0, startY = saved?.py ?? 0;
         if (!saved) {
-            for (let r = 0; r < 200 && !world.passable(startX, startY); r++) {
+            let bestX = 0, bestY = 0, bestScore = -1;
+            for (let r = 0; r < 600; r++) {
                 const ang = r * 0.618;
-                const rad = Math.floor(1 + r * 0.6);
-                startX = Math.round(Math.cos(ang) * rad);
-                startY = Math.round(Math.sin(ang) * rad);
+                const rad = Math.floor(1 + r * 0.5);
+                const tx = Math.round(Math.cos(ang) * rad);
+                const ty = Math.round(Math.sin(ang) * rad);
+                if (!world.passable(tx, ty)) continue;
+                const b = world.biomeAt(tx, ty);
+                if (b !== 'grass' && b !== 'forest') continue;
+                // Score: count passable neighbours in a 5-tile radius.
+                let score = 0;
+                for (let dy = -3; dy <= 3; dy++) for (let dx = -3; dx <= 3; dx++) {
+                    if (world.passable(tx + dx, ty + dy)) score++;
+                }
+                if (score > bestScore) { bestScore = score; bestX = tx; bestY = ty; }
+                if (bestScore >= 40) break; // big enough landmass, stop searching
             }
+            startX = bestX; startY = bestY;
         }
         // ── Dungeon state ──────────────────────────────────
         let _dungeon = null; // { map, overworldX, overworldY } when inside a dungeon
