@@ -9,7 +9,7 @@
 const TILE_W = 48;
 const TILE_H = 24;
 const CHUNK_SIZE = 32;
-const MOVE_MS = 220;
+const MOVE_MS = 440;
 const CREATURE_MOVE_MS = 600;
 const DAY_MS = 5 * 60 * 1000;  // full day cycle (5 minutes real time)
 
