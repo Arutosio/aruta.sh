@@ -413,24 +413,53 @@ class World {
     }
 }
 
-// ── Day/night tint ───────────────────────────────────────
+// ── Day/night + fog of war ────────────────────────────────
 // timeOfDay: 0..1, with 0 = midnight, 0.25 = dawn, 0.5 = noon, 0.75 = dusk.
-function _dayNightTint(t) {
-    // Bell curve around noon — darkest at midnight.
-    const night  = Math.max(0, Math.cos(t * Math.PI * 2));      // 1 at noon, -1 at midnight
-    const dark   = Math.max(0, -night);                         // 0..1 (night factor)
-    const dusk   = Math.max(0, Math.sin((t - 0.5) * Math.PI * 2)); // peaks at 0.75 (dusk)
-    const dawn   = Math.max(0, Math.sin((t - 0.25) * Math.PI * 2)); // peaks at 0.5 → shift
-    // Use simpler sin-based bands.
-    const r = 0.04, g = 0.06, b = 0.18;
-    // Alpha peaks at ~0.55 at midnight, 0 at noon.
-    const a = Math.min(0.55, dark * 0.55);
-    // Warm tint near dusk (t∈[0.65, 0.85]) and dawn (t∈[0.15, 0.35]).
-    let tintR = r, tintG = g, tintB = b;
-    const warm = (t > 0.66 && t < 0.85) || (t > 0.15 && t < 0.34);
-    if (warm) { tintR = 0.5; tintG = 0.25; tintB = 0.10; }
-    if (a <= 0.02) return null;
-    return `rgba(${Math.round(tintR * 255)}, ${Math.round(tintG * 255)}, ${Math.round(tintB * 255)}, ${a.toFixed(3)})`;
+
+/** Returns a darkness factor 0 (full day) → 1 (midnight). */
+function _nightFactor(t) {
+    // Cosine curve peaking at 0.5 (noon = 0 dark). Minimum at 0 (midnight = max dark).
+    const noon = Math.cos(t * Math.PI * 2); // +1 at noon, -1 at midnight
+    return Math.max(0, -noon); // 0..1
+}
+
+/** Vision radius in tiles. Day = huge, night = tight torch radius. */
+function _visionRadius(t) {
+    const nf = _nightFactor(t);
+    // Day: 999 (effectively infinite). Night: 6 tiles. Transition smooth.
+    return 999 - nf * 993;
+}
+
+/** Draws the fog-of-war radial vignette + night tint centred on the player. */
+function drawFogOfWar(ctx, W, H, playerScreenX, playerScreenY, timeOfDay) {
+    const nf = _nightFactor(timeOfDay);
+    if (nf < 0.02) return; // broad daylight — skip entirely
+
+    const vr = _visionRadius(timeOfDay);
+    const radiusPx = vr * TILE_W * 0.7; // convert tile radius to approximate screen pixels
+
+    // Warm dusk/dawn vs cold night.
+    const warm = (timeOfDay > 0.66 && timeOfDay < 0.85) || (timeOfDay > 0.15 && timeOfDay < 0.34);
+    const r = warm ? 80 : 8;
+    const g = warm ? 50 : 10;
+    const b = warm ? 20 : 35;
+
+    const grad = ctx.createRadialGradient(
+        playerScreenX, playerScreenY, radiusPx * 0.3,
+        playerScreenX, playerScreenY, radiusPx
+    );
+    grad.addColorStop(0, `rgba(${r},${g},${b},0)`);
+    grad.addColorStop(0.6, `rgba(${r},${g},${b},${(nf * 0.45).toFixed(3)})`);
+    grad.addColorStop(1, `rgba(${r},${g},${b},${(nf * 0.92).toFixed(3)})`);
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, W, H);
+
+    // Extra flat overlay to darken the entire scene a bit (atmosphere).
+    const flatAlpha = nf * 0.3;
+    if (flatAlpha > 0.01) {
+        ctx.fillStyle = `rgba(${r},${g},${b},${flatAlpha.toFixed(3)})`;
+        ctx.fillRect(0, 0, W, H);
+    }
 }
 
 // ── Color helpers ────────────────────────────────────────
@@ -456,6 +485,8 @@ function camera(canvasW, canvasH, pwx, pwy) {
 // ── Rendering ────────────────────────────────────────────
 const ELEV_PX = 18; // max pixel lift for highest elevation
 
+let _renderTime = 0;
+
 function drawTile(ctx, sx, sy, biome, elev = 0.5) {
     const b = BIOMES[biome];
     const hx = TILE_W / 2, hy = TILE_H / 2;
@@ -464,7 +495,11 @@ function drawTile(ctx, sx, sy, biome, elev = 0.5) {
     const ty = sy - lift;
 
     // Brightness shift: low tiles slightly darker, high tiles brighter.
-    const bright = 0.85 + elev * 0.3; // range ~0.85–1.15
+    let bright = 0.85 + elev * 0.3; // range ~0.85–1.15
+    // Water shimmer — gentle brightness wave.
+    if (biome === 'water' || biome === 'deep') {
+        bright += Math.sin(_renderTime * 0.002 + sx * 0.08 + sy * 0.12) * 0.12;
+    }
 
     const g = ctx.createLinearGradient(sx, ty, sx, ty + TILE_H);
     g.addColorStop(0, _adjustBright(b.color1, bright));
@@ -1351,12 +1386,12 @@ export default {
                 drawEmoji(ctx, sx, sy, s.emoji, s.size);
             }
 
-            // ── Day/night tint overlay ─────────────────────
-            const tint = _dayNightTint(timeOfDay);
-            if (tint) {
-                ctx.fillStyle = tint;
-                ctx.fillRect(0, 0, W, H);
-            }
+            // ── Day/night fog of war ─────────────────────────
+            const pScreen = iso(player.rx, player.ry);
+            const pLift = (world.elevAt(player.wx, player.wy) - 0.35) * ELEV_PX;
+            drawFogOfWar(ctx, W, H,
+                pScreen.x + cam.cx, pScreen.y + cam.cy + TILE_H / 2 - pLift,
+                timeOfDay);
         }
 
         // ── Minimap ────────────────────────────────────────
@@ -1439,6 +1474,7 @@ export default {
 
         function loop(now) {
             const dt = Math.min(50, now - last); last = now;
+            _renderTime += dt;
             tryStepFromHeld();
             player.update(dt);
             tickCreatures(dt);
