@@ -1206,7 +1206,7 @@ export default {
                 <canvas class="ua-canvas" id="ua-canvas"></canvas>
                 <canvas class="ua-minimap" id="ua-minimap" width="140" height="140"></canvas>
                 <div class="ua-hud" id="ua-hud"></div>
-                <div class="ua-help">WASD move · <b>Right-hold</b> walk · <b>Space</b> interact · <b>I</b> bag · <b>P</b> doll · <b>C</b> craft · ${worldRow.name}</div>
+                <div class="ua-help">WASD · <b>Right-hold</b> walk · <b>Click</b> attack · <b>Q</b> potion · <b>Space</b> interact · <b>H</b> guide · ${worldRow.name}</div>
                 <div class="ua-backpack" id="ua-backpack" style="display:none;">
                     <div class="ua-backpack-head">
                         <span class="ua-backpack-title">🎒 Backpack</span>
@@ -1306,6 +1306,11 @@ export default {
             if (e.type === 'keydown' && k === 'h') {
                 e.preventDefault();
                 togglePanel('help');
+                return;
+            }
+            if (e.type === 'keydown' && k === 'q') {
+                e.preventDefault();
+                quickPotion();
             }
         }
 
@@ -2160,7 +2165,8 @@ export default {
                     if (cr.dead) continue;
                     const aggro = cr.ai === 'aggressive' && Math.max(Math.abs(cr.rc - player.wx), Math.abs(cr.rr - player.wy)) <= 6;
                     sprites.push({ wx: cr.rc, wy: cr.rr, emoji: cr.emoji, size: SPRITE_SIZES[cr.emoji] || 22,
-                                   hp: cr.hp, maxHp: cr.maxHp, isCreature: true, aggro });
+                                   hp: cr.hp, maxHp: cr.maxHp, isCreature: true, aggro,
+                                   hitFlash: cr._hitFlash || 0, isTarget: cr === _autoTarget });
                 }
             } else {
                 // Overworld features + creatures.
@@ -2185,7 +2191,8 @@ export default {
                         const effAI = (isNight && cr.ai === 'neutral') ? 'aggressive' : cr.ai;
                         const aggro = effAI === 'aggressive' && Math.max(Math.abs(wx - player.wx), Math.abs(wy - player.wy)) <= 6;
                         sprites.push({ wx, wy, emoji: cr.emoji, size: SPRITE_SIZES[cr.emoji] || 22,
-                                       hp: cr.hp, maxHp: cr.maxHp, isCreature: true, aggro });
+                                       hp: cr.hp, maxHp: cr.maxHp, isCreature: true, aggro,
+                                       hitFlash: cr._hitFlash || 0, isTarget: cr === _autoTarget });
                     }
                 }
             }
@@ -2203,6 +2210,24 @@ export default {
                 const sy = H / 2 + ((rawSy - lift) - H / 2) * ps;
                 const scaledSize = Math.round(s.size * ps);
                 drawShadow(ctx, sx, sy, scaledSize);
+                // Target highlight ring.
+                if (s.isTarget) {
+                    ctx.strokeStyle = 'rgba(255,200,60,0.7)';
+                    ctx.lineWidth = 2;
+                    ctx.beginPath();
+                    const tw = TILE_W * ps;
+                    ctx.ellipse(sx + tw / 2, sy + (TILE_H * ps) / 2, tw * 0.35, tw * 0.18, 0, 0, Math.PI * 2);
+                    ctx.stroke();
+                }
+                // Creature hit flash: red glow.
+                if (s.hitFlash > 0) {
+                    const fa = Math.min(0.5, s.hitFlash / 250);
+                    ctx.fillStyle = `rgba(255,40,40,${fa.toFixed(2)})`;
+                    const tw = TILE_W * ps;
+                    ctx.beginPath();
+                    ctx.ellipse(sx + tw / 2, sy + (TILE_H * ps) / 2, 14, 8, 0, 0, Math.PI * 2);
+                    ctx.fill();
+                }
                 // Player damage flash: red glow under sprite.
                 if (s.flash && s.flash > 0) {
                     const fa = Math.min(0.5, s.flash / 300);
@@ -2359,28 +2384,63 @@ export default {
             return map[w.key] || 4;
         }
 
+        /** Armor damage reduction — sums defence from all equipped armor pieces. */
+        function getArmorDef() {
+            let def = 0;
+            const map = { helm: 2, armor: 5, robe: 2, gloves: 1, boots: 1, shield: 4, cape: 1, crown: 1 };
+            for (const [slot, item] of Object.entries(equipment)) {
+                if (item && map[item.key]) def += map[item.key];
+            }
+            return def;
+        }
+
+        /** Apply armor reduction to incoming damage (min 1). */
+        function reduceDamage(rawDmg) {
+            const def = getArmorDef();
+            return Math.max(1, rawDmg - def);
+        }
+
         function attackCreature(cr) {
             if (cr.dead || player.attackCooldown > 0) return;
-            const dist = Math.max(Math.abs((cr.c + Math.floor(cr.rc - cr.c)) - player.wx),
-                                  Math.abs((cr.r + Math.floor(cr.rr - cr.r)) - player.wy));
             // Bow has range 3; melee range 1.5
             const range = equipment.weapon?.key === 'bow' ? 3 : 1.5;
-            // Compute world pos of creature.
             const chCx = Math.floor(player.wx / CHUNK_SIZE), chCy = Math.floor(player.wy / CHUNK_SIZE);
-            const cwx = chCx * CHUNK_SIZE + cr.c, cwy = chCy * CHUNK_SIZE + cr.r;
+            const cwx = (_dungeon ? 0 : chCx * CHUNK_SIZE) + cr.c;
+            const cwy = (_dungeon ? 0 : chCy * CHUNK_SIZE) + cr.r;
             const d = Math.max(Math.abs(cwx - player.wx), Math.abs(cwy - player.wy));
             if (d > range) return;
 
             if (player.stamina < 5) { addFloater(player.wx, player.wy, 'Exhausted!', '#ffaa00'); return; }
             player.stamina = Math.max(0, player.stamina - 8);
-            const dmg = player.baseDmg + getWeaponDmg() + Math.floor(Math.random() * 3);
+
+            // Critical hit: 10% base, +5% with dagger.
+            const critChance = 0.10 + (equipment.weapon?.key === 'dagger' ? 0.05 : 0);
+            const isCrit = Math.random() < critChance;
+            let dmg = player.baseDmg + getWeaponDmg() + Math.floor(Math.random() * 3);
+            if (isCrit) dmg = Math.floor(dmg * 2);
+
             cr.hp = Math.max(0, cr.hp - dmg);
+            cr._hitFlash = 250; // visual flash on creature
             player.attackCooldown = 800;
-            addFloater(cwx, cwy, '-' + dmg, '#ff4040');
+            addFloater(cwx, cwy, isCrit ? 'CRIT -' + dmg + '!' : '-' + dmg, isCrit ? '#ffff00' : '#ff4040');
             sfxHit();
-            // Turn neutral creatures aggressive when attacked.
+            if (isCrit) _sfx(600, 0.08, 'triangle', 0.05);
             if (cr.ai === 'neutral') cr.ai = 'aggressive';
             if (cr.hp <= 0) killCreature(cr, chCx, chCy);
+        }
+
+        /** Quick potion: press Q to consume the first potion in backpack. */
+        function quickPotion() {
+            const idx = inventory.items.findIndex(i => i.key === 'potion');
+            if (idx < 0) { addFloater(player.wx, player.wy, 'No potions!', '#ff6060'); return; }
+            const def = ITEMS.potion;
+            if (def.use.hp)   player.hp   = Math.min(player.maxHp,   player.hp   + def.use.hp);
+            if (def.use.mana) player.mana = Math.min(player.maxMana, player.mana + def.use.mana);
+            inventory.items.splice(idx, 1);
+            saveInventory();
+            addFloater(player.wx, player.wy, '+30 HP +20 MP', '#60ff60');
+            _sfx(660, 0.08, 'sine', 0.05);
+            if ($pack.style.display !== 'none') renderBackpack();
         }
 
         function killCreature(cr, chCx, chCy) {
@@ -2430,6 +2490,7 @@ export default {
             for (const cr of creatures) {
                 if (cr.dead) continue;
                 if (cr.attackCooldown > 0) cr.attackCooldown -= dt;
+                if (cr._hitFlash > 0) cr._hitFlash = Math.max(0, cr._hitFlash - dt);
                 if (cr.moveT > 0) {
                     cr.moveT = Math.max(0, cr.moveT - dt);
                     const t = 1 - (cr.moveT / CREATURE_MOVE_MS);
@@ -2442,9 +2503,9 @@ export default {
                 const distToPlayer = Math.max(Math.abs(cwx - player.wx), Math.abs(cwy - player.wy));
                 if (cr.ai === 'aggressive' && distToPlayer <= 6) {
                     if (distToPlayer <= 1 && cr.attackCooldown <= 0) {
-                        player.hp = Math.max(0, player.hp - cr.dmg);
+                        player.hp = Math.max(0, player.hp - reduceDamage(cr.dmg));
                         cr.attackCooldown = 1200;
-                        addFloater(player.wx, player.wy, '-' + cr.dmg, '#ff6060');
+                        addFloater(player.wx, player.wy, '-' + reduceDamage(cr.dmg), '#ff6060');
                         sfxHurt();
                         _playerFlash = 300;
                         if (player.hp <= 0) {
@@ -2661,6 +2722,7 @@ export default {
                         if (cr.dead) continue;
                         // Attack cooldown.
                         if (cr.attackCooldown > 0) cr.attackCooldown -= dt;
+                if (cr._hitFlash > 0) cr._hitFlash = Math.max(0, cr._hitFlash - dt);
                         // Advance an in-progress tween.
                         if (cr.moveT > 0) {
                             cr.moveT = Math.max(0, cr.moveT - dt);
@@ -2683,9 +2745,9 @@ export default {
                         // Aggressive AI: chase player + attack when adjacent.
                         if (effectiveAI === 'aggressive' && distToPlayer <= 6) {
                             if (distToPlayer <= 1 && cr.attackCooldown <= 0) {
-                                player.hp = Math.max(0, player.hp - cr.dmg);
+                                player.hp = Math.max(0, player.hp - reduceDamage(cr.dmg));
                                 cr.attackCooldown = 1200;
-                                addFloater(player.wx, player.wy, '-' + cr.dmg, '#ff6060');
+                                addFloater(player.wx, player.wy, '-' + reduceDamage(cr.dmg), '#ff6060');
                                 sfxHurt();
                                 _playerFlash = 300;
                                 if (player.hp <= 0) {
