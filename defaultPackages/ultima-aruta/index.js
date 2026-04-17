@@ -80,6 +80,9 @@ const CREATURE_DEFS = {
     '🐍': { ai: 'aggressive', hp: 22, dmg: 6,  xp: 7,  loot: [{ key: 'potion', rate: 0.15 }] },
     '🐉': { ai: 'aggressive', hp: 120, dmg: 18, xp: 50, loot: [{ key: 'gem', rate: 0.8 }, { key: 'crown', rate: 0.2 }, { key: 'spellbook', rate: 0.15 }] },
     '🐸': { ai: 'passive',   hp: 8,   dmg: 0,  xp: 1,  loot: [{ key: 'herb', rate: 0.3 }] },
+    '🐲': { ai: 'aggressive', hp: 100, dmg: 15, xp: 40, loot: [{ key: 'gem', rate: 0.9 }, { key: 'crown', rate: 0.3 }] },
+    '👹': { ai: 'aggressive', hp: 80,  dmg: 12, xp: 30, loot: [{ key: 'armor', rate: 0.4 }, { key: 'gold', rate: 0.8 }] },
+    '🧟': { ai: 'aggressive', hp: 70,  dmg: 10, xp: 25, loot: [{ key: 'sword', rate: 0.3 }, { key: 'potion', rate: 0.5 }] },
 };
 
 const CREATURES = {
@@ -218,6 +221,7 @@ const SPRITE_SIZES = {
     '🕳️': 32, '🏚️': 38, '🪜': 30, '🧰': 24,
     '💀': 26, '👻': 24, '🦇': 20, '🕷️': 22, '⛰️': 36,
     '🐻': 28, '🐍': 20, '🐉': 42, '🐸': 16,
+    '🐲': 38, '👹': 34, '🧟': 28,
 };
 /* ╔══════════════════════════════════════════════════════════╗
  * ║  ULTIMA ARUTA — engine.js                                  ║
@@ -278,19 +282,37 @@ function generateDungeon(dungeonId) {
         }
     }
     for (let i = 1; i < rooms.length; i++) {
-        const count = 1 + Math.floor(rnd() * 3);
+        const isLast = i === rooms.length - 1;
+        const count = isLast ? 1 : 1 + Math.floor(rnd() * 3);
         for (let j = 0; j < count; j++) {
             const cc = rooms[i].x + Math.floor(rnd() * rooms[i].w);
             const cr2 = rooms[i].y + Math.floor(rnd() * rooms[i].h);
             if (biomes[cr2 * N + cc] !== 'cave_floor') continue;
-            const def = DUNGEON_CREATURES[Math.floor(rnd() * DUNGEON_CREATURES.length)];
-            creatures.push({
-                c: cc, r: cr2, rc: cc, rr: cr2, fromC: cc, fromR: cr2, moveT: 0,
-                emoji: def.emoji, biome: 'cave_floor',
-                nextMoveAt: 800 + rnd() * 3000, timer: 0,
-                hp: def.hp, maxHp: def.hp, ai: def.ai, dmg: def.dmg,
-                attackCooldown: 0, dead: false,
-            });
+            if (isLast && j === 0) {
+                // BOSS — stronger unique creature in the deepest room.
+                const bossPool = [
+                    { emoji: '🐲', hp: 100, dmg: 15, xp: 40 },
+                    { emoji: '👹', hp: 80,  dmg: 12, xp: 30 },
+                    { emoji: '🧟', hp: 70,  dmg: 10, xp: 25 },
+                ];
+                const boss = bossPool[Math.floor(rnd() * bossPool.length)];
+                creatures.push({
+                    c: cc, r: cr2, rc: cc, rr: cr2, fromC: cc, fromR: cr2, moveT: 0,
+                    emoji: boss.emoji, biome: 'cave_floor',
+                    nextMoveAt: 600, timer: 0,
+                    hp: boss.hp, maxHp: boss.hp, ai: 'aggressive', dmg: boss.dmg,
+                    attackCooldown: 0, dead: false, isBoss: true,
+                });
+            } else {
+                const def = DUNGEON_CREATURES[Math.floor(rnd() * DUNGEON_CREATURES.length)];
+                creatures.push({
+                    c: cc, r: cr2, rc: cc, rr: cr2, fromC: cc, fromR: cr2, moveT: 0,
+                    emoji: def.emoji, biome: 'cave_floor',
+                    nextMoveAt: 800 + rnd() * 3000, timer: 0,
+                    hp: def.hp, maxHp: def.hp, ai: def.ai, dmg: def.dmg,
+                    attackCooldown: 0, dead: false,
+                });
+            }
         }
     }
     return { biomes, elevations, features, creatures, N, spawnX: exitRoom.cx, spawnY: exitRoom.cy };
@@ -1719,14 +1741,22 @@ export default {
             });
         }
         function renderStats() {
-            const bm = BIOMES[world.biomeAt(player.wx, player.wy)].name;
+            const b = biomeAtDg(player.wx, player.wy);
+            const bm = (ALL_BIOMES[b] || BIOMES.grass).name;
+            const cd = classDef || CLASSES.warrior;
+            const wpn = equipment.weapon;
+            const wpnStr = wpn ? `${ITEMS[wpn.key]?.emoji || '?'} ${wpn.name} (+${getWeaponDmg()})` : 'Bare hands';
             $statsBody.innerHTML = `
                 <div><b>${worldRow.name}</b></div>
-                <div>Seed <span style="color:#ffc857">${worldRow.seed}</span></div>
-                <div>Position: ${player.wx}, ${player.wy}</div>
+                <div>Class: ${cd.icon} <b>${cd.name}</b></div>
+                <div>Level: <b>${player.level}</b> (${player.xp}/${player.xpNext} XP)</div>
+                <div>Weapon: ${wpnStr}</div>
+                <div>Armor: 🛡️ <b>${getArmorDef()}</b> defense</div>
+                <div>Base DMG: <b>${player.baseDmg}</b></div>
+                <div style="margin-top:6px">Position: ${player.wx}, ${player.wy}</div>
                 <div>Biome: ${bm}</div>
+                <div>Seed: <span style="color:#ffc857">${worldRow.seed}</span></div>
                 <div>Inventory: ${inventory.items.length} items</div>
-                <div>Equipment: ${Object.keys(equipment).length} slots filled</div>
                 <div style="margin-top:10px"><button class="ua-btn ua-btn-danger" id="ua-back-to-menu">↩ Back to world menu</button></div>
             `;
             $statsBody.querySelector('#ua-back-to-menu').addEventListener('click', () => {
@@ -2506,6 +2536,43 @@ export default {
         }
 
         /** Quick potion: press Q to consume the first potion in backpack. */
+        /** Find nearest village feature — used for respawn. */
+        function findNearestVillage() {
+            let best = null, bestDist = Infinity;
+            const cx0 = Math.floor(startX / CHUNK_SIZE), cy0 = Math.floor(startY / CHUNK_SIZE);
+            for (let dcy = -4; dcy <= 4; dcy++) for (let dcx = -4; dcx <= 4; dcx++) {
+                const ch = world.chunks.get((cx0+dcx)+','+(cy0+dcy));
+                if (!ch) continue;
+                for (const f of ch.features) {
+                    if (!f.village) continue;
+                    const wx = (cx0+dcx) * CHUNK_SIZE + f.c;
+                    const wy = (cy0+dcy) * CHUNK_SIZE + f.r;
+                    const d = Math.abs(wx - player.wx) + Math.abs(wy - player.wy);
+                    if (d < bestDist && world.passable(wx, wy)) { bestDist = d; best = { wx, wy }; }
+                }
+            }
+            return best || { wx: startX, wy: startY };
+        }
+
+        function respawnPlayer() {
+            const goldCount = inventory.items.filter(i => i.key === 'gold').length;
+            const goldLost = Math.min(goldCount, Math.max(1, Math.floor(goldCount * 0.3)));
+            let removed = 0;
+            inventory.items = inventory.items.filter(i => {
+                if (i.key === 'gold' && removed < goldLost) { removed++; return false; }
+                return true;
+            });
+            saveInventory();
+            const lostMsg = goldLost > 0 ? ' Lost ' + goldLost + ' gold.' : '';
+            showDialogBubble('☠️', 'You have been slain!' + lostMsg);
+            if (_dungeon) exitDungeon();
+            const spawn = findNearestVillage();
+            player.hp = player.maxHp; player.mana = player.maxMana; player.stamina = player.maxStamina;
+            player.wx = spawn.wx; player.wy = spawn.wy;
+            player.rx = spawn.wx; player.ry = spawn.wy;
+            _playerFlash = 600;
+        }
+
         function quickPotion() {
             const idx = inventory.items.findIndex(i => i.key === 'potion');
             if (idx < 0) { addFloater(player.wx, player.wy, 'No potions!', '#ff6060'); return; }
@@ -2584,14 +2651,7 @@ export default {
                         addFloater(player.wx, player.wy, '-' + reduceDamage(cr.dmg), '#ff6060');
                         sfxHurt();
                         _playerFlash = 300;
-                        if (player.hp <= 0) {
-                            showDialogBubble('☠️', 'You have been slain!');
-                            if (_dungeon) exitDungeon();
-                            player.hp = player.maxHp; player.mana = player.maxMana; player.stamina = player.maxStamina;
-                            player.wx = startX; player.wy = startY;
-                            player.rx = startX; player.ry = startY;
-                            _playerFlash = 600;
-                        }
+                        if (player.hp <= 0) { respawnPlayer(); }
                         continue;
                     }
                     cr.timer += dt;
@@ -2782,6 +2842,54 @@ export default {
                     }
                 }
             }
+
+            // Gathering: click a tree or rock within 2 tiles to harvest.
+            if (!_dungeon) {
+                const dist = Math.max(Math.abs(wx - player.wx), Math.abs(wy - player.wy));
+                if (dist <= 2) {
+                    const f = world.featureAt(wx, wy);
+                    if (f && !f.item && !f.npc && !f.merchant && !f.dungeon && !f.village && !f.blocks) {
+                        const GATHER = {
+                            '🌲': [{ key: 'herb', rate: 0.5 }, { key: 'apple', rate: 0.2 }],
+                            '🌳': [{ key: 'herb', rate: 0.5 }, { key: 'apple', rate: 0.3 }],
+                            '🌴': [{ key: 'apple', rate: 0.6 }],
+                            '🪨': [{ key: 'stone', rate: 0.6 }, { key: 'gem', rate: 0.1 }],
+                            '🍄': [{ key: 'mushroom', rate: 0.9 }],
+                            '🌿': [{ key: 'herb', rate: 0.8 }],
+                            '🌾': [{ key: 'berry', rate: 0.7 }],
+                        };
+                        const table = GATHER[f.emoji];
+                        if (table) {
+                            if (player.stamina < 3) { addFloater(player.wx, player.wy, 'Exhausted!', '#ffaa00'); return; }
+                            player.stamina -= 3;
+                            _sfx(300, 0.06, 'triangle', 0.04);
+                            for (const drop of table) {
+                                if (Math.random() < drop.rate) {
+                                    const def = ITEMS[drop.key];
+                                    inventory.items.push({
+                                        id: 'it_' + Math.random().toString(36).slice(2, 9),
+                                        key: drop.key, emoji: def.emoji, name: def.name,
+                                        x: 6 + (inventory.items.length % 7) * 36,
+                                        y: 6 + Math.floor(inventory.items.length / 7) * 36,
+                                    });
+                                    addFloater(wx, wy, '+' + def.name, '#80c0ff');
+                                    saveInventory();
+                                    break;
+                                }
+                            }
+                            if (Math.random() < 0.3) {
+                                // Tree/rock depleted — remove feature (regrows on chunk regen).
+                                const cx0 = Math.floor(wx / CHUNK_SIZE), cy0 = Math.floor(wy / CHUNK_SIZE);
+                                const ch = world.getChunk(cx0, cy0);
+                                const lx = ((wx % CHUNK_SIZE) + CHUNK_SIZE) % CHUNK_SIZE;
+                                const ly = ((wy % CHUNK_SIZE) + CHUNK_SIZE) % CHUNK_SIZE;
+                                const fi = ch.features.findIndex(ff => ff.c === lx && ff.r === ly);
+                                if (fi >= 0) ch.features.splice(fi, 1);
+                            }
+                        }
+                    }
+                }
+            }
         });
 
         function tickCreatures(dt) {
@@ -2827,23 +2935,7 @@ export default {
                                 addFloater(player.wx, player.wy, '-' + reduceDamage(cr.dmg), '#ff6060');
                                 sfxHurt();
                                 _playerFlash = 300;
-                                if (player.hp <= 0) {
-                                    // Death penalty: lose gold from backpack.
-                                    const goldCount = inventory.items.filter(i => i.key === 'gold').length;
-                                    const goldLost = Math.min(goldCount, Math.max(1, Math.floor(goldCount * 0.3)));
-                                    let removed = 0;
-                                    inventory.items = inventory.items.filter(i => {
-                                        if (i.key === 'gold' && removed < goldLost) { removed++; return false; }
-                                        return true;
-                                    });
-                                    saveInventory();
-                                    const lostMsg = goldLost > 0 ? ' Lost ' + goldLost + ' gold.' : '';
-                                    showDialogBubble('☠️', 'You have been slain! Respawning...' + lostMsg);
-                                    player.hp = player.maxHp; player.mana = player.maxMana; player.stamina = player.maxStamina;
-                                    player.wx = startX; player.wy = startY;
-                                    player.rx = startX; player.ry = startY;
-                                    _playerFlash = 600;
-                                }
+                                if (player.hp <= 0) { respawnPlayer(); }
                                 continue;
                             }
                             cr.timer += dt;
