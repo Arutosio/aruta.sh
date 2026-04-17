@@ -766,12 +766,38 @@ function drawShadow(ctx, sx, sy, spriteSize) {
     ctx.fill();
 }
 
+// Emoji cache: render each emoji+size pair to an offscreen canvas once,
+// force all partially-transparent pixels to full opacity (fixes Windows
+// Segoe UI Emoji rendering with internal alpha), then drawImage from cache.
+const _emojiCache = new Map();
+function _getEmojiImg(emoji, size) {
+    const key = emoji + ':' + size;
+    let c = _emojiCache.get(key);
+    if (c) return c;
+    const s = Math.ceil(size * 1.4);
+    c = document.createElement('canvas');
+    c.width = s; c.height = s;
+    const c2 = c.getContext('2d');
+    c2.font = size + "px 'Apple Color Emoji', 'Segoe UI Emoji', 'Noto Color Emoji', sans-serif";
+    c2.textAlign = 'center';
+    c2.textBaseline = 'middle';
+    c2.fillText(emoji, s / 2, s / 2);
+    // Force full opacity on every visible pixel.
+    const img = c2.getImageData(0, 0, s, s);
+    const d = img.data;
+    for (let i = 3; i < d.length; i += 4) {
+        if (d[i] > 25) d[i] = 255;
+    }
+    c2.putImageData(img, 0, 0);
+    _emojiCache.set(key, c);
+    return c;
+}
+
 function drawEmoji(ctx, sx, sy, emoji, size = 28) {
-    const cx = sx + TILE_W / 2, cy = sy + TILE_H / 2;
-    ctx.font = size + "px 'Apple Color Emoji', 'Segoe UI Emoji', 'Noto Color Emoji', sans-serif";
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillText(emoji, cx, cy);
+    const cached = _getEmojiImg(emoji, size);
+    const cx = sx + TILE_W / 2 - cached.width / 2;
+    const cy = sy + TILE_H / 2 - cached.height / 2;
+    ctx.drawImage(cached, cx, cy);
 }
 
 // ── Player ───────────────────────────────────────────────
@@ -1504,7 +1530,7 @@ export default {
             if (dragState.source === 'world') {
                 const key = dragState.worldKey;
                 const def = ITEMS[key];
-                const picked = () => removeWorldItem(dragState.wx, dragState.wy);
+                const picked = () => removeItemAt(dragState.wx, dragState.wy);
                 // Detect drop on the player's own tile (or any tile within 1),
                 // which acts as a shortcut for "put in backpack".
                 let droppedOnPlayer = false;
@@ -1626,17 +1652,27 @@ export default {
             startDrag('world', { worldKey: f.itemKey, wx, wy }, ev.clientX, ev.clientY);
         });
 
-        function _findItemNear(cx, cy, world, c2w) {
+        function _findItemNear(cx, cy, _unused, c2w) {
             const base = c2w(cx, cy);
-            // Scan a small neighbourhood around the clicked cell (prefer the
-            // tile just above since the emoji is anchored at the feet).
-            const offsets = [[0,-1],[-1,-1],[1,-1],[0,0],[-1,0],[1,0],[0,1],[0,-2],[-1,-2],[1,-2]];
+            const offsets = [[0,0],[0,-1],[-1,-1],[1,-1],[-1,0],[1,0],[0,1],[0,-2],[-1,-2],[1,-2]];
             for (const [dx, dy] of offsets) {
                 const wx = base.wx + dx, wy = base.wy + dy;
-                const f = world.featureAt(wx, wy);
+                const f = featureAtDg(wx, wy);
                 if (f && f.item) return { wx, wy, feature: f };
             }
             return null;
+        }
+
+        // Remove an item from wherever we are (overworld or dungeon).
+        function removeItemAt(wx, wy) {
+            if (_dungeon) {
+                const idx = _dungeon.map.features.findIndex(f => f.c === wx && f.r === wy && f.item);
+                if (idx < 0) return null;
+                const f = _dungeon.map.features[idx];
+                _dungeon.map.features.splice(idx, 1);
+                return f.itemKey;
+            }
+            return removeWorldItem(wx, wy);
         }
 
         // Double-click an item in backpack to consume it (food/potions).
@@ -2154,13 +2190,27 @@ export default {
                 sfxLevelUp();
                 showDialogBubble('✦', 'Level up! You are now level ' + player.level);
             }
-            // Loot drop on the world at the creature's tile.
-            const wx = chCx * CHUNK_SIZE + cr.c;
-            const wy = chCy * CHUNK_SIZE + cr.r;
-            for (const l of def.loot) {
-                if (Math.random() < l.rate) {
-                    placeWorldItem(wx, wy, l.key);
-                    break; // one drop per kill max
+            // Loot drop at the creature's tile.
+            if (_dungeon) {
+                // Dungeon: add directly to dungeon features.
+                for (const l of def.loot) {
+                    if (Math.random() < l.rate) {
+                        const lootDef = ITEMS[l.key];
+                        if (lootDef && !_dungeon.map.features.find(f => f.c === cr.c && f.r === cr.r)) {
+                            _dungeon.map.features.push({ c: cr.c, r: cr.r, emoji: lootDef.emoji, item: true, itemKey: l.key });
+                        }
+                        break;
+                    }
+                }
+            } else {
+                // Overworld: use persistent world delta system.
+                const wx = chCx * CHUNK_SIZE + cr.c;
+                const wy = chCy * CHUNK_SIZE + cr.r;
+                for (const l of def.loot) {
+                    if (Math.random() < l.rate) {
+                        placeWorldItem(wx, wy, l.key);
+                        break;
+                    }
                 }
             }
         }
@@ -2357,18 +2407,25 @@ export default {
             if (ev.button !== 0) return;
             const rect = canvas.getBoundingClientRect();
             const { wx, wy } = canvasToWorldCell(ev.clientX - rect.left, ev.clientY - rect.top);
-            // Find creature at that world cell (scan nearby chunks).
-            const cx0 = Math.floor(wx / CHUNK_SIZE), cy0 = Math.floor(wy / CHUNK_SIZE);
-            for (let dcy = -1; dcy <= 1; dcy++) for (let dcx = -1; dcx <= 1; dcx++) {
-                const ch = world.chunks.get((cx0+dcx)+','+(cy0+dcy));
-                if (!ch) continue;
-                for (const cr of ch.creatures) {
+
+            // Search creatures — in dungeon use the flat array, overworld uses chunks.
+            const creatureSources = [];
+            if (_dungeon) {
+                creatureSources.push({ creatures: _dungeon.map.creatures, ox: 0, oy: 0 });
+            } else {
+                const cx0 = Math.floor(wx / CHUNK_SIZE), cy0 = Math.floor(wy / CHUNK_SIZE);
+                for (let dcy = -1; dcy <= 1; dcy++) for (let dcx = -1; dcx <= 1; dcx++) {
+                    const ch = world.chunks.get((cx0+dcx)+','+(cy0+dcy));
+                    if (ch) creatureSources.push({ creatures: ch.creatures, ox: (cx0+dcx) * CHUNK_SIZE, oy: (cy0+dcy) * CHUNK_SIZE });
+                }
+            }
+            for (const src of creatureSources) {
+                for (const cr of src.creatures) {
                     if (cr.dead) continue;
-                    const cwx = (cx0+dcx) * CHUNK_SIZE + cr.c;
-                    const cwy = (cy0+dcy) * CHUNK_SIZE + cr.r;
+                    const cwx = src.ox + cr.c, cwy = src.oy + cr.r;
                     if (Math.abs(cwx - wx) <= 1 && Math.abs(cwy - wy) <= 1) {
                         attackCreature(cr);
-                        _autoTarget = cr; // auto-attack while holding
+                        _autoTarget = cr;
                         return;
                     }
                 }
