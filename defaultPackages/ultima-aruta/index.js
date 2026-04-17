@@ -932,6 +932,56 @@ class Player {
     }
 }
 
+// ── Character classes ────────────────────────────────────
+const CLASSES = {
+    warrior: {
+        name: 'Warrior', icon: '⚔️', desc: 'High HP, strong melee, starts with sword + shield.',
+        hp: 120, mana: 30, stamina: 110, baseDmg: 7,
+        gear: { weapon: 'sword', shield: 'shield', armor: 'armor' },
+    },
+    mage: {
+        name: 'Mage', icon: '🧙', desc: 'High mana, starts with spellbook + robe.',
+        hp: 80, mana: 80, stamina: 90, baseDmg: 4,
+        gear: { book: 'spellbook', chest: 'robe', head: 'hat' },
+    },
+    archer: {
+        name: 'Archer', icon: '🏹', desc: 'Fast, ranged attacker, starts with bow + boots.',
+        hp: 90, mana: 40, stamina: 130, baseDmg: 5,
+        gear: { weapon: 'bow', feet: 'boots', cape: 'cape' },
+    },
+    rogue: {
+        name: 'Rogue', icon: '🗡️', desc: 'High crit chance, starts with dagger + gloves.',
+        hp: 85, mana: 40, stamina: 120, baseDmg: 6,
+        gear: { weapon: 'dagger', hands: 'gloves', feet: 'sandals' },
+    },
+};
+
+function showClassSelect(root) {
+    return new Promise((resolve) => {
+        root.innerHTML = `
+            <div class="ua-select-shell">
+                <h1 class="ua-select-title">Choose thy class</h1>
+                <p class="ua-select-sub">Each path shapes your destiny…</p>
+                <div class="ua-select-list" id="ua-class-list">
+                    ${Object.entries(CLASSES).map(([k, c]) => `
+                        <div class="ua-select-row ua-class-row" data-class="${k}">
+                            <div class="ua-select-meta">
+                                <div class="ua-select-name">${c.icon} ${c.name}</div>
+                                <div class="ua-select-info">${c.desc}</div>
+                                <div class="ua-select-info">HP ${c.hp} · MP ${c.mana} · SP ${c.stamina} · DMG ${c.baseDmg}</div>
+                            </div>
+                            <button class="ua-btn ua-btn-primary" data-pick="${k}">Select</button>
+                        </div>
+                    `).join('')}
+                </div>
+            </div>
+        `;
+        root.querySelectorAll('[data-pick]').forEach(btn => {
+            btn.addEventListener('click', () => resolve(btn.dataset.pick));
+        });
+    });
+}
+
 // ── World-select screen ──────────────────────────────────
 // Shown before the game mounts. Returns the picked world id (or null
 // on cancel). Mutates the `worlds` array in place via `onChange`.
@@ -1034,9 +1084,15 @@ export default {
         const DELTA_KEY  = 'worldDeltas_'  + worldId;
         const EQUIP_KEY  = 'equipment_'    + worldId;
 
-        // ── Save/load ────────────────────────────────────
+        // ── Class selection (first time only per world) ──
         let saved = null;
         try { saved = await sdk.storage.get(STATE_KEY); } catch {}
+        let playerClass = saved?.playerClass || null;
+        if (!playerClass) {
+            playerClass = await showClassSelect(root);
+            if (!playerClass) return;
+        }
+        const classDef = CLASSES[playerClass];
         const seed = worldRow.seed >>> 0;
         const world = new World(seed);
 
@@ -1115,7 +1171,15 @@ export default {
         }
 
         const player = new Player(startX, startY);
-        // Restore player stats from save.
+        // Apply class stats.
+        if (classDef) {
+            player.maxHp = classDef.hp; player.hp = classDef.hp;
+            player.maxMana = classDef.mana; player.mana = classDef.mana;
+            player.maxStamina = classDef.stamina; player.stamina = classDef.stamina;
+            player.baseDmg = classDef.baseDmg;
+            player.emoji = classDef.icon === '🧙' ? '🧙' : classDef.icon === '🏹' ? '🧝' : classDef.icon === '🗡️' ? '🥷' : '🧙';
+        }
+        // Restore player stats from save (overrides class defaults for returning players).
         if (saved) {
             if (saved.hp != null)      player.hp      = saved.hp;
             if (saved.mana != null)    player.mana    = saved.mana;
@@ -1142,6 +1206,18 @@ export default {
             const eq = await sdk.storage.get(EQUIP_KEY);
             if (eq && typeof eq === 'object') equipment = eq;
         } catch {}
+        // First-time class starting gear (only when no save exists).
+        if (!saved && classDef && classDef.gear) {
+            for (const [slot, key] of Object.entries(classDef.gear)) {
+                const def = ITEMS[key];
+                if (def) {
+                    equipment[slot] = {
+                        id: 'it_' + Math.random().toString(36).slice(2, 9),
+                        key, emoji: def.emoji, name: def.name,
+                    };
+                }
+            }
+        }
         // Persistent mutations to the procedural world (things picked up,
         // things dropped by the player). Applied to each chunk after
         // generation — without this a reload would respawn picked items.
@@ -1656,7 +1732,7 @@ export default {
             $statsBody.querySelector('#ua-back-to-menu').addEventListener('click', () => {
                 // Persist state then re-mount the shell.
                 sdk.storage.set(STATE_KEY, {
-                    seed, px: player.wx, py: player.wy, timeOfDay,
+                    seed, px: player.wx, py: player.wy, timeOfDay, playerClass,
                     hp: player.hp, mana: player.mana, stamina: player.stamina,
                     level: player.level, xp: player.xp, xpNext: player.xpNext,
                     maxHp: player.maxHp, maxMana: player.maxMana, maxStamina: player.maxStamina, baseDmg: player.baseDmg,
@@ -2523,7 +2599,7 @@ export default {
                     cr.timer = 0;
                     const sdx = Math.sign(player.wx - cwx), sdy = Math.sign(player.wy - cwy);
                     const nc = cr.c + sdx, nr = cr.r + sdy;
-                    if (nc >= 0 && nc < N && nr >= 0 && nr < N) {
+                    if (nc >= 0 && nc < N && nr >= 0 && nr < N && passableDg(ox + nc, oy + nr)) {
                         cr.fromC = cr.c; cr.fromR = cr.r;
                         cr.c = nc; cr.r = nr;
                         cr.moveT = CREATURE_MOVE_MS * 0.7;
@@ -2538,6 +2614,7 @@ export default {
                 const [ddx, ddy] = dirs[Math.floor(Math.random() * 4)];
                 const nc = cr.c + ddx, nr = cr.r + ddy;
                 if (nc < 0 || nc >= N || nr < 0 || nr >= N) continue;
+                if (!passableDg(ox + nc, oy + nr)) continue;
                 cr.fromC = cr.c; cr.fromR = cr.r;
                 cr.c = nc; cr.r = nr;
                 cr.moveT = CREATURE_MOVE_MS;
@@ -2843,7 +2920,7 @@ export default {
             if (saveTimer > 2000) {
                 saveTimer = 0;
                 sdk.storage.set(STATE_KEY, {
-                    seed, px: player.wx, py: player.wy, timeOfDay,
+                    seed, px: player.wx, py: player.wy, timeOfDay, playerClass,
                     hp: player.hp, mana: player.mana, stamina: player.stamina,
                     level: player.level, xp: player.xp, xpNext: player.xpNext,
                     maxHp: player.maxHp, maxMana: player.maxMana, maxStamina: player.maxStamina, baseDmg: player.baseDmg,
