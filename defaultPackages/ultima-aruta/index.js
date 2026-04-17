@@ -765,12 +765,20 @@ function drawShadow(ctx, sx, sy, spriteSize) {
 }
 
 function drawEmoji(ctx, sx, sy, emoji, size = 28) {
+    const cx = sx + TILE_W / 2, cy = sy + TILE_H / 2;
+    // Opaque backing disc behind the emoji. This prevents the
+    // platform's font compositor from blending emoji edges against the
+    // transparent canvas, which on Windows (Segoe UI Emoji) causes a
+    // semi-transparent halo effect.
+    const r = size * 0.38;
+    ctx.fillStyle = 'rgba(20, 16, 28, 1)';
+    ctx.beginPath();
+    ctx.arc(cx, cy, r, 0, Math.PI * 2);
+    ctx.fill();
     ctx.font = size + "px 'Apple Color Emoji', 'Segoe UI Emoji', 'Noto Color Emoji', sans-serif";
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    // Anchor at the tile's geometric centre (UO-style: entities stand ON the
-    // tile, not at the junction between four of them).
-    ctx.fillText(emoji, sx + TILE_W / 2, sy + TILE_H / 2);
+    ctx.fillText(emoji, cx, cy);
 }
 
 // ── Player ───────────────────────────────────────────────
@@ -1795,29 +1803,19 @@ export default {
             const minY = Math.min(tl.wy, tr.wy, bl.wy, br.wy) - 1;
             const maxY = Math.max(tl.wy, tr.wy, bl.wy, br.wy) + 1;
 
-            // PASS 1 — tiles with elevation height + depth walls + perspective.
+            // PASS 1 — tiles with elevation + depth walls (uniform size;
+            // perspective is applied only to sprites to avoid seams between tiles).
             for (let y = minY; y <= maxY; y++) {
                 for (let x = minX; x <= maxX; x++) {
                     const p = iso(x, y);
-                    const rawSx = p.x + cam.cx;
-                    const rawSy = p.y + cam.cy;
-                    const elev = elevAtDg(x, y);
-                    const lift = (elev - 0.35) * ELEV_PX;
-                    const tileScreenY = rawSy - lift + TILE_H / 2;
-                    const ps = perspScale(tileScreenY, H);
-                    // Perspective-scaled position: shift toward/away from center.
-                    const sx = W / 2 + (rawSx - W / 2) * ps - (TILE_W * ps) / 2;
-                    const sy = H / 2 + (rawSy - H / 2) * ps;
-                    ctx.save();
-                    ctx.translate(sx + (TILE_W * ps) / 2, sy + (TILE_H * ps) / 2);
-                    ctx.scale(ps, ps);
-                    ctx.translate(-(TILE_W / 2), -(TILE_H / 2));
+                    const sx = p.x + cam.cx - TILE_W / 2;
+                    const sy = p.y + cam.cy;
                     const b = biomeAtDg(x, y);
-                    drawTile(ctx, 0, 0, b, elev);
+                    const elev = elevAtDg(x, y);
+                    drawTile(ctx, sx, sy, b, elev);
                     const elevS = elevAtDg(x + 1, y);
                     const elevE = elevAtDg(x, y + 1);
-                    drawTileDepth(ctx, 0, 0, elev, elevS, elevE);
-                    ctx.restore();
+                    drawTileDepth(ctx, sx, sy, elev, elevS, elevE);
                 }
             }
 
