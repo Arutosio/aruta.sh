@@ -154,6 +154,17 @@ const ITEM_DROPS = {
     ],
 };
 
+// Crafting recipes: input keys → output key. Consumes from backpack.
+const RECIPES = [
+    { name: 'Potion',       inputs: ['herb', 'mushroom'],    output: 'potion' },
+    { name: 'Strong Potion', inputs: ['herb', 'herb', 'berry'], output: 'potion' },
+    { name: 'Scroll',       inputs: ['flower', 'herb'],      output: 'scroll' },
+    { name: 'Ring',         inputs: ['gem', 'gold'],          output: 'ring' },
+    { name: 'Necklace',     inputs: ['gem', 'gem', 'gold'],   output: 'necklace' },
+    { name: 'Dagger',       inputs: ['stone', 'stone'],       output: 'dagger' },
+    { name: 'Axe',          inputs: ['stone', 'stone', 'herb'], output: 'axe' },
+];
+
 // Paperdoll slot definitions — order shown in the UI, left → right, top → bottom.
 const SLOTS = [
     { key: 'head',   label: '⛑️ Head'   },
@@ -942,9 +953,14 @@ export default {
                     </div>
                     <div class="ua-stats-body" id="ua-stats-body"></div>
                 </div>
+                <div class="ua-craft" id="ua-craft" style="display:none;">
+                    <div class="ua-backpack-head"><span>🔨 Craft</span><span class="ua-backpack-close" data-close="craft">×</span></div>
+                    <div class="ua-craft-body" id="ua-craft-body"></div>
+                </div>
                 <div class="ua-hub" id="ua-hub">
                     <button class="ua-hub-btn" data-hub="pack"   title="Backpack (I)">🎒</button>
                     <button class="ua-hub-btn" data-hub="doll"   title="Paperdoll (P)">👤</button>
+                    <button class="ua-hub-btn" data-hub="craft"  title="Craft (C)">🔨</button>
                     <button class="ua-hub-btn" data-hub="stats"  title="Stats">📊</button>
                 </div>
                 <div class="ua-drag-ghost" id="ua-drag-ghost" style="display:none;"></div>
@@ -987,6 +1003,11 @@ export default {
             if (e.type === 'keydown' && k === 'p') {
                 e.preventDefault();
                 togglePaperdoll();
+                return;
+            }
+            if (e.type === 'keydown' && k === 'c') {
+                e.preventDefault();
+                togglePanel('craft');
             }
         }
 
@@ -1126,12 +1147,64 @@ export default {
         const $stats    = root.querySelector('#ua-stats');
         const $statsBody= root.querySelector('#ua-stats-body');
 
+        const $craft     = root.querySelector('#ua-craft');
+        const $craftBody = root.querySelector('#ua-craft-body');
+
+        function renderCraft() {
+            $craftBody.innerHTML = RECIPES.map((r, ri) => {
+                const def = ITEMS[r.output];
+                // Check if player has the ingredients.
+                const counts = {};
+                for (const k of r.inputs) counts[k] = (counts[k] || 0) + 1;
+                let canCraft = true;
+                for (const [k, need] of Object.entries(counts)) {
+                    const have = inventory.items.filter(i => i.key === k).length;
+                    if (have < need) canCraft = false;
+                }
+                const inputStr = r.inputs.map(k => (ITEMS[k]?.emoji || '?') + ' ' + (ITEMS[k]?.name || k)).join(' + ');
+                return `<div class="ua-shop-row">
+                    <span>${def.emoji} <b>${r.name}</b></span>
+                    <span style="font-size:11px;opacity:0.7">${inputStr}</span>
+                    <button class="ua-btn" data-craft="${ri}" ${canCraft ? '' : 'disabled'}>Craft</button>
+                </div>`;
+            }).join('');
+            $craftBody.querySelectorAll('[data-craft]').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const ri = Number(btn.dataset.craft);
+                    const r = RECIPES[ri];
+                    // Consume ingredients.
+                    const toRemove = {};
+                    for (const k of r.inputs) toRemove[k] = (toRemove[k] || 0) + 1;
+                    for (const [k, n] of Object.entries(toRemove)) {
+                        let rem = 0;
+                        inventory.items = inventory.items.filter(i => {
+                            if (i.key === k && rem < n) { rem++; return false; }
+                            return true;
+                        });
+                    }
+                    // Add result.
+                    const def = ITEMS[r.output];
+                    inventory.items.push({
+                        id: 'it_' + Math.random().toString(36).slice(2, 9),
+                        key: r.output, emoji: def.emoji, name: def.name,
+                        x: 6 + (inventory.items.length % 7) * 36,
+                        y: 6 + Math.floor(inventory.items.length / 7) * 36,
+                    });
+                    saveInventory();
+                    addFloater(player.wx, player.wy, '🔨 ' + def.name, '#80c0ff');
+                    _sfx(520, 0.08, 'triangle', 0.05); setTimeout(() => _sfx(780, 0.1, 'triangle', 0.04), 80);
+                    renderCraft();
+                    if ($pack.style.display !== 'none') renderBackpack();
+                });
+            });
+        }
+
         function togglePanel(kind) {
-            const m = { pack: $pack, doll: $doll, stats: $stats };
+            const m = { pack: $pack, doll: $doll, stats: $stats, craft: $craft };
             const el = m[kind]; if (!el) return;
             const open = el.style.display !== 'none';
             if (open) el.style.display = 'none';
-            else { el.style.display = ''; if (kind === 'pack') renderBackpack(); if (kind === 'doll') renderPaperdoll(); if (kind === 'stats') renderStats(); }
+            else { el.style.display = ''; if (kind === 'pack') renderBackpack(); if (kind === 'doll') renderPaperdoll(); if (kind === 'stats') renderStats(); if (kind === 'craft') renderCraft(); }
         }
         root.querySelectorAll('[data-close]').forEach(btn => btn.addEventListener('click', () => togglePanel(btn.dataset.close)));
         root.querySelectorAll('.ua-hub-btn').forEach(btn => btn.addEventListener('click', () => togglePanel(btn.dataset.hub)));
