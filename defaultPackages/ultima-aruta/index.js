@@ -508,6 +508,49 @@ const ELEV_PX = 18; // max pixel lift for highest elevation
 
 let _renderTime = 0;
 
+// ── Floating combat text ─────────────────────────────────
+// Managed as an array of {wx, wy, text, color, age, maxAge}.
+const _floaters = [];
+function addFloater(wx, wy, text, color = '#fff') {
+    _floaters.push({ wx, wy, text, color, age: 0, maxAge: 900 });
+}
+function tickFloaters(dt) {
+    for (let i = _floaters.length - 1; i >= 0; i--) {
+        _floaters[i].age += dt;
+        if (_floaters[i].age >= _floaters[i].maxAge) _floaters.splice(i, 1);
+    }
+}
+
+// ── Stars (rendered behind tiles at night) ───────────────
+let _stars = null;
+function ensureStars() {
+    if (_stars) return _stars;
+    _stars = [];
+    for (let i = 0; i < 120; i++) {
+        _stars.push({ x: Math.random(), y: Math.random(), r: 0.5 + Math.random() * 1.2, twinkle: Math.random() * Math.PI * 2 });
+    }
+    return _stars;
+}
+
+// ── Simple WebAudio SFX (no assets) ─────────────────────
+let _sfxCtx = null;
+function _sfx(freq, dur = 0.1, type = 'sine', gain = 0.06) {
+    if (!_sfxCtx) try { _sfxCtx = new (window.AudioContext || window.webkitAudioContext)(); } catch { return; }
+    const t = _sfxCtx.currentTime;
+    const o = _sfxCtx.createOscillator();
+    const g = _sfxCtx.createGain();
+    o.type = type; o.frequency.setValueAtTime(freq, t);
+    g.gain.setValueAtTime(0, t);
+    g.gain.linearRampToValueAtTime(gain, t + 0.01);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    o.connect(g); g.connect(_sfxCtx.destination);
+    o.start(t); o.stop(t + dur + 0.02);
+}
+function sfxHit()     { _sfx(180, 0.1, 'square', 0.07); }
+function sfxKill()    { _sfx(440, 0.08); setTimeout(() => _sfx(660, 0.12), 60); }
+function sfxHurt()    { _sfx(120, 0.14, 'sawtooth', 0.08); }
+function sfxLevelUp() { _sfx(523, 0.12); setTimeout(() => _sfx(659, 0.14), 100); setTimeout(() => _sfx(784, 0.2), 240); }
+
 function drawTile(ctx, sx, sy, biome, elev = 0.5) {
     const b = BIOMES[biome];
     const hx = TILE_W / 2, hy = TILE_H / 2;
@@ -1349,6 +1392,20 @@ export default {
             const H = VIEW_H;
             ctx.clearRect(0, 0, W, H);
 
+            // Stars behind everything, visible at night.
+            const nf = _nightFactor(timeOfDay);
+            if (nf > 0.15) {
+                const stars = ensureStars();
+                const alpha = Math.min(1, (nf - 0.15) * 2);
+                for (const s of stars) {
+                    const twinkle = 0.5 + 0.5 * Math.sin(_renderTime * 0.001 + s.twinkle);
+                    ctx.fillStyle = `rgba(220,220,255,${(alpha * twinkle * 0.7).toFixed(2)})`;
+                    ctx.beginPath();
+                    ctx.arc(s.x * W, s.y * H * 0.5, s.r, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+            }
+
             const cam = camera(W, H, player.rx, player.ry);
 
             // Determine visible world-cell range.
@@ -1463,6 +1520,30 @@ export default {
             drawFogOfWar(ctx, W, H,
                 pScreen.x + cam.cx, pScreen.y + cam.cy + TILE_H / 2 - pLift,
                 timeOfDay);
+
+            // ── Floating combat text ────────────────────────
+            ctx.font = "bold 11px 'Inter', sans-serif";
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            for (const fl of _floaters) {
+                const p = iso(fl.wx, fl.wy);
+                const elev = world.elevAt(Math.round(fl.wx), Math.round(fl.wy));
+                const lift = (elev - 0.35) * ELEV_PX;
+                const fx = p.x + cam.cx;
+                const fy = p.y + cam.cy + TILE_H / 2 - lift - (fl.age / fl.maxAge) * 20;
+                const alpha = 1 - fl.age / fl.maxAge;
+                ctx.fillStyle = fl.color.replace(')', ',' + alpha.toFixed(2) + ')').replace('rgb', 'rgba');
+                // Fallback for hex colours.
+                if (fl.color.startsWith('#')) {
+                    const h = fl.color.replace('#', '');
+                    const r = parseInt(h.slice(0,2),16), g = parseInt(h.slice(2,4),16), b = parseInt(h.slice(4,6),16);
+                    ctx.fillStyle = `rgba(${r},${g},${b},${alpha.toFixed(2)})`;
+                }
+                ctx.strokeStyle = `rgba(0,0,0,${(alpha * 0.7).toFixed(2)})`;
+                ctx.lineWidth = 2;
+                ctx.strokeText(fl.text, fx, fy);
+                ctx.fillText(fl.text, fx, fy);
+            }
         }
 
         // ── Minimap ────────────────────────────────────────
@@ -1530,6 +1611,8 @@ export default {
             const dmg = player.baseDmg + getWeaponDmg() + Math.floor(Math.random() * 3);
             cr.hp = Math.max(0, cr.hp - dmg);
             player.attackCooldown = 800;
+            addFloater(cwx, cwy, '-' + dmg, '#ff4040');
+            sfxHit();
             // Turn neutral creatures aggressive when attacked.
             if (cr.ai === 'neutral') cr.ai = 'aggressive';
             if (cr.hp <= 0) killCreature(cr, chCx, chCy);
@@ -1537,9 +1620,10 @@ export default {
 
         function killCreature(cr, chCx, chCy) {
             cr.dead = true;
-            // XP
+            sfxKill();
             const def = CREATURE_DEFS[cr.emoji] || { xp: 1, loot: [] };
             player.xp += def.xp;
+            addFloater(chCx * CHUNK_SIZE + cr.c, chCy * CHUNK_SIZE + cr.r, '+' + def.xp + ' XP', '#ffc857');
             while (player.xp >= player.xpNext) {
                 player.xp -= player.xpNext;
                 player.level++;
@@ -1547,6 +1631,7 @@ export default {
                 player.maxHp += 10; player.hp = player.maxHp;
                 player.maxMana += 5; player.mana = player.maxMana;
                 player.baseDmg += 1;
+                sfxLevelUp();
                 showDialogBubble('✦', 'Level up! You are now level ' + player.level);
             }
             // Loot drop on the world at the creature's tile.
@@ -1556,6 +1641,30 @@ export default {
                 if (Math.random() < l.rate) {
                     placeWorldItem(wx, wy, l.key);
                     break; // one drop per kill max
+                }
+            }
+        }
+
+        // Respawn dead creatures after 30–60 s.
+        let _respawnTimer = 0;
+        function tickCreatureRespawn(dt) {
+            _respawnTimer += dt;
+            if (_respawnTimer < 5000) return; // check every 5 s
+            _respawnTimer = 0;
+            const cx0 = Math.floor(player.wx / CHUNK_SIZE), cy0 = Math.floor(player.wy / CHUNK_SIZE);
+            for (let dcy = -2; dcy <= 2; dcy++) for (let dcx = -2; dcx <= 2; dcx++) {
+                const ch = world.chunks.get((cx0+dcx)+','+(cy0+dcy));
+                if (!ch) continue;
+                for (const cr of ch.creatures) {
+                    if (!cr.dead) continue;
+                    cr._deadTime = (cr._deadTime || 0) + 5000;
+                    if (cr._deadTime > 30000 + Math.random() * 30000) {
+                        const def = CREATURE_DEFS[cr.emoji] || { hp: 10 };
+                        cr.dead = false; cr.hp = def.hp; cr.maxHp = def.hp;
+                        cr.ai = (CREATURE_DEFS[cr.emoji] || {}).ai || 'neutral';
+                        cr._deadTime = 0;
+                        cr.attackCooldown = 0;
+                    }
                 }
             }
         }
@@ -1621,6 +1730,8 @@ export default {
                             if (distToPlayer <= 1 && cr.attackCooldown <= 0) {
                                 player.hp = Math.max(0, player.hp - cr.dmg);
                                 cr.attackCooldown = 1200;
+                                addFloater(player.wx, player.wy, '-' + cr.dmg, '#ff6060');
+                                sfxHurt();
                                 if (player.hp <= 0) {
                                     showDialogBubble('☠️', 'You have been slain! Respawning...');
                                     player.hp = player.maxHp; player.mana = player.maxMana;
@@ -1687,6 +1798,8 @@ export default {
             player.update(dt);
             tickCreatures(dt);
             tickCombat(dt);
+            tickFloaters(dt);
+            tickCreatureRespawn(dt);
             render();
             updateHUD();
             renderMinimap();
