@@ -655,6 +655,7 @@ class Player {
         this.emoji = '🧙';
         this.hp = 100; this.maxHp = 100;
         this.mana = 50; this.maxMana = 50;
+        this.stamina = 100; this.maxStamina = 100;
         this.level = 1; this.xp = 0; this.xpNext = 20;
         this.attackCooldown = 0;
         this.baseDmg = 5;
@@ -665,7 +666,9 @@ class Player {
         if (!world.passable(nx, ny)) return false;
         this.moveFrom = { wx: this.wx, wy: this.wy };
         this.wx = nx; this.wy = ny;
-        this.moveT = MOVE_MS;
+        // Stamina cost: each step drains 2. When exhausted, movement slows.
+        this.stamina = Math.max(0, this.stamina - 2);
+        this.moveT = this.stamina > 0 ? MOVE_MS : MOVE_MS * 1.8;
         return true;
     }
     update(dt) {
@@ -806,6 +809,8 @@ export default {
             if (saved.xpNext != null)  player.xpNext  = saved.xpNext;
             if (saved.maxHp != null)   player.maxHp   = saved.maxHp;
             if (saved.maxMana != null) player.maxMana = saved.maxMana;
+            if (saved.stamina != null)    player.stamina    = saved.stamina;
+            if (saved.maxStamina != null) player.maxStamina = saved.maxStamina;
             if (saved.baseDmg != null) player.baseDmg = saved.baseDmg;
         }
         // Day starts at noon on first load. Time advances with real-time dt.
@@ -1046,9 +1051,9 @@ export default {
                 // Persist state then re-mount the shell.
                 sdk.storage.set(STATE_KEY, {
                     seed, px: player.wx, py: player.wy, timeOfDay,
-                    hp: player.hp, mana: player.mana,
+                    hp: player.hp, mana: player.mana, stamina: player.stamina,
                     level: player.level, xp: player.xp, xpNext: player.xpNext,
-                    maxHp: player.maxHp, maxMana: player.maxMana, baseDmg: player.baseDmg,
+                    maxHp: player.maxHp, maxMana: player.maxMana, maxStamina: player.maxStamina, baseDmg: player.baseDmg,
                 }).catch(() => {});
                 root.__uaCleanup?.();
                 // Reload by re-invoking mount — simplest way.
@@ -1585,7 +1590,7 @@ export default {
             const hh = String(hours).padStart(2, '0');
             const mm = String(mins).padStart(2, '0');
             const phase = timeOfDay < 0.25 ? '🌑' : timeOfDay < 0.42 ? '🌅' : timeOfDay < 0.66 ? '☀️' : timeOfDay < 0.83 ? '🌇' : '🌙';
-            $hud.innerHTML = `❤️ <b>${Math.round(player.hp)}/${player.maxHp}</b> · 💧 <b>${Math.round(player.mana)}/${player.maxMana}</b> · Lv <b>${player.level}</b> (${player.xp}/${player.xpNext})<br>📍 <b>${player.wx}, ${player.wy}</b> · ${biome} · ${phase} <b>${hh}:${mm}</b>`;
+            $hud.innerHTML = `❤️ <b>${Math.round(player.hp)}/${player.maxHp}</b> · 💧 <b>${Math.round(player.mana)}/${player.maxMana}</b> · ⚡ <b>${Math.round(player.stamina)}/${player.maxStamina}</b> · Lv <b>${player.level}</b> (${player.xp}/${player.xpNext})<br>📍 <b>${player.wx}, ${player.wy}</b> · ${biome} · ${phase} <b>${hh}:${mm}</b>`;
         }
 
         // ── Combat helpers ─────────────────────────────────
@@ -1608,6 +1613,8 @@ export default {
             const d = Math.max(Math.abs(cwx - player.wx), Math.abs(cwy - player.wy));
             if (d > range) return;
 
+            if (player.stamina < 5) { addFloater(player.wx, player.wy, 'Exhausted!', '#ffaa00'); return; }
+            player.stamina = Math.max(0, player.stamina - 8);
             const dmg = player.baseDmg + getWeaponDmg() + Math.floor(Math.random() * 3);
             cr.hp = Math.max(0, cr.hp - dmg);
             player.attackCooldown = 800;
@@ -1630,6 +1637,7 @@ export default {
                 player.xpNext = Math.floor(player.xpNext * 1.5);
                 player.maxHp += 10; player.hp = player.maxHp;
                 player.maxMana += 5; player.mana = player.maxMana;
+                player.maxStamina += 5; player.stamina = player.maxStamina;
                 player.baseDmg += 1;
                 sfxLevelUp();
                 showDialogBubble('✦', 'Level up! You are now level ' + player.level);
@@ -1675,6 +1683,10 @@ export default {
             if (player.hp < player.maxHp) player.hp = Math.min(player.maxHp, player.hp + 0.3 * dt / 1000);
             // Mana regen.
             if (player.mana < player.maxMana) player.mana = Math.min(player.maxMana, player.mana + 0.5 * dt / 1000);
+            // Stamina regen — faster when standing still (6/s), slower while moving (2/s).
+            const moving = player.moveT > 0;
+            const staminaRate = moving ? 2 : 6;
+            if (player.stamina < player.maxStamina) player.stamina = Math.min(player.maxStamina, player.stamina + staminaRate * dt / 1000);
         }
 
         // ── Click-to-attack ──────────────────────────────
@@ -1734,7 +1746,7 @@ export default {
                                 sfxHurt();
                                 if (player.hp <= 0) {
                                     showDialogBubble('☠️', 'You have been slain! Respawning...');
-                                    player.hp = player.maxHp; player.mana = player.maxMana;
+                                    player.hp = player.maxHp; player.mana = player.maxMana; player.stamina = player.maxStamina;
                                     player.wx = startX; player.wy = startY;
                                     player.rx = startX; player.ry = startY;
                                 }
@@ -1813,9 +1825,9 @@ export default {
                 saveTimer = 0;
                 sdk.storage.set(STATE_KEY, {
                     seed, px: player.wx, py: player.wy, timeOfDay,
-                    hp: player.hp, mana: player.mana,
+                    hp: player.hp, mana: player.mana, stamina: player.stamina,
                     level: player.level, xp: player.xp, xpNext: player.xpNext,
-                    maxHp: player.maxHp, maxMana: player.maxMana, baseDmg: player.baseDmg,
+                    maxHp: player.maxHp, maxMana: player.maxMana, maxStamina: player.maxStamina, baseDmg: player.baseDmg,
                 }).catch(() => {});
                 worldRow.lastPlayed = Date.now();
                 sdk.storage.set('worlds', worlds).catch(() => {});
