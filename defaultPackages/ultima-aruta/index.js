@@ -84,15 +84,15 @@ const VILLAGE = {
 const ITEMS = {
     gold:     { emoji: '🪙', name: 'Gold Coin' },
     gem:      { emoji: '💎', name: 'Gem' },
-    berry:    { emoji: '🍓', name: 'Wild Berry' },
-    mushroom: { emoji: '🍄', name: 'Mushroom' },
+    berry:    { emoji: '🍓', name: 'Wild Berry',  use: { hp: 8, stamina: 10 } },
+    mushroom: { emoji: '🍄', name: 'Mushroom',    use: { hp: 5, mana: 8 } },
     stone:    { emoji: '🪨', name: 'Stone' },
     flower:   { emoji: '🌸', name: 'Flower' },
-    apple:    { emoji: '🍎', name: 'Apple' },
-    herb:     { emoji: '🌿', name: 'Herb' },
+    apple:    { emoji: '🍎', name: 'Apple',       use: { hp: 12, stamina: 15 } },
+    herb:     { emoji: '🌿', name: 'Herb',        use: { hp: 6, mana: 5 } },
     key:      { emoji: '🗝️', name: 'Old Key' },
-    potion:   { emoji: '🧪', name: 'Potion' },
-    scroll:   { emoji: '📜', name: 'Scroll' },
+    potion:   { emoji: '🧪', name: 'Potion',      use: { hp: 30, mana: 20 } },
+    scroll:   { emoji: '📜', name: 'Scroll',      use: { mana: 25 } },
     // Equipables
     sword:    { emoji: '⚔️', name: 'Shortsword',   slot: 'weapon' },
     axe:      { emoji: '🪓', name: 'Hand Axe',      slot: 'weapon' },
@@ -546,6 +546,8 @@ function _sfx(freq, dur = 0.1, type = 'sine', gain = 0.06) {
     o.connect(g); g.connect(_sfxCtx.destination);
     o.start(t); o.stop(t + dur + 0.02);
 }
+let _playerFlash = 0;
+
 function sfxHit()     { _sfx(180, 0.1, 'square', 0.07); }
 function sfxKill()    { _sfx(440, 0.08); setTimeout(() => _sfx(660, 0.12), 60); }
 function sfxHurt()    { _sfx(120, 0.14, 'sawtooth', 0.08); }
@@ -1299,6 +1301,31 @@ export default {
             return null;
         }
 
+        // Double-click an item in backpack to consume it (food/potions).
+        $packBody.addEventListener('dblclick', (ev) => {
+            const itemEl = ev.target.closest('.ua-item');
+            if (!itemEl) return;
+            const id = itemEl.dataset.id;
+            const it = inventory.items.find(i => i.id === id);
+            if (!it) return;
+            const def = ITEMS[it.key];
+            if (!def || !def.use) { addFloater(player.wx, player.wy, 'Cannot use', '#aaa'); return; }
+            // Apply effects.
+            if (def.use.hp)      player.hp      = Math.min(player.maxHp,      player.hp      + def.use.hp);
+            if (def.use.mana)    player.mana    = Math.min(player.maxMana,    player.mana    + def.use.mana);
+            if (def.use.stamina) player.stamina = Math.min(player.maxStamina, player.stamina + def.use.stamina);
+            // Remove from inventory.
+            inventory.items = inventory.items.filter(i => i.id !== id);
+            saveInventory();
+            renderBackpack();
+            const parts = [];
+            if (def.use.hp)      parts.push('+' + def.use.hp + ' HP');
+            if (def.use.mana)    parts.push('+' + def.use.mana + ' MP');
+            if (def.use.stamina) parts.push('+' + def.use.stamina + ' SP');
+            addFloater(player.wx, player.wy, parts.join(' '), '#60ff60');
+            _sfx(660, 0.08, 'sine', 0.05);
+        });
+
         $packBody.addEventListener('pointerdown', (ev) => {
             const itemEl = ev.target.closest('.ua-item');
             if (!itemEl) return;
@@ -1495,7 +1522,7 @@ export default {
                                    hp: cr.hp, maxHp: cr.maxHp, isCreature: true });
                 }
             }
-            sprites.push({ wx: player.rx, wy: player.ry, emoji: player.emoji, size: 32, isPlayer: true });
+            sprites.push({ wx: player.rx, wy: player.ry, emoji: player.emoji, size: 32, isPlayer: true, flash: _playerFlash });
             sprites.sort((a, b) => (a.wx + a.wy) - (b.wx + b.wy) || a.wx - b.wx);
             for (const s of sprites) {
                 const p = iso(s.wx, s.wy);
@@ -1504,6 +1531,14 @@ export default {
                 const lift = (elev - 0.35) * ELEV_PX;
                 const sy = p.y + cam.cy - lift;
                 drawShadow(ctx, sx, sy, s.size);
+                // Player damage flash: red glow under sprite.
+                if (s.flash && s.flash > 0) {
+                    const fa = Math.min(0.5, s.flash / 300);
+                    ctx.fillStyle = `rgba(255,40,40,${fa.toFixed(2)})`;
+                    ctx.beginPath();
+                    ctx.ellipse(sx + TILE_W / 2, sy + TILE_H / 2, 16, 10, 0, 0, Math.PI * 2);
+                    ctx.fill();
+                }
                 drawEmoji(ctx, sx, sy, s.emoji, s.size);
                 // HP bar above damaged creatures.
                 if (s.isCreature && s.hp < s.maxHp) {
@@ -1737,18 +1772,34 @@ export default {
                         const cwy = (cy0 + dcy) * CHUNK_SIZE + cr.r;
                         const distToPlayer = Math.max(Math.abs(cwx - player.wx), Math.abs(cwy - player.wy));
 
+                        // At night, neutral creatures turn aggressive (UO-style danger).
+                        const isNight = _nightFactor(timeOfDay) > 0.5;
+                        const effectiveAI = (isNight && cr.ai === 'neutral') ? 'aggressive' : cr.ai;
+
                         // Aggressive AI: chase player + attack when adjacent.
-                        if (cr.ai === 'aggressive' && distToPlayer <= 6) {
+                        if (effectiveAI === 'aggressive' && distToPlayer <= 6) {
                             if (distToPlayer <= 1 && cr.attackCooldown <= 0) {
                                 player.hp = Math.max(0, player.hp - cr.dmg);
                                 cr.attackCooldown = 1200;
                                 addFloater(player.wx, player.wy, '-' + cr.dmg, '#ff6060');
                                 sfxHurt();
+                                _playerFlash = 300;
                                 if (player.hp <= 0) {
-                                    showDialogBubble('☠️', 'You have been slain! Respawning...');
+                                    // Death penalty: lose gold from backpack.
+                                    const goldCount = inventory.items.filter(i => i.key === 'gold').length;
+                                    const goldLost = Math.min(goldCount, Math.max(1, Math.floor(goldCount * 0.3)));
+                                    let removed = 0;
+                                    inventory.items = inventory.items.filter(i => {
+                                        if (i.key === 'gold' && removed < goldLost) { removed++; return false; }
+                                        return true;
+                                    });
+                                    saveInventory();
+                                    const lostMsg = goldLost > 0 ? ' Lost ' + goldLost + ' gold.' : '';
+                                    showDialogBubble('☠️', 'You have been slain! Respawning...' + lostMsg);
                                     player.hp = player.maxHp; player.mana = player.maxMana; player.stamina = player.maxStamina;
                                     player.wx = startX; player.wy = startY;
                                     player.rx = startX; player.ry = startY;
+                                    _playerFlash = 600;
                                 }
                                 continue;
                             }
@@ -1768,7 +1819,7 @@ export default {
                         }
 
                         // Passive AI: flee if player within 4 tiles.
-                        if (cr.ai === 'passive' && distToPlayer <= 4) {
+                        if (effectiveAI === 'passive' && distToPlayer <= 4) {
                             cr.timer += dt;
                             if (cr.timer < 300) continue;
                             cr.timer = 0;
@@ -1812,6 +1863,7 @@ export default {
             tickCombat(dt);
             tickFloaters(dt);
             tickCreatureRespawn(dt);
+            if (_playerFlash > 0) _playerFlash = Math.max(0, _playerFlash - dt);
             render();
             updateHUD();
             renderMinimap();
