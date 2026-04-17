@@ -1758,6 +1758,33 @@ export default {
                 }
             }
             miniCtx.putImageData(img, 0, 0);
+
+            // Village markers (yellow squares) + creature dots (red) on minimap.
+            const mpx = player.wx, mpy = player.wy;
+            const mcx = Math.floor(mpx / CHUNK_SIZE), mcy = Math.floor(mpy / CHUNK_SIZE);
+            for (let dcy = -2; dcy <= 2; dcy++) for (let dcx = -2; dcx <= 2; dcx++) {
+                const ch = world.chunks.get((mcx+dcx)+','+(mcy+dcy));
+                if (!ch) continue;
+                for (const f of ch.features) {
+                    if (!f.village && !f.npc && !f.merchant) continue;
+                    const fwx = (mcx+dcx) * CHUNK_SIZE + f.c;
+                    const fwy = (mcy+dcy) * CHUNK_SIZE + f.r;
+                    const mx = fwx - mpx + 70, my = fwy - mpy + 70;
+                    if (mx < 0 || mx >= 140 || my < 0 || my >= 140) continue;
+                    miniCtx.fillStyle = f.merchant ? '#60ff60' : f.npc ? '#ffffff' : '#ffc857';
+                    miniCtx.fillRect(mx, my, 2, 2);
+                }
+                for (const cr of ch.creatures) {
+                    if (cr.dead) continue;
+                    const fwx = (mcx+dcx) * CHUNK_SIZE + cr.c;
+                    const fwy = (mcy+dcy) * CHUNK_SIZE + cr.r;
+                    const mx = fwx - mpx + 70, my = fwy - mpy + 70;
+                    if (mx < 0 || mx >= 140 || my < 0 || my >= 140) continue;
+                    const isAgg = cr.ai === 'aggressive' || (_nightFactor(timeOfDay) > 0.5 && cr.ai === 'neutral');
+                    miniCtx.fillStyle = isAgg ? '#ff4040' : '#80ff80';
+                    miniCtx.fillRect(mx, my, 1, 1);
+                }
+            }
             // Player dot.
             miniCtx.fillStyle = '#ffc857';
             miniCtx.fillRect(69, 69, 3, 3);
@@ -1861,6 +1888,12 @@ export default {
 
         function tickCombat(dt) {
             if (player.attackCooldown > 0) player.attackCooldown -= dt;
+            // Auto-attack: keep swinging at the target if still alive + in range.
+            if (_autoTarget && !_autoTarget.dead) {
+                attackCreature(_autoTarget);
+            } else {
+                _autoTarget = null;
+            }
             // HP regen (slow).
             if (player.hp < player.maxHp) player.hp = Math.min(player.maxHp, player.hp + 0.3 * dt / 1000);
             // Mana regen.
@@ -1869,6 +1902,39 @@ export default {
             const moving = player.moveT > 0;
             const staminaRate = moving ? 2 : 6;
             if (player.stamina < player.maxStamina) player.stamina = Math.min(player.maxStamina, player.stamina + staminaRate * dt / 1000);
+        }
+
+        // ── Ambient biome sounds ─────────────────────────
+        let _ambientOsc = null, _ambientGain = null, _ambientBiome = '';
+        const BIOME_TONES = {
+            grass: { freq: 180, type: 'sine',     gain: 0.012 },
+            forest:{ freq: 140, type: 'sine',     gain: 0.015 },
+            sand:  { freq: 260, type: 'triangle', gain: 0.008 },
+            water: { freq: 220, type: 'sine',     gain: 0.018 },
+            deep:  { freq: 190, type: 'sine',     gain: 0.020 },
+            snow:  { freq: 300, type: 'triangle', gain: 0.010 },
+            mountain:{ freq: 160, type: 'sine',   gain: 0.008 },
+        };
+        function tickAmbientSound() {
+            const biome = world.biomeAt(player.wx, player.wy);
+            if (biome === _ambientBiome) return;
+            _ambientBiome = biome;
+            const tone = BIOME_TONES[biome];
+            if (!tone) return;
+            if (!_sfxCtx) try { _sfxCtx = new (window.AudioContext || window.webkitAudioContext)(); } catch { return; }
+            // Crossfade to new ambient tone.
+            try {
+                if (_ambientGain) _ambientGain.gain.linearRampToValueAtTime(0, _sfxCtx.currentTime + 0.5);
+                if (_ambientOsc) setTimeout(() => { try { _ambientOsc.stop(); } catch {} }, 600);
+            } catch {}
+            const o = _sfxCtx.createOscillator();
+            const g = _sfxCtx.createGain();
+            o.type = tone.type; o.frequency.value = tone.freq;
+            g.gain.setValueAtTime(0, _sfxCtx.currentTime);
+            g.gain.linearRampToValueAtTime(tone.gain, _sfxCtx.currentTime + 0.8);
+            o.connect(g); g.connect(_sfxCtx.destination);
+            o.start();
+            _ambientOsc = o; _ambientGain = g;
         }
 
         // ── Hover tooltip ─────────────────────────────────
@@ -1922,7 +1988,10 @@ export default {
             }
         });
 
-        // ── Click-to-attack ──────────────────────────────
+        // ── Click-to-attack (+ auto-attack on hold) ─────
+        let _autoTarget = null; // creature ref, cleared on pointerup or target death/far
+        canvas.addEventListener('pointerup', () => { _autoTarget = null; });
+
         canvas.addEventListener('click', (ev) => {
             if (ev.button !== 0) return;
             const rect = canvas.getBoundingClientRect();
@@ -1938,6 +2007,7 @@ export default {
                     const cwy = (cy0+dcy) * CHUNK_SIZE + cr.r;
                     if (Math.abs(cwx - wx) <= 1 && Math.abs(cwy - wy) <= 1) {
                         attackCreature(cr);
+                        _autoTarget = cr; // auto-attack while holding
                         return;
                     }
                 }
@@ -2062,6 +2132,7 @@ export default {
             tickFloaters(dt);
             tickCreatureRespawn(dt);
             if (_playerFlash > 0) _playerFlash = Math.max(0, _playerFlash - dt);
+            tickAmbientSound();
             render();
             updateHUD();
             renderMinimap();
@@ -2094,6 +2165,7 @@ export default {
             document.removeEventListener('keyup', onKey);
             document.removeEventListener('pointermove', onPointerMove);
             document.removeEventListener('pointerup', onPointerUp);
+            try { _ambientOsc?.stop(); _ambientOsc = null; } catch {}
         };
     },
 
