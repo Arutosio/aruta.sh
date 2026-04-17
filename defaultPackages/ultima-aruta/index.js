@@ -938,9 +938,11 @@ class Player {
         if (!passCheck(nx, ny)) return false;
         this.moveFrom = { wx: this.wx, wy: this.wy };
         this.wx = nx; this.wy = ny;
-        // Stamina cost: each step drains 2. When exhausted, movement slows.
+        // Stamina cost: each step drains 2 (4 in water = swimming). When exhausted, movement slows.
         this.stamina = Math.max(0, this.stamina - 2);
         this.moveT = this.stamina > 0 ? MOVE_MS : MOVE_MS * 1.8;
+        // Footstep SFX (subtle).
+        try { _sfx(100 + Math.random() * 60, 0.04, 'triangle', 0.02); } catch {}
         return true;
     }
     update(dt) {
@@ -1020,7 +1022,8 @@ function showWorldSelect(root, worlds, onChange) {
                             <div class="ua-select-row" data-id="${w.id}">
                                 <div class="ua-select-meta">
                                     <div class="ua-select-name">${escapeHTML(w.name)}</div>
-                                    <div class="ua-select-info">Seed ${w.seed} · Last played ${w.lastPlayed ? new Date(w.lastPlayed).toLocaleString() : '—'}</div>
+                                    <div class="ua-select-info">${w.playerClass ? (CLASSES[w.playerClass]?.icon || '') + ' ' + (CLASSES[w.playerClass]?.name || '') + ' Lv' + (w.level || 1) + ' · 💀' + (w.kills || 0) + ' · ' : ''}Seed ${w.seed}</div>
+                                    <div class="ua-select-info">Last played ${w.lastPlayed ? new Date(w.lastPlayed).toLocaleString() : '—'}</div>
                                 </div>
                                 <div class="ua-select-actions">
                                     <button class="ua-btn" data-act="play">▶ Play</button>
@@ -2130,13 +2133,19 @@ export default {
                 dy = absY >= bigger * 0.4 ? Math.sign(wdy) : 0;
             }
             if (dx || dy) {
-                // If the diagonal step is blocked, slide along a single axis
-                // so the player doesn't "stick" against a corner.
-                if (!player.tryMove(Math.sign(dx), Math.sign(dy), passableDg)) {
-                    if (dx && dy) {
-                        if (!player.tryMove(Math.sign(dx), 0, passableDg)) {
+                // If the diagonal step is blocked, slide along a single axis.
+                let moved = player.tryMove(Math.sign(dx), Math.sign(dy), passableDg);
+                if (!moved && dx && dy) {
+                    moved = player.tryMove(Math.sign(dx), 0, passableDg) ||
                             player.tryMove(0, Math.sign(dy), passableDg);
-                        }
+                }
+                // Swimming penalty: water tiles slow + extra stamina drain.
+                if (moved && !_dungeon) {
+                    const b = biomeAtDg(player.wx, player.wy);
+                    if (b === 'water') {
+                        player.moveT = Math.max(player.moveT, MOVE_MS * 1.6);
+                        player.stamina = Math.max(0, player.stamina - 2);
+                        try { _sfx(200, 0.05, 'sine', 0.02); } catch {} // splash
                     }
                 }
             }
@@ -2319,6 +2328,18 @@ export default {
                 const sy = H / 2 + ((rawSy - lift) - H / 2) * ps;
                 const scaledSize = Math.round(s.size * ps);
                 drawShadow(ctx, sx, sy, scaledSize);
+                // Item sparkle (ground items pulse softly to attract attention).
+                if (!s.isCreature && !s.isPlayer && !s.aggro) {
+                    const f = featureAtDg(Math.round(s.wx), Math.round(s.wy));
+                    if (f && f.item) {
+                        const sparkle = 0.3 + 0.3 * Math.sin(_renderTime * 0.005 + s.wx * 7 + s.wy * 11);
+                        ctx.fillStyle = `rgba(255,220,100,${sparkle.toFixed(2)})`;
+                        const tw = TILE_W * ps;
+                        ctx.beginPath();
+                        ctx.arc(sx + tw / 2, sy + (TILE_H * ps) / 2, 4, 0, Math.PI * 2);
+                        ctx.fill();
+                    }
+                }
                 // Target highlight ring.
                 if (s.isTarget) {
                     ctx.strokeStyle = 'rgba(255,200,60,0.7)';
@@ -3063,6 +3084,9 @@ export default {
                     maxHp: player.maxHp, maxMana: player.maxMana, maxStamina: player.maxStamina, baseDmg: player.baseDmg, kills: player.kills,
                 }).catch(() => {});
                 worldRow.lastPlayed = Date.now();
+                worldRow.playerClass = playerClass;
+                worldRow.level = player.level;
+                worldRow.kills = player.kills;
                 sdk.storage.set('worlds', worlds).catch(() => {});
             }
 
