@@ -181,6 +181,12 @@ const RECIPES = [
     { name: 'Necklace',      inputs: ['gem', 'gem', 'gold'],    output: 'necklace' },
     { name: 'Dagger',        inputs: ['stone', 'stone'],         output: 'dagger' },
     { name: 'Axe',           inputs: ['stone', 'stone', 'herb'], output: 'axe' },
+    { name: 'Shield',        inputs: ['stone', 'stone', 'stone'], output: 'shield' },
+    { name: 'Helm',          inputs: ['stone', 'stone', 'gold'], output: 'helm' },
+    { name: 'Boots',         inputs: ['herb', 'herb', 'stone'],  output: 'boots' },
+    { name: 'Armor',         inputs: ['stone', 'stone', 'stone', 'gold'], output: 'armor' },
+    { name: 'Bow',           inputs: ['herb', 'herb', 'herb', 'stone'],   output: 'bow' },
+    { name: 'Crown',         inputs: ['gem', 'gem', 'gem', 'gold'],       output: 'crown' },
 ];
 
 const SLOTS = [
@@ -931,6 +937,7 @@ class Player {
         this.attackCooldown = 0;
         this.baseDmg = 5;
         this.kills = 0;
+        this.days = 0;
     }
     tryMove(dx, dy, passCheck) {
         if (this.moveT > 0) return false;
@@ -1218,6 +1225,7 @@ export default {
             if (saved.maxStamina != null) player.maxStamina = saved.maxStamina;
             if (saved.baseDmg != null) player.baseDmg = saved.baseDmg;
             if (saved.kills != null)  player.kills  = saved.kills;
+            if (saved.days != null)   player.days   = saved.days;
         }
         // Day starts at noon on first load. Time advances with real-time dt.
         let timeOfDay = (typeof saved?.timeOfDay === 'number') ? saved.timeOfDay : 0.5;
@@ -1761,7 +1769,7 @@ export default {
                 <div style="margin-top:6px">Position: ${player.wx}, ${player.wy}</div>
                 <div>Biome: ${bm}</div>
                 <div>Seed: <span style="color:#ffc857">${worldRow.seed}</span></div>
-                <div>Kills: 💀 <b>${player.kills}</b></div>
+                <div>Kills: 💀 <b>${player.kills}</b> · Days survived: <b>${player.days + 1}</b></div>
                 <div>Inventory: ${inventory.items.length} items</div>
                 <div style="margin-top:10px"><button class="ua-btn ua-btn-danger" id="ua-back-to-menu">↩ Back to world menu</button></div>
             `;
@@ -1771,7 +1779,7 @@ export default {
                     seed, px: player.wx, py: player.wy, timeOfDay, playerClass,
                     hp: player.hp, mana: player.mana, stamina: player.stamina,
                     level: player.level, xp: player.xp, xpNext: player.xpNext,
-                    maxHp: player.maxHp, maxMana: player.maxMana, maxStamina: player.maxStamina, baseDmg: player.baseDmg, kills: player.kills,
+                    maxHp: player.maxHp, maxMana: player.maxMana, maxStamina: player.maxStamina, baseDmg: player.baseDmg, kills: player.kills, days: player.days,
                 }).catch(() => {});
                 root.__uaCleanup?.();
                 // Reload by re-invoking mount — simplest way.
@@ -2509,12 +2517,12 @@ export default {
                 const ch = world.chunks.get((mcx+dcx)+','+(mcy+dcy));
                 if (!ch) continue;
                 for (const f of ch.features) {
-                    if (!f.village && !f.npc && !f.merchant) continue;
+                    if (!f.village && !f.npc && !f.merchant && !f.dungeon) continue;
                     const fwx = (mcx+dcx) * CHUNK_SIZE + f.c;
                     const fwy = (mcy+dcy) * CHUNK_SIZE + f.r;
                     const mx = fwx - mpx + 70, my = fwy - mpy + 70;
                     if (mx < 0 || mx >= 140 || my < 0 || my >= 140) continue;
-                    miniCtx.fillStyle = f.merchant ? '#60ff60' : f.npc ? '#ffffff' : '#ffc857';
+                    miniCtx.fillStyle = f.dungeon ? '#ff4040' : f.merchant ? '#60ff60' : f.npc ? '#ffffff' : '#ffc857';
                     miniCtx.fillRect(mx, my, 2, 2);
                 }
                 for (const cr of ch.creatures) {
@@ -2544,7 +2552,7 @@ export default {
             const mm = String(mins).padStart(2, '0');
             const phase = timeOfDay < 0.25 ? '🌑' : timeOfDay < 0.42 ? '🌅' : timeOfDay < 0.66 ? '☀️' : timeOfDay < 0.83 ? '🌇' : '🌙';
             const cd2 = classDef || CLASSES.warrior;
-            $hud.innerHTML = `${cd2.icon} <b>Lv${player.level}</b> · ❤️ <b>${Math.round(player.hp)}/${player.maxHp}</b> · 💧 <b>${Math.round(player.mana)}/${player.maxMana}</b> · ⚡ <b>${Math.round(player.stamina)}/${player.maxStamina}</b> · 💀 ${player.kills}<br>📍 <b>${player.wx}, ${player.wy}</b> · ${biome} · ${phase} <b>${hh}:${mm}</b>`;
+            $hud.innerHTML = `${cd2.icon} <b>Lv${player.level}</b> · ❤️ <b>${Math.round(player.hp)}/${player.maxHp}</b> · 💧 <b>${Math.round(player.mana)}/${player.maxMana}</b> · ⚡ <b>${Math.round(player.stamina)}/${player.maxStamina}</b> · 💀${player.kills}<br>📍 <b>${player.wx},${player.wy}</b> · ${biome} · ${phase} <b>${hh}:${mm}</b> · Day <b>${player.days + 1}</b>`;
         }
 
         // ── Combat helpers ─────────────────────────────────
@@ -3071,7 +3079,9 @@ export default {
             renderMinimap();
 
             // Advance time-of-day (wraps 0..1 over DAY_MS).
+            const prevDay = timeOfDay;
             timeOfDay = (timeOfDay + dt / DAY_MS) % 1;
+            if (timeOfDay < prevDay) player.days++; // midnight wrap = new day
 
             // Save every ~2s.
             saveTimer += dt;
@@ -3081,7 +3091,7 @@ export default {
                     seed, px: player.wx, py: player.wy, timeOfDay, playerClass,
                     hp: player.hp, mana: player.mana, stamina: player.stamina,
                     level: player.level, xp: player.xp, xpNext: player.xpNext,
-                    maxHp: player.maxHp, maxMana: player.maxMana, maxStamina: player.maxStamina, baseDmg: player.baseDmg, kills: player.kills,
+                    maxHp: player.maxHp, maxMana: player.maxMana, maxStamina: player.maxStamina, baseDmg: player.baseDmg, kills: player.kills, days: player.days,
                 }).catch(() => {});
                 worldRow.lastPlayed = Date.now();
                 worldRow.playerClass = playerClass;
