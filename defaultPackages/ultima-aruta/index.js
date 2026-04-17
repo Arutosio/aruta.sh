@@ -620,6 +620,15 @@ function camera(canvasW, canvasH, pwx, pwy) {
     return { cx: canvasW / 2 - p.x, cy: canvasH / 2 - p.y };
 }
 
+// Perspective scale: tiles/sprites near the bottom of the screen (close)
+// appear larger; those near the top (far) appear smaller. Returns a
+// multiplier centred on 1.0 at the viewport middle.
+const PERSP_STRENGTH = 0.35; // 0 = no perspective, 1 = extreme
+function perspScale(screenY, viewH) {
+    const norm = (screenY / viewH) - 0.5; // -0.5 (top) to +0.5 (bottom)
+    return 1.0 + norm * PERSP_STRENGTH;   // ~0.825 at top, ~1.175 at bottom
+}
+
 // ── Rendering ────────────────────────────────────────────
 const ELEV_PX = 18; // max pixel lift for highest elevation
 
@@ -1786,20 +1795,39 @@ export default {
             const minY = Math.min(tl.wy, tr.wy, bl.wy, br.wy) - 1;
             const maxY = Math.max(tl.wy, tr.wy, bl.wy, br.wy) + 1;
 
-            // PASS 1 — tiles with elevation height + depth walls.
+            // PASS 1 — tiles with elevation height + depth walls + perspective.
             for (let y = minY; y <= maxY; y++) {
                 for (let x = minX; x <= maxX; x++) {
                     const p = iso(x, y);
-                    const sx = p.x + cam.cx - TILE_W / 2;
-                    const sy = p.y + cam.cy;
-                    const b = biomeAtDg(x, y);
+                    const rawSx = p.x + cam.cx;
+                    const rawSy = p.y + cam.cy;
                     const elev = elevAtDg(x, y);
-                    drawTile(ctx, sx, sy, b, elev);
+                    const lift = (elev - 0.35) * ELEV_PX;
+                    const tileScreenY = rawSy - lift + TILE_H / 2;
+                    const ps = perspScale(tileScreenY, H);
+                    // Perspective-scaled position: shift toward/away from center.
+                    const sx = W / 2 + (rawSx - W / 2) * ps - (TILE_W * ps) / 2;
+                    const sy = H / 2 + (rawSy - H / 2) * ps;
+                    ctx.save();
+                    ctx.translate(sx + (TILE_W * ps) / 2, sy + (TILE_H * ps) / 2);
+                    ctx.scale(ps, ps);
+                    ctx.translate(-(TILE_W / 2), -(TILE_H / 2));
+                    const b = biomeAtDg(x, y);
+                    drawTile(ctx, 0, 0, b, elev);
                     const elevS = elevAtDg(x + 1, y);
                     const elevE = elevAtDg(x, y + 1);
-                    drawTileDepth(ctx, sx, sy, elev, elevS, elevE);
+                    drawTileDepth(ctx, 0, 0, elev, elevS, elevE);
+                    ctx.restore();
                 }
             }
+
+            // ── Day/night fog of war (drawn on tiles, BEFORE sprites
+            //    so entities stay fully opaque and visible in the dark).
+            const pScreen = iso(player.rx, player.ry);
+            const pLift = (elevAtDg(player.wx, player.wy) - 0.35) * ELEV_PX;
+            drawFogOfWar(ctx, W, H,
+                pScreen.x + cam.cx, pScreen.y + cam.cy + TILE_H / 2 - pLift,
+                timeOfDay);
 
             // PASS 2 — features + player, depth-sorted by wx+wy then wx.
             const SIZES = {
@@ -1873,11 +1901,16 @@ export default {
             sprites.sort((a, b) => (a.wx + a.wy) - (b.wx + b.wy) || a.wx - b.wx);
             for (const s of sprites) {
                 const p = iso(s.wx, s.wy);
-                const sx = p.x + cam.cx - TILE_W / 2;
-                const elev = world.elevAt(Math.round(s.wx), Math.round(s.wy));
+                const rawSx = p.x + cam.cx;
+                const rawSy = p.y + cam.cy;
+                const elev = elevAtDg(Math.round(s.wx), Math.round(s.wy));
                 const lift = (elev - 0.35) * ELEV_PX;
-                const sy = p.y + cam.cy - lift;
-                drawShadow(ctx, sx, sy, s.size);
+                const spriteScreenY = rawSy - lift + TILE_H / 2;
+                const ps = perspScale(spriteScreenY, H);
+                const sx = W / 2 + (rawSx - W / 2) * ps - (TILE_W * ps) / 2;
+                const sy = H / 2 + ((rawSy - lift) - H / 2) * ps;
+                const scaledSize = Math.round(s.size * ps);
+                drawShadow(ctx, sx, sy, scaledSize);
                 // Player damage flash: red glow under sprite.
                 if (s.flash && s.flash > 0) {
                     const fa = Math.min(0.5, s.flash / 300);
@@ -1886,21 +1919,23 @@ export default {
                     ctx.ellipse(sx + TILE_W / 2, sy + TILE_H / 2, 16, 10, 0, 0, Math.PI * 2);
                     ctx.fill();
                 }
-                drawEmoji(ctx, sx, sy, s.emoji, s.size);
+                drawEmoji(ctx, sx, sy, s.emoji, scaledSize);
                 // Aggro indicator — pulsing red triangle above hostile creatures.
                 if (s.aggro) {
                     const pulse = 0.5 + 0.5 * Math.sin(_renderTime * 0.008);
                     ctx.fillStyle = `rgba(255,50,50,${(0.5 + pulse * 0.5).toFixed(2)})`;
-                    const ax = sx + TILE_W / 2, ay = sy - 6;
+                    const tw = TILE_W * ps;
+                    const ax = sx + tw / 2, ay = sy - 6 * ps;
                     ctx.beginPath();
                     ctx.moveTo(ax, ay - 6); ctx.lineTo(ax - 4, ay); ctx.lineTo(ax + 4, ay);
                     ctx.closePath(); ctx.fill();
                 }
                 // HP bar above damaged creatures.
                 if (s.isCreature && s.hp < s.maxHp) {
-                    const bw = 24, bh = 3;
-                    const bx = sx + TILE_W / 2 - bw / 2;
-                    const by = sy - 2;
+                    const bw = Math.round(24 * ps), bh = 3;
+                    const tw = TILE_W * ps;
+                    const bx = sx + tw / 2 - bw / 2;
+                    const by = sy - 2 * ps;
                     ctx.fillStyle = 'rgba(0,0,0,0.5)';
                     ctx.fillRect(bx - 1, by - 1, bw + 2, bh + 2);
                     const pct = Math.max(0, s.hp / s.maxHp);
@@ -1909,13 +1944,6 @@ export default {
                     ctx.fillRect(bx, by, bw * pct, bh);
                 }
             }
-
-            // ── Day/night fog of war ─────────────────────────
-            const pScreen = iso(player.rx, player.ry);
-            const pLift = (world.elevAt(player.wx, player.wy) - 0.35) * ELEV_PX;
-            drawFogOfWar(ctx, W, H,
-                pScreen.x + cam.cx, pScreen.y + cam.cy + TILE_H / 2 - pLift,
-                timeOfDay);
 
             // ── Player stat bars (top-left, below HUD) ─────
             const barX = 8, barY = H - 28, barW = 120, barH = 5, barGap = 8;
