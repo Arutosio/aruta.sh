@@ -376,11 +376,12 @@ class World {
             if (f && f.blocks) return false;
             return true;
         }
-        // Wade rule: a shallow-water tile (not deep) is still reachable if at
-        // least one of its 4 world-neighbours is solid land. Lets the player
-        // hug the shoreline UO-style.
+        // Wade rule: a shallow-water tile (not deep) is passable if any of
+        // its 8 world-neighbours is solid land. Lets the player reach
+        // narrow landmasses, islands' corners, and coves without being
+        // stopped just because the target cell is classified as water.
         if (b === 'water') {
-            const neighbours = [[1,0],[-1,0],[0,1],[0,-1]];
+            const neighbours = [[1,0],[-1,0],[0,1],[0,-1],[1,1],[1,-1],[-1,1],[-1,-1]];
             for (const [dx, dy] of neighbours) {
                 const nb = this.biomeAt(wx + dx, wy + dy);
                 if (BIOMES[nb].passable) {
@@ -1167,7 +1168,17 @@ export default {
                 dx = absX >= bigger * 0.4 ? Math.sign(wdx) : 0;
                 dy = absY >= bigger * 0.4 ? Math.sign(wdy) : 0;
             }
-            if (dx || dy) player.tryMove(Math.sign(dx), Math.sign(dy), world);
+            if (dx || dy) {
+                // If the diagonal step is blocked, slide along a single axis
+                // so the player doesn't "stick" against a corner.
+                if (!player.tryMove(Math.sign(dx), Math.sign(dy), world)) {
+                    if (dx && dy) {
+                        if (!player.tryMove(Math.sign(dx), 0, world)) {
+                            player.tryMove(0, Math.sign(dy), world);
+                        }
+                    }
+                }
+            }
         }
 
         function render() {
