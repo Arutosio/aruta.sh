@@ -69,14 +69,18 @@ const CREATURE_DEFS = {
     '👻': { ai: 'aggressive', hp: 35, dmg: 8,  xp: 12, loot: [{ key: 'scroll', rate: 0.3 }, { key: 'gem', rate: 0.15 }] },
     '🦇': { ai: 'aggressive', hp: 20, dmg: 5,  xp: 6,  loot: [{ key: 'herb', rate: 0.4 }] },
     '🕷️': { ai: 'aggressive', hp: 30, dmg: 7,  xp: 10, loot: [{ key: 'potion', rate: 0.2 }, { key: 'gold', rate: 0.4 }] },
+    '🐻': { ai: 'neutral',    hp: 50, dmg: 9,  xp: 14, loot: [{ key: 'herb', rate: 0.4 }, { key: 'gold', rate: 0.3 }] },
+    '🐍': { ai: 'aggressive', hp: 22, dmg: 6,  xp: 7,  loot: [{ key: 'potion', rate: 0.15 }] },
+    '🐉': { ai: 'aggressive', hp: 120, dmg: 18, xp: 50, loot: [{ key: 'gem', rate: 0.8 }, { key: 'crown', rate: 0.2 }, { key: 'spellbook', rate: 0.15 }] },
 };
 
 const CREATURES = {
     grass:  { count: 3, pool: ['🐑', '🐇', '🦊', '🦌'] },
-    forest: { count: 4, pool: ['🦌', '🐗', '🦉', '🦝'] },
+    forest: { count: 4, pool: ['🦌', '🐗', '🦉', '🦝', '🐻', '🐍'] },
     sand:   { count: 1, pool: ['🦀', '🦎'] },
     water:  { count: 3, pool: ['🐟', '🐠'] },
-    snow:   { count: 1, pool: ['🦌', '🐺'] },
+    snow:   { count: 1, pool: ['🦌', '🐺', '🐻'] },
+    mountain: { count: 1, pool: ['🐉'] },
 };
 
 const DUNGEON_CREATURES = [
@@ -202,6 +206,7 @@ const SPRITE_SIZES = {
     '💍': 12, '📖': 20,
     '🕳️': 32, '🏚️': 38, '🪜': 30, '🧰': 24,
     '💀': 26, '👻': 24, '🦇': 20, '🕷️': 22,
+    '🐻': 28, '🐍': 20, '🐉': 42,
 };
 /* ╔══════════════════════════════════════════════════════════╗
  * ║  ULTIMA ARUTA — engine.js                                  ║
@@ -383,7 +388,7 @@ class World {
         // ── Village placement ──────────────────────────────
         // ~8% of chunks get a village. Find the largest flat grass patch
         // around the chunk center; if big enough, carve a small settlement.
-        if (rnd() < 0.08) {
+        if (rnd() < 0.14) {
             this._maybePlaceVillage(cx, cy, biomes, features, rnd);
         }
 
@@ -473,6 +478,20 @@ class World {
             for (let i = features.length - 1; i >= 0; i--) {
                 const f = features[i];
                 if (f.c >= oc - 2 && f.c <= oc + 2 && f.r >= or - 2 && f.r <= or + 2) features.splice(i, 1);
+            }
+
+            // Pave the village area with sand (dirt paths).
+            for (let pr = or - 1; pr <= or + 1; pr++) {
+                for (let pc = oc - 1; pc <= oc + 1; pc++) {
+                    if (pr >= 0 && pr < N && pc >= 0 && pc < N) biomes[pr * N + pc] = 'sand';
+                }
+            }
+            // Cross paths to houses.
+            for (const [hc, hr] of [[-2,0],[2,0],[0,-2],[0,2]]) {
+                const pc = oc + hc, pr2 = or + hr;
+                if (pc >= 0 && pc < N && pr2 >= 0 && pr2 < N) biomes[pr2 * N + pc] = 'sand';
+                const mc = oc + Math.sign(hc), mr = or + Math.sign(hr);
+                if (mc >= 0 && mc < N && mr >= 0 && mr < N) biomes[mr * N + mc] = 'sand';
             }
 
             // Landmark at the centre.

@@ -2,7 +2,7 @@
     "id": "ultima-aruta",
     "name": "Ultima Aruta",
     "icon": "🗺️",
-    "version": "0.27.0",
+    "version": "0.28.0",
     "minSdk": 2,
     "roles": ["app"],
     "author": "Aruta",
