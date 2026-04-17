@@ -53,9 +53,9 @@ const FEATURES = {
     sand:    [{ emoji: '🌴', rate: 0.02 }, { emoji: '🪨', rate: 0.01 }],
     swamp:   [{ emoji: '🌿', rate: 0.08 }, { emoji: '🍄', rate: 0.04 }, { emoji: '🌳', rate: 0.02 }],
     grass:   [{ emoji: '🌳', rate: 0.03 }, { emoji: '🌿', rate: 0.04 }, { emoji: '🌾', rate: 0.02 }, { emoji: '🪨', rate: 0.005 }],
-    savanna: [{ emoji: '🌾', rate: 0.06 }, { emoji: '🌳', rate: 0.01 }, { emoji: '🪨', rate: 0.008 }],
+    savanna: [{ emoji: '🌾', rate: 0.06 }, { emoji: '🌳', rate: 0.01 }, { emoji: '🪨', rate: 0.008 }, { emoji: '🗿', rate: 0.003 }],
     forest:  [{ emoji: '🌲', rate: 0.35 }, { emoji: '🌳', rate: 0.12 }, { emoji: '🍄', rate: 0.01 }, { emoji: '🪨', rate: 0.01 }],
-    tundra:  [{ emoji: '🪨', rate: 0.03 }, { emoji: '🌿', rate: 0.01 }],
+    tundra:  [{ emoji: '🪨', rate: 0.03 }, { emoji: '🌿', rate: 0.01 }, { emoji: '🗿', rate: 0.004 }],
     snow:    [{ emoji: '🌲', rate: 0.06 }, { emoji: '⛄', rate: 0.005 }],
 };
 
@@ -83,18 +83,32 @@ const CREATURE_DEFS = {
     '🐲': { ai: 'aggressive', hp: 100, dmg: 15, xp: 40, loot: [{ key: 'gem', rate: 0.9 }, { key: 'crown', rate: 0.3 }] },
     '👹': { ai: 'aggressive', hp: 80,  dmg: 12, xp: 30, loot: [{ key: 'armor', rate: 0.4 }, { key: 'gold', rate: 0.8 }] },
     '🧟': { ai: 'aggressive', hp: 70,  dmg: 10, xp: 25, loot: [{ key: 'sword', rate: 0.3 }, { key: 'potion', rate: 0.5 }] },
+    // New overworld creatures
+    '🦅': { ai: 'passive',    hp: 14, dmg: 0,  xp: 3,  loot: [{ key: 'feather', rate: 0.6 }] },
+    '🦈': { ai: 'aggressive', hp: 50, dmg: 12, xp: 15, loot: [{ key: 'gold', rate: 0.5 }] },
+    '🐊': { ai: 'aggressive', hp: 40, dmg: 9,  xp: 12, loot: [{ key: 'gold', rate: 0.4 }, { key: 'meat', rate: 0.3 }] },
+    '🦂': { ai: 'aggressive', hp: 25, dmg: 7,  xp: 8,  loot: [{ key: 'potion', rate: 0.2 }] },
+    '🐄': { ai: 'passive',    hp: 20, dmg: 0,  xp: 2,  loot: [{ key: 'meat', rate: 0.7 }] },
+    '🐴': { ai: 'passive',    hp: 30, dmg: 0,  xp: 1,  loot: [{ key: 'herb', rate: 0.3 }] },
+    '🦄': { ai: 'passive',    hp: 40, dmg: 0,  xp: 10, loot: [{ key: 'gem', rate: 0.8 }, { key: 'potion', rate: 0.5 }] },
+    '🧛': { ai: 'aggressive', hp: 55, dmg: 11, xp: 18, loot: [{ key: 'scroll', rate: 0.4 }, { key: 'gold', rate: 0.6 }] },
+    '🧌': { ai: 'aggressive', hp: 65, dmg: 10, xp: 16, loot: [{ key: 'stone', rate: 0.5 }, { key: 'gold', rate: 0.4 }] },
+    '👿': { ai: 'aggressive', hp: 110, dmg: 16, xp: 45, loot: [{ key: 'spellbook', rate: 0.3 }, { key: 'gem', rate: 0.7 }] },
+    '🐓': { ai: 'passive',    hp: 5,  dmg: 0,  xp: 1,  loot: [{ key: 'feather', rate: 0.5 }] },
+    '🦆': { ai: 'passive',    hp: 8,  dmg: 0,  xp: 1,  loot: [{ key: 'feather', rate: 0.4 }] },
 };
 
 const CREATURES = {
-    grass:    { count: 3, pool: ['🐑', '🐇', '🦊', '🦌'] },
-    savanna:  { count: 2, pool: ['🐇', '🦎', '🐍'] },
-    forest:   { count: 4, pool: ['🦌', '🐗', '🦉', '🦝', '🐻', '🐍'] },
-    swamp:    { count: 2, pool: ['🐍', '🦎', '🐸'] },
-    sand:     { count: 1, pool: ['🦀', '🦎'] },
-    water:    { count: 3, pool: ['🐟', '🐠'] },
-    tundra:   { count: 1, pool: ['🐺', '🐻'] },
+    grass:    { count: 4, pool: ['🐑', '🐇', '🦊', '🦌', '🐄', '🐴', '🐓'] },
+    savanna:  { count: 3, pool: ['🐇', '🦎', '🐍', '🦂', '🐄'] },
+    forest:   { count: 4, pool: ['🦌', '🐗', '🦉', '🦝', '🐻', '🐍', '🦄'] },
+    swamp:    { count: 3, pool: ['🐍', '🦎', '🐸', '🐊'] },
+    sand:     { count: 2, pool: ['🦀', '🦎', '🦂'] },
+    water:    { count: 3, pool: ['🐟', '🐠', '🦆'] },
+    deep:     { count: 2, pool: ['🦈'] },
+    tundra:   { count: 2, pool: ['🐺', '🐻', '🦅'] },
     snow:     { count: 1, pool: ['🦌', '🐺', '🐻'] },
-    mountain: { count: 1, pool: ['🐉'] },
+    mountain: { count: 1, pool: ['🐉', '🦅', '🧌'] },
 };
 
 const DUNGEON_CREATURES = [
@@ -139,6 +153,16 @@ const ITEMS = {
     necklace: { emoji: '📿', name: 'Necklace',      slot: 'neck' },
     ring:     { emoji: '💍', name: 'Ring',          slot: 'ring' },
     spellbook:{ emoji: '📖', name: 'Spellbook',     slot: 'book' },
+    // New items
+    wand:     { emoji: '🪄', name: 'Wand',          slot: 'weapon' },
+    meat:     { emoji: '🍖', name: 'Cooked Meat',   use: { hp: 18, stamina: 20 } },
+    bread:    { emoji: '🍞', name: 'Bread',         use: { hp: 10, stamina: 12 } },
+    wine:     { emoji: '🍷', name: 'Wine',          use: { hp: 5, mana: 15, stamina: 10 } },
+    feather:  { emoji: '🪶', name: 'Feather' },
+    wood:     { emoji: '🪵', name: 'Wood' },
+    crystal:  { emoji: '🔮', name: 'Crystal Ball',  slot: 'book' },
+    torch:    { emoji: '🔦', name: 'Torch' },
+    compass:  { emoji: '🧭', name: 'Compass' },
 };
 
 const ITEM_DROPS = {
@@ -171,6 +195,11 @@ const MERCHANT_STOCK = [
     { key: 'armor',     price: 50 }, { key: 'boots',     price: 20 },
     { key: 'bow',       price: 45 }, { key: 'ring',      price: 25 },
     { key: 'spellbook', price: 55 },
+    { key: 'wand',      price: 35 },
+    { key: 'meat',      price: 8 },
+    { key: 'bread',     price: 4 },
+    { key: 'wine',      price: 10 },
+    { key: 'torch',     price: 6 },
 ];
 
 const RECIPES = [
@@ -187,6 +216,9 @@ const RECIPES = [
     { name: 'Armor',         inputs: ['stone', 'stone', 'stone', 'gold'], output: 'armor' },
     { name: 'Bow',           inputs: ['herb', 'herb', 'herb', 'stone'],   output: 'bow' },
     { name: 'Crown',         inputs: ['gem', 'gem', 'gem', 'gold'],       output: 'crown' },
+    { name: 'Wand',          inputs: ['wood', 'gem'],                    output: 'wand' },
+    { name: 'Torch',         inputs: ['wood', 'herb'],                   output: 'torch' },
+    { name: 'Spellbook',     inputs: ['wood', 'feather', 'gem'],         output: 'spellbook' },
 ];
 
 const SLOTS = [
@@ -228,6 +260,11 @@ const SPRITE_SIZES = {
     '💀': 26, '👻': 24, '🦇': 20, '🕷️': 22, '⛰️': 36,
     '🐻': 28, '🐍': 20, '🐉': 42, '🐸': 16,
     '🐲': 38, '👹': 34, '🧟': 28,
+    '🦅': 22, '🦈': 26, '🐊': 24, '🦂': 18, '🐄': 26, '🐴': 28, '🦄': 30,
+    '🧛': 28, '🧌': 30, '👿': 36, '🐓': 16, '🦆': 18,
+    '🪄': 20, '🍖': 16, '🍞': 16, '🍷': 16, '🪶': 14, '🪵': 18,
+    '🔮': 22, '🔦': 18, '🧭': 16,
+    '⛲': 34, '🪦': 22, '⛺': 32, '🕯️': 16, '🗿': 30,
 };
 /* ╔══════════════════════════════════════════════════════════╗
  * ║  ULTIMA ARUTA — engine.js                                  ║
@@ -300,6 +337,8 @@ function generateDungeon(dungeonId) {
                     { emoji: '🐲', hp: 100, dmg: 15, xp: 40 },
                     { emoji: '👹', hp: 80,  dmg: 12, xp: 30 },
                     { emoji: '🧟', hp: 70,  dmg: 10, xp: 25 },
+                    { emoji: '👿', hp: 110, dmg: 16, xp: 45 },
+                    { emoji: '🧌', hp: 90,  dmg: 13, xp: 35 },
                 ];
                 const boss = bossPool[Math.floor(rnd() * bossPool.length)];
                 creatures.push({
@@ -585,6 +624,11 @@ class World {
                     npc: true,
                     dialog: DIALOGS[Math.floor(rnd() * DIALOGS.length)],
                 });
+            }
+            // Fountain at one of the corners (heals on interact).
+            const fc = oc - 1, fr = or - 1;
+            if (!features.find(f => f.c === fc && f.r === fr)) {
+                features.push({ c: fc, r: fr, emoji: '⛲', fountain: true });
             }
             // 1 merchant per village (always present).
             const mc = oc + 1, mr = or - 1;
@@ -1440,6 +1484,13 @@ export default {
                 for (let dx = -1; dx <= 1; dx++) {
                     const f = world.featureAt(player.wx + dx, player.wy + dy);
                     if (!f) continue;
+                    if (f.fountain) {
+                        player.hp = player.maxHp; player.mana = player.maxMana; player.stamina = player.maxStamina;
+                        addFloater(player.wx, player.wy, 'Fully restored!', '#60ff60');
+                        _sfx(440, 0.12); setTimeout(() => _sfx(660, 0.14), 100);
+                        showDialogBubble('⛲', 'The sacred fountain restores your body and spirit.');
+                        return;
+                    }
                     if (f.merchant) { showShop(); return; }
                     if (f.npc) { showDialogBubble(f.emoji, f.dialog || DIALOGS[0]); return; }
                     if (f.dungeon && dx === 0 && dy === 0) {
@@ -2559,7 +2610,7 @@ export default {
         function getWeaponDmg() {
             const w = equipment.weapon;
             if (!w) return 0;
-            const map = { sword: 8, axe: 10, bow: 7, dagger: 5 };
+            const map = { sword: 8, axe: 10, bow: 7, dagger: 5, wand: 6 };
             return map[w.key] || 4;
         }
 
@@ -2871,7 +2922,8 @@ export default {
                     }
                 } else {
                     const f = world.featureAt(wx, wy);
-                    if (f && f.merchant) text = `${f.emoji} Merchant · Press Space to trade`;
+                    if (f && f.fountain) text = `${f.emoji} Sacred Fountain · Press Space to heal`;
+                    else if (f && f.merchant) text = `${f.emoji} Merchant · Press Space to trade`;
                     else if (f && f.npc) text = `${f.emoji} NPC · Press Space to talk`;
                     else if (f && f.dungeon) text = `${f.emoji} ${f.emoji === '⛰️' ? 'Mountain cave' : 'Dungeon entrance'} · Press Space to enter`;
                 }
@@ -2924,13 +2976,14 @@ export default {
                     const f = world.featureAt(wx, wy);
                     if (f && !f.item && !f.npc && !f.merchant && !f.dungeon && !f.village && !f.blocks) {
                         const GATHER = {
-                            '🌲': [{ key: 'herb', rate: 0.5 }, { key: 'apple', rate: 0.2 }],
-                            '🌳': [{ key: 'herb', rate: 0.5 }, { key: 'apple', rate: 0.3 }],
-                            '🌴': [{ key: 'apple', rate: 0.6 }],
+                            '🌲': [{ key: 'wood', rate: 0.5 }, { key: 'herb', rate: 0.3 }, { key: 'apple', rate: 0.1 }],
+                            '🌳': [{ key: 'wood', rate: 0.5 }, { key: 'herb', rate: 0.3 }, { key: 'apple', rate: 0.2 }],
+                            '🌴': [{ key: 'wood', rate: 0.3 }, { key: 'apple', rate: 0.5 }],
                             '🪨': [{ key: 'stone', rate: 0.6 }, { key: 'gem', rate: 0.1 }],
                             '🍄': [{ key: 'mushroom', rate: 0.9 }],
                             '🌿': [{ key: 'herb', rate: 0.8 }],
                             '🌾': [{ key: 'berry', rate: 0.7 }],
+                            '⛄': [{ key: 'stone', rate: 0.3 }],
                         };
                         const table = GATHER[f.emoji];
                         if (table) {
