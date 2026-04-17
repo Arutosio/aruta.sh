@@ -561,40 +561,42 @@ function _nightFactor(t) {
     return Math.max(0, -noon); // 0..1
 }
 
-/** Vision radius in tiles. Day = huge, night = tight torch radius. */
+/** Vision radius in tiles. Day = 18 tiles, night = 6. Always bounded. */
 function _visionRadius(t) {
     const nf = _nightFactor(t);
-    // Day: 999 (effectively infinite). Night: 6 tiles. Transition smooth.
-    return 999 - nf * 993;
+    return 18 - nf * 12; // 18 day → 6 night
 }
 
-/** Draws the fog-of-war radial vignette + night tint centred on the player. */
+/** Vision radius fog — ALWAYS active. Daytime shows a wide clear area
+ *  with grey beyond; night shrinks the radius and tints with dark blue. */
 function drawFogOfWar(ctx, W, H, playerScreenX, playerScreenY, timeOfDay) {
     const nf = _nightFactor(timeOfDay);
-    if (nf < 0.02) return; // broad daylight — skip entirely
-
     const vr = _visionRadius(timeOfDay);
-    const radiusPx = vr * TILE_W * 0.7; // convert tile radius to approximate screen pixels
+    const radiusPx = vr * TILE_W * 0.7;
 
-    // Warm dusk/dawn vs cold night.
+    // Colour: warm at dusk/dawn, cold at night, neutral grey during day.
     const warm = (timeOfDay > 0.66 && timeOfDay < 0.85) || (timeOfDay > 0.15 && timeOfDay < 0.34);
-    const r = warm ? 80 : 8;
-    const g = warm ? 50 : 10;
-    const b = warm ? 20 : 35;
+    const r = warm ? 80 : nf > 0.1 ? 8 : 40;
+    const g = warm ? 50 : nf > 0.1 ? 10 : 40;
+    const b = warm ? 20 : nf > 0.1 ? 35 : 45;
+
+    // Inner alpha: 0 (clear). Outer alpha: 0.92 at night, 0.85 during day.
+    const outerAlpha = 0.85 + nf * 0.07;
+    const midAlpha   = nf * 0.35;
 
     const grad = ctx.createRadialGradient(
-        playerScreenX, playerScreenY, radiusPx * 0.3,
+        playerScreenX, playerScreenY, radiusPx * 0.25,
         playerScreenX, playerScreenY, radiusPx
     );
     grad.addColorStop(0, `rgba(${r},${g},${b},0)`);
-    grad.addColorStop(0.6, `rgba(${r},${g},${b},${(nf * 0.45).toFixed(3)})`);
-    grad.addColorStop(1, `rgba(${r},${g},${b},${(nf * 0.92).toFixed(3)})`);
+    grad.addColorStop(0.55, `rgba(${r},${g},${b},${midAlpha.toFixed(3)})`);
+    grad.addColorStop(1, `rgba(${r},${g},${b},${outerAlpha.toFixed(3)})`);
     ctx.fillStyle = grad;
     ctx.fillRect(0, 0, W, H);
 
-    // Extra flat overlay to darken the entire scene a bit (atmosphere).
-    const flatAlpha = nf * 0.3;
-    if (flatAlpha > 0.01) {
+    // Extra night atmosphere.
+    if (nf > 0.05) {
+        const flatAlpha = nf * 0.25;
         ctx.fillStyle = `rgba(${r},${g},${b},${flatAlpha.toFixed(3)})`;
         ctx.fillRect(0, 0, W, H);
     }
@@ -766,15 +768,6 @@ function drawShadow(ctx, sx, sy, spriteSize) {
 
 function drawEmoji(ctx, sx, sy, emoji, size = 28) {
     const cx = sx + TILE_W / 2, cy = sy + TILE_H / 2;
-    // Opaque backing disc behind the emoji. This prevents the
-    // platform's font compositor from blending emoji edges against the
-    // transparent canvas, which on Windows (Segoe UI Emoji) causes a
-    // semi-transparent halo effect.
-    const r = size * 0.38;
-    ctx.fillStyle = 'rgba(20, 16, 28, 1)';
-    ctx.beginPath();
-    ctx.arc(cx, cy, r, 0, Math.PI * 2);
-    ctx.fill();
     ctx.font = size + "px 'Apple Color Emoji', 'Segoe UI Emoji', 'Noto Color Emoji', sans-serif";
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
@@ -1803,19 +1796,74 @@ export default {
             const minY = Math.min(tl.wy, tr.wy, bl.wy, br.wy) - 1;
             const maxY = Math.max(tl.wy, tr.wy, bl.wy, br.wy) + 1;
 
-            // PASS 1 — tiles with elevation + depth walls (uniform size;
-            // perspective is applied only to sprites to avoid seams between tiles).
+            // PASS 1 — tiles with elevation + depth walls.
+            // Each tile's 4 diamond vertices are individually perspective-
+            // projected so adjacent tiles share exact edge coordinates (no seams).
+            function perspPt(isoX, isoY) {
+                const screenY = isoY;
+                const ps = perspScale(screenY, H);
+                return {
+                    x: W / 2 + (isoX - W / 2) * ps,
+                    y: H / 2 + (isoY - H / 2) * ps,
+                };
+            }
             for (let y = minY; y <= maxY; y++) {
                 for (let x = minX; x <= maxX; x++) {
                     const p = iso(x, y);
-                    const sx = p.x + cam.cx - TILE_W / 2;
-                    const sy = p.y + cam.cy;
-                    const b = biomeAtDg(x, y);
+                    const cx2 = p.x + cam.cx;
+                    const cy2 = p.y + cam.cy;
                     const elev = elevAtDg(x, y);
-                    drawTile(ctx, sx, sy, b, elev);
+                    const lift = (elev - 0.35) * ELEV_PX;
+                    const b = biomeAtDg(x, y);
+                    const bio = _allBiomes[b] || BIOMES.grass;
+                    const bright = 0.85 + elev * 0.3;
+                    let bri = bright;
+                    if (b === 'water' || b === 'deep') bri += Math.sin(_renderTime * 0.002 + cx2 * 0.08 + cy2 * 0.12) * 0.12;
+
+                    // 4 vertices of the diamond (top, right, bottom, left) with lift.
+                    const top    = perspPt(cx2,              cy2 - lift);
+                    const right  = perspPt(cx2 + TILE_W / 2, cy2 + TILE_H / 2 - lift);
+                    const bottom = perspPt(cx2,              cy2 + TILE_H - lift);
+                    const left   = perspPt(cx2 - TILE_W / 2, cy2 + TILE_H / 2 - lift);
+
+                    const g = ctx.createLinearGradient(top.x, top.y, bottom.x, bottom.y);
+                    g.addColorStop(0, _adjustBright(bio.color1, bri));
+                    g.addColorStop(1, _adjustBright(bio.color2, bri));
+                    ctx.fillStyle = g;
+                    ctx.beginPath();
+                    ctx.moveTo(top.x, top.y);
+                    ctx.lineTo(right.x, right.y);
+                    ctx.lineTo(bottom.x, bottom.y);
+                    ctx.lineTo(left.x, left.y);
+                    ctx.closePath();
+                    ctx.fill();
+                    ctx.strokeStyle = 'rgba(0,0,0,0.08)';
+                    ctx.lineWidth = 0.5;
+                    ctx.stroke();
+
+                    // Depth wall — south-east face.
                     const elevS = elevAtDg(x + 1, y);
+                    const liftS = (elevS - 0.35) * ELEV_PX;
+                    if (lift - liftS > 1.5) {
+                        const botS = perspPt(cx2, cy2 + TILE_H - liftS);
+                        const rightS = perspPt(cx2 + TILE_W / 2, cy2 + TILE_H / 2 - liftS);
+                        ctx.fillStyle = 'rgba(0,0,0,0.22)';
+                        ctx.beginPath();
+                        ctx.moveTo(bottom.x, bottom.y); ctx.lineTo(right.x, right.y);
+                        ctx.lineTo(rightS.x, rightS.y); ctx.lineTo(botS.x, botS.y);
+                        ctx.closePath(); ctx.fill();
+                    }
                     const elevE = elevAtDg(x, y + 1);
-                    drawTileDepth(ctx, sx, sy, elev, elevS, elevE);
+                    const liftE = (elevE - 0.35) * ELEV_PX;
+                    if (lift - liftE > 1.5) {
+                        const botE = perspPt(cx2, cy2 + TILE_H - liftE);
+                        const leftE = perspPt(cx2 - TILE_W / 2, cy2 + TILE_H / 2 - liftE);
+                        ctx.fillStyle = 'rgba(0,0,0,0.30)';
+                        ctx.beginPath();
+                        ctx.moveTo(bottom.x, bottom.y); ctx.lineTo(left.x, left.y);
+                        ctx.lineTo(leftE.x, leftE.y); ctx.lineTo(botE.x, botE.y);
+                        ctx.closePath(); ctx.fill();
+                    }
                 }
             }
 
