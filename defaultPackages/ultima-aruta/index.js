@@ -647,7 +647,18 @@ function perspScale(screenY, viewH) {
 // ── Rendering ────────────────────────────────────────────
 // ELEV_PX loaded from data.js
 
-let _renderTime = 0; // internal — drawTile shimmer uses this; index.js has its own
+let _renderTime = 0;
+let _playerFlash = 0;
+const _floaters = [];
+function addFloater(wx, wy, text, color = '#fff') {
+    _floaters.push({ wx, wy, text, color, age: 0, maxAge: 900 });
+}
+function tickFloaters(dt) {
+    for (let i = _floaters.length - 1; i >= 0; i--) {
+        _floaters[i].age += dt;
+        if (_floaters[i].age >= _floaters[i].maxAge) _floaters.splice(i, 1);
+    }
+}
 
 // ── Stars (rendered behind tiles at night) ───────────────
 let _stars = null;
