@@ -930,6 +930,7 @@ class Player {
         this.level = 1; this.xp = 0; this.xpNext = 20;
         this.attackCooldown = 0;
         this.baseDmg = 5;
+        this.kills = 0;
     }
     tryMove(dx, dy, passCheck) {
         if (this.moveT > 0) return false;
@@ -1213,6 +1214,7 @@ export default {
             if (saved.stamina != null)    player.stamina    = saved.stamina;
             if (saved.maxStamina != null) player.maxStamina = saved.maxStamina;
             if (saved.baseDmg != null) player.baseDmg = saved.baseDmg;
+            if (saved.kills != null)  player.kills  = saved.kills;
         }
         // Day starts at noon on first load. Time advances with real-time dt.
         let timeOfDay = (typeof saved?.timeOfDay === 'number') ? saved.timeOfDay : 0.5;
@@ -1756,6 +1758,7 @@ export default {
                 <div style="margin-top:6px">Position: ${player.wx}, ${player.wy}</div>
                 <div>Biome: ${bm}</div>
                 <div>Seed: <span style="color:#ffc857">${worldRow.seed}</span></div>
+                <div>Kills: 💀 <b>${player.kills}</b></div>
                 <div>Inventory: ${inventory.items.length} items</div>
                 <div style="margin-top:10px"><button class="ua-btn ua-btn-danger" id="ua-back-to-menu">↩ Back to world menu</button></div>
             `;
@@ -1765,7 +1768,7 @@ export default {
                     seed, px: player.wx, py: player.wy, timeOfDay, playerClass,
                     hp: player.hp, mana: player.mana, stamina: player.stamina,
                     level: player.level, xp: player.xp, xpNext: player.xpNext,
-                    maxHp: player.maxHp, maxMana: player.maxMana, maxStamina: player.maxStamina, baseDmg: player.baseDmg,
+                    maxHp: player.maxHp, maxMana: player.maxMana, maxStamina: player.maxStamina, baseDmg: player.baseDmg, kills: player.kills,
                 }).catch(() => {});
                 root.__uaCleanup?.();
                 // Reload by re-invoking mount — simplest way.
@@ -2387,6 +2390,46 @@ export default {
             ctx.fillText('MP',  barX + barW + 4, barY - barH - barGap + barH / 2);
             ctx.fillText('SP',  barX + barW + 4, barY - (barH + barGap) * 2 + barH / 2);
 
+            // ── Rain particles (when moisture is high) ──────
+            if (!_dungeon) {
+                const moist = fbm2D(player.wx / 120, player.wy / 120, world.seed + 9999, 3, 0.5);
+                if (moist > 0.55) {
+                    const intensity = Math.min(40, Math.floor((moist - 0.55) * 200));
+                    ctx.strokeStyle = 'rgba(150,180,220,0.25)';
+                    ctx.lineWidth = 1;
+                    for (let i = 0; i < intensity; i++) {
+                        const rx = Math.random() * W;
+                        const ry = Math.random() * H;
+                        ctx.beginPath();
+                        ctx.moveTo(rx, ry);
+                        ctx.lineTo(rx + 2, ry + 6);
+                        ctx.stroke();
+                    }
+                }
+            }
+
+            // ── Target creature name ─────────────────────────
+            if (_autoTarget && !_autoTarget.dead) {
+                const def = CREATURE_DEFS[_autoTarget.emoji];
+                if (def) {
+                    const twx = (_dungeon ? 0 : Math.floor(player.wx / CHUNK_SIZE) * CHUNK_SIZE) + _autoTarget.rc;
+                    const twy = (_dungeon ? 0 : Math.floor(player.wy / CHUNK_SIZE) * CHUNK_SIZE) + _autoTarget.rr;
+                    const tp = iso(twx, twy);
+                    const elev = elevAtDg(Math.round(twx), Math.round(twy));
+                    const lift = (elev - 0.35) * ELEV_PX;
+                    const tps = perspScale(tp.y + cam.cy - lift + TILE_H / 2, H);
+                    const tsx = W / 2 + (tp.x + cam.cx - W / 2) * tps;
+                    const tsy = H / 2 + ((tp.y + cam.cy - lift) - H / 2) * tps;
+                    ctx.font = "bold 9px 'Inter', sans-serif";
+                    ctx.textAlign = 'center'; ctx.textBaseline = 'bottom';
+                    ctx.fillStyle = '#ffc857';
+                    ctx.strokeStyle = 'rgba(0,0,0,0.7)'; ctx.lineWidth = 2;
+                    const label = `${_autoTarget.emoji} HP ${Math.round(_autoTarget.hp)}/${_autoTarget.maxHp}`;
+                    ctx.strokeText(label, tsx + TILE_W * tps / 2, tsy - 8);
+                    ctx.fillText(label, tsx + TILE_W * tps / 2, tsy - 8);
+                }
+            }
+
             // ── Floating combat text ────────────────────────
             ctx.font = "bold 11px 'Inter', sans-serif";
             ctx.textAlign = 'center';
@@ -2479,7 +2522,8 @@ export default {
             const hh = String(hours).padStart(2, '0');
             const mm = String(mins).padStart(2, '0');
             const phase = timeOfDay < 0.25 ? '🌑' : timeOfDay < 0.42 ? '🌅' : timeOfDay < 0.66 ? '☀️' : timeOfDay < 0.83 ? '🌇' : '🌙';
-            $hud.innerHTML = `❤️ <b>${Math.round(player.hp)}/${player.maxHp}</b> · 💧 <b>${Math.round(player.mana)}/${player.maxMana}</b> · ⚡ <b>${Math.round(player.stamina)}/${player.maxStamina}</b> · Lv <b>${player.level}</b> (${player.xp}/${player.xpNext})<br>📍 <b>${player.wx}, ${player.wy}</b> · ${biome} · ${phase} <b>${hh}:${mm}</b>`;
+            const cd2 = classDef || CLASSES.warrior;
+            $hud.innerHTML = `${cd2.icon} <b>Lv${player.level}</b> · ❤️ <b>${Math.round(player.hp)}/${player.maxHp}</b> · 💧 <b>${Math.round(player.mana)}/${player.maxMana}</b> · ⚡ <b>${Math.round(player.stamina)}/${player.maxStamina}</b> · 💀 ${player.kills}<br>📍 <b>${player.wx}, ${player.wy}</b> · ${biome} · ${phase} <b>${hh}:${mm}</b>`;
         }
 
         // ── Combat helpers ─────────────────────────────────
@@ -2589,6 +2633,7 @@ export default {
         function killCreature(cr, chCx, chCy) {
             cr.dead = true;
             sfxKill();
+            player.kills++;
             const def = CREATURE_DEFS[cr.emoji] || { xp: 1, loot: [] };
             player.xp += def.xp;
             addFloater(chCx * CHUNK_SIZE + cr.c, chCy * CHUNK_SIZE + cr.r, '+' + def.xp + ' XP', '#ffc857');
@@ -3015,7 +3060,7 @@ export default {
                     seed, px: player.wx, py: player.wy, timeOfDay, playerClass,
                     hp: player.hp, mana: player.mana, stamina: player.stamina,
                     level: player.level, xp: player.xp, xpNext: player.xpNext,
-                    maxHp: player.maxHp, maxMana: player.maxMana, maxStamina: player.maxStamina, baseDmg: player.baseDmg,
+                    maxHp: player.maxHp, maxMana: player.maxMana, maxStamina: player.maxStamina, baseDmg: player.baseDmg, kills: player.kills,
                 }).catch(() => {});
                 worldRow.lastPlayed = Date.now();
                 sdk.storage.set('worlds', worlds).catch(() => {});
