@@ -81,6 +81,11 @@ const CREATURE_DEFS = {
     '🦎': { ai: 'neutral',  hp: 10, dmg: 2, xp: 2, loot: [{ key: 'gem', rate: 0.1 }] },
     '🐗': { ai: 'aggressive', hp: 35, dmg: 7, xp: 10, loot: [{ key: 'gold', rate: 0.5 }, { key: 'potion', rate: 0.2 }] },
     '🐺': { ai: 'aggressive', hp: 40, dmg: 8, xp: 12, loot: [{ key: 'gold', rate: 0.4 }, { key: 'dagger', rate: 0.08 }] },
+    // Dungeon creatures.
+    '💀': { ai: 'aggressive', hp: 45, dmg: 10, xp: 15, loot: [{ key: 'gold', rate: 0.6 }, { key: 'sword', rate: 0.1 }] },
+    '👻': { ai: 'aggressive', hp: 35, dmg: 8,  xp: 12, loot: [{ key: 'scroll', rate: 0.3 }, { key: 'gem', rate: 0.15 }] },
+    '🦇': { ai: 'aggressive', hp: 20, dmg: 5,  xp: 6,  loot: [{ key: 'herb', rate: 0.4 }] },
+    '🕷️': { ai: 'aggressive', hp: 30, dmg: 7,  xp: 10, loot: [{ key: 'potion', rate: 0.2 }, { key: 'gold', rate: 0.4 }] },
 };
 
 const CREATURES = {
@@ -179,7 +184,84 @@ const SLOTS = [
     { key: 'book',   label: '📖 Book'   },
 ];
 
-// ── Seeded RNG (Mulberry32) ──────────────────────────────
+// Dungeon biomes + creatures.
+const DUNGEON_BIOMES = {
+    cave_floor: { color1: '#3a3040', color2: '#28202a', passable: true,  name: 'Cave' },
+    cave_wall:  { color1: '#1a1418', color2: '#0e0a10', passable: false, name: 'Wall' },
+    lava:       { color1: '#a03010', color2: '#601808', passable: false, name: 'Lava' },
+    exit:       { color1: '#406040', color2: '#304830', passable: true,  name: 'Exit' },
+};
+const DUNGEON_CREATURES = [
+    { emoji: '💀', ai: 'aggressive', hp: 45, dmg: 10, xp: 15, loot: [{ key: 'gold', rate: 0.6 }, { key: 'sword', rate: 0.1 }] },
+    { emoji: '👻', ai: 'aggressive', hp: 35, dmg: 8,  xp: 12, loot: [{ key: 'scroll', rate: 0.3 }, { key: 'gem', rate: 0.15 }] },
+    { emoji: '🦇', ai: 'aggressive', hp: 20, dmg: 5,  xp: 6,  loot: [{ key: 'herb', rate: 0.4 }] },
+    { emoji: '🕷️', ai: 'aggressive', hp: 30, dmg: 7,  xp: 10, loot: [{ key: 'potion', rate: 0.2 }, { key: 'gold', rate: 0.4 }] },
+];
+const DUNGEON_SIZE = 24;
+
+function generateDungeon(dungeonId) {
+    const rnd = mulberry32(dungeonId);
+    const N = DUNGEON_SIZE;
+    const biomes = new Array(N * N).fill('cave_wall');
+    const elevations = new Float32Array(N * N).fill(0.5);
+    const features = [];
+    const creatures = [];
+
+    // Carve rooms + corridors.
+    const rooms = [];
+    for (let i = 0; i < 6; i++) {
+        const rw = 3 + Math.floor(rnd() * 4);
+        const rh = 3 + Math.floor(rnd() * 4);
+        const rx = 1 + Math.floor(rnd() * (N - rw - 2));
+        const ry = 1 + Math.floor(rnd() * (N - rh - 2));
+        rooms.push({ x: rx, y: ry, w: rw, h: rh, cx: Math.floor(rx + rw / 2), cy: Math.floor(ry + rh / 2) });
+        for (let y = ry; y < ry + rh; y++) for (let x = rx; x < rx + rw; x++) biomes[y * N + x] = 'cave_floor';
+    }
+    for (let i = 1; i < rooms.length; i++) {
+        let cx = rooms[i - 1].cx, cy = rooms[i - 1].cy;
+        const tx = rooms[i].cx, ty = rooms[i].cy;
+        while (cx !== tx) { biomes[cy * N + cx] = 'cave_floor'; cx += Math.sign(tx - cx); }
+        while (cy !== ty) { biomes[cy * N + cx] = 'cave_floor'; cy += Math.sign(ty - cy); }
+    }
+    const exitRoom = rooms[0];
+    biomes[exitRoom.cy * N + exitRoom.cx] = 'exit';
+    features.push({ c: exitRoom.cx, r: exitRoom.cy, emoji: '🪜', isExit: true });
+    const lastRoom = rooms[rooms.length - 1];
+    for (let i = 0; i < 4; i++) {
+        const lx = lastRoom.x + Math.floor(rnd() * lastRoom.w);
+        const ly = lastRoom.y + Math.floor(rnd() * lastRoom.h);
+        if (biomes[ly * N + lx] === 'cave_floor') biomes[ly * N + lx] = 'lava';
+    }
+    for (let i = 1; i < rooms.length; i++) {
+        if (rnd() < 0.5) {
+            const tc = rooms[i].x + Math.floor(rnd() * rooms[i].w);
+            const tr = rooms[i].y + Math.floor(rnd() * rooms[i].h);
+            if (biomes[tr * N + tc] === 'cave_floor' && !features.find(f => f.c === tc && f.r === tr)) {
+                const pool = ['gold', 'gold', 'gold', 'gem', 'potion', 'sword', 'shield', 'helm', 'armor', 'spellbook'];
+                features.push({ c: tc, r: tr, emoji: '🧰', item: true, itemKey: pool[Math.floor(rnd() * pool.length)], chest: true });
+            }
+        }
+    }
+    for (let i = 1; i < rooms.length; i++) {
+        const count = 1 + Math.floor(rnd() * 3);
+        for (let j = 0; j < count; j++) {
+            const cc = rooms[i].x + Math.floor(rnd() * rooms[i].w);
+            const cr2 = rooms[i].y + Math.floor(rnd() * rooms[i].h);
+            if (biomes[cr2 * N + cc] !== 'cave_floor') continue;
+            const def = DUNGEON_CREATURES[Math.floor(rnd() * DUNGEON_CREATURES.length)];
+            creatures.push({
+                c: cc, r: cr2, rc: cc, rr: cr2, fromC: cc, fromR: cr2, moveT: 0,
+                emoji: def.emoji, biome: 'cave_floor',
+                nextMoveAt: 800 + rnd() * 3000, timer: 0,
+                hp: def.hp, maxHp: def.hp, ai: def.ai, dmg: def.dmg,
+                attackCooldown: 0, dead: false,
+            });
+        }
+    }
+    return { biomes, elevations, features, creatures, N, spawnX: exitRoom.cx, spawnY: exitRoom.cy };
+}
+
+// ── Seeded RNG (Mulberry32) ───────────���──────────���───────
 function mulberry32(a) {
     return function () {
         a |= 0; a = a + 0x6D2B79F5 | 0;
@@ -589,7 +671,7 @@ function sfxHurt()    { _sfx(120, 0.14, 'sawtooth', 0.08); }
 function sfxLevelUp() { _sfx(523, 0.12); setTimeout(() => _sfx(659, 0.14), 100); setTimeout(() => _sfx(784, 0.2), 240); }
 
 function drawTile(ctx, sx, sy, biome, elev = 0.5) {
-    const b = BIOMES[biome];
+    const b = BIOMES[biome] || DUNGEON_BIOMES[biome];
     const hx = TILE_W / 2, hy = TILE_H / 2;
     // Elevation offset: higher tiles render higher on screen.
     const lift = (elev - 0.35) * ELEV_PX;
@@ -697,10 +779,10 @@ class Player {
         this.attackCooldown = 0;
         this.baseDmg = 5;
     }
-    tryMove(dx, dy, world) {
+    tryMove(dx, dy, passCheck) {
         if (this.moveT > 0) return false;
         const nx = this.wx + dx, ny = this.wy + dy;
-        if (!world.passable(nx, ny)) return false;
+        if (!passCheck(nx, ny)) return false;
         this.moveFrom = { wx: this.wx, wy: this.wy };
         this.wx = nx; this.wy = ny;
         // Stamina cost: each step drains 2. When exhausted, movement slows.
@@ -836,6 +918,56 @@ export default {
                 startY = Math.round(Math.sin(ang) * rad);
             }
         }
+        // ── Dungeon state ──────────────────────────────────
+        let _dungeon = null; // { map, overworldX, overworldY } when inside a dungeon
+        const _allBiomes = { ...BIOMES, ...DUNGEON_BIOMES };
+
+        // Dungeon-aware lookups (override world methods when inside).
+        function biomeAtDg(wx, wy) {
+            if (!_dungeon) return world.biomeAt(wx, wy);
+            if (wx < 0 || wy < 0 || wx >= DUNGEON_SIZE || wy >= DUNGEON_SIZE) return 'cave_wall';
+            return _dungeon.map.biomes[wy * DUNGEON_SIZE + wx];
+        }
+        function elevAtDg(wx, wy) {
+            if (!_dungeon) return world.elevAt(wx, wy);
+            return 0.5; // flat dungeons
+        }
+        function passableDg(wx, wy) {
+            const b = biomeAtDg(wx, wy);
+            const bio = _allBiomes[b];
+            if (!bio) return false;
+            if (!bio.passable) return false;
+            if (!_dungeon) return world.passable(wx, wy);
+            const f = featureAtDg(wx, wy);
+            return !(f && f.blocks);
+        }
+        function featureAtDg(wx, wy) {
+            if (!_dungeon) return world.featureAt(wx, wy);
+            return _dungeon.map.features.find(f => f.c === wx && f.r === wy) || null;
+        }
+        function creaturesForRender() {
+            if (_dungeon) return [{ key: '0,0', creatures: _dungeon.map.creatures, ox: 0, oy: 0 }];
+            return null; // use normal chunk-based rendering
+        }
+
+        function enterDungeon(dungeonId) {
+            const map = generateDungeon(dungeonId);
+            _dungeon = { map, overworldX: player.wx, overworldY: player.wy };
+            player.wx = map.spawnX; player.wy = map.spawnY;
+            player.rx = map.spawnX; player.ry = map.spawnY;
+            player.moveT = 0;
+            showDialogBubble('🕳️', 'You descend into the darkness...');
+            _sfx(120, 0.3, 'sawtooth', 0.06);
+        }
+        function exitDungeon() {
+            player.wx = _dungeon.overworldX; player.wy = _dungeon.overworldY;
+            player.rx = player.wx; player.ry = player.wy;
+            player.moveT = 0;
+            _dungeon = null;
+            showDialogBubble('🪜', 'You emerge back to the surface.');
+            _sfx(440, 0.15, 'sine', 0.05);
+        }
+
         const player = new Player(startX, startY);
         // Restore player stats from save.
         if (saved) {
@@ -1014,7 +1146,14 @@ export default {
         // ── Interaction: SPACE/E talks to an adjacent NPC or enters a
         // dungeon when the player is standing on (or beside) its tile.
         function tryInteract() {
-            // Check the 9 cells centred on the player.
+            // In dungeon: check for exit tile.
+            if (_dungeon) {
+                const f = featureAtDg(player.wx, player.wy);
+                if (f && f.isExit) { exitDungeon(); return; }
+                // Check adjacent for dungeon features (chests handled via drag).
+                return;
+            }
+            // Overworld: check the 9 cells centred on the player.
             for (let dy = -1; dy <= 1; dy++) {
                 for (let dx = -1; dx <= 1; dx++) {
                     const f = world.featureAt(player.wx + dx, player.wy + dy);
@@ -1022,7 +1161,7 @@ export default {
                     if (f.merchant) { showShop(); return; }
                     if (f.npc) { showDialogBubble(f.emoji, f.dialog || DIALOGS[0]); return; }
                     if (f.dungeon && dx === 0 && dy === 0) {
-                        showDialogBubble('🕳️', 'You stand before a dark entrance. The depths beckon… (dungeon #' + f.dungeonId.toString(36) + ')');
+                        enterDungeon(f.dungeonId);
                         return;
                     }
                 }
@@ -1598,10 +1737,10 @@ export default {
             if (dx || dy) {
                 // If the diagonal step is blocked, slide along a single axis
                 // so the player doesn't "stick" against a corner.
-                if (!player.tryMove(Math.sign(dx), Math.sign(dy), world)) {
+                if (!player.tryMove(Math.sign(dx), Math.sign(dy), passableDg)) {
                     if (dx && dy) {
-                        if (!player.tryMove(Math.sign(dx), 0, world)) {
-                            player.tryMove(0, Math.sign(dy), world);
+                        if (!player.tryMove(Math.sign(dx), 0, passableDg)) {
+                            player.tryMove(0, Math.sign(dy), passableDg);
                         }
                     }
                 }
@@ -1653,11 +1792,11 @@ export default {
                     const p = iso(x, y);
                     const sx = p.x + cam.cx - TILE_W / 2;
                     const sy = p.y + cam.cy;
-                    const elev = world.elevAt(x, y);
-                    drawTile(ctx, sx, sy, world.biomeAt(x, y), elev);
-                    // Depth walls — south-east face when higher than neighbours.
-                    const elevS = world.elevAt(x + 1, y);  // south in iso
-                    const elevE = world.elevAt(x, y + 1);  // east in iso
+                    const b = biomeAtDg(x, y);
+                    const elev = elevAtDg(x, y);
+                    drawTile(ctx, sx, sy, b, elev);
+                    const elevS = elevAtDg(x + 1, y);
+                    const elevE = elevAtDg(x, y + 1);
                     drawTileDepth(ctx, sx, sy, elev, elevS, elevE);
                 }
             }
@@ -1686,32 +1825,48 @@ export default {
                 '💍': 12, '📖': 20,
                 // Dungeons
                 '🕳️': 32, '🏚️': 38,
+                '🪜': 30, '🧰': 24,
+                '💀': 26, '👻': 24, '🦇': 20, '🕷️': 22,
             };
             const sprites = [];
-            // Visible chunks for creature sampling.
-            const seenChunks = new Set();
-            for (let y = minY; y <= maxY; y++) {
-                for (let x = minX; x <= maxX; x++) {
-                    const f = world.featureAt(x, y);
-                    if (f) sprites.push({ wx: x, wy: y, emoji: f.emoji, size: SIZES[f.emoji] || 26 });
-                    const ccx = Math.floor(x / CHUNK_SIZE), ccy = Math.floor(y / CHUNK_SIZE);
-                    seenChunks.add(ccx + ',' + ccy);
+            if (_dungeon) {
+                // Dungeon features + creatures.
+                for (const f of _dungeon.map.features) {
+                    if (f.c >= minX && f.c <= maxX && f.r >= minY && f.r <= maxY) {
+                        sprites.push({ wx: f.c, wy: f.r, emoji: f.emoji, size: SIZES[f.emoji] || 26 });
+                    }
                 }
-            }
-            // Draw creatures from visible chunks.
-            for (const key of seenChunks) {
-                const [ccx, ccy] = key.split(',').map(Number);
-                const ch = world.getChunk(ccx, ccy);
-                for (const cr of ch.creatures) {
+                for (const cr of _dungeon.map.creatures) {
                     if (cr.dead) continue;
-                    const wx = ccx * CHUNK_SIZE + cr.rc;
-                    const wy = ccy * CHUNK_SIZE + cr.rr;
-                    if (wx < minX - 1 || wx > maxX + 1 || wy < minY - 1 || wy > maxY + 1) continue;
-                    const isNight = _nightFactor(timeOfDay) > 0.5;
-                    const effAI = (isNight && cr.ai === 'neutral') ? 'aggressive' : cr.ai;
-                    const aggro = effAI === 'aggressive' && Math.max(Math.abs(wx - player.wx), Math.abs(wy - player.wy)) <= 6;
-                    sprites.push({ wx, wy, emoji: cr.emoji, size: SIZES[cr.emoji] || 22,
+                    const aggro = cr.ai === 'aggressive' && Math.max(Math.abs(cr.rc - player.wx), Math.abs(cr.rr - player.wy)) <= 6;
+                    sprites.push({ wx: cr.rc, wy: cr.rr, emoji: cr.emoji, size: SIZES[cr.emoji] || 22,
                                    hp: cr.hp, maxHp: cr.maxHp, isCreature: true, aggro });
+                }
+            } else {
+                // Overworld features + creatures.
+                const seenChunks = new Set();
+                for (let y = minY; y <= maxY; y++) {
+                    for (let x = minX; x <= maxX; x++) {
+                        const f = world.featureAt(x, y);
+                        if (f) sprites.push({ wx: x, wy: y, emoji: f.emoji, size: SIZES[f.emoji] || 26 });
+                        const ccx = Math.floor(x / CHUNK_SIZE), ccy = Math.floor(y / CHUNK_SIZE);
+                        seenChunks.add(ccx + ',' + ccy);
+                    }
+                }
+                for (const key of seenChunks) {
+                    const [ccx, ccy] = key.split(',').map(Number);
+                    const ch = world.getChunk(ccx, ccy);
+                    for (const cr of ch.creatures) {
+                        if (cr.dead) continue;
+                        const wx = ccx * CHUNK_SIZE + cr.rc;
+                        const wy = ccy * CHUNK_SIZE + cr.rr;
+                        if (wx < minX - 1 || wx > maxX + 1 || wy < minY - 1 || wy > maxY + 1) continue;
+                        const isNight = _nightFactor(timeOfDay) > 0.5;
+                        const effAI = (isNight && cr.ai === 'neutral') ? 'aggressive' : cr.ai;
+                        const aggro = effAI === 'aggressive' && Math.max(Math.abs(wx - player.wx), Math.abs(wy - player.wy)) <= 6;
+                        sprites.push({ wx, wy, emoji: cr.emoji, size: SIZES[cr.emoji] || 22,
+                                       hp: cr.hp, maxHp: cr.maxHp, isCreature: true, aggro });
+                    }
                 }
             }
             sprites.push({ wx: player.rx, wy: player.ry, emoji: player.emoji, size: 32, isPlayer: true, flash: _playerFlash });
@@ -1866,7 +2021,8 @@ export default {
         }
 
         function updateHUD() {
-            const biome = BIOMES[world.biomeAt(player.wx, player.wy)].name;
+            const b = biomeAtDg(player.wx, player.wy);
+            const biome = (_allBiomes[b] || BIOMES.grass).name;
             const hours = Math.floor(timeOfDay * 24);
             const mins  = Math.floor((timeOfDay * 24 * 60) % 60);
             const hh = String(hours).padStart(2, '0');
@@ -1932,6 +2088,64 @@ export default {
                     placeWorldItem(wx, wy, l.key);
                     break; // one drop per kill max
                 }
+            }
+        }
+
+        // Dungeon creature tick helper — same AI as overworld but on a flat array.
+        function _tickCreatureList(creatures, ox, oy, dt, N) {
+            for (const cr of creatures) {
+                if (cr.dead) continue;
+                if (cr.attackCooldown > 0) cr.attackCooldown -= dt;
+                if (cr.moveT > 0) {
+                    cr.moveT = Math.max(0, cr.moveT - dt);
+                    const t = 1 - (cr.moveT / CREATURE_MOVE_MS);
+                    cr.rc = cr.fromC + (cr.c - cr.fromC) * t;
+                    cr.rr = cr.fromR + (cr.r - cr.fromR) * t;
+                    continue;
+                }
+                cr.rc = cr.c; cr.rr = cr.r;
+                const cwx = ox + cr.c, cwy = oy + cr.r;
+                const distToPlayer = Math.max(Math.abs(cwx - player.wx), Math.abs(cwy - player.wy));
+                if (cr.ai === 'aggressive' && distToPlayer <= 6) {
+                    if (distToPlayer <= 1 && cr.attackCooldown <= 0) {
+                        player.hp = Math.max(0, player.hp - cr.dmg);
+                        cr.attackCooldown = 1200;
+                        addFloater(player.wx, player.wy, '-' + cr.dmg, '#ff6060');
+                        sfxHurt();
+                        _playerFlash = 300;
+                        if (player.hp <= 0) {
+                            showDialogBubble('☠️', 'You have been slain!');
+                            if (_dungeon) exitDungeon();
+                            player.hp = player.maxHp; player.mana = player.maxMana; player.stamina = player.maxStamina;
+                            player.wx = startX; player.wy = startY;
+                            player.rx = startX; player.ry = startY;
+                            _playerFlash = 600;
+                        }
+                        continue;
+                    }
+                    cr.timer += dt;
+                    if (cr.timer < 400) continue;
+                    cr.timer = 0;
+                    const sdx = Math.sign(player.wx - cwx), sdy = Math.sign(player.wy - cwy);
+                    const nc = cr.c + sdx, nr = cr.r + sdy;
+                    if (nc >= 0 && nc < N && nr >= 0 && nr < N) {
+                        cr.fromC = cr.c; cr.fromR = cr.r;
+                        cr.c = nc; cr.r = nr;
+                        cr.moveT = CREATURE_MOVE_MS * 0.7;
+                    }
+                    continue;
+                }
+                cr.timer += dt;
+                if (cr.timer < cr.nextMoveAt) continue;
+                cr.timer = 0;
+                cr.nextMoveAt = 1200 + Math.random() * 3500;
+                const dirs = [[1,0],[-1,0],[0,1],[0,-1]];
+                const [ddx, ddy] = dirs[Math.floor(Math.random() * 4)];
+                const nc = cr.c + ddx, nr = cr.r + ddy;
+                if (nc < 0 || nc >= N || nr < 0 || nr >= N) continue;
+                cr.fromC = cr.c; cr.fromR = cr.r;
+                cr.c = nc; cr.r = nr;
+                cr.moveT = CREATURE_MOVE_MS;
             }
         }
 
@@ -2088,7 +2302,11 @@ export default {
         });
 
         function tickCreatures(dt) {
-            // Wander creatures only in chunks near the player (keeps cost low).
+            // In dungeon, tick dungeon creatures directly.
+            if (_dungeon) {
+                _tickCreatureList(_dungeon.map.creatures, 0, 0, dt, DUNGEON_SIZE);
+                return;
+            }
             const cx0 = Math.floor(player.wx / CHUNK_SIZE), cy0 = Math.floor(player.wy / CHUNK_SIZE);
             for (let dcy = -1; dcy <= 1; dcy++) {
                 for (let dcx = -1; dcx <= 1; dcx++) {
