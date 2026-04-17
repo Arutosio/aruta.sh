@@ -46,8 +46,24 @@ const FEATURES = {
     snow:   [{ emoji: '🌲', rate: 0.06 }, { emoji: '⛄', rate: 0.005 }],
 };
 
-// Ambient creatures per biome (as wandering entities, not static features).
-// Counts are per-chunk spawn targets.
+// Ambient creatures per biome. `ai`: passive (flees), neutral, aggressive.
+// `hp` is base max HP. `dmg` is base attack damage. `xp` given on kill.
+// `loot` is array of {key, rate}.
+const CREATURE_DEFS = {
+    '🐑': { ai: 'passive', hp: 10, dmg: 0, xp: 2, loot: [{ key: 'herb', rate: 0.4 }] },
+    '🐇': { ai: 'passive', hp: 8,  dmg: 0, xp: 1, loot: [{ key: 'berry', rate: 0.5 }] },
+    '🦌': { ai: 'passive', hp: 18, dmg: 0, xp: 3, loot: [{ key: 'herb', rate: 0.3 }, { key: 'apple', rate: 0.2 }] },
+    '🐟': { ai: 'passive', hp: 6,  dmg: 0, xp: 1, loot: [] },
+    '🐠': { ai: 'passive', hp: 6,  dmg: 0, xp: 1, loot: [] },
+    '🦊': { ai: 'neutral',  hp: 20, dmg: 4, xp: 5, loot: [{ key: 'gold', rate: 0.3 }] },
+    '🦉': { ai: 'neutral',  hp: 14, dmg: 3, xp: 3, loot: [{ key: 'scroll', rate: 0.15 }] },
+    '🦝': { ai: 'neutral',  hp: 16, dmg: 3, xp: 4, loot: [{ key: 'gold', rate: 0.2 }] },
+    '🦀': { ai: 'neutral',  hp: 12, dmg: 2, xp: 2, loot: [{ key: 'stone', rate: 0.3 }] },
+    '🦎': { ai: 'neutral',  hp: 10, dmg: 2, xp: 2, loot: [{ key: 'gem', rate: 0.1 }] },
+    '🐗': { ai: 'aggressive', hp: 35, dmg: 7, xp: 10, loot: [{ key: 'gold', rate: 0.5 }, { key: 'potion', rate: 0.2 }] },
+    '🐺': { ai: 'aggressive', hp: 40, dmg: 8, xp: 12, loot: [{ key: 'gold', rate: 0.4 }, { key: 'dagger', rate: 0.08 }] },
+};
+
 const CREATURES = {
     grass:  { count: 3, pool: ['🐑', '🐇', '🦊', '🦌'] },
     forest: { count: 4, pool: ['🦌', '🐗', '🦉', '🦝'] },
@@ -279,15 +295,20 @@ class World {
                 // Don't spawn on a blocking feature tile.
                 if (features.find(f => f.c === lc && f.r === lr && f.blocks)) continue;
                 const em = rule2.pool[Math.floor(rnd() * rule2.pool.length)];
+                const def = CREATURE_DEFS[em] || { ai: 'neutral', hp: 10, dmg: 2, xp: 1, loot: [] };
                 creatures.push({
                     c: lc, r: lr,
-                    rc: lc, rr: lr,        // rendered (tweened) position
-                    fromC: lc, fromR: lr,  // tween start
-                    moveT: 0,               // ms remaining in current tween
+                    rc: lc, rr: lr,
+                    fromC: lc, fromR: lr,
+                    moveT: 0,
                     emoji: em,
                     biome: bKey,
                     nextMoveAt: 800 + rnd() * 4000,
                     timer: 0,
+                    hp: def.hp, maxHp: def.hp,
+                    ai: def.ai, dmg: def.dmg,
+                    attackCooldown: 0,
+                    dead: false,
                 });
                 placed++;
             }
@@ -584,11 +605,16 @@ function drawEmoji(ctx, sx, sy, emoji, size = 28) {
 // ── Player ───────────────────────────────────────────────
 class Player {
     constructor(wx, wy) {
-        this.wx = wx; this.wy = wy;         // integer world cell
-        this.rx = wx; this.ry = wy;         // rendered position (tweened)
-        this.moveT = 0;                      // ms remaining in current tween
+        this.wx = wx; this.wy = wy;
+        this.rx = wx; this.ry = wy;
+        this.moveT = 0;
         this.moveFrom = { wx, wy };
         this.emoji = '🧙';
+        this.hp = 100; this.maxHp = 100;
+        this.mana = 50; this.maxMana = 50;
+        this.level = 1; this.xp = 0; this.xpNext = 20;
+        this.attackCooldown = 0;
+        this.baseDmg = 5;
     }
     tryMove(dx, dy, world) {
         if (this.moveT > 0) return false;
@@ -728,6 +754,17 @@ export default {
             }
         }
         const player = new Player(startX, startY);
+        // Restore player stats from save.
+        if (saved) {
+            if (saved.hp != null)      player.hp      = saved.hp;
+            if (saved.mana != null)    player.mana    = saved.mana;
+            if (saved.level != null)   player.level   = saved.level;
+            if (saved.xp != null)      player.xp      = saved.xp;
+            if (saved.xpNext != null)  player.xpNext  = saved.xpNext;
+            if (saved.maxHp != null)   player.maxHp   = saved.maxHp;
+            if (saved.maxMana != null) player.maxMana = saved.maxMana;
+            if (saved.baseDmg != null) player.baseDmg = saved.baseDmg;
+        }
         // Day starts at noon on first load. Time advances with real-time dt.
         let timeOfDay = (typeof saved?.timeOfDay === 'number') ? saved.timeOfDay : 0.5;
 
@@ -964,7 +1001,12 @@ export default {
             `;
             $statsBody.querySelector('#ua-back-to-menu').addEventListener('click', () => {
                 // Persist state then re-mount the shell.
-                sdk.storage.set(STATE_KEY, { seed, px: player.wx, py: player.wy, timeOfDay }).catch(() => {});
+                sdk.storage.set(STATE_KEY, {
+                    seed, px: player.wx, py: player.wy, timeOfDay,
+                    hp: player.hp, mana: player.mana,
+                    level: player.level, xp: player.xp, xpNext: player.xpNext,
+                    maxHp: player.maxHp, maxMana: player.maxMana, baseDmg: player.baseDmg,
+                }).catch(() => {});
                 root.__uaCleanup?.();
                 // Reload by re-invoking mount — simplest way.
                 location.reload();
@@ -1383,10 +1425,12 @@ export default {
                 const [ccx, ccy] = key.split(',').map(Number);
                 const ch = world.getChunk(ccx, ccy);
                 for (const cr of ch.creatures) {
+                    if (cr.dead) continue;
                     const wx = ccx * CHUNK_SIZE + cr.rc;
                     const wy = ccy * CHUNK_SIZE + cr.rr;
                     if (wx < minX - 1 || wx > maxX + 1 || wy < minY - 1 || wy > maxY + 1) continue;
-                    sprites.push({ wx, wy, emoji: cr.emoji, size: SIZES[cr.emoji] || 22 });
+                    sprites.push({ wx, wy, emoji: cr.emoji, size: SIZES[cr.emoji] || 22,
+                                   hp: cr.hp, maxHp: cr.maxHp, isCreature: true });
                 }
             }
             sprites.push({ wx: player.rx, wy: player.ry, emoji: player.emoji, size: 32, isPlayer: true });
@@ -1399,6 +1443,18 @@ export default {
                 const sy = p.y + cam.cy - lift;
                 drawShadow(ctx, sx, sy, s.size);
                 drawEmoji(ctx, sx, sy, s.emoji, s.size);
+                // HP bar above damaged creatures.
+                if (s.isCreature && s.hp < s.maxHp) {
+                    const bw = 24, bh = 3;
+                    const bx = sx + TILE_W / 2 - bw / 2;
+                    const by = sy - 2;
+                    ctx.fillStyle = 'rgba(0,0,0,0.5)';
+                    ctx.fillRect(bx - 1, by - 1, bw + 2, bh + 2);
+                    const pct = Math.max(0, s.hp / s.maxHp);
+                    const hpColor = pct > 0.5 ? '#4caf50' : pct > 0.25 ? '#ff9800' : '#f44336';
+                    ctx.fillStyle = hpColor;
+                    ctx.fillRect(bx, by, bw * pct, bh);
+                }
             }
 
             // ── Day/night fog of war ─────────────────────────
@@ -1448,8 +1504,91 @@ export default {
             const hh = String(hours).padStart(2, '0');
             const mm = String(mins).padStart(2, '0');
             const phase = timeOfDay < 0.25 ? '🌑' : timeOfDay < 0.42 ? '🌅' : timeOfDay < 0.66 ? '☀️' : timeOfDay < 0.83 ? '🌇' : '🌙';
-            $hud.innerHTML = `📍 <b>${player.wx}, ${player.wy}</b> · ${biome} · ${phase} <b>${hh}:${mm}</b>`;
+            $hud.innerHTML = `❤️ <b>${Math.round(player.hp)}/${player.maxHp}</b> · 💧 <b>${Math.round(player.mana)}/${player.maxMana}</b> · Lv <b>${player.level}</b> (${player.xp}/${player.xpNext})<br>📍 <b>${player.wx}, ${player.wy}</b> · ${biome} · ${phase} <b>${hh}:${mm}</b>`;
         }
+
+        // ── Combat helpers ─────────────────────────────────
+        function getWeaponDmg() {
+            const w = equipment.weapon;
+            if (!w) return 0;
+            const map = { sword: 8, axe: 10, bow: 7, dagger: 5 };
+            return map[w.key] || 4;
+        }
+
+        function attackCreature(cr) {
+            if (cr.dead || player.attackCooldown > 0) return;
+            const dist = Math.max(Math.abs((cr.c + Math.floor(cr.rc - cr.c)) - player.wx),
+                                  Math.abs((cr.r + Math.floor(cr.rr - cr.r)) - player.wy));
+            // Bow has range 3; melee range 1.5
+            const range = equipment.weapon?.key === 'bow' ? 3 : 1.5;
+            // Compute world pos of creature.
+            const chCx = Math.floor(player.wx / CHUNK_SIZE), chCy = Math.floor(player.wy / CHUNK_SIZE);
+            const cwx = chCx * CHUNK_SIZE + cr.c, cwy = chCy * CHUNK_SIZE + cr.r;
+            const d = Math.max(Math.abs(cwx - player.wx), Math.abs(cwy - player.wy));
+            if (d > range) return;
+
+            const dmg = player.baseDmg + getWeaponDmg() + Math.floor(Math.random() * 3);
+            cr.hp = Math.max(0, cr.hp - dmg);
+            player.attackCooldown = 800;
+            // Turn neutral creatures aggressive when attacked.
+            if (cr.ai === 'neutral') cr.ai = 'aggressive';
+            if (cr.hp <= 0) killCreature(cr, chCx, chCy);
+        }
+
+        function killCreature(cr, chCx, chCy) {
+            cr.dead = true;
+            // XP
+            const def = CREATURE_DEFS[cr.emoji] || { xp: 1, loot: [] };
+            player.xp += def.xp;
+            while (player.xp >= player.xpNext) {
+                player.xp -= player.xpNext;
+                player.level++;
+                player.xpNext = Math.floor(player.xpNext * 1.5);
+                player.maxHp += 10; player.hp = player.maxHp;
+                player.maxMana += 5; player.mana = player.maxMana;
+                player.baseDmg += 1;
+                showDialogBubble('✦', 'Level up! You are now level ' + player.level);
+            }
+            // Loot drop on the world at the creature's tile.
+            const wx = chCx * CHUNK_SIZE + cr.c;
+            const wy = chCy * CHUNK_SIZE + cr.r;
+            for (const l of def.loot) {
+                if (Math.random() < l.rate) {
+                    placeWorldItem(wx, wy, l.key);
+                    break; // one drop per kill max
+                }
+            }
+        }
+
+        function tickCombat(dt) {
+            if (player.attackCooldown > 0) player.attackCooldown -= dt;
+            // HP regen (slow).
+            if (player.hp < player.maxHp) player.hp = Math.min(player.maxHp, player.hp + 0.3 * dt / 1000);
+            // Mana regen.
+            if (player.mana < player.maxMana) player.mana = Math.min(player.maxMana, player.mana + 0.5 * dt / 1000);
+        }
+
+        // ── Click-to-attack ──────────────────────────────
+        canvas.addEventListener('click', (ev) => {
+            if (ev.button !== 0) return;
+            const rect = canvas.getBoundingClientRect();
+            const { wx, wy } = canvasToWorldCell(ev.clientX - rect.left, ev.clientY - rect.top);
+            // Find creature at that world cell (scan nearby chunks).
+            const cx0 = Math.floor(wx / CHUNK_SIZE), cy0 = Math.floor(wy / CHUNK_SIZE);
+            for (let dcy = -1; dcy <= 1; dcy++) for (let dcx = -1; dcx <= 1; dcx++) {
+                const ch = world.chunks.get((cx0+dcx)+','+(cy0+dcy));
+                if (!ch) continue;
+                for (const cr of ch.creatures) {
+                    if (cr.dead) continue;
+                    const cwx = (cx0+dcx) * CHUNK_SIZE + cr.c;
+                    const cwy = (cy0+dcy) * CHUNK_SIZE + cr.r;
+                    if (Math.abs(cwx - wx) <= 1 && Math.abs(cwy - wy) <= 1) {
+                        attackCreature(cr);
+                        return;
+                    }
+                }
+            }
+        });
 
         function tickCreatures(dt) {
             // Wander creatures only in chunks near the player (keeps cost low).
@@ -1459,6 +1598,9 @@ export default {
                     const ch = world.chunks.get((cx0 + dcx) + ',' + (cy0 + dcy));
                     if (!ch) continue;
                     for (const cr of ch.creatures) {
+                        if (cr.dead) continue;
+                        // Attack cooldown.
+                        if (cr.attackCooldown > 0) cr.attackCooldown -= dt;
                         // Advance an in-progress tween.
                         if (cr.moveT > 0) {
                             cr.moveT = Math.max(0, cr.moveT - dt);
@@ -1468,11 +1610,62 @@ export default {
                             continue;
                         }
                         cr.rc = cr.c; cr.rr = cr.r;
+
+                        // World coords of this creature.
+                        const cwx = (cx0 + dcx) * CHUNK_SIZE + cr.c;
+                        const cwy = (cy0 + dcy) * CHUNK_SIZE + cr.r;
+                        const distToPlayer = Math.max(Math.abs(cwx - player.wx), Math.abs(cwy - player.wy));
+
+                        // Aggressive AI: chase player + attack when adjacent.
+                        if (cr.ai === 'aggressive' && distToPlayer <= 6) {
+                            if (distToPlayer <= 1 && cr.attackCooldown <= 0) {
+                                player.hp = Math.max(0, player.hp - cr.dmg);
+                                cr.attackCooldown = 1200;
+                                if (player.hp <= 0) {
+                                    showDialogBubble('☠️', 'You have been slain! Respawning...');
+                                    player.hp = player.maxHp; player.mana = player.maxMana;
+                                    player.wx = startX; player.wy = startY;
+                                    player.rx = startX; player.ry = startY;
+                                }
+                                continue;
+                            }
+                            cr.timer += dt;
+                            if (cr.timer < 400) continue;
+                            cr.timer = 0;
+                            // Chase: step toward player.
+                            const sdx = Math.sign(player.wx - cwx);
+                            const sdy = Math.sign(player.wy - cwy);
+                            const nc = cr.c + sdx, nr = cr.r + sdy;
+                            if (nc >= 0 && nc < CHUNK_SIZE && nr >= 0 && nr < CHUNK_SIZE) {
+                                cr.fromC = cr.c; cr.fromR = cr.r;
+                                cr.c = nc; cr.r = nr;
+                                cr.moveT = CREATURE_MOVE_MS * 0.7;
+                            }
+                            continue;
+                        }
+
+                        // Passive AI: flee if player within 4 tiles.
+                        if (cr.ai === 'passive' && distToPlayer <= 4) {
+                            cr.timer += dt;
+                            if (cr.timer < 300) continue;
+                            cr.timer = 0;
+                            const fdx = Math.sign(cwx - player.wx);
+                            const fdy = Math.sign(cwy - player.wy);
+                            const nc = cr.c + fdx, nr = cr.r + fdy;
+                            if (nc >= 0 && nc < CHUNK_SIZE && nr >= 0 && nr < CHUNK_SIZE &&
+                                ch.biomes[nr * CHUNK_SIZE + nc] === cr.biome) {
+                                cr.fromC = cr.c; cr.fromR = cr.r;
+                                cr.c = nc; cr.r = nr;
+                                cr.moveT = CREATURE_MOVE_MS * 0.6;
+                            }
+                            continue;
+                        }
+
+                        // Default wander.
                         cr.timer += dt;
                         if (cr.timer < cr.nextMoveAt) continue;
                         cr.timer = 0;
                         cr.nextMoveAt = 1200 + Math.random() * 3500;
-                        // Try a random cardinal step.
                         const dirs = [[1,0],[-1,0],[0,1],[0,-1]];
                         const [dx, dy] = dirs[Math.floor(Math.random() * 4)];
                         const nc = cr.c + dx, nr = cr.r + dy;
@@ -1493,6 +1686,7 @@ export default {
             tryStepFromHeld();
             player.update(dt);
             tickCreatures(dt);
+            tickCombat(dt);
             render();
             updateHUD();
             renderMinimap();
@@ -1504,7 +1698,12 @@ export default {
             saveTimer += dt;
             if (saveTimer > 2000) {
                 saveTimer = 0;
-                sdk.storage.set(STATE_KEY, { seed, px: player.wx, py: player.wy, timeOfDay }).catch(() => {});
+                sdk.storage.set(STATE_KEY, {
+                    seed, px: player.wx, py: player.wy, timeOfDay,
+                    hp: player.hp, mana: player.mana,
+                    level: player.level, xp: player.xp, xpNext: player.xpNext,
+                    maxHp: player.maxHp, maxMana: player.maxMana, baseDmg: player.baseDmg,
+                }).catch(() => {});
                 worldRow.lastPlayed = Date.now();
                 sdk.storage.set('worlds', worlds).catch(() => {});
             }
