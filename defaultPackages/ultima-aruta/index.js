@@ -562,10 +562,13 @@ function _adjustBright(hex, factor) {
     return '#' + ((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1);
 }
 
-function drawShadow(ctx, sx, sy) {
-    ctx.fillStyle = 'rgba(0,0,0,0.22)';
+function drawShadow(ctx, sx, sy, spriteSize) {
+    if (spriteSize < 16) return; // tiny items (coins, flowers) skip shadow
+    const rx = Math.min(12, spriteSize * 0.35);
+    const ry = Math.min(5, spriteSize * 0.14);
+    ctx.fillStyle = 'rgba(0,0,0,0.18)';
     ctx.beginPath();
-    ctx.ellipse(sx + TILE_W / 2, sy + TILE_H / 2 + 2, 10, 4, 0, 0, Math.PI * 2);
+    ctx.ellipse(sx + TILE_W / 2, sy + TILE_H / 2 + 2, rx, ry, 0, 0, Math.PI * 2);
     ctx.fill();
 }
 
@@ -840,14 +843,14 @@ export default {
         const ctx = canvas.getContext('2d');
         const $hud = root.querySelector('#ua-hud');
 
-        function resize() {
-            const r = canvas.getBoundingClientRect();
-            const dpr = window.devicePixelRatio || 1;
-            canvas.width  = Math.max(320, Math.floor(r.width  * dpr));
-            canvas.height = Math.max(240, Math.floor(r.height * dpr));
-            ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-        }
-        const ro = new ResizeObserver(resize); ro.observe(canvas); resize();
+        // Fixed internal resolution — the viewport always shows the same
+        // area (~18 tiles wide) regardless of the window size. CSS stretches
+        // the canvas to fill; `image-rendering: pixelated` on the canvas
+        // element keeps it crisp.
+        const VIEW_W = 800, VIEW_H = 540;
+        canvas.width = VIEW_W;
+        canvas.height = VIEW_H;
+        canvas.style.imageRendering = 'pixelated';
 
         // ── Input: grid-snap with auto-repeat ────────────
         const held = new Set();
@@ -1020,8 +1023,19 @@ export default {
         }
         function hideGhost() { $ghost.style.display = 'none'; $ghost.textContent = ''; }
 
-        function canvasToWorldCell(canvasX, canvasY) {
-            const W = canvas.clientWidth, H = canvas.clientHeight;
+        // Convert CSS-pixel coords relative to canvas top-left into internal
+        // 800×540 resolution coords (canvas stretches via CSS).
+        function _cssToInternal(relX, relY) {
+            const rect = canvas.getBoundingClientRect();
+            return {
+                x: relX * VIEW_W / rect.width,
+                y: relY * VIEW_H / rect.height,
+            };
+        }
+
+        function canvasToWorldCell(cssRelX, cssRelY) {
+            const { x: canvasX, y: canvasY } = _cssToInternal(cssRelX, cssRelY);
+            const W = VIEW_W, H = VIEW_H;
             const cam = camera(W, H, player.rx, player.ry);
             const a = (canvasY - cam.cy) * 2 / TILE_H;
             const b = (canvasX - cam.cx) * 2 / TILE_W;
@@ -1251,9 +1265,10 @@ export default {
             // to the cursor, then convert back to world delta via inverse iso.
             if (!dx && !dy && mouseWalk) {
                 const rect = canvas.getBoundingClientRect();
-                const cx = mouseWalk.clientX - rect.left;
-                const cy = mouseWalk.clientY - rect.top;
-                const W = canvas.clientWidth, H = canvas.clientHeight;
+                const { x: cx, y: cy } = _cssToInternal(
+                    mouseWalk.clientX - rect.left,
+                    mouseWalk.clientY - rect.top);
+                const W = VIEW_W, H = VIEW_H;
                 const cam = camera(W, H, player.rx, player.ry);
                 const p = iso(player.wx, player.wy);
                 const px = p.x + cam.cx, py = p.y + cam.cy;
@@ -1288,8 +1303,8 @@ export default {
         }
 
         function render() {
-            const W = canvas.width  / (window.devicePixelRatio || 1);
-            const H = canvas.height / (window.devicePixelRatio || 1);
+            const W = VIEW_W;
+            const H = VIEW_H;
             ctx.clearRect(0, 0, W, H);
 
             const cam = camera(W, H, player.rx, player.ry);
@@ -1382,7 +1397,7 @@ export default {
                 const elev = world.elevAt(Math.round(s.wx), Math.round(s.wy));
                 const lift = (elev - 0.35) * ELEV_PX;
                 const sy = p.y + cam.cy - lift;
-                drawShadow(ctx, sx, sy);
+                drawShadow(ctx, sx, sy, s.size);
                 drawEmoji(ctx, sx, sy, s.emoji, s.size);
             }
 
@@ -1505,7 +1520,6 @@ export default {
             document.removeEventListener('keyup', onKey);
             document.removeEventListener('pointermove', onPointerMove);
             document.removeEventListener('pointerup', onPointerUp);
-            try { ro.disconnect(); } catch {}
         };
     },
 
