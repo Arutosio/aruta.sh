@@ -248,11 +248,11 @@ export default {
         }
 
         // ── Movement mode ────────────────────────────────
-        /** Determine current movement mode based on state + target tile. */
-        function getMoveMode(targetBiome) {
-            if (_boarded) return 'sail';
-            if (targetBiome === 'water') return 'swim';
-            return 'walk';
+        /** Determine current movement mode. Only two modes for the player:
+         *  walk (default) or sail (when boarded). No auto-swim — water is
+         *  blocked unless you board a boat first. */
+        function getMoveMode() {
+            return _boarded ? 'sail' : 'walk';
         }
 
         /** Creature movement mode from emoji type. */
@@ -280,7 +280,7 @@ export default {
          * Uses the current movement mode (walk/swim/sail).
          */
         function passableDg(wx, wy) {
-            const mode = getMoveMode(biomeAtDg(wx, wy));
+            const mode = getMoveMode();
             return canTraverseDg(wx, wy, mode);
         }
 
@@ -1306,17 +1306,13 @@ export default {
             }
             if (dx || dy) {
                 const sdx = Math.sign(dx), sdy = Math.sign(dy);
-                // Determine mode for the target tile.
-                const targetB = biomeAtDg(player.wx + sdx, player.wy + sdy);
-                const mode = getMoveMode(targetB);
+                const mode = getMoveMode();
 
                 // Try diagonal, then slide fallback.
                 let moved = player.tryMove(sdx, sdy, passableDg, mode);
                 if (!moved && dx && dy) {
-                    const modeX = getMoveMode(biomeAtDg(player.wx + sdx, player.wy));
-                    const modeY = getMoveMode(biomeAtDg(player.wx, player.wy + sdy));
-                    moved = player.tryMove(sdx, 0, passableDg, modeX) ||
-                            player.tryMove(0, sdy, passableDg, modeY);
+                    moved = player.tryMove(sdx, 0, passableDg, mode) ||
+                            player.tryMove(0, sdy, passableDg, mode);
                 }
 
                 // Auto-unboard when reaching land while sailing.
