@@ -227,9 +227,43 @@ export default {
             player.emoji = _savedEmoji || '🧙';
             addFloater(player.wx, player.wy, 'Disembarked', '#80c0ff');
         }
+        /** Toggle boarding — press B near water with boat in inventory. */
+        function toggleBoard() {
+            if (_boarded) {
+                // Unboard only if current tile is land (or shore).
+                const b = biomeAtDg(player.wx, player.wy);
+                if (BIOMES[b]?.passable) { unboardBoat(); }
+                else { addFloater(player.wx, player.wy, 'Move to land first!', '#ffaa00'); }
+            } else {
+                if (!hasBoatInInventory()) { addFloater(player.wx, player.wy, 'No boat!', '#ff6060'); return; }
+                // Check if adjacent to water.
+                const adj = [[1,0],[-1,0],[0,1],[0,-1]];
+                const nearWater = adj.some(([dx,dy]) => {
+                    const b = biomeAtDg(player.wx+dx, player.wy+dy);
+                    return b === 'water' || b === 'deep';
+                });
+                if (!nearWater) { addFloater(player.wx, player.wy, 'No water nearby!', '#ffaa00'); return; }
+                boardBoat();
+            }
+        }
+
+        // ── Movement mode ────────────────────────────────
+        /** Determine current movement mode based on state + target tile. */
+        function getMoveMode(targetBiome) {
+            if (_boarded) return 'sail';
+            if (targetBiome === 'water') return 'swim';
+            return 'walk';
+        }
+
+        /** Creature movement mode from emoji type. */
+        function creatureMode(emoji) {
+            if (AQUATIC_CREATURES.includes(emoji)) return 'swim';
+            if (FLYING_CREATURES.includes(emoji)) return 'walk'; // flying uses walk but skips water block
+            return 'walk';
+        }
 
         // ── Dungeon state ──────────────────────────────────
-        let _dungeon = null; // { map, overworldX, overworldY } when inside a dungeon
+        let _dungeon = null;
 
         // Dungeon-aware lookups (override world methods when inside).
         function biomeAtDg(wx, wy) {
@@ -241,21 +275,28 @@ export default {
             if (!_dungeon) return world.elevAt(wx, wy);
             return 0.5; // flat dungeons
         }
+        /**
+         * Unified passability check for player movement.
+         * Uses the current movement mode (walk/swim/sail).
+         */
         function passableDg(wx, wy) {
-            const b = biomeAtDg(wx, wy);
-            const bio = ALL_BIOMES[b];
-            if (!bio) return false;
-            // Boat: all water (including deep) is passable while boarded.
-            if (_boarded && (b === 'water' || b === 'deep')) return true;
-            // Boat boarding: allow stepping INTO water if player has boat.
-            if (!bio.passable && !_dungeon && (b === 'water' || b === 'deep') && hasBoatInInventory()) return true;
-            // Delegate to world.passable which includes the corner rule
-            // (non-mountain tiles near land are reachable).
-            if (!_dungeon) return world.passable(wx, wy);
-            // Dungeon passability.
-            if (!bio.passable) return false;
-            const f = featureAtDg(wx, wy);
-            return !(f && f.blocks);
+            const mode = getMoveMode(biomeAtDg(wx, wy));
+            return canTraverseDg(wx, wy, mode);
+        }
+
+        /** Core traversal check — used by player AND creatures. */
+        function canTraverseDg(wx, wy, mode = 'walk') {
+            if (_dungeon) {
+                // Dungeon tiles.
+                if (wx < 0 || wy < 0 || wx >= DUNGEON_SIZE || wy >= DUNGEON_SIZE) return false;
+                const b = _dungeon.map.biomes[wy * DUNGEON_SIZE + wx];
+                const bio = ALL_BIOMES[b];
+                if (!bio || !bio.passable) return false;
+                const f = _dungeon.map.features.find(ff => ff.c === wx && ff.r === wy);
+                return !(f && f.blocks);
+            }
+            // Overworld — delegate to World.canTraverse.
+            return world.canTraverse(wx, wy, mode);
         }
         function featureAtDg(wx, wy) {
             if (!_dungeon) return world.featureAt(wx, wy);
@@ -398,7 +439,7 @@ export default {
                 <canvas class="ua-canvas" id="ua-canvas"></canvas>
                 <canvas class="ua-minimap" id="ua-minimap" width="140" height="140"></canvas>
                 <div class="ua-hud" id="ua-hud"></div>
-                <div class="ua-help">WASD · <b>Right-hold</b> walk · <b>Click</b> attack · <b>Q</b> potion · <b>Space</b> interact · <b>H</b> guide · ${worldRow.name}</div>
+                <div class="ua-help">WASD · <b>Right-hold</b> walk · <b>Click</b> attack · <b>Q</b> potion · <b>B</b> board/unboard · <b>Space</b> interact · <b>H</b> guide</div>
                 <div class="ua-backpack" id="ua-backpack" style="display:none;">
                     <div class="ua-backpack-head">
                         <span class="ua-backpack-title">🎒 Backpack</span>
@@ -475,7 +516,12 @@ export default {
                 tryInteract();
                 return;
             }
-            if (e.type === 'keydown' && (k === 'i' || k === 'b')) {
+            if (e.type === 'keydown' && k === 'b') {
+                e.preventDefault();
+                toggleBoard();
+                return;
+            }
+            if (e.type === 'keydown' && k === 'i') {
                 e.preventDefault();
                 toggleBackpack();
                 return;
@@ -1259,30 +1305,24 @@ export default {
                 dy = absY >= bigger * 0.4 ? Math.sign(wdy) : 0;
             }
             if (dx || dy) {
-                // If the diagonal step is blocked, slide along a single axis.
-                let moved = player.tryMove(Math.sign(dx), Math.sign(dy), passableDg);
+                const sdx = Math.sign(dx), sdy = Math.sign(dy);
+                // Determine mode for the target tile.
+                const targetB = biomeAtDg(player.wx + sdx, player.wy + sdy);
+                const mode = getMoveMode(targetB);
+
+                // Try diagonal, then slide fallback.
+                let moved = player.tryMove(sdx, sdy, passableDg, mode);
                 if (!moved && dx && dy) {
-                    moved = player.tryMove(Math.sign(dx), 0, passableDg) ||
-                            player.tryMove(0, Math.sign(dy), passableDg);
+                    const modeX = getMoveMode(biomeAtDg(player.wx + sdx, player.wy));
+                    const modeY = getMoveMode(biomeAtDg(player.wx, player.wy + sdy));
+                    moved = player.tryMove(sdx, 0, passableDg, modeX) ||
+                            player.tryMove(0, sdy, passableDg, modeY);
                 }
-                // Boat + swimming logic after each move.
-                if (moved && !_dungeon) {
+
+                // Auto-unboard when reaching land while sailing.
+                if (moved && _boarded && !_dungeon) {
                     const b = biomeAtDg(player.wx, player.wy);
-                    const onWater = b === 'water' || b === 'deep';
-                    if (onWater && !_boarded && hasBoatInInventory()) {
-                        boardBoat();
-                    } else if (!onWater && _boarded) {
-                        unboardBoat();
-                    }
-                    if (onWater && _boarded) {
-                        // Sailing: slower but no extra stamina drain.
-                        player.moveT = Math.max(player.moveT, MOVE_MS * 1.3);
-                    } else if (onWater && !_boarded) {
-                        // Swimming (no boat): slow + stamina drain.
-                        player.moveT = Math.max(player.moveT, MOVE_MS * 1.6);
-                        player.stamina = Math.max(0, player.stamina - 2);
-                        try { _sfx(200, 0.05, 'sine', 0.02); } catch {}
-                    }
+                    if (b !== 'water' && b !== 'deep') unboardBoat();
                 }
             }
         }
@@ -1868,7 +1908,7 @@ export default {
                     cr.timer = 0;
                     const sdx = Math.sign(player.wx - cwx), sdy = Math.sign(player.wy - cwy);
                     const nc = cr.c + sdx, nr = cr.r + sdy;
-                    if (nc >= 0 && nc < N && nr >= 0 && nr < N && passableDg(ox + nc, oy + nr)) {
+                    if (nc >= 0 && nc < N && nr >= 0 && nr < N && canTraverseDg(ox + nc, oy + nr, creatureMode(cr.emoji))) {
                         cr.fromC = cr.c; cr.fromR = cr.r;
                         cr.c = nc; cr.r = nr;
                         cr.moveT = CREATURE_MOVE_MS * 0.7;
@@ -1883,7 +1923,7 @@ export default {
                 const [ddx, ddy] = dirs[Math.floor(Math.random() * 4)];
                 const nc = cr.c + ddx, nr = cr.r + ddy;
                 if (nc < 0 || nc >= N || nr < 0 || nr >= N) continue;
-                if (!passableDg(ox + nc, oy + nr)) continue;
+                if (!canTraverseDg(ox + nc, oy + nr, creatureMode(cr.emoji))) continue;
                 cr.fromC = cr.c; cr.fromR = cr.r;
                 cr.c = nc; cr.r = nr;
                 cr.moveT = CREATURE_MOVE_MS;
@@ -2191,11 +2231,15 @@ export default {
                             cr.timer += dt;
                             if (cr.timer < 400) continue;
                             cr.timer = 0;
-                            // Chase: step toward player.
+                            // Chase: step toward player (uses canTraverseDg).
                             const sdx = Math.sign(player.wx - cwx);
                             const sdy = Math.sign(player.wy - cwy);
                             const nc = cr.c + sdx, nr = cr.r + sdy;
-                            if (nc >= 0 && nc < CHUNK_SIZE && nr >= 0 && nr < CHUNK_SIZE) {
+                            const cMode = creatureMode(cr.emoji);
+                            const nwx = (cx0 + dcx) * CHUNK_SIZE + nc;
+                            const nwy = (cy0 + dcy) * CHUNK_SIZE + nr;
+                            if (nc >= 0 && nc < CHUNK_SIZE && nr >= 0 && nr < CHUNK_SIZE &&
+                                canTraverseDg(nwx, nwy, cMode)) {
                                 cr.fromC = cr.c; cr.fromR = cr.r;
                                 cr.c = nc; cr.r = nr;
                                 cr.moveT = CREATURE_MOVE_MS * 0.7;
@@ -2211,8 +2255,11 @@ export default {
                             const fdx = Math.sign(cwx - player.wx);
                             const fdy = Math.sign(cwy - player.wy);
                             const nc = cr.c + fdx, nr = cr.r + fdy;
+                            const cMode = creatureMode(cr.emoji);
+                            const nwx = (cx0 + dcx) * CHUNK_SIZE + nc;
+                            const nwy = (cy0 + dcy) * CHUNK_SIZE + nr;
                             if (nc >= 0 && nc < CHUNK_SIZE && nr >= 0 && nr < CHUNK_SIZE &&
-                                ch.biomes[nr * CHUNK_SIZE + nc] === cr.biome) {
+                                canTraverseDg(nwx, nwy, cMode)) {
                                 cr.fromC = cr.c; cr.fromR = cr.r;
                                 cr.c = nc; cr.r = nr;
                                 cr.moveT = CREATURE_MOVE_MS * 0.6;
@@ -2229,8 +2276,10 @@ export default {
                         const [dx, dy] = dirs[Math.floor(Math.random() * 4)];
                         const nc = cr.c + dx, nr = cr.r + dy;
                         if (nc < 0 || nc >= CHUNK_SIZE || nr < 0 || nr >= CHUNK_SIZE) continue;
-                        if (ch.biomes[nr * CHUNK_SIZE + nc] !== cr.biome) continue;
-                        if (ch.features.find(f => f.c === nc && f.r === nr && f.blocks)) continue;
+                        const cMode = creatureMode(cr.emoji);
+                        const nwx = (cx0 + dcx) * CHUNK_SIZE + nc;
+                        const nwy = (cy0 + dcy) * CHUNK_SIZE + nr;
+                        if (!canTraverseDg(nwx, nwy, cMode)) continue;
                         cr.fromC = cr.c; cr.fromR = cr.r;
                         cr.c = nc; cr.r = nr;
                         cr.moveT = CREATURE_MOVE_MS;

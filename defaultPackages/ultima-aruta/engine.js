@@ -404,26 +404,50 @@ class World {
         return this.getChunk(cx, cy).biomes[ly * CHUNK_SIZE + lx];
     }
 
-    passable(wx, wy) {
+    /** Is this water tile on the shore? (≥1 cardinal land neighbor) */
+    isShore(wx, wy) {
+        const cardinals = [[1,0],[-1,0],[0,1],[0,-1]];
+        for (const [dx, dy] of cardinals) {
+            const nb = this.biomeAt(wx + dx, wy + dy);
+            if (BIOMES[nb]?.passable) return true;
+        }
+        return false;
+    }
+
+    /**
+     * Unified passability check.
+     * @param {number} wx — world X
+     * @param {number} wy — world Y
+     * @param {'walk'|'swim'|'sail'} mode
+     * @returns {boolean}
+     */
+    canTraverse(wx, wy, mode = 'walk') {
         const b = this.biomeAt(wx, wy);
-        if (BIOMES[b].passable) {
+        const bio = BIOMES[b];
+        if (!bio) return false;
+
+        // Feature blocking (structures in villages etc.) — blocks walk only.
+        if (mode === 'walk') {
             const f = this.featureAt(wx, wy);
             if (f && f.blocks) return false;
-            return true;
         }
-        // Shore rule: a water/deep tile is passable if at least 2 of its
-        // 4 cardinal neighbours are solid land. This lets the player walk
-        // along coastlines and reach corners without drifting into open sea.
-        // Mountains stay fully blocked.
-        if (b !== 'mountain') {
-            const cardinals = [[1,0],[-1,0],[0,1],[0,-1]];
-            let landCount = 0;
-            for (const [dx, dy] of cardinals) {
-                const nb = this.biomeAt(wx + dx, wy + dy);
-                if (BIOMES[nb]?.passable) landCount++;
-            }
-            if (landCount >= 2) return true;
+
+        // Land biomes (passable by default): only walkable.
+        if (bio.passable) return mode === 'walk';
+
+        // Water biome rules:
+        if (b === 'water') {
+            if (mode === 'sail') return true;
+            if (mode === 'swim') return true;
+            if (mode === 'walk') return this.isShore(wx, wy); // wet feet at shore
+            return false;
         }
+        if (b === 'deep') {
+            if (mode === 'sail') return true;
+            return false; // no swimming or walking in deep water
+        }
+
+        // Mountain, cave_wall, lava: always blocked.
         return false;
     }
 

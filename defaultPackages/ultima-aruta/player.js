@@ -1,10 +1,11 @@
 /* Ultima Aruta — player.js: Player class */
-// ── Player ───────────────────────────────────────────────
+
 class Player {
     constructor(wx, wy) {
         this.wx = wx; this.wy = wy;
         this.rx = wx; this.ry = wy;
         this.moveT = 0;
+        this._moveDur = MOVE_MS; // actual duration of current move (for tween)
         this.moveFrom = { wx, wy };
         this.emoji = '🧙';
         this.hp = 100; this.maxHp = 100;
@@ -15,26 +16,50 @@ class Player {
         this.baseDmg = 5;
         this.kills = 0;
         this.days = 0;
-        this.poison = 0;    // remaining poison ticks (ms). 0 = not poisoned.
-        this.poisonDps = 0; // damage per second while poisoned.
+        this.poison = 0;
+        this.poisonDps = 0;
     }
-    tryMove(dx, dy, passCheck) {
+
+    /**
+     * Try to move one tile in direction (dx, dy).
+     * @param {number} dx — world X step (-1, 0, +1)
+     * @param {number} dy — world Y step (-1, 0, +1)
+     * @param {function} canPass — (wx, wy) → boolean
+     * @param {'walk'|'swim'|'sail'} mode — traversal mode
+     * @returns {boolean} true if moved
+     */
+    tryMove(dx, dy, canPass, mode = 'walk') {
         if (this.moveT > 0) return false;
         const nx = this.wx + dx, ny = this.wy + dy;
-        if (!passCheck(nx, ny)) return false;
+        if (!canPass(nx, ny)) return false;
+
         this.moveFrom = { wx: this.wx, wy: this.wy };
         this.wx = nx; this.wy = ny;
-        // Stamina cost: each step drains 2 (4 in water = swimming). When exhausted, movement slows.
-        this.stamina = Math.max(0, this.stamina - 2);
-        this.moveT = this.stamina > 0 ? MOVE_MS : MOVE_MS * 1.8;
-        // Footstep SFX (subtle).
-        try { _sfx(100 + Math.random() * 60, 0.04, 'triangle', 0.02); } catch {}
+
+        // Stamina cost from mode.
+        const cost = STAMINA_COST[mode] || 2;
+        this.stamina = Math.max(0, this.stamina - cost);
+
+        // Speed from mode + exhaustion.
+        const speedMult = SPEED[mode] || 1;
+        const exhaustMult = this.stamina > 0 ? 1 : SPEED.exhausted;
+        this._moveDur = Math.round(MOVE_MS * speedMult * exhaustMult);
+        this.moveT = this._moveDur;
+
+        // Footstep SFX — vary by mode.
+        try {
+            if (mode === 'swim')      _sfx(200, 0.05, 'sine', 0.02);
+            else if (mode === 'sail') _sfx(160, 0.06, 'triangle', 0.015);
+            else                      _sfx(100 + Math.random() * 60, 0.04, 'triangle', 0.02);
+        } catch {}
+
         return true;
     }
+
     update(dt) {
         if (this.moveT > 0) {
             this.moveT = Math.max(0, this.moveT - dt);
-            const t = 1 - (this.moveT / MOVE_MS);
+            const t = 1 - (this.moveT / this._moveDur);
             this.rx = this.moveFrom.wx + (this.wx - this.moveFrom.wx) * t;
             this.ry = this.moveFrom.wy + (this.wy - this.moveFrom.wy) * t;
         } else {
@@ -42,4 +67,3 @@ class Player {
         }
     }
 }
-

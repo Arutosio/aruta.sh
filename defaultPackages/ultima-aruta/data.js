@@ -10,6 +10,20 @@ const PERSP_STRENGTH = 0.65;
 const DUNGEON_SIZE = 24;
 const SELL_RATIO = 0.3;
 
+// Movement speed multipliers (applied to MOVE_MS).
+const SPEED = {
+    walk: 1.0,        // base
+    swim: 1.5,        // 50% slower
+    sail: 1.2,        // 20% slower
+    exhausted: 1.8,   // 80% slower (stacks multiplicatively)
+};
+// Stamina cost per step by mode.
+const STAMINA_COST = { walk: 2, swim: 4, sail: 1 };
+
+// Creature movement types.
+const AQUATIC_CREATURES = ['🐟', '🐠', '🦈', '🦆'];
+const FLYING_CREATURES  = ['🦅'];
+
 const BIOMES = {
     deep:     { color1: '#123864', color2: '#0a1e3d', passable: false, name: 'Deep Water' },
     water:    { color1: '#2a7abc', color2: '#1d5a92', passable: false, name: 'Water' },
