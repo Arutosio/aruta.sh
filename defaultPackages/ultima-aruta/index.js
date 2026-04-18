@@ -163,6 +163,7 @@ const ITEMS = {
     crystal:  { emoji: '🔮', name: 'Crystal Ball',  slot: 'book' },
     torch:    { emoji: '🔦', name: 'Torch' },
     compass:  { emoji: '🧭', name: 'Compass' },
+    antidote: { emoji: '⚗️', name: 'Antidote',     use: { cure: true } },
 };
 
 const ITEM_DROPS = {
@@ -200,6 +201,7 @@ const MERCHANT_STOCK = [
     { key: 'bread',     price: 4 },
     { key: 'wine',      price: 10 },
     { key: 'torch',     price: 6 },
+    { key: 'antidote',  price: 12 },
 ];
 
 const RECIPES = [
@@ -219,6 +221,8 @@ const RECIPES = [
     { name: 'Wand',          inputs: ['wood', 'gem'],                    output: 'wand' },
     { name: 'Torch',         inputs: ['wood', 'herb'],                   output: 'torch' },
     { name: 'Spellbook',     inputs: ['wood', 'feather', 'gem'],         output: 'spellbook' },
+    { name: 'Antidote',      inputs: ['herb', 'mushroom', 'berry'],     output: 'antidote' },
+    { name: 'Meat',          inputs: ['wood', 'berry'],                 output: 'meat' },
 ];
 
 const SLOTS = [
@@ -240,6 +244,16 @@ const DIALOGS = [
     'Do not trust mushrooms that glow.',
     'At night the fae dance in forest clearings.',
     'I dreamt of a dragon last night. Wasn\'t friendly.',
+    'Beware the scorpions in the sand dunes. Their sting burns.',
+    'I heard howling from the mountains last night. Could be trolls.',
+    'The fountain in the village square can heal any wound.',
+    'Unicorns roam the deepest forests. They flee at the sight of man.',
+    'Wood and feathers — that\'s all ye need for a proper spellbook.',
+    'Sharks patrol the deep waters. Stay close to shore!',
+    'A wise mage always carries an antidote. Snakes are everywhere.',
+    'The caves hold treasures, but also terrible creatures.',
+    'Craft yourself some armour before venturing far. Stones are plenty.',
+    'They say a demon lurks in the deepest dungeon chamber.',
 ];
 
 // Sprite sizes by emoji — used by the renderer.
@@ -264,7 +278,7 @@ const SPRITE_SIZES = {
     '🧛': 28, '🧌': 30, '👿': 36, '🐓': 16, '🦆': 18,
     '🪄': 20, '🍖': 16, '🍞': 16, '🍷': 16, '🪶': 14, '🪵': 18,
     '🔮': 22, '🔦': 18, '🧭': 16,
-    '⛲': 34, '🪦': 22, '⛺': 32, '🕯️': 16, '🗿': 30,
+    '⛲': 34, '🪦': 22, '⛺': 32, '🕯️': 16, '🗿': 30, '🕸️': 18, '⚗️': 16,
 };
 /* ╔══════════════════════════════════════════════════════════╗
  * ║  ULTIMA ARUTA — engine.js                                  ║
@@ -359,6 +373,16 @@ function generateDungeon(dungeonId) {
                 });
             }
         }
+    }
+    // Dungeon atmosphere decorations: candles + cobwebs on corridor/room edges.
+    for (let y = 1; y < N - 1; y++) for (let x = 1; x < N - 1; x++) {
+        if (biomes[y * N + x] !== 'cave_floor') continue;
+        if (features.find(f => f.c === x && f.r === y)) continue;
+        // Place candle next to a wall.
+        const wallAdj = [[1,0],[-1,0],[0,1],[0,-1]].some(([dx,dy]) => biomes[(y+dy)*N+(x+dx)] === 'cave_wall');
+        if (wallAdj && rnd() < 0.06) features.push({ c: x, r: y, emoji: '🕯️' });
+        else if (wallAdj && rnd() < 0.04) features.push({ c: x, r: y, emoji: '🕸️' });
+        else if (rnd() < 0.01) features.push({ c: x, r: y, emoji: '🪦' });
     }
     return { biomes, elevations, features, creatures, N, spawnX: exitRoom.cx, spawnY: exitRoom.cy };
 }
@@ -982,6 +1006,8 @@ class Player {
         this.baseDmg = 5;
         this.kills = 0;
         this.days = 0;
+        this.poison = 0;    // remaining poison ticks (ms). 0 = not poisoned.
+        this.poisonDps = 0; // damage per second while poisoned.
     }
     tryMove(dx, dy, passCheck) {
         if (this.moveT > 0) return false;
@@ -2099,6 +2125,7 @@ export default {
             if (def.use.hp)      player.hp      = Math.min(player.maxHp,      player.hp      + def.use.hp);
             if (def.use.mana)    player.mana    = Math.min(player.maxMana,    player.mana    + def.use.mana);
             if (def.use.stamina) player.stamina = Math.min(player.maxStamina, player.stamina + def.use.stamina);
+            if (def.use.cure) { player.poison = 0; player.poisonDps = 0; }
             // Remove from inventory.
             inventory.items = inventory.items.filter(i => i.id !== id);
             saveInventory();
@@ -2603,7 +2630,8 @@ export default {
             const mm = String(mins).padStart(2, '0');
             const phase = timeOfDay < 0.25 ? '🌑' : timeOfDay < 0.42 ? '🌅' : timeOfDay < 0.66 ? '☀️' : timeOfDay < 0.83 ? '🌇' : '🌙';
             const cd2 = classDef || CLASSES.warrior;
-            $hud.innerHTML = `${cd2.icon} <b>Lv${player.level}</b> · ❤️ <b>${Math.round(player.hp)}/${player.maxHp}</b> · 💧 <b>${Math.round(player.mana)}/${player.maxMana}</b> · ⚡ <b>${Math.round(player.stamina)}/${player.maxStamina}</b> · 💀${player.kills}<br>📍 <b>${player.wx},${player.wy}</b> · ${biome} · ${phase} <b>${hh}:${mm}</b> · Day <b>${player.days + 1}</b>`;
+            const poisonTag = player.poison > 0 ? ' · <span style="color:#40c040">☠ POISONED</span>' : '';
+            $hud.innerHTML = `${cd2.icon} <b>Lv${player.level}</b> · ❤️ <b>${Math.round(player.hp)}/${player.maxHp}</b> · 💧 <b>${Math.round(player.mana)}/${player.maxMana}</b> · ⚡ <b>${Math.round(player.stamina)}/${player.maxStamina}</b> · 💀${player.kills}${poisonTag}<br>📍 <b>${player.wx},${player.wy}</b> · ${biome} · ${phase} <b>${hh}:${mm}</b> · Day <b>${player.days + 1}</b>`;
         }
 
         // ── Combat helpers ─────────────────────────────────
@@ -2776,6 +2804,12 @@ export default {
                         addFloater(player.wx, player.wy, '-' + reduceDamage(cr.dmg), '#ff6060');
                         sfxHurt();
                         _playerFlash = 300;
+                        // Venomous creatures apply poison.
+                        const venomous = ['🐍', '🦂', '🕷️'];
+                        if (venomous.includes(cr.emoji) && player.poison <= 0) {
+                            player.poison = 8000; player.poisonDps = 2;
+                            addFloater(player.wx, player.wy, '☠ Poisoned!', '#40c040');
+                        }
                         if (player.hp <= 0) { respawnPlayer(); }
                         continue;
                     }
@@ -2842,8 +2876,14 @@ export default {
             } else {
                 _autoTarget = null;
             }
-            // HP regen (slow).
-            if (player.hp < player.maxHp) player.hp = Math.min(player.maxHp, player.hp + 0.3 * dt / 1000);
+            // Poison DoT.
+            if (player.poison > 0) {
+                player.poison -= dt;
+                player.hp = Math.max(1, player.hp - player.poisonDps * dt / 1000);
+                if (player.poison <= 0) { player.poison = 0; player.poisonDps = 0; addFloater(player.wx, player.wy, 'Cured!', '#60ff60'); }
+            }
+            // HP regen (slow — blocked while poisoned).
+            if (player.hp < player.maxHp && player.poison <= 0) player.hp = Math.min(player.maxHp, player.hp + 0.3 * dt / 1000);
             // Mana regen.
             if (player.mana < player.maxMana) player.mana = Math.min(player.maxMana, player.mana + 0.5 * dt / 1000);
             // Stamina regen — faster when standing still (6/s), slower while moving (2/s).
