@@ -192,13 +192,13 @@ export default {
                 const rad = Math.floor(1 + r * 0.5);
                 const tx = Math.round(Math.cos(ang) * rad);
                 const ty = Math.round(Math.sin(ang) * rad);
-                if (!world.passable(tx, ty)) continue;
+                if (!world.canTraverse(tx, ty)) continue;
                 const b = world.biomeAt(tx, ty);
                 if (b !== 'grass' && b !== 'forest') continue;
                 // Score: count passable neighbours in a 5-tile radius.
                 let score = 0;
                 for (let dy = -3; dy <= 3; dy++) for (let dx = -3; dx <= 3; dx++) {
-                    if (world.passable(tx + dx, ty + dy)) score++;
+                    if (world.canTraverse(tx + dx, ty + dy)) score++;
                 }
                 if (score > bestScore) { bestScore = score; bestX = tx; bestY = ty; }
                 if (bestScore >= 40) break; // big enough landmass, stop searching
@@ -1107,7 +1107,7 @@ export default {
                     const cr = canvas.getBoundingClientRect();
                     const { wx, wy } = canvasToWorldCell(ev.clientX - cr.left, ev.clientY - cr.top);
                     const dist = Math.max(Math.abs(wx - player.wx), Math.abs(wy - player.wy));
-                    if (dist <= 2 && world.passable(wx, wy) && placeWorldItem(wx, wy, dragState.invItem.key)) {
+                    if (dist <= 2 && world.canTraverse(wx, wy) && placeWorldItem(wx, wy, dragState.invItem.key)) {
                         inventory.items = inventory.items.filter(i => i.id !== dragState.invItem.id);
                         saveInventory(); renderBackpack();
                     }
@@ -1138,7 +1138,7 @@ export default {
                         const cr = canvas.getBoundingClientRect();
                         const { wx, wy } = canvasToWorldCell(ev.clientX - cr.left, ev.clientY - cr.top);
                         const dist = Math.max(Math.abs(wx - player.wx), Math.abs(wy - player.wy));
-                        if (dist <= 2 && world.passable(wx, wy)) placeWorldItem(wx, wy, it.key);
+                        if (dist <= 2 && world.canTraverse(wx, wy)) placeWorldItem(wx, wy, it.key);
                         else inventory.items.push(it);
                         saveInventory(); renderBackpack();
                     }
@@ -1790,7 +1790,7 @@ export default {
                     const wx = (cx0+dcx) * CHUNK_SIZE + f.c;
                     const wy = (cy0+dcy) * CHUNK_SIZE + f.r;
                     const d = Math.abs(wx - player.wx) + Math.abs(wy - player.wy);
-                    if (d < bestDist && world.passable(wx, wy)) { bestDist = d; best = { wx, wy }; }
+                    if (d < bestDist && world.canTraverse(wx, wy)) { bestDist = d; best = { wx, wy }; }
                 }
             }
             return best || { wx: startX, wy: startY };
