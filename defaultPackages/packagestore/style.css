@@ -525,21 +525,52 @@ body {
     font-size: 0.82rem;
 }
 
+/* ── Tablet (narrow 3-pane) ───────────────────────── */
+@media (max-width: 900px) {
+    .ps-sidebar { width: 180px; }
+    .ps-details { width: 220px; }
+}
+
 /* ── Mobile ───────────────────────────────────────── */
 @media (max-width: 720px) {
     .ps-wrap { flex-direction: column; }
     .ps-sidebar {
         width: 100%;
-        max-height: 180px;
+        max-height: 140px;
         border-right: none;
         border-bottom: 1px solid rgba(255, 200, 87, 0.2);
+        flex-direction: row;
+        overflow-x: auto;
     }
+    .ps-repos { flex-direction: row; display: flex; gap: 0.3rem; flex-wrap: nowrap; }
+    .ps-side-foot { border-top: none; border-left: 1px solid rgba(255, 200, 87, 0.15); padding: 0.3rem; }
     .ps-details {
         width: 100%;
-        max-height: 240px;
+        max-height: 200px;
         border-left: none;
         border-top: 1px solid rgba(255, 200, 87, 0.2);
     }
+    .ps-toolbar { gap: 0.3rem; }
+    .ps-search { min-width: 80px; font-size: 0.8rem; }
+    .ps-toolbar select { font-size: 0.75rem; padding: 0.2rem 0.35rem; }
+    .ps-filter-chips { flex-wrap: wrap; }
+    .ps-act { min-width: 60px; font-size: 0.75rem; padding: 0.25rem 0.5rem; }
+    .ps-chip-installed { min-width: 80px; font-size: 0.7rem; padding: 0.2rem 0.4rem; }
+    .ps-pkg-row { gap: 0.4rem; padding: 0.45rem 0.5rem; }
+    .ps-pkg-icon { font-size: 1.4rem; width: 28px; }
+    .ps-pkg-name { font-size: 0.82rem; }
+    .ps-pkg-desc { font-size: 0.72rem; }
+}
+
+/* ── Very small (phone portrait) ─────────────────── */
+@media (max-width: 480px) {
+    .ps-sidebar { max-height: 100px; }
+    .ps-details { display: none; } /* hide details pane entirely */
+    .ps-pkg-actions { flex-direction: row; gap: 0.2rem; }
+    .ps-act { min-width: auto; padding: 0.2rem 0.4rem; }
+    .ps-chip-installed { min-width: auto; }
+    .ps-filter-chips { gap: 2px; }
+    .ps-filter-chips .ps-chip-seg { font-size: 0.68rem; padding: 0.15rem 0.4rem; }
 }
 
 /* ══════════════════════════════════════════════════════════
