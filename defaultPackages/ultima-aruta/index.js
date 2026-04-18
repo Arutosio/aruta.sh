@@ -629,24 +629,52 @@ export default {
         const $craft     = root.querySelector('#ua-craft');
         const $craftBody = root.querySelector('#ua-craft-body');
 
+        function _craftCategory(output) {
+            const def = ITEMS[output];
+            if (!def) return 'Other';
+            if (def.use) return '🧪 Consumables';
+            const armorSlots = ['head', 'chest', 'feet', 'hands', 'shield', 'cape'];
+            if (armorSlots.includes(def.slot)) return '🛡️ Armor';
+            if (def.slot === 'weapon') return '⚔️ Weapons';
+            if (['ring', 'neck', 'book'].includes(def.slot)) return '✦ Accessories';
+            return '🔧 Other';
+        }
+
         function renderCraft() {
-            $craftBody.innerHTML = RECIPES.map((r, ri) => {
-                const def = ITEMS[r.output];
-                // Check if player has the ingredients.
-                const counts = {};
-                for (const k of r.inputs) counts[k] = (counts[k] || 0) + 1;
-                let canCraft = true;
-                for (const [k, need] of Object.entries(counts)) {
-                    const have = inventory.items.filter(i => i.key === k).length;
-                    if (have < need) canCraft = false;
+            // Group recipes by category.
+            const cats = {};
+            RECIPES.forEach((r, ri) => {
+                const cat = _craftCategory(r.output);
+                (cats[cat] = cats[cat] || []).push({ r, ri });
+            });
+            const catOrder = ['🧪 Consumables', '⚔️ Weapons', '🛡️ Armor', '✦ Accessories', '🔧 Other'];
+
+            let html = '';
+            for (const cat of catOrder) {
+                const entries = cats[cat];
+                if (!entries) continue;
+                html += `<div class="ua-craft-cat">${cat}</div>`;
+                for (const { r, ri } of entries) {
+                    const def = ITEMS[r.output];
+                    const counts = {};
+                    for (const k of r.inputs) counts[k] = (counts[k] || 0) + 1;
+                    let canCraft = true;
+                    // Build ingredient string with have/need highlighting.
+                    const ingParts = [];
+                    for (const [k, need] of Object.entries(counts)) {
+                        const have = inventory.items.filter(i => i.key === k).length;
+                        if (have < need) canCraft = false;
+                        const color = have >= need ? '#60ff60' : '#ff6060';
+                        ingParts.push(`<span style="color:${color}">${ITEMS[k]?.emoji || '?'} ${have}/${need}</span>`);
+                    }
+                    html += `<div class="ua-craft-row">
+                        <div class="ua-craft-item">${def.emoji} <b>${r.name}</b></div>
+                        <div class="ua-craft-ing">${ingParts.join(' ')}</div>
+                        <button class="ua-btn" data-craft="${ri}" ${canCraft ? '' : 'disabled'}>Craft</button>
+                    </div>`;
                 }
-                const inputStr = r.inputs.map(k => (ITEMS[k]?.emoji || '?') + ' ' + (ITEMS[k]?.name || k)).join(' + ');
-                return `<div class="ua-shop-row">
-                    <span>${def.emoji} <b>${r.name}</b></span>
-                    <span style="font-size:11px;opacity:0.7">${inputStr}</span>
-                    <button class="ua-btn" data-craft="${ri}" ${canCraft ? '' : 'disabled'}>Craft</button>
-                </div>`;
-            }).join('');
+            }
+            $craftBody.innerHTML = html;
             $craftBody.querySelectorAll('[data-craft]').forEach(btn => {
                 btn.addEventListener('click', () => {
                     const ri = Number(btn.dataset.craft);

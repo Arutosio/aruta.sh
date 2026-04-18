@@ -314,6 +314,20 @@ html, body, #root {
     user-select: none;
 }
 .ua-craft-body { padding: 8px 10px; }
+.ua-craft-cat {
+    font-size: 13px; font-weight: 700; color: #ffc857;
+    letter-spacing: 0.06em;
+    padding: 8px 4px 3px; margin-top: 4px;
+    border-bottom: 1px solid rgba(255, 200, 87, 0.2);
+}
+.ua-craft-row {
+    display: flex; align-items: center; justify-content: space-between; gap: 6px;
+    padding: 5px 6px;
+    border-bottom: 1px solid rgba(255, 200, 87, 0.06);
+    font-size: 13px;
+}
+.ua-craft-item { min-width: 100px; }
+.ua-craft-ing { font-size: 11px; flex: 1; text-align: right; margin-right: 6px; }
 
 /* ── Merchant shop ─────────────────────────────────────── */
 .ua-shop {
