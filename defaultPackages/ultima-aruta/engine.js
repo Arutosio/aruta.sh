@@ -411,20 +411,18 @@ class World {
             if (f && f.blocks) return false;
             return true;
         }
-        // Corner rule: any non-mountain impassable tile (water, deep) is
-        // reachable if at least 1 of its 8 neighbours is solid land. This
-        // lets the player hug shorelines, reach diagonal land corners
-        // (e.g. 3 water + 1 land), and traverse narrow straits.
-        // Mountains and cave walls stay fully blocked.
+        // Shore rule: a water/deep tile is passable if at least 2 of its
+        // 4 cardinal neighbours are solid land. This lets the player walk
+        // along coastlines and reach corners without drifting into open sea.
+        // Mountains stay fully blocked.
         if (b !== 'mountain') {
-            const neighbours = [[1,0],[-1,0],[0,1],[0,-1],[1,1],[1,-1],[-1,1],[-1,-1]];
-            for (const [dx, dy] of neighbours) {
+            const cardinals = [[1,0],[-1,0],[0,1],[0,-1]];
+            let landCount = 0;
+            for (const [dx, dy] of cardinals) {
                 const nb = this.biomeAt(wx + dx, wy + dy);
-                if (BIOMES[nb]?.passable) {
-                    const f = this.featureAt(wx + dx, wy + dy);
-                    if (!f || !f.blocks) return true;
-                }
+                if (BIOMES[nb]?.passable) landCount++;
             }
+            if (landCount >= 2) return true;
         }
         return false;
     }
