@@ -435,11 +435,10 @@ class World {
         // Land biomes (passable by default): only walkable.
         if (bio.passable) return mode === 'walk';
 
-        // Water biome rules:
+        // Water biome rules: NOT walkable. Swim or sail only.
         if (b === 'water') {
             if (mode === 'sail') return true;
             if (mode === 'swim') return true;
-            if (mode === 'walk') return this.isShore(wx, wy); // wet feet at shore
             return false;
         }
         if (b === 'deep') {
