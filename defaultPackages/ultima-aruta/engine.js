@@ -411,15 +411,16 @@ class World {
             if (f && f.blocks) return false;
             return true;
         }
-        // Wade rule: a shallow-water tile (not deep) is passable if any of
-        // its 8 world-neighbours is solid land. Lets the player reach
-        // narrow landmasses, islands' corners, and coves without being
-        // stopped just because the target cell is classified as water.
-        if (b === 'water') {
+        // Corner rule: any non-mountain impassable tile (water, deep) is
+        // reachable if at least 1 of its 8 neighbours is solid land. This
+        // lets the player hug shorelines, reach diagonal land corners
+        // (e.g. 3 water + 1 land), and traverse narrow straits.
+        // Mountains and cave walls stay fully blocked.
+        if (b !== 'mountain') {
             const neighbours = [[1,0],[-1,0],[0,1],[0,-1],[1,1],[1,-1],[-1,1],[-1,-1]];
             for (const [dx, dy] of neighbours) {
                 const nb = this.biomeAt(wx + dx, wy + dy);
-                if (BIOMES[nb].passable) {
+                if (BIOMES[nb]?.passable) {
                     const f = this.featureAt(wx + dx, wy + dy);
                     if (!f || !f.blocks) return true;
                 }
