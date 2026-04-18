@@ -1531,14 +1531,18 @@ export default {
                     ctx.fill();
                 }
                 // Player damage flash: red glow under sprite.
-                // Player position indicator — pulsing circle under the sprite.
+                // Player position indicator — bright green pulsing ellipse.
                 if (s.isPlayer) {
-                    const pulse = 0.35 + 0.15 * Math.sin(_renderTime * 0.004);
+                    const pulse = 0.5 + 0.3 * Math.sin(_renderTime * 0.004);
                     const tw = TILE_W * ps;
-                    ctx.strokeStyle = `rgba(255,200,87,${pulse.toFixed(2)})`;
-                    ctx.lineWidth = 1.5;
+                    const th = TILE_H * ps;
+                    // Fill + stroke for visibility.
+                    ctx.fillStyle = `rgba(60,220,60,${(pulse * 0.25).toFixed(2)})`;
+                    ctx.strokeStyle = `rgba(60,255,60,${pulse.toFixed(2)})`;
+                    ctx.lineWidth = 2;
                     ctx.beginPath();
-                    ctx.ellipse(sx + tw / 2, sy + (TILE_H * ps) / 2 + 2, tw * 0.32, tw * 0.16, 0, 0, Math.PI * 2);
+                    ctx.ellipse(sx + tw / 2, sy + th / 2 + 2, tw * 0.4, th * 0.5, 0, 0, Math.PI * 2);
+                    ctx.fill();
                     ctx.stroke();
                 }
                 if (s.flash && s.flash > 0) {

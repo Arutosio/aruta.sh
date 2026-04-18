@@ -370,8 +370,16 @@ html,body{margin:0;padding:0;width:100%;height:100%;background:transparent;color
                 // define classes/functions at top level (no export needed);
                 // only the entry file uses export default.
                 let bundledURL = fileURLs[entryPath];
+                // Collect all resolved entry paths so they're excluded from bundling.
+                const allEntries = new Set([entryPath]);
+                if (d.manifest.entriesResolved) {
+                    for (const v of Object.values(d.manifest.entriesResolved)) {
+                        if (v) allEntries.add(v);
+                    }
+                }
+                if (d.manifest.entry) allEntries.add(d.manifest.entry);
                 const depFiles = Object.keys(fileURLs).filter(p =>
-                    p.endsWith('.js') && p !== entryPath && p !== 'style.css');
+                    p.endsWith('.js') && !allEntries.has(p) && p !== 'style.css');
                 if (depFiles.length > 0) {
                     const parts = [];
                     for (const dep of depFiles.sort()) {
