@@ -247,12 +247,13 @@ export default {
             if (!bio) return false;
             // Boat: all water (including deep) is passable while boarded.
             if (_boarded && (b === 'water' || b === 'deep')) return true;
-            if (!bio.passable) {
-                // Boat boarding: allow stepping INTO water if player has boat.
-                if (!_dungeon && (b === 'water' || b === 'deep') && hasBoatInInventory()) return true;
-                return false;
-            }
+            // Boat boarding: allow stepping INTO water if player has boat.
+            if (!bio.passable && !_dungeon && (b === 'water' || b === 'deep') && hasBoatInInventory()) return true;
+            // Delegate to world.passable which includes the corner rule
+            // (non-mountain tiles near land are reachable).
             if (!_dungeon) return world.passable(wx, wy);
+            // Dungeon passability.
+            if (!bio.passable) return false;
             const f = featureAtDg(wx, wy);
             return !(f && f.blocks);
         }
