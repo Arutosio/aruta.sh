@@ -275,7 +275,7 @@ const SPRITE_SIZES = {
     '🐻': 28, '🐍': 20, '🐉': 42, '🐸': 16,
     '🐲': 38, '👹': 34, '🧟': 28,
     '🦅': 22, '🦈': 26, '🐊': 24, '🦂': 18, '🐄': 26, '🐴': 28, '🦄': 30,
-    '🧛': 28, '🧌': 30, '👿': 36, '🐓': 16, '🦆': 18,
+    '🧛': 28, '🧌': 30, '👿': 36, '🐓': 16, '🦆': 18, '💂': 28,
     '🪄': 20, '🍖': 16, '🍞': 16, '🍷': 16, '🪶': 14, '🪵': 18,
     '🔮': 22, '🔦': 18, '🧭': 16,
     '⛲': 34, '🪦': 22, '⛺': 32, '🕯️': 16, '🗿': 30, '🕸️': 18, '⚗️': 16,
@@ -653,6 +653,14 @@ class World {
             const fc = oc - 1, fr = or - 1;
             if (!features.find(f => f.c === fc && f.r === fr)) {
                 features.push({ c: fc, r: fr, emoji: '⛲', fountain: true });
+            }
+            // 1-2 guards at village edges.
+            const guardSpots = [[-2, -1], [2, 1]];
+            for (const [gc, gr] of guardSpots) {
+                const gx = oc + gc, gy = or + gr;
+                if (gx >= 0 && gx < N && gy >= 0 && gy < N && !features.find(f => f.c === gx && f.r === gy)) {
+                    features.push({ c: gx, r: gy, emoji: '💂', npc: true, dialog: 'Move along, citizen. The village is safe under our watch.' });
+                }
             }
             // 1 merchant per village (always present).
             const mc = oc + 1, mr = or - 1;
@@ -3009,6 +3017,33 @@ export default {
                 }
             }
 
+            // Fishing: click a water tile within 2 tiles.
+            if (!_dungeon) {
+                const dist0 = Math.max(Math.abs(wx - player.wx), Math.abs(wy - player.wy));
+                const clickBiome = biomeAtDg(wx, wy);
+                if (dist0 <= 2 && (clickBiome === 'water' || clickBiome === 'deep')) {
+                    if (player.stamina < 3) { addFloater(player.wx, player.wy, 'Exhausted!', '#ffaa00'); return; }
+                    player.stamina -= 3;
+                    _sfx(250, 0.06, 'sine', 0.03);
+                    if (Math.random() < 0.4) {
+                        const fishPool = ['gold', 'herb', 'gem'];
+                        const fishKey = clickBiome === 'deep' ? (Math.random() < 0.3 ? 'gem' : 'gold') : fishPool[Math.floor(Math.random() * fishPool.length)];
+                        const def = ITEMS[fishKey];
+                        inventory.items.push({
+                            id: 'it_' + Math.random().toString(36).slice(2, 9),
+                            key: fishKey, emoji: def.emoji, name: def.name,
+                            x: 6 + (inventory.items.length % 7) * 36,
+                            y: 6 + Math.floor(inventory.items.length / 7) * 36,
+                        });
+                        addFloater(wx, wy, '🐟 +' + def.name, '#80c0ff');
+                        saveInventory();
+                    } else {
+                        addFloater(wx, wy, 'Nothing bites...', '#aaa');
+                    }
+                    return;
+                }
+            }
+
             // Gathering: click a tree or rock within 2 tiles to harvest.
             if (!_dungeon) {
                 const dist = Math.max(Math.abs(wx - player.wx), Math.abs(wy - player.wy));
@@ -3102,6 +3137,12 @@ export default {
                                 addFloater(player.wx, player.wy, '-' + reduceDamage(cr.dmg), '#ff6060');
                                 sfxHurt();
                                 _playerFlash = 300;
+                                // Venomous overworld creatures.
+                                const venomous = ['🐍', '🦂'];
+                                if (venomous.includes(cr.emoji) && player.poison <= 0) {
+                                    player.poison = 8000; player.poisonDps = 2;
+                                    addFloater(player.wx, player.wy, '☠ Poisoned!', '#40c040');
+                                }
                                 if (player.hp <= 0) { respawnPlayer(); }
                                 continue;
                             }
