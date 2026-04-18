@@ -363,7 +363,31 @@ html,body{margin:0;padding:0;width:100%;height:100%;background:transparent;color
                     document.head.appendChild(link);
                 }
                 const entryPath = (d.manifest.entriesResolved && d.manifest.entriesResolved.app) || d.manifest.entry || 'index.js';
-                const mod = await import(fileURLs[entryPath]);
+                // Mini-bundler: concatenate all .js files (except entry +
+                // style.css) into the entry module so classes defined in
+                // separate files are in scope. Fixes Firefox blob-URL
+                // dynamic import limitation. Convention: dependency files
+                // define classes/functions at top level (no export needed);
+                // only the entry file uses export default.
+                let bundledURL = fileURLs[entryPath];
+                const depFiles = Object.keys(fileURLs).filter(p =>
+                    p.endsWith('.js') && p !== entryPath && p !== 'style.css');
+                if (depFiles.length > 0) {
+                    const parts = [];
+                    for (const dep of depFiles.sort()) {
+                        const r = await fetch(fileURLs[dep]);
+                        let txt = await r.text();
+                        // Strip export keywords so they don't conflict at top level.
+                        txt = txt.replace(/^export (default |)/gm, '');
+                        parts.push('/* ── ' + dep + ' ── */\\n' + txt);
+                    }
+                    const entryR = await fetch(fileURLs[entryPath]);
+                    const entryTxt = await entryR.text();
+                    const bundle = parts.join('\\n\\n') + '\\n\\n/* ── ' + entryPath + ' ── */\\n' + entryTxt;
+                    const blob = new Blob([bundle], { type: 'application/javascript' });
+                    bundledURL = URL.createObjectURL(blob);
+                }
+                const mod = await import(bundledURL);
                 const exp = mod.default || mod;
                 if (typeof exp.mount === 'function') await exp.mount(root, ctx);
                 // Stash the module and ctx so a later teardown message can
