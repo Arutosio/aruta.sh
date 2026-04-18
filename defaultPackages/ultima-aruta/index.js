@@ -1531,6 +1531,16 @@ export default {
                     ctx.fill();
                 }
                 // Player damage flash: red glow under sprite.
+                // Player position indicator — pulsing circle under the sprite.
+                if (s.isPlayer) {
+                    const pulse = 0.35 + 0.15 * Math.sin(_renderTime * 0.004);
+                    const tw = TILE_W * ps;
+                    ctx.strokeStyle = `rgba(255,200,87,${pulse.toFixed(2)})`;
+                    ctx.lineWidth = 1.5;
+                    ctx.beginPath();
+                    ctx.ellipse(sx + tw / 2, sy + (TILE_H * ps) / 2 + 2, tw * 0.32, tw * 0.16, 0, 0, Math.PI * 2);
+                    ctx.stroke();
+                }
                 if (s.flash && s.flash > 0) {
                     const fa = Math.min(0.5, s.flash / 300);
                     ctx.fillStyle = `rgba(255,40,40,${fa.toFixed(2)})`;
