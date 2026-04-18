@@ -148,6 +148,8 @@ const ITEMS = {
     torch:    { emoji: '🔦', name: 'Torch' },
     compass:  { emoji: '🧭', name: 'Compass' },
     antidote: { emoji: '⚗️', name: 'Antidote',     use: { cure: true } },
+    canoe:    { emoji: '🛶', name: 'Canoe',         boat: true },
+    sailboat: { emoji: '⛵', name: 'Sailboat',      boat: true },
 };
 
 const ITEM_DROPS = {
@@ -207,6 +209,8 @@ const RECIPES = [
     { name: 'Spellbook',     inputs: ['wood', 'feather', 'gem'],         output: 'spellbook' },
     { name: 'Antidote',      inputs: ['herb', 'mushroom', 'berry'],     output: 'antidote' },
     { name: 'Meat',          inputs: ['wood', 'berry'],                 output: 'meat' },
+    { name: 'Canoe',         inputs: ['wood', 'wood', 'wood', 'herb'],  output: 'canoe' },
+    { name: 'Sailboat',      inputs: ['wood', 'wood', 'wood', 'wood', 'feather'], output: 'sailboat' },
 ];
 
 const SLOTS = [
@@ -263,6 +267,7 @@ const SPRITE_SIZES = {
     '🪄': 20, '🍖': 16, '🍞': 16, '🍷': 16, '🪶': 14, '🪵': 18,
     '🔮': 22, '🔦': 18, '🧭': 16,
     '⛲': 34, '🪦': 22, '⛺': 32, '🕯️': 16, '🗿': 30, '🕸️': 18, '⚗️': 16,
+    '🛶': 28, '⛵': 32,
 };
 /* ╔══════════════════════════════════════════════════════════╗
  * ║  ULTIMA ARUTA — engine.js                                  ║

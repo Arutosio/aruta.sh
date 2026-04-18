@@ -205,6 +205,29 @@ export default {
             }
             startX = bestX; startY = bestY;
         }
+        // ── Boat state ────────────────────────────────────
+        let _boarded = false;
+        let _savedEmoji = '';
+
+        function hasBoatInInventory() {
+            return inventory.items.some(i => ITEMS[i.key]?.boat);
+        }
+        function boardBoat() {
+            if (_boarded) return;
+            _boarded = true;
+            _savedEmoji = player.emoji;
+            const boat = inventory.items.find(i => ITEMS[i.key]?.boat);
+            player.emoji = boat && boat.key === 'sailboat' ? '⛵' : '🛶';
+            addFloater(player.wx, player.wy, 'Boarded!', '#80c0ff');
+            _sfx(220, 0.1, 'sine', 0.04);
+        }
+        function unboardBoat() {
+            if (!_boarded) return;
+            _boarded = false;
+            player.emoji = _savedEmoji || '🧙';
+            addFloater(player.wx, player.wy, 'Disembarked', '#80c0ff');
+        }
+
         // ── Dungeon state ──────────────────────────────────
         let _dungeon = null; // { map, overworldX, overworldY } when inside a dungeon
 
@@ -222,7 +245,13 @@ export default {
             const b = biomeAtDg(wx, wy);
             const bio = ALL_BIOMES[b];
             if (!bio) return false;
-            if (!bio.passable) return false;
+            // Boat: all water (including deep) is passable while boarded.
+            if (_boarded && (b === 'water' || b === 'deep')) return true;
+            if (!bio.passable) {
+                // Boat boarding: allow stepping INTO water if player has boat.
+                if (!_dungeon && (b === 'water' || b === 'deep') && hasBoatInInventory()) return true;
+                return false;
+            }
             if (!_dungeon) return world.passable(wx, wy);
             const f = featureAtDg(wx, wy);
             return !(f && f.blocks);
@@ -632,6 +661,7 @@ export default {
         function _craftCategory(output) {
             const def = ITEMS[output];
             if (!def) return 'Other';
+            if (def.boat) return '🛶 Boats';
             if (def.use) return '🧪 Consumables';
             const armorSlots = ['head', 'chest', 'feet', 'hands', 'shield', 'cape'];
             if (armorSlots.includes(def.slot)) return '🛡️ Armor';
@@ -647,7 +677,7 @@ export default {
                 const cat = _craftCategory(r.output);
                 (cats[cat] = cats[cat] || []).push({ r, ri });
             });
-            const catOrder = ['🧪 Consumables', '⚔️ Weapons', '🛡️ Armor', '✦ Accessories', '🔧 Other'];
+            const catOrder = ['🧪 Consumables', '⚔️ Weapons', '🛡️ Armor', '✦ Accessories', '🛶 Boats', '🔧 Other'];
 
             let html = '';
             for (const cat of catOrder) {
@@ -1234,13 +1264,23 @@ export default {
                     moved = player.tryMove(Math.sign(dx), 0, passableDg) ||
                             player.tryMove(0, Math.sign(dy), passableDg);
                 }
-                // Swimming penalty: water tiles slow + extra stamina drain.
+                // Boat + swimming logic after each move.
                 if (moved && !_dungeon) {
                     const b = biomeAtDg(player.wx, player.wy);
-                    if (b === 'water') {
+                    const onWater = b === 'water' || b === 'deep';
+                    if (onWater && !_boarded && hasBoatInInventory()) {
+                        boardBoat();
+                    } else if (!onWater && _boarded) {
+                        unboardBoat();
+                    }
+                    if (onWater && _boarded) {
+                        // Sailing: slower but no extra stamina drain.
+                        player.moveT = Math.max(player.moveT, MOVE_MS * 1.3);
+                    } else if (onWater && !_boarded) {
+                        // Swimming (no boat): slow + stamina drain.
                         player.moveT = Math.max(player.moveT, MOVE_MS * 1.6);
                         player.stamina = Math.max(0, player.stamina - 2);
-                        try { _sfx(200, 0.05, 'sine', 0.02); } catch {} // splash
+                        try { _sfx(200, 0.05, 'sine', 0.02); } catch {}
                     }
                 }
             }
