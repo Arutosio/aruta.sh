@@ -97,10 +97,13 @@ class TavernChat {
             throw new Error('Trystero bundle missing joinRoom');
         }
         this.peerCount = 0;
+        this.peerNicks = new Map(); // peerId -> {nick, color}
         this.room = T.joinRoom({ appId: TAVERN_APP_ID }, this.roomName);
         const [sendMsg, getMsg] = this.room.makeAction('msg');
+        const [sendPresence, getPresence] = this.room.makeAction('presence');
         this.sendMsg = sendMsg;
         this.getMsg = getMsg;
+        this.sendPresence = sendPresence;
         this.getMsg((msg, peerId) => {
             if (typeof this.onMessageCb === 'function') {
                 this.onMessageCb({
@@ -113,19 +116,39 @@ class TavernChat {
                 });
             }
         });
+        getPresence((info, peerId) => {
+            const nick  = String(info?.nick  || 'Stranger').slice(0, 32);
+            const color = String(info?.color || '#a78bfa');
+            const type  = info?.type === 'leave' ? 'leave' : 'join';
+            if (type === 'join') this.peerNicks.set(peerId, { nick, color });
+            else                 this.peerNicks.delete(peerId);
+            if (typeof this.onPresenceCb === 'function') {
+                this.onPresenceCb({ type, nick, color, peerId, ts: Number(info?.ts) || Date.now() });
+            }
+        });
         this.room.onPeerJoin((peerId) => {
             this.peerCount++;
+            // Re-announce ourselves so the new peer learns who we are.
+            try { this.sendPresence({ type: 'join', nick: this.nick, color: this.color, ts: Date.now() }, peerId); } catch (_) {}
             if (typeof this.onPeerJoinCb === 'function') this.onPeerJoinCb(peerId, this.peerCount);
         });
         this.room.onPeerLeave((peerId) => {
             this.peerCount = Math.max(0, this.peerCount - 1);
-            if (typeof this.onPeerLeaveCb === 'function') this.onPeerLeaveCb(peerId, this.peerCount);
+            const info = this.peerNicks.get(peerId);
+            this.peerNicks.delete(peerId);
+            if (typeof this.onPeerLeaveCb === 'function') this.onPeerLeaveCb(peerId, this.peerCount, info);
         });
     }
 
     async init() {
         await this.loadProfile();
         await this._connect();
+    }
+
+    /** Broadcast a presence event so other peers can render the join/leave note. */
+    announcePresence(type) {
+        if (!this.sendPresence) return;
+        try { this.sendPresence({ type, nick: this.nick, color: this.color, ts: Date.now() }); } catch (_) {}
     }
 
     send(text) {
@@ -144,6 +167,7 @@ class TavernChat {
     onMessage(cb) { this.onMessageCb = cb; }
     onPeerJoin(cb) { this.onPeerJoinCb = cb; }
     onPeerLeave(cb) { this.onPeerLeaveCb = cb; }
+    onPresence(cb) { this.onPresenceCb = cb; }
 
     async destroy() {
         if (this.room) {

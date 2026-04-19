@@ -1,6 +1,11 @@
 // Tavern widget — compact chat pinned on the desktop.
-// Uses the same TavernChat helper as the full app, so opening both keeps
-// them in lockstep on nickname / room (shared via ctx.storage).
+// Auto-joins on mount (widget = always-on by design). Sets a heartbeat
+// flag in ctx.storage so the full app knows whether to suppress the
+// "left the tavern" broadcast on close: if the widget is alive, the
+// user is still listening — no leave message is sent.
+
+const TAVERN_WIDGET_ALIVE_KEY = '_widgetAlive';
+const TAVERN_WIDGET_HEARTBEAT_MS = 8000;
 
 export default {
     async mount(root, ctx) {
@@ -31,9 +36,26 @@ export default {
             while ($log.children.length > 20) $log.removeChild($log.firstChild);
         }
 
+        function appendSystem(text) {
+            const li = document.createElement('li');
+            li.className = 'tavern-widget-system';
+            li.textContent = text;
+            $log.appendChild(li);
+            $log.scrollTop = $log.scrollHeight;
+            while ($log.children.length > 20) $log.removeChild($log.firstChild);
+        }
+
         function refreshStatus() {
             $status.textContent = chat.roomName + ' · ' + (chat.peerCount === 0 ? 'no one' : chat.peerCount + ' nearby');
         }
+
+        // Heartbeat: stamps a recent timestamp so the full app can tell the
+        // widget is still alive (and suppress the "left" broadcast on close).
+        async function heartbeat() {
+            try { await ctx.storage.set(TAVERN_WIDGET_ALIVE_KEY, Date.now()); } catch (_) {}
+        }
+        await heartbeat();
+        const hbTimer = setInterval(heartbeat, TAVERN_WIDGET_HEARTBEAT_MS);
 
         try {
             await chat.init();
@@ -45,7 +67,16 @@ export default {
 
         chat.onMessage(append);
         chat.onPeerJoin(refreshStatus);
-        chat.onPeerLeave(refreshStatus);
+        chat.onPeerLeave((id, count, info) => {
+            refreshStatus();
+            if (info?.nick) appendSystem(info.nick + ' left');
+        });
+        chat.onPresence(({ type, nick }) => {
+            if (type === 'join') appendSystem(nick + ' joined');
+            else                 appendSystem(nick + ' left');
+            refreshStatus();
+        });
+        chat.announcePresence('join');
 
         $form.addEventListener('submit', (e) => {
             e.preventDefault();
@@ -56,6 +87,9 @@ export default {
 
         return {
             async unmount() {
+                clearInterval(hbTimer);
+                try { await ctx.storage.set(TAVERN_WIDGET_ALIVE_KEY, 0); } catch (_) {}
+                chat.announcePresence('leave');
                 await chat.destroy();
             }
         };
