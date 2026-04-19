@@ -141,10 +141,10 @@ export default {
             while ($log.children.length > 200) $log.removeChild($log.firstChild);
         }
 
-        function appendSystem(text) {
+        function appendSystem(text, kind) {
             if (!showSystemMsgs) return;
             const li = document.createElement('li');
-            li.className = 'tavern-system';
+            li.className = 'tavern-system is-' + (kind || 'info');
             li.textContent = text;
             $log.appendChild(li);
             $log.scrollTop = $log.scrollHeight;
@@ -335,7 +335,7 @@ export default {
                 await chat._connect();
             } catch (e) {
                 $status.textContent = 'connection failed';
-                appendSystem('Could not reach the tavern: ' + (e.message || e));
+                appendSystem('Could not reach the tavern: ' + (e.message || e), 'error');
                 $main.style.display = '';
                 $setup.style.display = 'none';
                 return;
@@ -357,15 +357,15 @@ export default {
             chat.onPeerJoin(refreshStatus);
             chat.onPeerLeave((id, count, info) => {
                 refreshStatus();
-                if (info?.nick) appendSystem(info.nick + ' left the tavern');
+                if (info?.nick) appendSystem(info.nick + ' left the tavern', 'warning');
             });
             chat.onPresence(({ type, nick }) => {
-                if (type === 'join') appendSystem(nick + ' entered the tavern');
-                else                 appendSystem(nick + ' left the tavern');
+                if (type === 'join') appendSystem(nick + ' entered the tavern', 'success');
+                else                 appendSystem(nick + ' left the tavern', 'warning');
                 refreshStatus();
             });
             chat.onSpoof(({ declared, actual }) => {
-                appendSystem('⚠ A peer tried to impersonate "' + declared + '" (real nick: ' + actual + ')');
+                appendSystem('⚠ A peer tried to impersonate "' + declared + '" (real nick: ' + actual + ')', 'error');
             });
             chat.announcePresence('join');
         }
@@ -376,7 +376,7 @@ export default {
         async function commitSend() {
             const text = $input.value;
             if (chat.peerCount === 0 && !warnedEmpty && text.trim()) {
-                appendSystem('No one else is in this room yet — your message will only reach travelers who join afterwards.');
+                appendSystem('No one else is in this room yet — your message will only reach travelers who join afterwards.', 'warning');
                 warnedEmpty = true;
             }
             if (chat.peerCount > 0) warnedEmpty = false;

@@ -611,27 +611,62 @@ html, body {
     word-break: break-word;
     overflow-wrap: anywhere;
 }
+/* System messages: palette differs by semantic kind so the user can
+   tell join / leave / warnings / errors apart at a glance. */
 .tavern-system {
-    color: #7dd3fc;
     font-style: italic;
     font-size: 0.76rem;
     margin: 6px 14%;
     padding: 4px 10px;
     text-align: center;
-    background: rgba(125, 211, 252, 0.06);
-    border: 1px dashed rgba(125, 211, 252, 0.28);
     border-radius: 4px;
+    border: 1px dashed;
     letter-spacing: 0.02em;
 }
-.tavern-system::before {
-    content: '✦ ';
-    opacity: 0.7;
-    margin-right: 2px;
+.tavern-system.is-info {
+    color: #7dd3fc;
+    background: rgba(125, 211, 252, 0.06);
+    border-color: rgba(125, 211, 252, 0.28);
 }
-[data-theme="light"] .tavern-system {
+.tavern-system.is-success {
+    color: #6ee7b7;
+    background: rgba(110, 231, 183, 0.07);
+    border-color: rgba(110, 231, 183, 0.32);
+}
+.tavern-system.is-warning {
+    color: #fbbf24;
+    background: rgba(251, 191, 36, 0.06);
+    border-color: rgba(251, 191, 36, 0.30);
+}
+.tavern-system.is-error {
+    color: #fb7185;
+    background: rgba(251, 113, 133, 0.08);
+    border-color: rgba(251, 113, 133, 0.38);
+}
+.tavern-system.is-info::before    { content: '✦ '; opacity: 0.7; margin-right: 2px; }
+.tavern-system.is-success::before { content: '→ '; opacity: 0.8; margin-right: 2px; }
+.tavern-system.is-warning::before { content: '← '; opacity: 0.8; margin-right: 2px; }
+.tavern-system.is-error::before   { content: '⚠ '; opacity: 0.9; margin-right: 2px; }
+
+[data-theme="light"] .tavern-system.is-info {
     color: #2563a3;
     background: rgba(37, 99, 163, 0.07);
     border-color: rgba(37, 99, 163, 0.3);
+}
+[data-theme="light"] .tavern-system.is-success {
+    color: #2f8a55;
+    background: rgba(47, 138, 85, 0.08);
+    border-color: rgba(47, 138, 85, 0.32);
+}
+[data-theme="light"] .tavern-system.is-warning {
+    color: #9c5212;
+    background: rgba(184, 106, 12, 0.08);
+    border-color: rgba(184, 106, 12, 0.32);
+}
+[data-theme="light"] .tavern-system.is-error {
+    color: #c23a4f;
+    background: rgba(194, 58, 79, 0.08);
+    border-color: rgba(194, 58, 79, 0.36);
 }
 .tavern-compose {
     display: flex;
