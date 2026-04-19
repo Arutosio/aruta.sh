@@ -123,10 +123,30 @@ function tavernRandNick() {
 }
 
 function tavernNickColor(nick) {
-    // Stable HSL hue derived from nick — same nick always gets same color.
+    // Legacy helper — kept for back-compat on initial profile bootstrap,
+    // but the display color now comes from tavernIdentityColor() keyed on
+    // the peer's public-key thumbprint so two peers sharing a nick are
+    // still visually distinguishable.
     let h = 0;
     for (let i = 0; i < nick.length; i++) h = (h * 31 + nick.charCodeAt(i)) >>> 0;
     return 'hsl(' + (h % 360) + ', 70%, 65%)';
+}
+
+/**
+ * Stable HSL color derived from a peer's public-key thumbprint. Two peers
+ * sharing the same nick will have DIFFERENT colors because their keypairs
+ * are distinct — this is the only anti-impersonation signal the user can
+ * perceive at a glance, besides the ⚠ spoof badge.
+ */
+function tavernIdentityColor(thumbprint) {
+    const s = String(thumbprint || '');
+    let h = 0;
+    for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) >>> 0;
+    // Bigger hue range + slightly varied lightness so adjacent peers don't
+    // collide visually when their hashes happen to land close together.
+    const hue = h % 360;
+    const light = 60 + ((h >>> 8) % 12); // 60-71%
+    return 'hsl(' + hue + ', 70%, ' + light + '%)';
 }
 
 function tavernEscapeHtml(s) {
@@ -139,7 +159,8 @@ function tavernFmtTime(ts) {
     const d = new Date(ts);
     const hh = String(d.getHours()).padStart(2, '0');
     const mm = String(d.getMinutes()).padStart(2, '0');
-    return hh + ':' + mm;
+    const ss = String(d.getSeconds()).padStart(2, '0');
+    return hh + ':' + mm + ':' + ss;
 }
 
 class TavernChat {
@@ -202,6 +223,10 @@ class TavernChat {
             await this.ctx.storage.set(TAVERN_KEYPAIR_KEY, { pub: this.pubKeyJwk, priv: privJwk });
         }
         this.selfThumbprint = await tavernThumbprint(this.pubKeyJwk);
+        // Display color now keyed on the permanent identity, not the nick —
+        // two users with the same nick still render in different colors so
+        // the audience can tell them apart.
+        this.color = tavernIdentityColor(this.selfThumbprint);
         const blocklist = await this.ctx.storage.get(TAVERN_BLOCKLIST_KEY);
         this.blockedThumbs = new Set(Array.isArray(blocklist) ? blocklist : []);
     }
@@ -302,9 +327,8 @@ class TavernChat {
         const trimmed = tavernSanitize(newNick, TAVERN_MAX_NICK_LEN).trim();
         if (!trimmed || trimmed === this.nick) return;
         this.nick = trimmed;
-        this.color = tavernNickColor(trimmed);
+        // Color is now identity-derived — don't change it on rename.
         await this.ctx.storage.set(TAVERN_NICK_KEY, trimmed);
-        await this.ctx.storage.set(TAVERN_NICK_COLOR_KEY, this.color);
     }
 
     async setRoom(newRoom) {
@@ -390,10 +414,13 @@ class TavernChat {
             const nick = spoofed ? firstNick : declaredNick;
 
             if (typeof this.onMessageCb === 'function') {
+                // Identity-based color overrides whatever the peer claimed —
+                // two peers sharing a nick get different colors so the user
+                // can visually tell them apart.
                 this.onMessageCb({
                     text: tavernSanitize(msg.text, TAVERN_MAX_TEXT_LEN),
                     nick: tavernSanitize(nick, TAVERN_MAX_NICK_LEN),
-                    color: msg.color,
+                    color: tavernIdentityColor(keyInfo.thumbprint),
                     ts: msg.ts,
                     self: false,
                     peerId,
@@ -454,7 +481,8 @@ class TavernChat {
                 this.peerKeys.set(peerId, { jwk: info.pub, thumbprint });
                 const prev = this.peerNicks.get(peerId);
                 this.peerNicks.set(peerId, {
-                    nick, color,
+                    nick,
+                    color: tavernIdentityColor(thumbprint),
                     joinedAt: prev?.joinedAt || Date.now()
                 });
                 if (!this.peerFirstNick.has(peerId)) {
@@ -474,7 +502,9 @@ class TavernChat {
                 this.peerKeys.delete(peerId);
             }
             if (typeof this.onPresenceCb === 'function') {
-                this.onPresenceCb({ type, nick, color, peerId, ts: info.ts });
+                const keyInfo = this.peerKeys.get(peerId);
+                const displayColor = keyInfo ? tavernIdentityColor(keyInfo.thumbprint) : color;
+                this.onPresenceCb({ type, nick, color: displayColor, peerId, ts: info.ts });
             }
         });
         this.room.onPeerJoin(async (peerId) => {
