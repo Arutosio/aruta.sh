@@ -10,6 +10,7 @@
 
 const TAVERN_WIDGET_ALIVE_KEY = '_widgetAlive';
 const TAVERN_WIDGET_FRESH_MS = 20000;
+const TAVERN_STRATEGY_KEY_UI = 'strategy';
 
 export default {
     async mount(root, ctx) {
@@ -27,6 +28,15 @@ export default {
                     <label class="tavern-field">
                         <span>Room</span>
                         <input type="text" data-room maxlength="64" placeholder="public">
+                    </label>
+                    <label class="tavern-field">
+                        <span>Signaling strategy</span>
+                        <select data-strategy>
+                            <option value="torrent">BitTorrent trackers (default)</option>
+                            <option value="nostr">Nostr relays</option>
+                            <option value="mqtt">MQTT brokers</option>
+                        </select>
+                        <small class="tavern-field-hint">If you can't find peers, try switching — some networks block one protocol but not another.</small>
                     </label>
                     <button type="button" class="tavern-join-btn" data-join>Enter the tavern</button>
                 </section>
@@ -46,6 +56,14 @@ export default {
                             <label class="tavern-field tavern-field-compact">
                                 <span>Nick</span>
                                 <input type="text" data-nick-live maxlength="32">
+                            </label>
+                            <label class="tavern-field tavern-field-compact">
+                                <span>Strategy</span>
+                                <select data-strategy-live>
+                                    <option value="torrent">torrent</option>
+                                    <option value="nostr">nostr</option>
+                                    <option value="mqtt">mqtt</option>
+                                </select>
                             </label>
                         </div>
                     </aside>
@@ -74,8 +92,10 @@ export default {
         const $input = root.querySelector('[data-input]');
         const $nickSetup = root.querySelector('[data-nick]');
         const $roomSetup = root.querySelector('[data-room]');
+        const $strategySetup = root.querySelector('[data-strategy]');
         const $joinBtn = root.querySelector('[data-join]');
         const $nickLive = root.querySelector('[data-nick-live]');
+        const $strategyLive = root.querySelector('[data-strategy-live]');
         const $roomsUl = root.querySelector('[data-rooms]');
         const $addBox = root.querySelector('[data-add]');
         const $addInput = root.querySelector('[data-add-input]');
@@ -98,6 +118,7 @@ export default {
         $app.dataset.side = side;
         $nickSetup.value = chat.nick;
         $roomSetup.value = chat.roomName;
+        $strategySetup.value = chat.strategy;
 
         function append(msg) {
             const li = document.createElement('li');
@@ -123,11 +144,36 @@ export default {
             while ($log.children.length > 200) $log.removeChild($log.firstChild);
         }
 
+        // Diagnostic status transitions through phases while waiting for
+        // the first peer: connecting → searching → stuck (suggest switch).
+        // refreshStatus() takes over once anyone shows up.
+        let statusTimers = [];
+        function clearStatusTimers() {
+            statusTimers.forEach(clearTimeout);
+            statusTimers = [];
+        }
+        function setConnectingStatus() {
+            clearStatusTimers();
+            $status.textContent = 'connecting via ' + chat.strategy + '…';
+            statusTimers.push(setTimeout(() => {
+                if (chat.peerCount === 0) $status.textContent = 'searching peers via ' + chat.strategy + '…';
+            }, 3000));
+            statusTimers.push(setTimeout(() => {
+                if (chat.peerCount === 0) $status.textContent = 'still alone — try another strategy below';
+            }, 15000));
+        }
+
         function refreshStatus() {
             const peers = chat.peerCount;
-            $status.textContent = peers === 0
-                ? 'alone in the tavern'
-                : (peers === 1 ? '1 fellow nearby' : peers + ' fellows nearby');
+            if (peers === 0) {
+                // Don't overwrite the diagnostic sequence while it's running.
+                if ($status.textContent && $status.textContent.includes('fellow')) {
+                    $status.textContent = 'alone in the tavern';
+                }
+            } else {
+                clearStatusTimers();
+                $status.textContent = peers === 1 ? '1 fellow nearby' : peers + ' fellows nearby';
+            }
             // Re-render the sidebar so the active-room count badge stays in
             // sync as peers join/leave. Cheap (just innerHTML rewrite).
             renderRooms();
@@ -256,6 +302,8 @@ export default {
         async function doJoin() {
             await chat.setNick($nickSetup.value);
             await chat.setRoom($roomSetup.value);
+            chat.strategy = $strategySetup.value; // picker value
+            await ctx.storage.set(TAVERN_STRATEGY_KEY_UI, chat.strategy);
             try {
                 await chat._connect();
             } catch (e) {
@@ -266,9 +314,11 @@ export default {
                 return;
             }
             connected = true;
+            setConnectingStatus();
             $setup.style.display = 'none';
             $main.style.display = '';
             $nickLive.value = chat.nick;
+            $strategyLive.value = chat.strategy;
             // Make sure the chosen room is bookmarked.
             if (!rooms.includes(chat.roomName)) rooms.push(chat.roomName);
             rooms = await tavernSaveRooms(ctx, rooms);
@@ -311,6 +361,19 @@ export default {
         $nickLive.addEventListener('input', () => {
             clearTimeout(nickTimer);
             nickTimer = setTimeout(() => chat.setNick($nickLive.value), 400);
+        });
+
+        $strategyLive.addEventListener('change', async () => {
+            if (!connected) return;
+            const newStrat = $strategyLive.value;
+            if (newStrat === chat.strategy) return;
+            chat.announcePresence('leave');
+            await chat.setStrategy(newStrat);
+            $log.innerHTML = '';
+            appendSystem('Reconnected via ' + chat.strategy);
+            setConnectingStatus();
+            chat.announcePresence('join');
+            renderRooms();
         });
 
         $roomsUl.addEventListener('click', (e) => {
@@ -367,6 +430,7 @@ export default {
         return {
             async unmount() {
                 clearTimeout(nickTimer);
+                clearStatusTimers();
                 if (!connected) return;
                 if (!(await widgetIsAlive())) {
                     chat.announcePresence('leave');

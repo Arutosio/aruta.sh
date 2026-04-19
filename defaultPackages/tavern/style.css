@@ -96,7 +96,34 @@ html, body {
     flex: 1;
     margin: 0;
 }
-.tavern-field-compact input { padding: 4px 8px; font-size: 0.78rem; }
+.tavern-field-compact input,
+.tavern-field-compact select { padding: 4px 8px; font-size: 0.78rem; }
+.tavern-field select {
+    background: var(--tavern-input-bg);
+    color: var(--tavern-fg);
+    border: 1px solid var(--tavern-border);
+    border-radius: 6px;
+    padding: 6px 10px;
+    font: inherit;
+    font-size: 0.85rem;
+    text-transform: none;
+    cursor: pointer;
+}
+.tavern-field select:focus {
+    outline: none;
+    border-color: var(--tavern-gold);
+    box-shadow: 0 0 6px rgba(255, 200, 87, 0.25);
+}
+.tavern-field-hint {
+    display: block;
+    margin-top: 4px;
+    color: var(--tavern-fg-dim);
+    font-size: 0.68rem;
+    font-style: italic;
+    text-transform: none;
+    letter-spacing: 0;
+    line-height: 1.4;
+}
 .tavern-join-btn {
     margin-top: 8px;
     background: rgba(255, 200, 87, 0.18);

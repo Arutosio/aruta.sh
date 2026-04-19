@@ -10,6 +10,9 @@ const TAVERN_NICK_COLOR_KEY = 'nickColor';
 const TAVERN_ROOM_KEY = 'room';
 const TAVERN_ROOMS_KEY = 'rooms';
 const TAVERN_SIDE_KEY = 'sidebarSide';
+const TAVERN_STRATEGY_KEY = 'strategy';
+const TAVERN_STRATEGIES = ['torrent', 'nostr', 'mqtt'];
+const TAVERN_STRATEGY_DEFAULT = 'torrent';
 
 async function tavernLoadRooms(ctx) {
     const stored = await ctx.storage.get(TAVERN_ROOMS_KEY);
@@ -94,6 +97,19 @@ class TavernChat {
         this.color = color;
         const room = await this.ctx.storage.get(TAVERN_ROOM_KEY);
         if (room) this.roomName = room;
+        const strategy = await this.ctx.storage.get(TAVERN_STRATEGY_KEY);
+        this.strategy = TAVERN_STRATEGIES.includes(strategy) ? strategy : TAVERN_STRATEGY_DEFAULT;
+    }
+
+    async setStrategy(name) {
+        const trimmed = TAVERN_STRATEGIES.includes(name) ? name : TAVERN_STRATEGY_DEFAULT;
+        if (trimmed === this.strategy) return;
+        this.strategy = trimmed;
+        await this.ctx.storage.set(TAVERN_STRATEGY_KEY, trimmed);
+        if (this.room) {
+            try { await this.room.leave(); } catch (_) {}
+        }
+        await this._connect();
     }
 
     async setNick(newNick) {
@@ -118,9 +134,10 @@ class TavernChat {
     }
 
     async _connect() {
-        const T = globalThis.__trystero;
+        const strategy = this.strategy || TAVERN_STRATEGY_DEFAULT;
+        const T = globalThis.__trystero?.[strategy];
         if (!T || typeof T.joinRoom !== 'function') {
-            throw new Error('Trystero bundle missing joinRoom');
+            throw new Error('Trystero strategy "' + strategy + '" not loaded');
         }
         this.peerCount = 0;
         this.peerNicks = new Map(); // peerId -> {nick, color}
