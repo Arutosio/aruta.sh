@@ -35,14 +35,7 @@ export default {
                         <input type="password" data-password maxlength="128" placeholder="leave empty for a public room">
                         <small class="tavern-field-hint">Only peers using the exact same password land in the same swarm. Anyone without it sees a different "public" room.</small>
                     </label>
-                    <label class="tavern-field">
-                        <span>Signaling strategy</span>
-                        <select data-strategy>
-                            <option value="torrent">BitTorrent trackers (default)</option>
-                            <option value="nostr">Nostr relays</option>
-                        </select>
-                        <small class="tavern-field-hint">If you can't find peers, try switching — some networks block one protocol but not another.</small>
-                    </label>
+                    <input type="hidden" data-strategy value="torrent">
                     <div class="tavern-setup-warning">
                         ⚠ Tavern is peer-to-peer. Your public IP is visible to everyone connected. Avoid sharing sensitive info.
                     </div>
@@ -65,13 +58,7 @@ export default {
                                 <span>Nick</span>
                                 <input type="text" data-nick-live maxlength="32">
                             </label>
-                            <label class="tavern-field tavern-field-compact">
-                                <span>Strategy</span>
-                                <select data-strategy-live>
-                                    <option value="torrent">torrent</option>
-                                    <option value="nostr">nostr</option>
-                                </select>
-                            </label>
+                            <input type="hidden" data-strategy-live value="torrent">
                         </div>
                     </aside>
 

@@ -2,7 +2,7 @@
   "id": "tavern",
   "name": "Tavern",
   "icon": "🍺",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "minSdk": 2,
   "roles": ["app", "widget"],
   "entries": { "app": "ui.js", "widget": "widget.js" },
