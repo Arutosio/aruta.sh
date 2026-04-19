@@ -1,0 +1,226 @@
+/* Tavern — shared styles for the full app and the widget. */
+
+:root {
+    --tavern-bg: rgba(20, 12, 8, 0.85);
+    --tavern-bg-2: rgba(36, 24, 14, 0.78);
+    --tavern-fg: #f0e2bf;
+    --tavern-fg-dim: #c4ad7c;
+    --tavern-gold: #ffc857;
+    --tavern-border: rgba(255, 200, 87, 0.28);
+    --tavern-input-bg: rgba(8, 4, 2, 0.55);
+    --tavern-self-bg: rgba(255, 200, 87, 0.10);
+}
+
+[data-theme="light"] {
+    --tavern-bg: rgba(248, 240, 220, 0.94);
+    --tavern-bg-2: rgba(232, 220, 196, 0.85);
+    --tavern-fg: #2a1a08;
+    --tavern-fg-dim: #6b5030;
+    --tavern-gold: #8b6914;
+    --tavern-border: rgba(139, 105, 20, 0.35);
+    --tavern-input-bg: rgba(255, 250, 232, 0.9);
+    --tavern-self-bg: rgba(139, 105, 20, 0.10);
+}
+
+html, body {
+    background: transparent;
+    color: var(--tavern-fg);
+    font-family: 'Inter', system-ui, sans-serif;
+    margin: 0;
+    height: 100%;
+}
+
+/* ── Full app ───────────────────────────────────────────── */
+.tavern-app {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    background: var(--tavern-bg);
+    color: var(--tavern-fg);
+}
+.tavern-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 10px 16px;
+    border-bottom: 1px solid var(--tavern-border);
+    background: var(--tavern-bg-2);
+    flex-shrink: 0;
+}
+.tavern-title {
+    font-family: 'Cinzel', Georgia, serif;
+    font-weight: 700;
+    color: var(--tavern-gold);
+    letter-spacing: 0.08em;
+}
+.tavern-status {
+    font-size: 0.75rem;
+    color: var(--tavern-fg-dim);
+    font-style: italic;
+}
+.tavern-settings {
+    display: flex;
+    gap: 10px;
+    padding: 10px 16px;
+    border-bottom: 1px solid var(--tavern-border);
+    flex-shrink: 0;
+}
+.tavern-field {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    font-size: 0.7rem;
+    color: var(--tavern-fg-dim);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+}
+.tavern-field input {
+    background: var(--tavern-input-bg);
+    color: var(--tavern-fg);
+    border: 1px solid var(--tavern-border);
+    border-radius: 6px;
+    padding: 6px 10px;
+    font: inherit;
+    font-size: 0.85rem;
+    text-transform: none;
+}
+.tavern-field input:focus {
+    outline: none;
+    border-color: var(--tavern-gold);
+    box-shadow: 0 0 6px rgba(255, 200, 87, 0.25);
+}
+.tavern-log {
+    flex: 1;
+    list-style: none;
+    margin: 0;
+    padding: 12px 16px;
+    overflow-y: auto;
+    font-size: 0.85rem;
+    line-height: 1.45;
+}
+.tavern-msg {
+    padding: 6px 10px;
+    margin-bottom: 6px;
+    border-radius: 6px;
+    background: var(--tavern-bg-2);
+}
+.tavern-msg.is-self { background: var(--tavern-self-bg); border-left: 2px solid var(--tavern-gold); }
+.tavern-msg-head {
+    display: flex;
+    justify-content: space-between;
+    gap: 8px;
+    font-size: 0.72rem;
+    margin-bottom: 2px;
+}
+.tavern-nick { font-weight: 700; }
+.tavern-msg-head time { color: var(--tavern-fg-dim); font-variant-numeric: tabular-nums; }
+.tavern-msg-text { display: block; word-break: break-word; }
+.tavern-system {
+    color: var(--tavern-fg-dim);
+    font-style: italic;
+    font-size: 0.78rem;
+    margin: 6px 0;
+    text-align: center;
+}
+.tavern-compose {
+    display: flex;
+    gap: 8px;
+    padding: 10px 16px;
+    border-top: 1px solid var(--tavern-border);
+    background: var(--tavern-bg-2);
+    flex-shrink: 0;
+}
+.tavern-compose input {
+    flex: 1;
+    background: var(--tavern-input-bg);
+    color: var(--tavern-fg);
+    border: 1px solid var(--tavern-border);
+    border-radius: 6px;
+    padding: 8px 12px;
+    font: inherit;
+}
+.tavern-compose input:focus {
+    outline: none;
+    border-color: var(--tavern-gold);
+    box-shadow: 0 0 6px rgba(255, 200, 87, 0.25);
+}
+.tavern-compose button {
+    background: rgba(255, 200, 87, 0.18);
+    color: var(--tavern-gold);
+    border: 1px solid var(--tavern-gold);
+    border-radius: 6px;
+    padding: 6px 14px;
+    font-family: 'Cinzel', Georgia, serif;
+    font-size: 0.78rem;
+    letter-spacing: 0.08em;
+    cursor: pointer;
+    transition: background 0.15s;
+}
+.tavern-compose button:hover { background: rgba(255, 200, 87, 0.32); }
+
+/* ── Widget (compact) ───────────────────────────────────── */
+.tavern-widget {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    background: var(--tavern-bg);
+    color: var(--tavern-fg);
+}
+.tavern-widget-status {
+    font-size: 0.7rem;
+    color: var(--tavern-fg-dim);
+    padding: 6px 12px;
+    border-bottom: 1px solid var(--tavern-border);
+    text-align: center;
+    font-style: italic;
+    flex-shrink: 0;
+}
+.tavern-widget-log {
+    flex: 1;
+    list-style: none;
+    margin: 0;
+    padding: 8px 12px;
+    overflow-y: auto;
+    font-size: 0.8rem;
+    line-height: 1.4;
+}
+.tavern-widget-msg {
+    padding: 4px 0;
+    border-bottom: 1px dashed transparent;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+.tavern-widget-msg + .tavern-widget-msg { border-top: 1px solid rgba(255, 200, 87, 0.06); }
+.tavern-widget-nick {
+    font-weight: 700;
+    font-size: 0.72rem;
+}
+.tavern-widget-text { word-break: break-word; }
+.tavern-widget-compose {
+    padding: 8px 12px;
+    border-top: 1px solid var(--tavern-border);
+    flex-shrink: 0;
+}
+.tavern-widget-compose input {
+    width: 100%;
+    background: var(--tavern-input-bg);
+    color: var(--tavern-fg);
+    border: 1px solid var(--tavern-border);
+    border-radius: 6px;
+    padding: 6px 10px;
+    font: inherit;
+    font-size: 0.85rem;
+    box-sizing: border-box;
+}
+.tavern-widget-compose input:focus {
+    outline: none;
+    border-color: var(--tavern-gold);
+    box-shadow: 0 0 6px rgba(255, 200, 87, 0.25);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .tavern-msg, .tavern-widget-msg, .tavern-compose button { transition: none; }
+}

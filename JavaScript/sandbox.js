@@ -394,7 +394,13 @@ html,body{margin:0;padding:0;width:100%;height:100%;background:transparent;color
                         const r = await fetch(fileURLs[dep]);
                         let txt = await r.text();
                         // Strip export keywords so they don't conflict at top level.
-                        txt = txt.replace(/^export (default |)/gm, '');
+                        // Order matters: inline patterns (used by minified bundles such
+                        // as Trystero — \`export{a,b};export default null;\`) must be
+                        // removed before the line-start fallback that handles plain
+                        // \`export default ...\` / \`export function/class/const ...\`.
+                        txt = txt.replace(/export\\s*\\{[^}]*\\}\\s*;?/g, '');
+                        txt = txt.replace(/export\\s+default\\s+null\\s*;?/g, '');
+                        txt = txt.replace(/^export\\s+(default\\s+)?/gm, '');
                         parts.push('/* ── ' + dep + ' ── */\\n' + txt);
                     }
                     const entryR = await fetch(fileURLs[entryPath]);
