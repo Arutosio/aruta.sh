@@ -612,11 +612,26 @@ html, body {
     overflow-wrap: anywhere;
 }
 .tavern-system {
-    color: var(--tavern-fg-dim);
+    color: #7dd3fc;
     font-style: italic;
-    font-size: 0.78rem;
-    margin: 6px 0;
+    font-size: 0.76rem;
+    margin: 6px 14%;
+    padding: 4px 10px;
     text-align: center;
+    background: rgba(125, 211, 252, 0.06);
+    border: 1px dashed rgba(125, 211, 252, 0.28);
+    border-radius: 4px;
+    letter-spacing: 0.02em;
+}
+.tavern-system::before {
+    content: '✦ ';
+    opacity: 0.7;
+    margin-right: 2px;
+}
+[data-theme="light"] .tavern-system {
+    color: #2563a3;
+    background: rgba(37, 99, 163, 0.07);
+    border-color: rgba(37, 99, 163, 0.3);
 }
 .tavern-compose {
     display: flex;
@@ -748,12 +763,25 @@ html, body {
 }
 .tavern-widget-msg + .tavern-widget-msg { border-top: 1px solid rgba(255, 200, 87, 0.06); }
 .tavern-widget-system {
-    color: var(--tavern-fg-dim);
+    color: #7dd3fc;
     font-style: italic;
-    font-size: 0.7rem;
+    font-size: 0.68rem;
     text-align: center;
-    padding: 4px 0;
-    opacity: 0.85;
+    padding: 3px 6px;
+    margin: 3px 6%;
+    background: rgba(125, 211, 252, 0.06);
+    border: 1px dashed rgba(125, 211, 252, 0.28);
+    border-radius: 3px;
+    letter-spacing: 0.02em;
+}
+.tavern-widget-system::before {
+    content: '✦ ';
+    opacity: 0.7;
+}
+[data-theme="light"] .tavern-widget-system {
+    color: #2563a3;
+    background: rgba(37, 99, 163, 0.07);
+    border-color: rgba(37, 99, 163, 0.3);
 }
 .tavern-widget-nick {
     font-weight: 700;
