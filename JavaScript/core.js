@@ -39,6 +39,18 @@ function applyTranslations(lang) {
         const key = el.dataset.i18n;
         if (t[key] !== undefined) el.textContent = t[key];
     });
+    document.querySelectorAll('[data-i18n-title]').forEach(el => {
+        const key = el.dataset.i18nTitle;
+        if (t[key] !== undefined) el.title = t[key];
+    });
+    document.querySelectorAll('[data-i18n-aria]').forEach(el => {
+        const key = el.dataset.i18nAria;
+        if (t[key] !== undefined) el.setAttribute('aria-label', t[key]);
+    });
+    document.querySelectorAll('[data-i18n-placeholder]').forEach(el => {
+        const key = el.dataset.i18nPlaceholder;
+        if (t[key] !== undefined) el.placeholder = t[key];
+    });
 }
 
 /**
