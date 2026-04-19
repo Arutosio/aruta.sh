@@ -111,6 +111,10 @@ export default {
         let rooms = [];
         let side = 'right';
         let showSystemMsgs = true;
+        // Session-only set of rooms the user explicitly disconnected from.
+        // Used to paint the status dot red (explicit disconnect) vs grey
+        // (never connected this session / idle after switching away).
+        const offlineRooms = new Set();
 
         // Pre-load identity + room bookmarks + sidebar pref so the setup
         // screen and the eventual sidebar both render with saved state.
@@ -205,10 +209,14 @@ export default {
                 const countBadge = isLive
                     ? `<button type="button" class="tavern-room-count" data-peers title="Show peers">${chat.peerCount + 1}</button>`
                     : '';
-                // Status dot: green if this row is the live Trystero swarm,
-                // grey otherwise. Click toggles (connect / disconnect / hop).
-                const connLabel = isLive ? 'Disconnect' : (isActive ? 'Reconnect' : 'Connect');
-                const connBtn = `<button type="button" class="tavern-room-conn${isLive ? ' is-on' : ''}" data-conn title="${connLabel}" aria-label="${connLabel}"></button>`;
+                // Status dot:
+                //   green = this row is the live Trystero swarm
+                //   red   = user explicitly disconnected from this room
+                //   grey  = idle (never connected this session, or switched away)
+                const isExplicitOff = offlineRooms.has(name);
+                const dotClass = isLive ? ' is-on' : (isExplicitOff ? ' is-off' : '');
+                const connLabel = isLive ? 'Disconnect' : 'Connect';
+                const connBtn = `<button type="button" class="tavern-room-conn${dotClass}" data-conn title="${connLabel}" aria-label="${connLabel}"></button>`;
                 li.innerHTML = `${lock}<span class="tavern-room-hash">#</span><span class="tavern-room-label"></span>${countBadge}${connBtn}<button type="button" class="tavern-room-x" title="Close">×</button>`;
                 li.querySelector('.tavern-room-label').textContent = name;
                 $roomsUl.appendChild(li);
@@ -295,6 +303,8 @@ export default {
                 rooms.push(chat.roomName);
                 rooms = await tavernSaveRooms(ctx, rooms);
             }
+            // Target room is now live — can no longer be in the red set.
+            offlineRooms.delete(chat.roomName);
             $log.innerHTML = '';
             appendSystem('Moved to room "' + chat.roomName + '"', 'info');
             chat.announcePresence('join');
@@ -438,22 +448,26 @@ export default {
                 const name = li.dataset.room;
                 const isActive = name === chat.roomName;
                 if (isActive && chat.isConnected) {
-                    // Disconnect the currently live room (stay bookmarked).
+                    // Explicit disconnect — mark the room red so the user
+                    // can see it's intentionally off, not just idle.
                     await chat.disconnect();
+                    offlineRooms.add(name);
                     appendSystem('Disconnected from "' + name + '"', 'warning');
                 } else if (isActive && !chat.isConnected) {
-                    // Reconnect the currently viewed room.
                     try {
                         await chat.reconnect();
+                        offlineRooms.delete(name);
                         appendSystem('Reconnected to "' + name + '"', 'success');
                     } catch (err) {
                         appendSystem('Could not reconnect: ' + (err.message || err), 'error');
                     }
                 } else {
-                    // Not active: disconnect any live room, then hop + connect
-                    // to this one (picks up per-room password automatically).
+                    // Connect to a different bookmarked room. Any currently
+                    // live room flips to idle (grey), not red — the user
+                    // didn't disconnect it, they moved on.
                     if (chat.isConnected) await chat.disconnect();
                     await chat.setRoom(name);
+                    offlineRooms.delete(name);
                     $log.innerHTML = '';
                     appendSystem('Moved to room "' + chat.roomName + '"', 'info');
                     chat.announcePresence('join');
