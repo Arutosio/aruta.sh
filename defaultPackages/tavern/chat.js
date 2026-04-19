@@ -34,6 +34,34 @@ function tavernCanonical(obj) {
     return '{' + keys.map(k => JSON.stringify(k) + ':' + tavernCanonical(obj[k])).join(',') + '}';
 }
 
+/**
+ * Strip characters used for display spoofing + CSS/DOM tampering:
+ *  - \u202A-\u202E / \u2066-\u2069: bidi overrides (RLO/LRO/PDF) that
+ *    reverse the apparent order of a string — classic phishing
+ *    technique ("abc@evil.com" rendered as "moc.live@cba").
+ *  - \u200B-\u200D / \uFEFF: zero-width spaces / joiners — used to
+ *    make two nicks look identical while having different code points.
+ *  - \u0000-\u001F / \u007F: ASCII control chars — should never
+ *    appear in user-facing text; they can break rendering or log
+ *    layout (newlines in a nick, null bytes, etc.).
+ */
+function tavernSanitize(s, maxLen) {
+    const stripped = String(s || '').replace(
+        /[\u202A-\u202E\u2066-\u2069\u200B-\u200D\uFEFF\u0000-\u001F\u007F]/g,
+        ''
+    );
+    return stripped.slice(0, maxLen);
+}
+
+/** Allow only canonical CSS color forms — no ";" so attribute context
+ *  can't be escaped, no "url(", no JS keywords. */
+const TAVERN_COLOR_RE = /^(?:#[0-9a-fA-F]{3,8}|hsla?\(\s*[-0-9.,%\s]+\)|rgba?\(\s*[-0-9.,%\s]+\))$/;
+function tavernValidColor(s) {
+    if (typeof s !== 'string') return false;
+    if (s.length === 0 || s.length > 48) return false;
+    return TAVERN_COLOR_RE.test(s);
+}
+
 function tavernB64(bytes) {
     let s = '';
     for (let i = 0; i < bytes.length; i++) s += String.fromCharCode(bytes[i]);
@@ -83,9 +111,12 @@ async function tavernSaveSide(ctx, side) {
 function tavernRandNick() {
     const adj = ['Wandering', 'Mystic', 'Silent', 'Lone', 'Crimson', 'Frost', 'Shadow', 'Iron', 'Wild', 'Old'];
     const noun = ['Mage', 'Bard', 'Druid', 'Knight', 'Rogue', 'Seer', 'Smith', 'Wraith', 'Pilgrim', 'Sage'];
-    const a = adj[Math.floor(Math.random() * adj.length)];
-    const n = noun[Math.floor(Math.random() * noun.length)];
-    const num = Math.floor(Math.random() * 900 + 100);
+    // Cryptographically random picks — avoid Math.random for identity-ish bits.
+    const buf = new Uint32Array(3);
+    crypto.getRandomValues(buf);
+    const a = adj[buf[0] % adj.length];
+    const n = noun[buf[1] % noun.length];
+    const num = 100 + (buf[2] % 900);
     return a + n + num;
 }
 
@@ -266,7 +297,7 @@ class TavernChat {
     }
 
     async setNick(newNick) {
-        const trimmed = String(newNick || '').trim().slice(0, 32);
+        const trimmed = tavernSanitize(newNick, TAVERN_MAX_NICK_LEN).trim();
         if (!trimmed || trimmed === this.nick) return;
         this.nick = trimmed;
         this.color = tavernNickColor(trimmed);
@@ -275,7 +306,7 @@ class TavernChat {
     }
 
     async setRoom(newRoom) {
-        const trimmed = String(newRoom || '').trim().slice(0, 64) || TAVERN_DEFAULT_ROOM;
+        const trimmed = tavernSanitize(newRoom, 64).trim() || TAVERN_DEFAULT_ROOM;
         if (trimmed === this.roomName) return;
         this.roomName = trimmed;
         await this.ctx.storage.set(TAVERN_ROOM_KEY, trimmed);
@@ -317,7 +348,9 @@ class TavernChat {
             if (typeof msg.ts !== 'number' || typeof msg.sig !== 'string') return;
             if (msg.text.length === 0 || msg.text.length > TAVERN_MAX_TEXT_LEN) return;
             if (msg.nick.length === 0 || msg.nick.length > TAVERN_MAX_NICK_LEN) return;
-            if (msg.color.length > 48) return;
+            if (!tavernValidColor(msg.color)) return;
+            // Sanitize any remaining spoofing chars AFTER signature check
+            // (we verify the bytes as received, then strip for display).
 
             // Anti-replay: reject anything too far from now.
             const now = Date.now();
@@ -347,8 +380,8 @@ class TavernChat {
 
             if (typeof this.onMessageCb === 'function') {
                 this.onMessageCb({
-                    text: msg.text.slice(0, TAVERN_MAX_TEXT_LEN),
-                    nick,
+                    text: tavernSanitize(msg.text, TAVERN_MAX_TEXT_LEN),
+                    nick: tavernSanitize(nick, TAVERN_MAX_NICK_LEN),
                     color: msg.color,
                     ts: msg.ts,
                     self: false,
@@ -367,7 +400,7 @@ class TavernChat {
             if (typeof info.ts !== 'number' || typeof info.sig !== 'string') return;
             if (info.type !== 'join' && info.type !== 'leave') return;
             if (info.nick.length === 0 || info.nick.length > TAVERN_MAX_NICK_LEN) return;
-            if (info.color.length > 48) return;
+            if (!tavernValidColor(info.color)) return;
             // Public key only needed on join (leave can trust the peerId we
             // already know) but validate shape when present.
             if (info.type === 'join') {
@@ -378,7 +411,10 @@ class TavernChat {
             const now = Date.now();
             if (Math.abs(now - info.ts) > TAVERN_TS_WINDOW_MS) return;
 
-            const nick  = info.nick.slice(0, TAVERN_MAX_NICK_LEN);
+            // Strip any display-spoofing chars before showing — but sign
+            // the ORIGINAL bytes (validate first, display sanitized).
+            const nick  = tavernSanitize(info.nick, TAVERN_MAX_NICK_LEN);
+            if (!nick) return;
             const color = info.color;
             const type  = info.type;
 
@@ -469,7 +505,7 @@ class TavernChat {
     }
 
     async send(text) {
-        const trimmed = String(text || '').trim().slice(0, TAVERN_MAX_TEXT_LEN);
+        const trimmed = tavernSanitize(text, TAVERN_MAX_TEXT_LEN).trim();
         if (!trimmed || !this.sendMsg || !this.privKey) return null;
         const payload = {
             text: trimmed,
