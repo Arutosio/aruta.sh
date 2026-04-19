@@ -70,10 +70,10 @@ export default {
                             <span class="tavern-status" data-status>not connected</span>
                         </div>
                         <ul class="tavern-log" data-log></ul>
-                        <form class="tavern-compose" data-compose>
+                        <div class="tavern-compose" data-compose>
                             <input type="text" data-input maxlength="1000" placeholder="Speak your piece…" autocomplete="off">
-                            <button type="submit">Send</button>
-                        </form>
+                            <button type="button" data-send>Send</button>
+                        </div>
                     </section>
                 </div>
             </div>
@@ -86,6 +86,7 @@ export default {
         const $log = root.querySelector('[data-log]');
         const $form = root.querySelector('[data-compose]');
         const $input = root.querySelector('[data-input]');
+        const $sendBtn = root.querySelector('[data-send]');
         const $nickSetup = root.querySelector('[data-nick]');
         const $roomSetup = root.querySelector('[data-room]');
         const $strategySetup = root.querySelector('[data-strategy]');
@@ -372,8 +373,7 @@ export default {
         $joinBtn.addEventListener('click', () => { doJoin(); });
 
         let warnedEmpty = false;
-        $form.addEventListener('submit', async (e) => {
-            e.preventDefault();
+        async function commitSend() {
             const text = $input.value;
             if (chat.peerCount === 0 && !warnedEmpty && text.trim()) {
                 appendSystem('No one else is in this room yet — your message will only reach travelers who join afterwards.');
@@ -382,6 +382,13 @@ export default {
             if (chat.peerCount > 0) warnedEmpty = false;
             const sent = await chat.send(text);
             if (sent) { append(sent); $input.value = ''; }
+        }
+        $sendBtn.addEventListener('click', () => { commitSend(); });
+        $input.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                commitSend();
+            }
         });
 
         $nickLive.addEventListener('input', () => {

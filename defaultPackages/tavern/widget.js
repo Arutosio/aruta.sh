@@ -13,9 +13,9 @@ export default {
             <div class="tavern-widget">
                 <div class="tavern-widget-status" data-status>connecting…</div>
                 <ul class="tavern-widget-log" data-log></ul>
-                <form class="tavern-widget-compose" data-compose>
+                <div class="tavern-widget-compose" data-compose>
                     <input type="text" data-input maxlength="500" placeholder="Speak…" autocomplete="off">
-                </form>
+                </div>
             </div>
         `;
         const $status = root.querySelector('[data-status]');
@@ -78,11 +78,16 @@ export default {
         });
         chat.announcePresence('join');
 
-        $form.addEventListener('submit', async (e) => {
-            e.preventDefault();
+        async function commitSend() {
             const text = $input.value;
             const sent = await chat.send(text);
             if (sent) { append(sent); $input.value = ''; }
+        }
+        $input.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                commitSend();
+            }
         });
 
         return {
