@@ -12,6 +12,8 @@ const TAVERN_WIDGET_ALIVE_KEY = '_widgetAlive';
 const TAVERN_WIDGET_FRESH_MS = 20000;
 const TAVERN_STRATEGY_KEY_UI = 'strategy';
 const TAVERN_PASSWORD_KEY_UI = 'password';
+const TAVERN_SHOW_SYS_KEY    = 'showSystemMsgs';
+const TAVERN_SIDE_KEY_UI     = 'sidebarSide';
 
 export default {
     async mount(root, ctx) {
@@ -46,7 +48,7 @@ export default {
                     <aside class="tavern-sidebar" data-sidebar>
                         <div class="tavern-side-head">
                             <span class="tavern-side-title">Rooms</span>
-                            <button type="button" class="tavern-side-flip" data-flip title="Move sidebar">⇄</button>
+                            <button type="button" class="tavern-side-prefs" data-prefs title="Preferences">⚙</button>
                         </div>
                         <ul class="tavern-room-list" data-rooms></ul>
                         <div class="tavern-add-room" data-add>
@@ -95,14 +97,15 @@ export default {
         const $addBox = root.querySelector('[data-add]');
         const $addInput = root.querySelector('[data-add-input]');
         const $addBtn = root.querySelector('[data-add-btn]');
-        const $flipBtn = root.querySelector('[data-flip]');
+        const $prefsBtn = root.querySelector('[data-prefs]');
         const $roomName = root.querySelector('[data-room-name]');
 
         const chat = new TavernChat(ctx);
         let connected = false;
         let nickTimer = null;
         let rooms = [];
-        let side = 'left';
+        let side = 'right';
+        let showSystemMsgs = true;
 
         // Pre-load identity + room bookmarks + sidebar pref so the setup
         // screen and the eventual sidebar both render with saved state.
@@ -111,6 +114,8 @@ export default {
         if (!rooms.includes(chat.roomName)) rooms.push(chat.roomName);
         side = await tavernLoadSide(ctx);
         $app.dataset.side = side;
+        const storedSys = await ctx.storage.get(TAVERN_SHOW_SYS_KEY);
+        showSystemMsgs = storedSys !== false; // default true
         $nickSetup.value = chat.nick;
         $roomSetup.value = chat.roomName;
         $strategySetup.value = chat.strategy;
@@ -136,6 +141,7 @@ export default {
         }
 
         function appendSystem(text) {
+            if (!showSystemMsgs) return;
             const li = document.createElement('li');
             li.className = 'tavern-system';
             li.textContent = text;
@@ -441,10 +447,77 @@ export default {
             }
         });
 
-        $flipBtn.addEventListener('click', async () => {
-            side = side === 'left' ? 'right' : 'left';
-            $app.dataset.side = side;
-            await tavernSaveSide(ctx, side);
+        // Preferences popover anchored under the gear button.
+        function closePrefsPopover() {
+            const existing = document.querySelector('.tavern-prefs-popover');
+            if (existing) existing.remove();
+        }
+        function openPrefsPopover() {
+            closePrefsPopover();
+            const pop = document.createElement('div');
+            pop.className = 'tavern-prefs-popover';
+            pop.innerHTML = `
+                <div class="tavern-prefs-head">Preferences</div>
+                <div class="tavern-prefs-section">
+                    <label class="tavern-prefs-label">Sidebar side</label>
+                    <div class="tavern-prefs-btn-group" data-side-group>
+                        <button type="button" data-side-choice="left"${side === 'left' ? ' class="is-active"' : ''}>Left</button>
+                        <button type="button" data-side-choice="right"${side === 'right' ? ' class="is-active"' : ''}>Right</button>
+                    </div>
+                </div>
+                <div class="tavern-prefs-section">
+                    <label class="tavern-prefs-label">Signaling strategy</label>
+                    <div class="tavern-prefs-readonly">${tavernEscapeHtml(chat.strategy)} <small>(only option available)</small></div>
+                </div>
+                <div class="tavern-prefs-section">
+                    <label class="tavern-prefs-row">
+                        <span>Show activity messages</span>
+                        <input type="checkbox" data-show-sys${showSystemMsgs ? ' checked' : ''}>
+                    </label>
+                    <small class="tavern-prefs-hint">Joins, leaves, warnings, moved rooms, etc.</small>
+                </div>
+                <div class="tavern-prefs-section">
+                    <label class="tavern-prefs-label">Identity</label>
+                    <div class="tavern-prefs-readonly">Nick: <strong>${tavernEscapeHtml(chat.nick)}</strong></div>
+                    <div class="tavern-prefs-readonly">Key thumbprint: <code>${tavernEscapeHtml((chat.selfThumbprint || '').slice(0, 16))}…</code></div>
+                </div>
+                <div class="tavern-prefs-section">
+                    <button type="button" class="tavern-prefs-close" data-close>Close</button>
+                </div>
+            `;
+            const r = $prefsBtn.getBoundingClientRect();
+            pop.style.position = 'fixed';
+            pop.style.left = Math.min(window.innerWidth - 260, r.left) + 'px';
+            pop.style.top = (r.bottom + 6) + 'px';
+            document.body.appendChild(pop);
+
+            pop.querySelectorAll('[data-side-choice]').forEach(btn => {
+                btn.addEventListener('click', async () => {
+                    const next = btn.dataset.sideChoice;
+                    if (next === side) return;
+                    side = next;
+                    $app.dataset.side = side;
+                    await tavernSaveSide(ctx, side);
+                    pop.querySelectorAll('[data-side-choice]').forEach(b =>
+                        b.classList.toggle('is-active', b.dataset.sideChoice === side));
+                });
+            });
+            pop.querySelector('[data-show-sys]').addEventListener('change', async (e) => {
+                showSystemMsgs = e.target.checked;
+                await ctx.storage.set(TAVERN_SHOW_SYS_KEY, showSystemMsgs);
+            });
+            pop.querySelector('[data-close]').addEventListener('click', closePrefsPopover);
+
+            const offClick = (e) => {
+                if (pop.contains(e.target) || $prefsBtn.contains(e.target)) return;
+                closePrefsPopover();
+                document.removeEventListener('mousedown', offClick);
+            };
+            setTimeout(() => document.addEventListener('mousedown', offClick), 0);
+        }
+        $prefsBtn.addEventListener('click', () => {
+            if (document.querySelector('.tavern-prefs-popover')) closePrefsPopover();
+            else openPrefsPopover();
         });
 
         return {

@@ -197,7 +197,7 @@ html, body {
     letter-spacing: 0.18em;
     text-transform: uppercase;
 }
-.tavern-side-flip {
+.tavern-side-prefs {
     background: transparent;
     border: 1px solid var(--tavern-border);
     color: var(--tavern-fg-dim);
@@ -209,7 +209,114 @@ html, body {
     font-size: 0.85rem;
     transition: background 0.15s, color 0.15s;
 }
-.tavern-side-flip:hover {
+.tavern-side-prefs:hover {
+    background: var(--tavern-row-hover);
+    color: var(--tavern-gold);
+}
+
+/* Preferences popover anchored under the gear button. */
+.tavern-prefs-popover {
+    width: 260px;
+    max-height: 440px;
+    overflow-y: auto;
+    background: var(--tavern-bg);
+    color: var(--tavern-fg);
+    border: 1px solid var(--tavern-border);
+    border-radius: 8px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
+    z-index: 9999;
+    font-family: 'Inter', system-ui, sans-serif;
+}
+.tavern-prefs-head {
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--tavern-border);
+    font-family: 'Cinzel', Georgia, serif;
+    font-size: 0.78rem;
+    font-weight: 700;
+    color: var(--tavern-gold);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+}
+.tavern-prefs-section {
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--tavern-border);
+}
+.tavern-prefs-section:last-child { border-bottom: none; }
+.tavern-prefs-label {
+    display: block;
+    font-size: 0.68rem;
+    color: var(--tavern-fg-dim);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    margin-bottom: 6px;
+}
+.tavern-prefs-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    font-size: 0.82rem;
+    cursor: pointer;
+}
+.tavern-prefs-hint {
+    display: block;
+    margin-top: 4px;
+    color: var(--tavern-fg-dim);
+    font-size: 0.68rem;
+    font-style: italic;
+    line-height: 1.4;
+}
+.tavern-prefs-readonly {
+    font-size: 0.78rem;
+    color: var(--tavern-fg);
+    margin: 2px 0;
+    word-break: break-all;
+}
+.tavern-prefs-readonly code {
+    background: var(--tavern-input-bg);
+    padding: 1px 5px;
+    border-radius: 3px;
+    font-size: 0.72rem;
+}
+.tavern-prefs-btn-group {
+    display: flex;
+    gap: 4px;
+}
+.tavern-prefs-btn-group button {
+    flex: 1;
+    background: transparent;
+    border: 1px solid var(--tavern-border);
+    color: var(--tavern-fg-dim);
+    padding: 5px 10px;
+    font: inherit;
+    font-size: 0.78rem;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background 0.12s, color 0.12s, border-color 0.12s;
+}
+.tavern-prefs-btn-group button:hover {
+    background: var(--tavern-row-hover);
+    color: var(--tavern-fg);
+}
+.tavern-prefs-btn-group button.is-active {
+    background: var(--tavern-row-active);
+    color: var(--tavern-gold);
+    border-color: var(--tavern-gold);
+}
+.tavern-prefs-close {
+    width: 100%;
+    background: transparent;
+    color: var(--tavern-fg-dim);
+    border: 1px solid var(--tavern-border);
+    border-radius: 4px;
+    padding: 6px 10px;
+    font-family: 'Cinzel', Georgia, serif;
+    font-size: 0.72rem;
+    letter-spacing: 0.08em;
+    cursor: pointer;
+    transition: background 0.12s, color 0.12s;
+}
+.tavern-prefs-close:hover {
     background: var(--tavern-row-hover);
     color: var(--tavern-gold);
 }

@@ -101,7 +101,9 @@ async function tavernSaveRooms(ctx, rooms) {
 
 async function tavernLoadSide(ctx) {
     const s = await ctx.storage.get(TAVERN_SIDE_KEY);
-    return s === 'right' ? 'right' : 'left';
+    if (s === 'left')  return 'left';
+    if (s === 'right') return 'right';
+    return 'right'; // default right per user preference
 }
 
 async function tavernSaveSide(ctx, side) {
