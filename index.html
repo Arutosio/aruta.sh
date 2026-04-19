@@ -122,7 +122,7 @@
     <header class="taskbar">
         <!-- Left: start button only -->
         <div class="taskbar-left">
-            <button class="taskbar-start" id="start-btn" aria-label="Start menu" title="Start">
+            <button class="taskbar-start" id="start-btn" aria-label="Start menu" title="Start" data-i18n-aria="start_btn_aria" data-i18n-title="start_btn">
                 <span class="start-icon">⚜</span>
             </button>
             <div class="taskbar-sep" aria-hidden="true"></div>
@@ -134,15 +134,15 @@
         <!-- Right: system tray -->
         <div class="taskbar-tray">
             <div class="taskbar-sep" aria-hidden="true"></div>
-            <button class="tray-btn tray-btn-sys" id="sysinfo-btn" title="System Info" aria-label="System info">
+            <button class="tray-btn tray-btn-sys" id="sysinfo-btn" title="System Info" aria-label="System info" data-i18n-title="sysinfo_btn" data-i18n-aria="sysinfo_btn">
                 <i class="fas fa-circle-info"></i>
                 <span class="tray-btn-label">SYS</span>
             </button>
             <!-- System Info Popover -->
             <div class="sysinfo-panel" id="sysinfo-panel" style="display: none;">
-                <div class="sysinfo-header">System Information</div>
+                <div class="sysinfo-header" data-i18n="sysinfo_title">System Information</div>
                 <div class="sysinfo-rows" id="sysinfo-rows">
-                    <div class="sysinfo-row"><span class="sysinfo-label">Loading...</span></div>
+                    <div class="sysinfo-row"><span class="sysinfo-label" data-i18n="sysinfo_loading">Loading...</span></div>
                 </div>
             </div>
             <div class="taskbar-sep" aria-hidden="true"></div>
@@ -172,7 +172,7 @@
                 <span class="start-logo">⚜</span>
                 <div class="start-header-text">
                     <span class="start-title">Aruta.sh</span>
-                    <span class="start-subtitle">Tome of the Wandering Mage</span>
+                    <span class="start-subtitle" data-i18n="start_subtitle">Tome of the Wandering Mage</span>
                 </div>
             </div>
             <!-- Items rendered dynamically by registry.js:renderStartMenuItems
@@ -296,9 +296,9 @@
             <div class="win-titlebar">
                 <span class="win-title">📖 <span data-i18n="sec_about">About</span></span>
                 <div class="win-controls">
-                    <button class="win-btn win-minimize" title="Minimize">▬</button>
-                    <button class="win-btn win-maximize" title="Maximize">☐</button>
-                    <button class="win-btn win-close" title="Close">✕</button>
+                    <button class="win-btn win-minimize" title="Minimize" data-i18n-title="win_minimize">▬</button>
+                    <button class="win-btn win-maximize" title="Maximize" data-i18n-title="win_maximize">☐</button>
+                    <button class="win-btn win-close" title="Close" data-i18n-title="win_close">✕</button>
                 </div>
             </div>
             <div class="win-content">
@@ -317,9 +317,9 @@
             <div class="win-titlebar">
                 <span class="win-title">🔮 <span data-i18n="sec_live">Live</span></span>
                 <div class="win-controls">
-                    <button class="win-btn win-minimize" title="Minimize">▬</button>
-                    <button class="win-btn win-maximize" title="Maximize">☐</button>
-                    <button class="win-btn win-close" title="Close">✕</button>
+                    <button class="win-btn win-minimize" title="Minimize" data-i18n-title="win_minimize">▬</button>
+                    <button class="win-btn win-maximize" title="Maximize" data-i18n-title="win_maximize">☐</button>
+                    <button class="win-btn win-close" title="Close" data-i18n-title="win_close">✕</button>
                 </div>
             </div>
             <div class="win-content">
@@ -380,9 +380,9 @@
             <div class="win-titlebar">
                 <span class="win-title">🔗 <span data-i18n="sec_links">Links</span></span>
                 <div class="win-controls">
-                    <button class="win-btn win-minimize" title="Minimize">▬</button>
-                    <button class="win-btn win-maximize" title="Maximize">☐</button>
-                    <button class="win-btn win-close" title="Close">✕</button>
+                    <button class="win-btn win-minimize" title="Minimize" data-i18n-title="win_minimize">▬</button>
+                    <button class="win-btn win-maximize" title="Maximize" data-i18n-title="win_maximize">☐</button>
+                    <button class="win-btn win-close" title="Close" data-i18n-title="win_close">✕</button>
                 </div>
             </div>
             <div class="win-content">
@@ -412,9 +412,9 @@
             <div class="win-titlebar">
                 <span class="win-title">⚙️ <span data-i18n="sec_settings">Settings</span></span>
                 <div class="win-controls">
-                    <button class="win-btn win-minimize" title="Minimize">▬</button>
-                    <button class="win-btn win-maximize" title="Maximize">☐</button>
-                    <button class="win-btn win-close" title="Close">✕</button>
+                    <button class="win-btn win-minimize" title="Minimize" data-i18n-title="win_minimize">▬</button>
+                    <button class="win-btn win-maximize" title="Maximize" data-i18n-title="win_maximize">☐</button>
+                    <button class="win-btn win-close" title="Close" data-i18n-title="win_close">✕</button>
                 </div>
             </div>
             <div class="win-content">
@@ -452,12 +452,12 @@
                             <div class="settings-row">
                                 <div class="settings-label"><span class="settings-icon">✒️</span><div><strong data-i18n="settings_font">Font Family</strong><br><small data-i18n="settings_font_desc">Typeface used across the site</small></div></div>
                                 <select id="settings-font" class="settings-select">
-                                    <option value="default">Arcane (Cinzel + Inter)</option>
-                                    <option value="medieval">Medieval (IM Fell)</option>
-                                    <option value="modern">Modern Sans</option>
-                                    <option value="serif">Classic Serif</option>
-                                    <option value="mono">Monospace</option>
-                                    <option value="nordic">Nordic (Cinzel only)</option>
+                                    <option value="default" data-i18n="font_default">Arcane (Cinzel + Inter)</option>
+                                    <option value="medieval" data-i18n="font_medieval">Medieval (IM Fell)</option>
+                                    <option value="modern" data-i18n="font_modern">Modern Sans</option>
+                                    <option value="serif" data-i18n="font_serif">Classic Serif</option>
+                                    <option value="mono" data-i18n="font_mono">Monospace</option>
+                                    <option value="nordic" data-i18n="font_nordic">Nordic (Cinzel only)</option>
                                 </select>
                             </div>
                             <div class="settings-row">
@@ -465,7 +465,7 @@
                                 <div class="settings-actions">
                                     <button class="settings-reset-btn" id="settings-bg-pick" data-i18n="settings_bg_pick">Upload…</button>
                                     <button class="settings-reset-btn" id="settings-bg-clear" data-i18n="settings_bg_clear">Clear</button>
-                                    <span class="settings-status" id="settings-bg-status">Default</span>
+                                    <span class="settings-status" id="settings-bg-status" data-i18n="settings_status_default">Default</span>
                                     <input type="file" id="settings-bg-file" accept="image/*,video/*" style="display:none;">
                                 </div>
                             </div>
@@ -474,7 +474,7 @@
                                 <div class="settings-actions">
                                     <button class="settings-reset-btn" id="settings-portrait-pick" data-i18n="settings_portrait_pick">Upload…</button>
                                     <button class="settings-reset-btn" id="settings-portrait-clear" data-i18n="settings_portrait_clear">Reset</button>
-                                    <span class="settings-status" id="settings-portrait-status">Default</span>
+                                    <span class="settings-status" id="settings-portrait-status" data-i18n="settings_status_default">Default</span>
                                     <input type="file" id="settings-portrait-file" accept="image/*" style="display:none;">
                                 </div>
                             </div>
@@ -488,12 +488,12 @@
                             <div class="settings-row">
                                 <div class="settings-label"><span class="settings-icon">🎨</span><div><strong data-i18n="settings_accent">Accent Color</strong><br><small data-i18n="settings_accent_desc">Choose your accent color</small></div></div>
                                 <div class="settings-colors" id="settings-accent">
-                                    <button class="settings-color-btn active" data-accent="gold" style="background:#ffc857;" title="Gold"></button>
-                                    <button class="settings-color-btn" data-accent="purple" style="background:#a78bfa;" title="Purple"></button>
-                                    <button class="settings-color-btn" data-accent="cyan" style="background:#22d3ee;" title="Cyan"></button>
-                                    <button class="settings-color-btn" data-accent="rose" style="background:#fb7185;" title="Rose"></button>
-                                    <button class="settings-color-btn" data-accent="emerald" style="background:#34d399;" title="Emerald"></button>
-                                    <label class="settings-color-btn settings-color-custom" data-accent="custom" title="Custom">
+                                    <button class="settings-color-btn active" data-accent="gold" style="background:#ffc857;" title="Gold" data-i18n-title="accent_gold"></button>
+                                    <button class="settings-color-btn" data-accent="purple" style="background:#a78bfa;" title="Purple" data-i18n-title="accent_purple"></button>
+                                    <button class="settings-color-btn" data-accent="cyan" style="background:#22d3ee;" title="Cyan" data-i18n-title="accent_cyan"></button>
+                                    <button class="settings-color-btn" data-accent="rose" style="background:#fb7185;" title="Rose" data-i18n-title="accent_rose"></button>
+                                    <button class="settings-color-btn" data-accent="emerald" style="background:#34d399;" title="Emerald" data-i18n-title="accent_emerald"></button>
+                                    <label class="settings-color-btn settings-color-custom" data-accent="custom" title="Custom" data-i18n-title="accent_custom">
                                         <span class="custom-swatch">🎨</span>
                                         <input type="color" id="settings-accent-custom" value="#ffc857">
                                     </label>
@@ -615,15 +615,15 @@
                             <h2 class="settings-page-title" data-i18n="settings_reset">Reset to Defaults</h2>
                             <div class="settings-row">
                                 <div class="settings-label"><span class="settings-icon">🔄</span><div><strong data-i18n="settings_reset">Reset to Defaults</strong><br><small data-i18n="settings_reset_desc">Reset all settings to default values</small></div></div>
-                                <button class="settings-reset-btn" id="settings-reset">Reset</button>
+                                <button class="settings-reset-btn" id="settings-reset" data-i18n="settings_reset_btn">Reset</button>
                             </div>
                             <div class="settings-row">
                                 <div class="settings-label"><span class="settings-icon">🧹</span><div><strong data-i18n="settings_wipe_settings">Wipe Settings Only</strong><br><small data-i18n="settings_wipe_settings_desc">Reset preferences but keep installed apps, commands and permissions</small></div></div>
-                                <button class="settings-reset-btn" id="settings-wipe-settings">Wipe</button>
+                                <button class="settings-reset-btn" id="settings-wipe-settings" data-i18n="settings_wipe_settings_btn">Wipe</button>
                             </div>
                             <div class="settings-row">
                                 <div class="settings-label"><span class="settings-icon">🗑️</span><div><strong data-i18n="settings_wipe">Wipe Local Data</strong><br><small data-i18n="settings_wipe_desc">Delete all locally stored data, apps and commands, then reload</small></div></div>
-                                <button class="settings-reset-btn settings-wipe-btn" id="settings-wipe">Wipe All</button>
+                                <button class="settings-reset-btn settings-wipe-btn" id="settings-wipe" data-i18n="settings_wipe_all_btn">Wipe All</button>
                             </div>
                         </div>
                         <!-- About -->
@@ -643,9 +643,9 @@
             <div class="win-titlebar">
                 <span class="win-title">⌨️ <span data-i18n="sec_terminal">Terminal</span></span>
                 <div class="win-controls">
-                    <button class="win-btn win-minimize" title="Minimize">▬</button>
-                    <button class="win-btn win-maximize" title="Maximize">☐</button>
-                    <button class="win-btn win-close" title="Close">✕</button>
+                    <button class="win-btn win-minimize" title="Minimize" data-i18n-title="win_minimize">▬</button>
+                    <button class="win-btn win-maximize" title="Maximize" data-i18n-title="win_maximize">☐</button>
+                    <button class="win-btn win-close" title="Close" data-i18n-title="win_close">✕</button>
                 </div>
             </div>
             <div class="win-content"></div>

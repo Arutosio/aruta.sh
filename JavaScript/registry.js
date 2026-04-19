@@ -353,9 +353,9 @@ function ensureAppWindow(manifest) {
         <div class="win-titlebar">
             <span class="win-title">${manifest.icon || '📦'} <span>${manifest.name}</span></span>
             <div class="win-controls">
-                <button class="win-btn win-minimize" title="Minimize">▬</button>
-                <button class="win-btn win-maximize" title="Maximize">☐</button>
-                <button class="win-btn win-close" title="Close">✕</button>
+                <button class="win-btn win-minimize" title="Minimize" data-i18n-title="win_minimize">▬</button>
+                <button class="win-btn win-maximize" title="Maximize" data-i18n-title="win_maximize">☐</button>
+                <button class="win-btn win-close" title="Close" data-i18n-title="win_close">✕</button>
             </div>
         </div>
         <div class="win-content custom-app-content"></div>

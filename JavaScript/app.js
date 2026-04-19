@@ -60,6 +60,7 @@ function showApp() {
         if (window.registry) await window.registry.bootstrap();
         if (window.defaults) await window.defaults.bootstrap();
         if (window.widgets) await window.widgets.bootstrap();
+        applyTranslations(currentLang);
     })();
     if (window.installer) window.installer.initDragDrop();
 
