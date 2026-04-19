@@ -74,32 +74,32 @@ function _createFrame(manifest, initialState) {
     const frame = document.createElement('div');
     frame.className = 'widget-frame';
     frame.dataset.widget = manifest.id;
+    frame.title = manifest.name;
     frame.style.width = initialState.width + 'px';
     frame.style.height = initialState.height + 'px';
     frame.style.left = initialState.x + 'px';
     frame.style.top = initialState.y + 'px';
     frame.style.zIndex = String(++_zTop);
-    frame.innerHTML = `
-        <div class="widget-handle">
-            <span class="widget-title"><span class="widget-icon">${manifest.icon || '🪄'}</span><span class="widget-name"></span></span>
-            <button class="widget-close" type="button" title="Disable widget" aria-label="Disable widget">×</button>
-        </div>
-        <div class="widget-body"></div>
-    `;
-    frame.querySelector('.widget-name').textContent = manifest.name;
+    // No chrome — just a thin border around the body that doubles as the
+    // drag handle. Closing/disabling is handled exclusively from
+    // Settings -> Widgets so the surface stays compact.
+    frame.innerHTML = `<div class="widget-body"></div>`;
     document.body.appendChild(frame);
     return frame;
 }
 
 function _wireDrag(frame, widgetId) {
-    const handle = frame.querySelector('.widget-handle');
+    // Whole frame is the drag handle, except the body — which contains the
+    // package iframe and must stay interactive. The 4px padding around the
+    // body acts as the visible drag belt.
+    const handle = frame;
     let dragging = false;
     let startX = 0, startY = 0, origX = 0, origY = 0;
     let saveTimer = null;
 
     const onDown = (e) => {
-        // Avoid drag when clicking the close button.
-        if (e.target.closest('.widget-close')) return;
+        // Mousedown inside the body (including the iframe) = no drag.
+        if (e.target.closest('.widget-body')) return;
         const isTouch = e.type === 'touchstart';
         const p = isTouch ? e.touches[0] : e;
         dragging = true;
@@ -180,8 +180,6 @@ async function enable(id) {
 
     const frame = _createFrame(manifest, initial);
     const body = frame.querySelector('.widget-body');
-    const closeBtn = frame.querySelector('.widget-close');
-    closeBtn.addEventListener('click', (e) => { e.stopPropagation(); disable(id); });
 
     const mounted = await window.sandbox.mountWidget(id, { container: body });
     if (!mounted) {
