@@ -525,6 +525,29 @@ html, body {
     text-overflow: ellipsis;
     white-space: nowrap;
     min-width: 0;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+/* Mirrors the sidebar dot colors: same three states, same visual language. */
+.tavern-banner-dot {
+    display: inline-block;
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    background: var(--tavern-fg-dim);
+    opacity: 0.6;
+    flex-shrink: 0;
+}
+.tavern-banner-dot.is-on {
+    background: #22c55e;
+    opacity: 1;
+    box-shadow: 0 0 6px rgba(34, 197, 94, 0.55);
+}
+.tavern-banner-dot.is-off {
+    background: #fb7185;
+    opacity: 1;
+    box-shadow: 0 0 6px rgba(251, 113, 133, 0.5);
 }
 
 /* Peer count badge on the active room (sidebar). */

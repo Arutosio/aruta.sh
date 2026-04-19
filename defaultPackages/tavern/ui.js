@@ -248,11 +248,16 @@ export default {
                 li.querySelector('.tavern-room-label').textContent = name;
                 $roomsUl.appendChild(li);
             }
-            // Banner reflects the room currently being VIEWED, with a live
-            // marker only when that room also happens to be the connected one.
-            const isViewingLive = viewingRoom === chat.roomName && chat.isConnected;
-            const marker = isViewingLive ? '' : (offlineRooms.has(viewingRoom) ? ' (disconnected)' : ' (offline)');
-            $roomName.textContent = '# ' + (viewingRoom || chat.roomName) + marker;
+            // Banner reflects the room currently being viewed. A colored
+            // dot mirrors the sidebar dot: green if that viewed room is
+            // the live Trystero swarm, red if it's an explicit disconnect,
+            // grey otherwise (never connected / idle).
+            const viewName = viewingRoom || chat.roomName;
+            const isViewingLive = viewName === chat.roomName && chat.isConnected;
+            const isViewingOff = offlineRooms.has(viewName);
+            const dotClass = isViewingLive ? 'is-on' : (isViewingOff ? 'is-off' : '');
+            $roomName.innerHTML = '# ' + tavernEscapeHtml(viewName) +
+                ' <span class="tavern-banner-dot ' + dotClass + '" aria-hidden="true"></span>';
         }
 
         function fmtAgo(ts) {
@@ -466,6 +471,8 @@ export default {
 
         function switchView(name) {
             if (!name || name === viewingRoom) return;
+            const beforeRoom = chat.roomName;
+            const beforeConn = chat.isConnected;
             // Persist current viewing room's DOM to cache before switching.
             if (viewingRoom) roomLogs.set(viewingRoom, $log.innerHTML);
             viewingRoom = name;
@@ -473,6 +480,11 @@ export default {
             $log.scrollTop = $log.scrollHeight;
             renderRooms();
             refreshStatus();
+            // Invariant: view switching must NEVER alter connection state.
+            if (chat.roomName !== beforeRoom || chat.isConnected !== beforeConn) {
+                console.warn('[tavern] switchView mutated connection state',
+                    { beforeRoom, beforeConn, afterRoom: chat.roomName, afterConn: chat.isConnected });
+            }
         }
 
         $roomsUl.addEventListener('click', async (e) => {
@@ -493,18 +505,28 @@ export default {
                     // Disconnect from the live room — flip its dot to red.
                     await chat.disconnect();
                     offlineRooms.add(name);
+                    // Double-write: log the notice in the affected room AND
+                    // (if different) in the currently viewed room so the
+                    // user sees the feedback no matter where they are.
                     appendSystem('Disconnected from "' + name + '"', 'warning', name);
+                    if (viewingRoom !== name) {
+                        appendSystem('Disconnected from "' + name + '"', 'warning', viewingRoom);
+                    }
                 } else {
-                    // Connect to this room: if we were connected elsewhere,
-                    // leave that swarm first (it flips grey, not red).
                     try {
                         if (chat.isConnected) await chat.disconnect();
                         await chat.setRoom(name);
                         offlineRooms.delete(name);
                         chat.announcePresence('join');
                         appendSystem('Connected to "' + name + '"', 'success', name);
+                        if (viewingRoom !== name) {
+                            appendSystem('Connected to "' + name + '"', 'success', viewingRoom);
+                        }
                     } catch (err) {
                         appendSystem('Could not connect: ' + (err.message || err), 'error', name);
+                        if (viewingRoom !== name) {
+                            appendSystem('Could not connect to "' + name + '": ' + (err.message || err), 'error', viewingRoom);
+                        }
                     }
                 }
                 renderRooms();
