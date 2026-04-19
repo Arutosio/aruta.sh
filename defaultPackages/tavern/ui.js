@@ -15,11 +15,6 @@ export default {
     async mount(root, ctx) {
         root.innerHTML = `
             <div class="tavern-app" data-side="left">
-                <header class="tavern-header">
-                    <span class="tavern-title">🍺 <span>Tavern</span></span>
-                    <span class="tavern-status" data-status>not connected</span>
-                </header>
-
                 <section class="tavern-setup" data-setup>
                     <p class="tavern-setup-blurb">
                         An anonymous, peer-to-peer common room. No accounts, no servers — just travelers.
@@ -57,6 +52,7 @@ export default {
                     <section class="tavern-chat-pane">
                         <div class="tavern-room-banner" data-banner>
                             <span class="tavern-room-name" data-room-name>#</span>
+                            <span class="tavern-status" data-status>not connected</span>
                         </div>
                         <ul class="tavern-log" data-log></ul>
                         <form class="tavern-compose" data-compose>
@@ -130,19 +126,72 @@ export default {
             $status.textContent = peers === 0
                 ? 'alone in the tavern'
                 : (peers === 1 ? '1 fellow nearby' : peers + ' fellows nearby');
+            // Re-render the sidebar so the active-room count badge stays in
+            // sync as peers join/leave. Cheap (just innerHTML rewrite).
+            renderRooms();
         }
 
         function renderRooms() {
             $roomsUl.innerHTML = '';
             for (const name of rooms) {
+                const isActive = name === chat.roomName;
                 const li = document.createElement('li');
-                li.className = 'tavern-room' + (name === chat.roomName ? ' is-active' : '');
+                li.className = 'tavern-room' + (isActive ? ' is-active' : '');
                 li.dataset.room = name;
-                li.innerHTML = `<span class="tavern-room-hash">#</span><span class="tavern-room-label"></span><button type="button" class="tavern-room-x" title="Remove">×</button>`;
+                // Active room shows a peer-count badge (self + remote peers).
+                // Click on the badge opens the peer list popover.
+                const countBadge = isActive
+                    ? `<button type="button" class="tavern-room-count" data-peers title="Show peers">${chat.peerCount + 1}</button>`
+                    : '';
+                li.innerHTML = `<span class="tavern-room-hash">#</span><span class="tavern-room-label"></span>${countBadge}<button type="button" class="tavern-room-x" title="Close">×</button>`;
                 li.querySelector('.tavern-room-label').textContent = name;
                 $roomsUl.appendChild(li);
             }
             $roomName.textContent = '# ' + chat.roomName;
+        }
+
+        function fmtAgo(ts) {
+            const sec = Math.max(1, Math.floor((Date.now() - Number(ts)) / 1000));
+            if (sec < 60) return sec + 's';
+            const min = Math.floor(sec / 60);
+            if (min < 60) return min + 'm';
+            const h = Math.floor(min / 60);
+            return h + 'h ' + (min % 60) + 'm';
+        }
+
+        function closePeersPopover() {
+            const existing = document.querySelector('.tavern-peers-popover');
+            if (existing) existing.remove();
+        }
+
+        function showPeersPopover(anchor) {
+            closePeersPopover();
+            const peers = chat.getPeers();
+            const pop = document.createElement('div');
+            pop.className = 'tavern-peers-popover';
+            pop.innerHTML = `<div class="tavern-peers-head">In # ${tavernEscapeHtml(chat.roomName)} (${peers.length})</div><ul class="tavern-peers-list"></ul>`;
+            const ul = pop.querySelector('.tavern-peers-list');
+            for (const p of peers) {
+                const li = document.createElement('li');
+                li.className = 'tavern-peer' + (p.self ? ' is-self' : '');
+                li.innerHTML = `<span class="tavern-peer-nick" style="color:${tavernEscapeHtml(p.color)};"></span><span class="tavern-peer-time"></span>`;
+                li.querySelector('.tavern-peer-nick').textContent = p.nick + (p.self ? ' (you)' : '');
+                li.querySelector('.tavern-peer-time').textContent = fmtAgo(p.joinedAt) + ' ago';
+                ul.appendChild(li);
+            }
+            // Anchor to the badge inside the room list.
+            const r = anchor.getBoundingClientRect();
+            pop.style.position = 'fixed';
+            pop.style.left = Math.min(window.innerWidth - 220, r.left) + 'px';
+            pop.style.top = (r.bottom + 6) + 'px';
+            document.body.appendChild(pop);
+            // Close on outside click.
+            const offClick = (e) => {
+                if (pop.contains(e.target) || anchor.contains(e.target)) return;
+                closePeersPopover();
+                document.removeEventListener('mousedown', offClick);
+            };
+            setTimeout(() => document.addEventListener('mousedown', offClick), 0);
         }
 
         async function widgetIsAlive() {
@@ -241,9 +290,18 @@ export default {
 
         $joinBtn.addEventListener('click', () => { doJoin(); });
 
+        let warnedEmpty = false;
         $form.addEventListener('submit', (e) => {
             e.preventDefault();
             const text = $input.value;
+            // Warn the user once per empty-room session that no one is
+            // listening yet — Trystero send is fire-and-forget, so an
+            // unattended room silently swallows everything otherwise.
+            if (chat.peerCount === 0 && !warnedEmpty && text.trim()) {
+                appendSystem('No one else is in this room yet — your message will only reach travelers who join afterwards.');
+                warnedEmpty = true;
+            }
+            if (chat.peerCount > 0) warnedEmpty = false; // reset if peers arrived
             const sent = chat.send(text);
             if (sent) { append(sent); $input.value = ''; }
         });
@@ -254,6 +312,12 @@ export default {
         });
 
         $roomsUl.addEventListener('click', (e) => {
+            const peers = e.target.closest('.tavern-room-count');
+            if (peers) {
+                e.stopPropagation();
+                showPeersPopover(peers);
+                return;
+            }
             const x = e.target.closest('.tavern-room-x');
             if (x) {
                 e.stopPropagation();
@@ -270,11 +334,17 @@ export default {
             const name = ($addInput.value || '').trim().slice(0, 64);
             if (!name) return;
             $addInput.value = '';
-            if (!rooms.includes(name)) {
+            const wasNew = !rooms.includes(name);
+            if (wasNew) {
                 rooms.push(name);
                 rooms = await tavernSaveRooms(ctx, rooms);
             }
-            // Auto-switch to the freshly added room.
+            // Already on it? Just confirm — no reconnect needed.
+            if (name === chat.roomName) {
+                renderRooms();
+                appendSystem(wasNew ? 'Bookmarked "' + name + '" (already here)' : 'Already in "' + name + '"');
+                return;
+            }
             await switchRoom(name);
         });
 

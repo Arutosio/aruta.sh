@@ -146,8 +146,18 @@ class TavernChat {
             const nick  = String(info?.nick  || 'Stranger').slice(0, 32);
             const color = String(info?.color || '#a78bfa');
             const type  = info?.type === 'leave' ? 'leave' : 'join';
-            if (type === 'join') this.peerNicks.set(peerId, { nick, color });
-            else                 this.peerNicks.delete(peerId);
+            if (type === 'join') {
+                // Track join timestamp so the UI can show "X min ago"
+                // entries in the peer list. Preserve original joinedAt if
+                // the same peer re-announces (e.g. on room hop).
+                const prev = this.peerNicks.get(peerId);
+                this.peerNicks.set(peerId, {
+                    nick, color,
+                    joinedAt: prev?.joinedAt || Date.now()
+                });
+            } else {
+                this.peerNicks.delete(peerId);
+            }
             if (typeof this.onPresenceCb === 'function') {
                 this.onPresenceCb({ type, nick, color, peerId, ts: Number(info?.ts) || Date.now() });
             }
@@ -174,6 +184,7 @@ class TavernChat {
     /** Broadcast a presence event so other peers can render the join/leave note. */
     announcePresence(type) {
         if (!this.sendPresence) return;
+        if (type === 'join') this.selfJoinedAt = Date.now();
         try { this.sendPresence({ type, nick: this.nick, color: this.color, ts: Date.now() }); } catch (_) {}
     }
 
@@ -194,6 +205,25 @@ class TavernChat {
     onPeerJoin(cb) { this.onPeerJoinCb = cb; }
     onPeerLeave(cb) { this.onPeerLeaveCb = cb; }
     onPresence(cb) { this.onPresenceCb = cb; }
+
+    /**
+     * Snapshot of everyone in the room from this client's perspective.
+     * Self is always included as the first entry; remote peers follow
+     * (whose nicks are known from received presence broadcasts).
+     */
+    getPeers() {
+        const list = [{
+            peerId: 'self',
+            nick: this.nick,
+            color: this.color,
+            joinedAt: this.selfJoinedAt || Date.now(),
+            self: true,
+        }];
+        for (const [peerId, info] of this.peerNicks.entries()) {
+            list.push({ peerId, nick: info.nick, color: info.color, joinedAt: info.joinedAt, self: false });
+        }
+        return list;
+    }
 
     async destroy() {
         if (this.room) {

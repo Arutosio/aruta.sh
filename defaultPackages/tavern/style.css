@@ -44,24 +44,10 @@ html, body {
     background: var(--tavern-bg);
     color: var(--tavern-fg);
 }
-.tavern-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 8px;
-    padding: 10px 16px;
-    border-bottom: 1px solid var(--tavern-border);
-    background: var(--tavern-bg-2);
-    flex-shrink: 0;
-}
-.tavern-title {
-    font-family: 'Cinzel', Georgia, serif;
-    font-weight: 700;
-    color: var(--tavern-gold);
-    letter-spacing: 0.08em;
-}
+/* Header removed — the OS window titlebar already shows "🍺 Tavern".
+   Connection status was relocated into .tavern-room-banner below. */
 .tavern-status {
-    font-size: 0.75rem;
+    font-size: 0.72rem;
     color: var(--tavern-fg-dim);
     font-style: italic;
 }
@@ -294,6 +280,10 @@ html, body {
     overflow: hidden;
 }
 .tavern-room-banner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
     padding: 8px 16px;
     border-bottom: 1px solid var(--tavern-border);
     background: var(--tavern-bg-3);
@@ -304,6 +294,77 @@ html, body {
     font-size: 0.95rem;
     color: var(--tavern-gold);
     letter-spacing: 0.04em;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    min-width: 0;
+}
+
+/* Peer count badge on the active room (sidebar). */
+.tavern-room-count {
+    background: var(--tavern-row-active);
+    color: var(--tavern-gold);
+    border: 1px solid var(--tavern-border);
+    border-radius: 999px;
+    font-size: 0.65rem;
+    font-weight: 700;
+    padding: 1px 7px;
+    min-width: 18px;
+    line-height: 1.4;
+    cursor: pointer;
+    flex-shrink: 0;
+    transition: background 0.12s;
+}
+.tavern-room-count:hover { background: rgba(255, 200, 87, 0.32); }
+
+/* Peers popover (anchored to the count badge, positioned via JS). */
+.tavern-peers-popover {
+    width: 220px;
+    max-height: 280px;
+    overflow-y: auto;
+    background: var(--tavern-bg);
+    color: var(--tavern-fg);
+    border: 1px solid var(--tavern-border);
+    border-radius: 8px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
+    z-index: 9999;
+    font-family: 'Inter', system-ui, sans-serif;
+}
+.tavern-peers-head {
+    padding: 8px 12px;
+    border-bottom: 1px solid var(--tavern-border);
+    font-family: 'Cinzel', Georgia, serif;
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: var(--tavern-gold);
+    letter-spacing: 0.08em;
+}
+.tavern-peers-list {
+    list-style: none;
+    margin: 0;
+    padding: 4px 0;
+}
+.tavern-peer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+    padding: 6px 12px;
+    font-size: 0.78rem;
+}
+.tavern-peer.is-self { background: var(--tavern-row-active); }
+.tavern-peer-nick {
+    font-weight: 700;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    min-width: 0;
+}
+.tavern-peer-time {
+    color: var(--tavern-fg-dim);
+    font-size: 0.7rem;
+    font-variant-numeric: tabular-nums;
+    flex-shrink: 0;
 }
 .tavern-log {
     flex: 1;
