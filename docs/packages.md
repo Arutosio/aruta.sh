@@ -11,14 +11,17 @@ This doc covers **how to build your own package**. See also:
 
 ---
 
-## Two kinds of package
+## Three kinds of package
 
 | Type | Runs in | Has UI | Typical use |
 |---|---|---|---|
 | **app** | `<iframe sandbox="allow-scripts allow-modals">` inside an OS window | yes | games, tools, mini-apps |
 | **command** | main thread, invoked from the Terminal | no | shell utilities, automations |
+| **widget** | `<iframe>` in a compact floating `.widget-frame` | yes, compact | chat presence, clocks, glanceable status — see [widgets.md](./widgets.md) |
 
-Both share the same zip format and the same `ctx` API.
+All share the same zip format and the same `ctx` API. A single package
+can declare more than one role (see the [Multi-role](#multi-role-packages)
+section below).
 
 ---
 
@@ -54,7 +57,7 @@ The zip **must** contain `manifest.json` and the entry module at its root (not n
 | Field | Required | Rules | Notes |
 |---|---|---|---|
 | `type` | ◐ | `"app"` \| `"command"` | legacy — still accepted. Modern manifests declare `roles` instead. |
-| `roles` | ◐ | `string[]` from `"app"`, `"command"` | modern replacement for `type`. At least one of `type` or `roles` must be present. A package can declare both roles to ship a hybrid app + CLI. SDK 2+ only. |
+| `roles` | ◐ | `string[]` from `"app"`, `"command"`, `"widget"` | modern replacement for `type`. At least one of `type` or `roles` must be present. A package can declare multiple roles to ship a hybrid app + CLI, or a widget alongside a full app. `"widget"` requires SDK 2+. |
 | `entries` | — | `{ [role]: filename }` | optional per-role entry override. Keys must be a subset of `roles`. Falls back to `entry` / `index.js`. |
 | `commandAlias` | — | string | short name the terminal uses for this command (e.g. `"pkg"` for a package id like `"packagestore"`). Only meaningful when `roles` includes `"command"`. The aliases `pkg`, `roll`, `fortune` are **reserved** for their bundled-hybrid owners (`packagestore`, `dice-roller`, `oracle`) — any other package claiming them is rejected at install. Non-reserved collisions log a warning and the newer manifest wins. |
 | `id` | ✅ | `^[a-z0-9][a-z0-9_-]{1,40}$` | must be unique; reinstalling overwrites |
@@ -65,6 +68,8 @@ The zip **must** contain `manifest.json` and the entry module at its root (not n
 | `entry` | — | path inside zip | defaults to `index.js`. Shared fallback when `entries` is omitted. |
 | `permissions` | — | string[] | must be strings from the known-permission set in `sandbox.js:PERM_REQUIRED` — unknown values reject at install time. Still gated at runtime regardless of declaration. |
 | `allowOrigin` | — | boolean | opt-in: relax the iframe sandbox to `allow-scripts allow-same-origin allow-modals`. Required for `showDirectoryPicker` / FS Access API. See below. |
+| `unmountOnClose` | — | boolean | opt-in: clicking × on the window tears the iframe down via `sandbox.unmount(id)` in addition to hiding it. Use for apps that hold background state you DON'T want lingering after close — most notably live network connections (Tavern's Trystero swarms, any WebSocket / SharedWorker app). Default `false` (iframe stays in memory so state survives close/reopen). |
+| `widget` | — | object | Optional widget sizing + initial anchor hints. Only valid when `roles` includes `"widget"`. Full schema: [widgets.md](./widgets.md#manifest-additions). |
 | `category` | — | string | one of `info`, `games`, `tools`, `creativity`, `system`, `other`. Unknown values log a warning and fall back to `other`. |
 | `sdk` / `minSdk` | — | integer (default `1`) | minimum host SDK version this package expects. Install is **rejected** if the host SDK is older. See "SDK versioning" below. |
 
@@ -149,7 +154,7 @@ export default {
 
 ## Multi-role packages
 
-A single package can declare **more than one role** by listing them in `roles`. Today the supported roles are `"app"` (windowed app in the desktop) and `"command"` (CLI entry reachable from the Terminal). The hybrid case — a package that ships both surfaces against the same id, storage, and permissions — is what the bundled **Package Manager** uses:
+A single package can declare **more than one role** by listing them in `roles`. Today the supported roles are `"app"` (windowed app in the desktop), `"command"` (CLI entry reachable from the Terminal), and `"widget"` (compact draggable floating frame — see [widgets.md](./widgets.md)). The hybrid case — a package that ships multiple surfaces against the same id, storage, and permissions — is what the bundled **Package Manager** uses:
 
 ```json
 {
@@ -177,11 +182,12 @@ Key points:
 
 ### Bundled hybrids
 
-The default package set ships three hybrids so the Start-menu app and the Terminal verb stay in sync by construction:
+The default package set ships four hybrids so the Start-menu app and the Terminal verb / widget stay in sync by construction:
 
 - `packagestore` + `pkg` — Package Manager (app) with the `pkg` CLI (alias).
 - `dice-roller` + `roll` — visual Dice Roller (app) with the `roll` CLI (alias).
 - `oracle` + `fortune` — Oracle (app) with the `fortune` CLI (alias).
+- `tavern` (app + widget) — anonymous P2P chat window + compact pinned widget sharing identity and bookmarks. See [tavern.md](./tavern.md).
 
 On boot, the defaults loader also **prunes orphan defaults** — any installed manifest still tagged `_origin: "default"` whose id no longer appears in `defaults.json` is uninstalled automatically (unless the user explicitly blacklisted it by uninstalling it manually). User-installed packages (`_origin: "user"`) are never touched, even if they share an id with a removed default.
 

@@ -5,7 +5,9 @@ Welcome to the docs. This folder covers everything beyond the top-level project 
 ## Contents
 
 ### User-facing
-- [**Packages**](./packages.md) — how to write, package, and install apps & commands (the main plugin guide)
+- [**Packages**](./packages.md) — how to write, package, and install apps, commands & widgets (the main plugin guide)
+- [**Widgets**](./widgets.md) — the draggable-mini-panel role: manifest block, lifecycle, example
+- [**Tavern**](./tavern.md) — the bundled anonymous P2P chat package: UX, multi-room architecture, security model
 - [**`ctx` API reference**](./ctx-api.md) — every method available to your apps and commands
 - [**Permissions**](./permissions.md) — what each permission unlocks and how the runtime prompt works
 - [**Examples**](./examples.md) — walk-through of the bundled example packages
@@ -35,6 +37,7 @@ Auto-installed on first boot from `defaultPackages/` (uninstall sticks):
 | `packagestore` (app + `pkg` cmd) | Package Manager app + apt-style `pkg` CLI |
 | `filemanager` (app) | File Explorer — browse virtual workspace, linked profile folder, external folders, and installed package files; preview + "Open in Grimoire" handoff |
 | `arcaneduel` (app) | Mini mage-arena duel: 7 elements × 3 spells, meditation, buffs/debuffs, shadow-mage AI |
+| `tavern` (app + widget) | Anonymous peer-to-peer chat via Trystero (BitTorrent trackers); multi-room, password-protected, end-to-end signed. Both a full app window and a compact pinned widget |
 
 ---
 

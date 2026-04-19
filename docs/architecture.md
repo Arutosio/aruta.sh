@@ -233,7 +233,24 @@ Iframe boot HTML is inlined in `sandbox.js:IFRAME_BOOT` via `srcdoc`. The sandbo
 
 ## Roles
 
-A package declares one or more roles (`"app"`, `"command"`) in its manifest. Every host-side branch that used to read `manifest.type === 'app'` / `'command'` now reads `manifest.roles.includes(...)`, which makes hybrid packages (app + CLI under one id, storage, and permission set) a first-class shape. Legacy `type` manifests are normalized into `roles: [type]` at boot. See [packages.md](./packages.md#multi-role-packages).
+A package declares one or more roles (`"app"`, `"command"`, `"widget"`) in its manifest. Every host-side branch that used to read `manifest.type === 'app'` / `'command'` now reads `manifest.roles.includes(...)`, which makes hybrid packages (app + CLI + widget under one id, storage, and permission set) a first-class shape. Legacy `type` manifests are normalized into `roles: [type]` at boot. See [packages.md](./packages.md#multi-role-packages).
+
+## Widget runtime
+
+The widget role lives alongside apps and commands but runs in its own lifecycle slot. `JavaScript/widgets.js` owns everything user-facing about widgets (Settings tab, drag handler, state persistence); `sandbox.js:mountWidget` is the low-level iframe spawner.
+
+Key points:
+
+- **`_mountedWidgets` Map** runs parallel to `_mounted`. `broadcastTheme` and `broadcastInstallChange` now iterate both — a theme flip or an install-change notice reaches every sandboxed surface regardless of whether it's an app window or a widget frame.
+- **`mountWidget(id, { container })`** reuses the same `IFRAME_BOOT` srcdoc as apps but passes `role: 'widget'` in the init payload. The iframe bootstrap resolves `manifest.entriesResolved[role]` so the widget entry file (`entries.widget`) loads instead of `entries.app`. Same postMessage bridge, same `ctx` API, same permission gate.
+- **Frame chrome is host-owned**. `widgets.js:_createFrame` emits only `<div class="widget-frame"><div class="widget-body"></div></div>` — no titlebar, no close button. The 4 px padding around the body doubles as the drag belt; mousedown inside the body passes through to the iframe. Disabling a widget goes exclusively through Settings → Widgets (or `registry.uninstall` hook below).
+- **Edge-anchor resize**. On every drag-end, `widgets.js` derives an `anchor = { h: 'left'|'right', v: 'top'|'bottom', offsetH, offsetV }` from the current position and persists it alongside `(x, y)`. On `window.resize` (requestAnimationFrame-throttled) each widget is repositioned from its anchor so the gap from the nearest edge is preserved — widgets pinned bottom-right stay 16 px from bottom-right when the viewport shrinks.
+- **Mobile**. `@media (max-width: 640px) { .widget-frame { display: none !important; } }` in `widgets.css` hides every frame, and `widgets.bootstrap` bails out when the viewport matches that query so iframes aren't even mounted.
+- **Uninstall hook**. `registry.uninstall(id)` calls `window.widgets.disable(id)` + `removeState(id)` before deleting manifest/files/permissions. A toast ("Widget disabled before uninstall") warns users who had the widget live.
+
+## `manifest.unmountOnClose`
+
+Apps default to keeping their iframe alive after close — state (drafts, game progress) survives close/reopen. Packages holding **background network state** (e.g. Tavern's live Trystero swarms) opt in to `"unmountOnClose": true`. When the user clicks × on that window, `registry.js` calls both `closeWindow(id)` (hide) **and** `sandbox.unmount(id)` (iframe teardown). Next time the window opens, a fresh iframe spins up — for Tavern this means the setup screen re-appears and zero connection lingers behind. `installer.js:validateManifest` validates the field as boolean.
 
 ---
 
