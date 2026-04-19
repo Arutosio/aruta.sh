@@ -18,6 +18,7 @@ function initSettings() {
             const target = document.querySelector(`.settings-page[data-page="${page}"]`);
             if (target) target.classList.add('active');
             if (page === 'permissions' && window.permissions) window.permissions.renderSettings();
+            if (page === 'widgets' && window.widgets) window.widgets.renderSettings();
         });
     });
 
@@ -237,6 +238,14 @@ function initSettings() {
             localStorage.removeItem('aruta_showdate');
             localStorage.removeItem('aruta_24h');
             localStorage.removeItem('aruta_lang');
+            // Disable any live widgets before wiping their state so their
+            // iframes tear down cleanly; then clear the persisted positions.
+            if (window.widgets?.list) {
+                for (const m of window.widgets.list()) {
+                    try { window.widgets.disable(m.id); } catch {}
+                }
+            }
+            localStorage.removeItem('aruta_widgets');
             // Reset to defaults
             document.documentElement.style.fontSize = '100%';
             document.documentElement.style.setProperty('--gold', '#ffc857');

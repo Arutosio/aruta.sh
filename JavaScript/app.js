@@ -59,6 +59,7 @@ function showApp() {
         try { await window.appearance?.apply(); } catch (e) { console.warn('[appearance] apply failed', e); }
         if (window.registry) await window.registry.bootstrap();
         if (window.defaults) await window.defaults.bootstrap();
+        if (window.widgets) await window.widgets.bootstrap();
     })();
     if (window.installer) window.installer.initDragDrop();
 

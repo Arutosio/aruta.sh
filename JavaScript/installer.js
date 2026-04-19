@@ -21,7 +21,7 @@ function loadJSZip() {
 
 const ID_RE = /^[a-z0-9][a-z0-9_-]{1,40}$/;
 const TYPES = ['app', 'command'];
-const KNOWN_ROLES = ['app', 'command'];
+const KNOWN_ROLES = ['app', 'command', 'widget'];
 const KNOWN_CATEGORIES = ['info', 'games', 'tools', 'creativity', 'system', 'other'];
 
 function _knownPermissions() {
@@ -87,6 +87,23 @@ function validateManifest(m) {
     }
     if (m.allowOrigin != null && typeof m.allowOrigin !== 'boolean') {
         return 'allowOrigin must be a boolean';
+    }
+    // Widget options block — only valid when 'widget' role is declared.
+    if (m.widget != null) {
+        if (typeof m.widget !== 'object' || Array.isArray(m.widget)) return 'widget must be an object';
+        const declaredRoles = Array.isArray(m.roles) ? m.roles : (TYPES.includes(m.type) ? [m.type] : []);
+        if (!declaredRoles.includes('widget')) return 'widget block requires "widget" in roles[]';
+        const w = m.widget;
+        const numKeys = ['defaultWidth', 'defaultHeight', 'minWidth', 'minHeight', 'maxWidth', 'maxHeight'];
+        for (const k of numKeys) {
+            if (w[k] != null && (typeof w[k] !== 'number' || w[k] <= 0)) {
+                return 'widget.' + k + ' must be a positive number';
+            }
+        }
+        if (w.defaultAnchor != null) {
+            const anchors = ['top-left', 'top-right', 'bottom-left', 'bottom-right'];
+            if (!anchors.includes(w.defaultAnchor)) return 'widget.defaultAnchor must be one of ' + anchors.join(', ');
+        }
     }
     if (m.category != null) {
         if (typeof m.category !== 'string') return 'category must be a string';

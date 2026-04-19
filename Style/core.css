@@ -107,7 +107,7 @@
 
     /* Z-index scale */
     --z-bg: 0; --z-fog: 1; --z-app: 2; --z-portrait: 5;
-    --z-window: 10; --z-spell: 50;
+    --z-window: 10; --z-widget: 15; --z-spell: 50;
     --z-taskbar: 100; --z-menu: 200;
     --z-summon: 999;
     --z-ripple: 9990; --z-achievement: 9990;

@@ -288,6 +288,19 @@ async function uninstall(id) {
     // at sandbox.js (`targetId === appId`). Here we freely unmount other apps —
     // `unregisterAppFromOS` below calls sandbox.unmount so an open window of
     // the target app gets torn down cleanly before we delete it.
+    // Widget cleanup: if package had an active widget, tear it down first so
+    // its DOM frame and iframe are removed before we nuke files/perms.
+    if (m.roles?.includes('widget') && window.widgets) {
+        try {
+            const state = window.widgets.getState(id);
+            if (state?.enabled) {
+                window.widgets.disable(id);
+                const t = window.t ? window.t() : {};
+                window.showToast?.(t.widget_uninstall_warning || 'Widget disabled before uninstall', 'warning');
+            }
+            window.widgets.removeState(id);
+        } catch (e) { console.warn('[registry] widget cleanup failed', e); }
+    }
     const db = await openDB();
     await new Promise((res, rej) => {
         const t = tx(db, ['manifests', 'files'], 'readwrite');

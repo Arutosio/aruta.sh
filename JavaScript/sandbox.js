@@ -37,6 +37,7 @@ function normalizeManifest(m) {
 }
 
 const _mounted = new Map(); // appId -> { iframe, channel }
+const _mountedWidgets = new Map(); // widgetId -> { iframe, frame, onMsg }
 
 /**
  * Push a theme change to every mounted app iframe. The in-iframe bootstrap
@@ -45,6 +46,9 @@ const _mounted = new Map(); // appId -> { iframe, channel }
  */
 function broadcastTheme(v) {
     for (const m of _mounted.values()) {
+        try { m.iframe.contentWindow?.postMessage({ __aruta_sdk: true, type: 'theme', value: v }, '*'); } catch (_) {}
+    }
+    for (const m of _mountedWidgets.values()) {
         try { m.iframe.contentWindow?.postMessage({ __aruta_sdk: true, type: 'theme', value: v }, '*'); } catch (_) {}
     }
 }
@@ -56,6 +60,9 @@ function broadcastTheme(v) {
  */
 function broadcastInstallChange() {
     for (const m of _mounted.values()) {
+        try { m.iframe.contentWindow?.postMessage({ __aruta_sdk: true, type: 'install-change' }, '*'); } catch (_) {}
+    }
+    for (const m of _mountedWidgets.values()) {
         try { m.iframe.contentWindow?.postMessage({ __aruta_sdk: true, type: 'install-change' }, '*'); } catch (_) {}
     }
 }
@@ -362,7 +369,8 @@ html,body{margin:0;padding:0;width:100%;height:100%;background:transparent;color
                     link.href = fileURLs['style.css'];
                     document.head.appendChild(link);
                 }
-                const entryPath = (d.manifest.entriesResolved && d.manifest.entriesResolved.app) || d.manifest.entry || 'index.js';
+                const role = d.role || 'app';
+                const entryPath = (d.manifest.entriesResolved && d.manifest.entriesResolved[role]) || d.manifest.entry || 'index.js';
                 // Mini-bundler: concatenate all .js files (except entry +
                 // style.css) into the entry module so classes defined in
                 // separate files are in scope. Fixes Firefox blob-URL
@@ -579,4 +587,69 @@ async function closeAppStorage(appId) {
     await window.db.closeDB((window.Storage?.constants.APP_DB_PREFIX || 'aruta_app_') + appId);
 }
 
-window.sandbox = { mount: mountApp, unmount: unmountApp, runCommand, closeAppStorage, broadcastTheme, broadcastInstallChange, SDK_VERSION, PERM_REQUIRED, normalizeManifest, isMounted: (id) => _mounted.has(id) };
+/**
+ * Mount a package as a floating draggable widget. Parallel to mountApp but
+ * uses the package's widget entry (manifest.entriesResolved.widget) and a
+ * compact .widget-frame container inserted into the desktop instead of a
+ * full OS window. Same postMessage protocol, same ctx SDK.
+ *
+ * @param {string} widgetId — package id (must have 'widget' role)
+ * @param {object} opts — { container: HTMLElement, onReady: () => void }
+ * @returns {Promise<boolean>} true on success
+ */
+async function mountWidget(widgetId, opts) {
+    opts = opts || {};
+    const manifest = window.registry.getManifest(widgetId);
+    if (!manifest || !Array.isArray(manifest.roles) || !manifest.roles.includes('widget')) return false;
+    if (_mountedWidgets.has(widgetId)) return true;
+
+    const container = opts.container;
+    if (!container) return false;
+
+    const files = await window.registry.getFiles(widgetId);
+
+    const iframe = document.createElement('iframe');
+    iframe.className = 'widget-iframe';
+    const sandboxAttr = manifest.allowOrigin
+        ? 'allow-scripts allow-same-origin allow-modals'
+        : 'allow-scripts allow-modals';
+    iframe.setAttribute('sandbox', sandboxAttr);
+    iframe.style.cssText = 'width:100%;height:100%;border:0;background:transparent;';
+    iframe.srcdoc = IFRAME_BOOT;
+    container.appendChild(iframe);
+
+    const onMsg = async (e) => {
+        if (e.source !== iframe.contentWindow) return;
+        const d = e.data;
+        if (!d || !d.__aruta_sdk) return;
+        if (d.type === 'ready') {
+            const theme = window.currentTheme || document.documentElement.dataset.theme || 'dark';
+            iframe.contentWindow.postMessage({ __aruta_sdk: true, type: 'init', manifest, files, theme, sdkVersion: SDK_VERSION, role: 'widget' }, '*');
+        } else if (d.type === 'call') {
+            try {
+                const value = await _handleCall(widgetId, d.method, d.args || []);
+                iframe.contentWindow.postMessage({ __aruta_sdk: true, type: 'reply', id: d.id, value }, '*');
+            } catch (err) {
+                iframe.contentWindow.postMessage({ __aruta_sdk: true, type: 'reply', id: d.id, error: String(err.message || err) }, '*');
+            }
+        } else if (d.type === 'error') {
+            console.warn('[sandbox:widget]', widgetId, d.error);
+        } else if (d.type === 'mounted' && typeof opts.onReady === 'function') {
+            opts.onReady();
+        }
+    };
+    window.addEventListener('message', onMsg);
+    _mountedWidgets.set(widgetId, { iframe, onMsg, container });
+    return true;
+}
+
+function unmountWidget(widgetId) {
+    const m = _mountedWidgets.get(widgetId);
+    if (!m) return;
+    try { m.iframe.contentWindow?.postMessage({ __aruta_sdk: true, type: 'teardown' }, '*'); } catch (_) {}
+    window.removeEventListener('message', m.onMsg);
+    m.iframe.remove();
+    _mountedWidgets.delete(widgetId);
+}
+
+window.sandbox = { mount: mountApp, unmount: unmountApp, runCommand, closeAppStorage, broadcastTheme, broadcastInstallChange, SDK_VERSION, PERM_REQUIRED, normalizeManifest, isMounted: (id) => _mounted.has(id), mountWidget, unmountWidget, isWidgetMounted: (id) => _mountedWidgets.has(id) };

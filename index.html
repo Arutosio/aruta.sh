@@ -68,6 +68,7 @@
     <link rel="stylesheet" href="Style/sections.css">
     <link rel="stylesheet" href="Style/responsive.css">
     <link rel="stylesheet" href="Style/terminal.css">
+    <link rel="stylesheet" href="Style/widgets.css">
     <!-- VanillaTilt removed — replaced with pure CSS/JS tilt -->
 </head>
 <body>
@@ -426,6 +427,7 @@
                         <button class="settings-cat" data-cat="language">🌐 <span data-i18n="settings_language">Language</span></button>
                         <button class="settings-cat" data-cat="sound">🔊 <span data-i18n="settings_sound">Sound</span></button>
                         <button class="settings-cat" data-cat="permissions">🔐 <span data-i18n="settings_permissions">Permissions</span></button>
+                        <button class="settings-cat" data-cat="widgets">🪄 <span data-i18n="settings_widgets">Widgets</span></button>
                         <button class="settings-cat" data-cat="profile">💾 <span data-i18n="settings_profile">Profile</span></button>
                         <button class="settings-cat" data-cat="reset">🔄 <span data-i18n="settings_reset">Reset</span></button>
                         <button class="settings-cat" data-cat="about">⚜ <span data-i18n="settings_about">About</span></button>
@@ -569,6 +571,18 @@
                             </div>
                             <div id="settings-perms-list"></div>
                         </div>
+                        <!-- Widgets -->
+                        <div class="settings-page" data-page="widgets">
+                            <h2 class="settings-page-title" data-i18n="settings_widgets">Widgets</h2>
+                            <div class="settings-row">
+                                <div class="settings-label">
+                                    <span class="settings-icon">🪄</span>
+                                    <div><strong data-i18n="settings_widgets">Widgets</strong><br><small data-i18n="settings_widgets_desc">Floating mini-panels from installed packages. Enabled widgets stay pinned on the desktop.</small></div>
+                                </div>
+                            </div>
+                            <div class="widgets-empty-mobile" data-i18n="widgets_mobile_disabled" style="display:none;">Widgets are hidden on mobile screens.</div>
+                            <div id="settings-widgets-list"></div>
+                        </div>
                         <!-- Portable Profile -->
                         <div class="settings-page" data-page="profile">
                             <h2 class="settings-page-title" data-i18n="settings_profile">Profile</h2>
@@ -661,6 +675,7 @@
 <script src="JavaScript/permissions.js"></script>
 <script src="JavaScript/registry.js"></script>
 <script src="JavaScript/sandbox.js"></script>
+<script src="JavaScript/widgets.js"></script>
 <script src="JavaScript/installer.js"></script>
 <script src="JavaScript/defaults.js"></script>
 <script src="JavaScript/terminal.js"></script>
