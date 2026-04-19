@@ -141,6 +141,20 @@ html, body {
     background: rgba(255, 200, 87, 0.32);
     box-shadow: 0 0 14px rgba(255, 200, 87, 0.25);
 }
+.tavern-setup-warning {
+    padding: 10px 12px;
+    font-size: 0.75rem;
+    line-height: 1.5;
+    color: #ffb347;
+    background: rgba(255, 179, 71, 0.08);
+    border: 1px solid rgba(255, 179, 71, 0.35);
+    border-radius: 6px;
+}
+[data-theme="light"] .tavern-setup-warning {
+    color: #9c5212;
+    background: rgba(184, 106, 12, 0.08);
+    border-color: rgba(184, 106, 12, 0.4);
+}
 
 /* ── Main view (sidebar + chat pane) ────────────────────── */
 .tavern-main {
@@ -399,6 +413,23 @@ html, body {
     font-size: 0.78rem;
 }
 .tavern-peer.is-self { background: var(--tavern-row-active); }
+.tavern-peer.is-blocked { opacity: 0.5; }
+.tavern-peer-block {
+    background: transparent;
+    border: 1px solid var(--tavern-border);
+    border-radius: 4px;
+    color: var(--tavern-fg-dim);
+    font-size: 0.82rem;
+    line-height: 1;
+    padding: 2px 6px;
+    cursor: pointer;
+    flex-shrink: 0;
+    transition: background 0.12s, color 0.12s;
+}
+.tavern-peer-block:hover {
+    background: var(--tavern-row-hover);
+    color: var(--tavern-gold);
+}
 .tavern-peer-nick {
     font-weight: 700;
     overflow: hidden;
@@ -435,6 +466,15 @@ html, body {
 .tavern-msg.is-self {
     background: var(--tavern-self-bg);
     border-left: 2px solid var(--tavern-gold);
+}
+.tavern-msg.is-spoofed {
+    background: rgba(251, 113, 133, 0.10);
+    border-left: 2px solid #fb7185;
+}
+.tavern-msg.is-spoofed .tavern-nick::after {
+    content: ' ⚠';
+    color: #fb7185;
+    font-size: 0.72rem;
 }
 .tavern-msg-head {
     display: flex;

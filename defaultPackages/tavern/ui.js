@@ -11,6 +11,7 @@
 const TAVERN_WIDGET_ALIVE_KEY = '_widgetAlive';
 const TAVERN_WIDGET_FRESH_MS = 20000;
 const TAVERN_STRATEGY_KEY_UI = 'strategy';
+const TAVERN_PASSWORD_KEY_UI = 'password';
 
 export default {
     async mount(root, ctx) {
@@ -30,6 +31,11 @@ export default {
                         <input type="text" data-room maxlength="64" placeholder="public">
                     </label>
                     <label class="tavern-field">
+                        <span>Password (optional)</span>
+                        <input type="password" data-password maxlength="128" placeholder="leave empty for a public room">
+                        <small class="tavern-field-hint">Only peers using the exact same password land in the same swarm. Anyone without it sees a different "public" room.</small>
+                    </label>
+                    <label class="tavern-field">
                         <span>Signaling strategy</span>
                         <select data-strategy>
                             <option value="torrent">BitTorrent trackers (default)</option>
@@ -38,6 +44,9 @@ export default {
                         </select>
                         <small class="tavern-field-hint">If you can't find peers, try switching — some networks block one protocol but not another.</small>
                     </label>
+                    <div class="tavern-setup-warning">
+                        ⚠ Tavern is peer-to-peer. Your public IP is visible to everyone connected. Avoid sharing sensitive info.
+                    </div>
                     <button type="button" class="tavern-join-btn" data-join>Enter the tavern</button>
                 </section>
 
@@ -93,6 +102,7 @@ export default {
         const $nickSetup = root.querySelector('[data-nick]');
         const $roomSetup = root.querySelector('[data-room]');
         const $strategySetup = root.querySelector('[data-strategy]');
+        const $passwordSetup = root.querySelector('[data-password]');
         const $joinBtn = root.querySelector('[data-join]');
         const $nickLive = root.querySelector('[data-nick-live]');
         const $strategyLive = root.querySelector('[data-strategy-live]');
@@ -119,10 +129,11 @@ export default {
         $nickSetup.value = chat.nick;
         $roomSetup.value = chat.roomName;
         $strategySetup.value = chat.strategy;
+        $passwordSetup.value = chat.password || '';
 
         function append(msg) {
             const li = document.createElement('li');
-            li.className = 'tavern-msg' + (msg.self ? ' is-self' : '');
+            li.className = 'tavern-msg' + (msg.self ? ' is-self' : '') + (msg.spoofed ? ' is-spoofed' : '');
             const time = tavernFmtTime(msg.ts);
             li.innerHTML = `<span class="tavern-msg-head">
                     <span class="tavern-nick" style="color:${tavernEscapeHtml(msg.color)};">${tavernEscapeHtml(msg.nick)}</span>
@@ -221,12 +232,28 @@ export default {
             const ul = pop.querySelector('.tavern-peers-list');
             for (const p of peers) {
                 const li = document.createElement('li');
-                li.className = 'tavern-peer' + (p.self ? ' is-self' : '');
-                li.innerHTML = `<span class="tavern-peer-nick" style="color:${tavernEscapeHtml(p.color)};"></span><span class="tavern-peer-time"></span>`;
+                const blocked = chat.isBlocked(p.peerId);
+                li.className = 'tavern-peer' + (p.self ? ' is-self' : '') + (blocked ? ' is-blocked' : '');
+                li.innerHTML = `<span class="tavern-peer-nick" style="color:${tavernEscapeHtml(p.color)};"></span><span class="tavern-peer-time"></span>` +
+                    (p.self ? '' : `<button type="button" class="tavern-peer-block" data-peer="${tavernEscapeHtml(p.peerId)}" title="${blocked ? 'Unmute' : 'Mute'} this peer">${blocked ? '🔊' : '🔇'}</button>`);
                 li.querySelector('.tavern-peer-nick').textContent = p.nick + (p.self ? ' (you)' : '');
                 li.querySelector('.tavern-peer-time').textContent = fmtAgo(p.joinedAt) + ' ago';
                 ul.appendChild(li);
             }
+            ul.addEventListener('click', (e) => {
+                const btn = e.target.closest('.tavern-peer-block');
+                if (!btn) return;
+                const pid = btn.dataset.peer;
+                if (chat.isBlocked(pid)) {
+                    chat.unblockPeer(pid);
+                    appendSystem('Unmuted peer');
+                } else {
+                    chat.blockPeer(pid);
+                    appendSystem('Muted peer — their messages will no longer appear');
+                }
+                // Refresh the popover so the button state updates.
+                showPeersPopover(anchor);
+            });
             // Anchor to the badge inside the room list.
             const r = anchor.getBoundingClientRect();
             pop.style.position = 'fixed';
@@ -304,6 +331,10 @@ export default {
             await chat.setRoom($roomSetup.value);
             chat.strategy = $strategySetup.value; // picker value
             await ctx.storage.set(TAVERN_STRATEGY_KEY_UI, chat.strategy);
+            // Password: apply without triggering an extra reconnect —
+            // _connect is about to run anyway.
+            chat.password = String($passwordSetup.value || '');
+            await ctx.storage.set(TAVERN_PASSWORD_KEY_UI, chat.password);
             try {
                 await chat._connect();
             } catch (e) {
@@ -336,6 +367,9 @@ export default {
                 if (type === 'join') appendSystem(nick + ' entered the tavern');
                 else                 appendSystem(nick + ' left the tavern');
                 refreshStatus();
+            });
+            chat.onSpoof(({ declared, actual }) => {
+                appendSystem('⚠ A peer tried to impersonate "' + declared + '" (real nick: ' + actual + ')');
             });
             chat.announcePresence('join');
         }
