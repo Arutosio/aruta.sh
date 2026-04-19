@@ -8,6 +8,32 @@ const TAVERN_DEFAULT_ROOM = 'public';
 const TAVERN_NICK_KEY = 'nickname';
 const TAVERN_NICK_COLOR_KEY = 'nickColor';
 const TAVERN_ROOM_KEY = 'room';
+const TAVERN_ROOMS_KEY = 'rooms';
+const TAVERN_SIDE_KEY = 'sidebarSide';
+
+async function tavernLoadRooms(ctx) {
+    const stored = await ctx.storage.get(TAVERN_ROOMS_KEY);
+    if (Array.isArray(stored) && stored.every(r => typeof r === 'string')) return stored;
+    return [TAVERN_DEFAULT_ROOM];
+}
+
+async function tavernSaveRooms(ctx, rooms) {
+    const cleaned = Array.from(new Set(
+        rooms.map(r => String(r || '').trim().slice(0, 64)).filter(Boolean)
+    ));
+    if (cleaned.length === 0) cleaned.push(TAVERN_DEFAULT_ROOM);
+    await ctx.storage.set(TAVERN_ROOMS_KEY, cleaned);
+    return cleaned;
+}
+
+async function tavernLoadSide(ctx) {
+    const s = await ctx.storage.get(TAVERN_SIDE_KEY);
+    return s === 'right' ? 'right' : 'left';
+}
+
+async function tavernSaveSide(ctx, side) {
+    await ctx.storage.set(TAVERN_SIDE_KEY, side === 'right' ? 'right' : 'left');
+}
 
 function tavernRandNick() {
     const adj = ['Wandering', 'Mystic', 'Silent', 'Lone', 'Crimson', 'Frost', 'Shadow', 'Iron', 'Wild', 'Old'];

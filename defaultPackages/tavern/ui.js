@@ -1,21 +1,20 @@
 // Tavern — full app UI. Adventurer's chat by the firelight.
 // Anonymous P2P chat via Trystero (BitTorrent trackers, no backend).
 //
-// Flow:
-//   1. mount() shows a setup screen (nickname + room) — no auto-join,
-//      so the user can pick a name before any message is broadcast.
-//   2. "Enter the tavern" button triggers chat.init() and announces a
-//      presence:join so other peers see "X joined".
-//   3. unmount() announces presence:leave UNLESS the widget heartbeat
-//      shows the user is still listening through the pinned widget.
+// Layout:
+//   [Setup screen] -> click "Enter the tavern" -> [Main view]
+//   Main view = sidebar (room bookmarks) + chat pane.
+//   Sidebar position is user-configurable (left/right) and persists
+//   in ctx.storage. One room is active at a time; switching tears
+//   down the current Trystero connection and joins the new one.
 
 const TAVERN_WIDGET_ALIVE_KEY = '_widgetAlive';
-const TAVERN_WIDGET_FRESH_MS = 20000; // widget alive flag must be this recent
+const TAVERN_WIDGET_FRESH_MS = 20000;
 
 export default {
     async mount(root, ctx) {
         root.innerHTML = `
-            <div class="tavern-app">
+            <div class="tavern-app" data-side="left">
                 <header class="tavern-header">
                     <span class="tavern-title">🍺 <span>Tavern</span></span>
                     <span class="tavern-status" data-status>not connected</span>
@@ -37,30 +36,43 @@ export default {
                     <button type="button" class="tavern-join-btn" data-join>Enter the tavern</button>
                 </section>
 
-                <ul class="tavern-log" data-log style="display:none;"></ul>
+                <div class="tavern-main" data-main style="display:none;">
+                    <aside class="tavern-sidebar" data-sidebar>
+                        <div class="tavern-side-head">
+                            <span class="tavern-side-title">Rooms</span>
+                            <button type="button" class="tavern-side-flip" data-flip title="Move sidebar">⇄</button>
+                        </div>
+                        <ul class="tavern-room-list" data-rooms></ul>
+                        <form class="tavern-add-room" data-add>
+                            <input type="text" data-add-input maxlength="64" placeholder="+ add room">
+                        </form>
+                        <div class="tavern-side-foot">
+                            <label class="tavern-field tavern-field-compact">
+                                <span>Nick</span>
+                                <input type="text" data-nick-live maxlength="32">
+                            </label>
+                            <button type="button" class="tavern-leave-btn" data-leave>Leave</button>
+                        </div>
+                    </aside>
 
-                <section class="tavern-settings" data-settings style="display:none;">
-                    <label class="tavern-field">
-                        <span>Nickname</span>
-                        <input type="text" data-nick-live maxlength="32">
-                    </label>
-                    <label class="tavern-field">
-                        <span>Room</span>
-                        <input type="text" data-room-live maxlength="64">
-                    </label>
-                    <button type="button" class="tavern-leave-btn" data-leave>Leave</button>
-                </section>
-
-                <form class="tavern-compose" data-compose style="display:none;">
-                    <input type="text" data-input maxlength="1000" placeholder="Speak your piece…" autocomplete="off">
-                    <button type="submit">Send</button>
-                </form>
+                    <section class="tavern-chat-pane">
+                        <div class="tavern-room-banner" data-banner>
+                            <span class="tavern-room-name" data-room-name>#</span>
+                        </div>
+                        <ul class="tavern-log" data-log></ul>
+                        <form class="tavern-compose" data-compose>
+                            <input type="text" data-input maxlength="1000" placeholder="Speak your piece…" autocomplete="off">
+                            <button type="submit">Send</button>
+                        </form>
+                    </section>
+                </div>
             </div>
         `;
 
+        const $app = root.querySelector('.tavern-app');
         const $status = root.querySelector('[data-status]');
         const $setup = root.querySelector('[data-setup]');
-        const $settings = root.querySelector('[data-settings]');
+        const $main = root.querySelector('[data-main]');
         const $log = root.querySelector('[data-log]');
         const $form = root.querySelector('[data-compose]');
         const $input = root.querySelector('[data-input]');
@@ -68,15 +80,26 @@ export default {
         const $roomSetup = root.querySelector('[data-room]');
         const $joinBtn = root.querySelector('[data-join]');
         const $nickLive = root.querySelector('[data-nick-live]');
-        const $roomLive = root.querySelector('[data-room-live]');
+        const $roomsUl = root.querySelector('[data-rooms]');
+        const $addForm = root.querySelector('[data-add]');
+        const $addInput = root.querySelector('[data-add-input]');
+        const $flipBtn = root.querySelector('[data-flip]');
         const $leaveBtn = root.querySelector('[data-leave]');
+        const $roomName = root.querySelector('[data-room-name]');
 
         const chat = new TavernChat(ctx);
         let connected = false;
-        let nickTimer = null, roomTimer = null;
+        let nickTimer = null;
+        let rooms = [];
+        let side = 'left';
 
-        // Pre-load saved profile so the setup inputs are pre-filled.
+        // Pre-load identity + room bookmarks + sidebar pref so the setup
+        // screen and the eventual sidebar both render with saved state.
         await chat.loadProfile();
+        rooms = await tavernLoadRooms(ctx);
+        if (!rooms.includes(chat.roomName)) rooms.push(chat.roomName);
+        side = await tavernLoadSide(ctx);
+        $app.dataset.side = side;
         $nickSetup.value = chat.nick;
         $roomSetup.value = chat.roomName;
 
@@ -111,6 +134,19 @@ export default {
                 : (peers === 1 ? '1 fellow nearby' : peers + ' fellows nearby');
         }
 
+        function renderRooms() {
+            $roomsUl.innerHTML = '';
+            for (const name of rooms) {
+                const li = document.createElement('li');
+                li.className = 'tavern-room' + (name === chat.roomName ? ' is-active' : '');
+                li.dataset.room = name;
+                li.innerHTML = `<span class="tavern-room-hash">#</span><span class="tavern-room-label"></span><button type="button" class="tavern-room-x" title="Remove">×</button>`;
+                li.querySelector('.tavern-room-label').textContent = name;
+                $roomsUl.appendChild(li);
+            }
+            $roomName.textContent = '# ' + chat.roomName;
+        }
+
         async function widgetIsAlive() {
             try {
                 const ts = await ctx.storage.get(TAVERN_WIDGET_ALIVE_KEY);
@@ -118,8 +154,31 @@ export default {
             } catch { return false; }
         }
 
+        async function switchRoom(name) {
+            if (!connected || name === chat.roomName) return;
+            chat.announcePresence('leave');
+            await chat.setRoom(name);
+            // Bookmark the room if new.
+            if (!rooms.includes(chat.roomName)) {
+                rooms.push(chat.roomName);
+                rooms = await tavernSaveRooms(ctx, rooms);
+            }
+            $log.innerHTML = '';
+            appendSystem('Moved to room "' + chat.roomName + '"');
+            chat.announcePresence('join');
+            renderRooms();
+            refreshStatus();
+        }
+
+        async function removeRoom(name) {
+            if (rooms.length <= 1) return; // keep at least one bookmark
+            if (name === chat.roomName) return; // can't remove the active room
+            rooms = rooms.filter(r => r !== name);
+            rooms = await tavernSaveRooms(ctx, rooms);
+            renderRooms();
+        }
+
         async function doJoin() {
-            // Persist the chosen identity before connecting.
             await chat.setNick($nickSetup.value);
             await chat.setRoom($roomSetup.value);
             try {
@@ -127,16 +186,18 @@ export default {
             } catch (e) {
                 $status.textContent = 'connection failed';
                 appendSystem('Could not reach the tavern: ' + (e.message || e));
-                $log.style.display = '';
+                $main.style.display = '';
+                $setup.style.display = 'none';
                 return;
             }
             connected = true;
             $setup.style.display = 'none';
-            $log.style.display = '';
-            $settings.style.display = '';
-            $form.style.display = '';
+            $main.style.display = '';
             $nickLive.value = chat.nick;
-            $roomLive.value = chat.roomName;
+            // Make sure the chosen room is bookmarked.
+            if (!rooms.includes(chat.roomName)) rooms.push(chat.roomName);
+            rooms = await tavernSaveRooms(ctx, rooms);
+            renderRooms();
             refreshStatus();
             appendSystem('You entered "' + chat.roomName + '" as ' + chat.nick);
 
@@ -168,20 +229,35 @@ export default {
             nickTimer = setTimeout(() => chat.setNick($nickLive.value), 400);
         });
 
-        $roomLive.addEventListener('input', () => {
-            clearTimeout(roomTimer);
-            roomTimer = setTimeout(async () => {
-                if (!connected) return;
-                const before = chat.roomName;
-                // Announce leave on the OLD room before reconnecting.
-                chat.announcePresence('leave');
-                await chat.setRoom($roomLive.value);
-                if (chat.roomName !== before) {
-                    appendSystem('Moved to room "' + chat.roomName + '"');
-                    chat.announcePresence('join');
-                    refreshStatus();
-                }
-            }, 600);
+        $roomsUl.addEventListener('click', (e) => {
+            const x = e.target.closest('.tavern-room-x');
+            if (x) {
+                e.stopPropagation();
+                const li = x.closest('.tavern-room');
+                if (li) removeRoom(li.dataset.room);
+                return;
+            }
+            const li = e.target.closest('.tavern-room');
+            if (li) switchRoom(li.dataset.room);
+        });
+
+        $addForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const name = ($addInput.value || '').trim().slice(0, 64);
+            if (!name) return;
+            $addInput.value = '';
+            if (!rooms.includes(name)) {
+                rooms.push(name);
+                rooms = await tavernSaveRooms(ctx, rooms);
+            }
+            // Auto-switch to the freshly added room.
+            await switchRoom(name);
+        });
+
+        $flipBtn.addEventListener('click', async () => {
+            side = side === 'left' ? 'right' : 'left';
+            $app.dataset.side = side;
+            await tavernSaveSide(ctx, side);
         });
 
         $leaveBtn.addEventListener('click', async () => {
@@ -190,9 +266,7 @@ export default {
             await chat.destroy();
             connected = false;
             $log.innerHTML = '';
-            $log.style.display = 'none';
-            $settings.style.display = 'none';
-            $form.style.display = 'none';
+            $main.style.display = 'none';
             $setup.style.display = '';
             $status.textContent = 'not connected';
         });
@@ -200,10 +274,7 @@ export default {
         return {
             async unmount() {
                 clearTimeout(nickTimer);
-                clearTimeout(roomTimer);
                 if (!connected) return;
-                // Suppress the "left" broadcast when the widget is still
-                // alive — the user is staying in the room through it.
                 if (!(await widgetIsAlive())) {
                     chat.announcePresence('leave');
                 }

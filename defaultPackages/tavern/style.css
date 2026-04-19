@@ -3,23 +3,29 @@
 :root {
     --tavern-bg: rgba(20, 12, 8, 0.85);
     --tavern-bg-2: rgba(36, 24, 14, 0.78);
+    --tavern-bg-3: rgba(48, 32, 18, 0.65);
     --tavern-fg: #f0e2bf;
     --tavern-fg-dim: #c4ad7c;
     --tavern-gold: #ffc857;
     --tavern-border: rgba(255, 200, 87, 0.28);
     --tavern-input-bg: rgba(8, 4, 2, 0.55);
     --tavern-self-bg: rgba(255, 200, 87, 0.10);
+    --tavern-row-hover: rgba(255, 200, 87, 0.10);
+    --tavern-row-active: rgba(255, 200, 87, 0.18);
 }
 
 [data-theme="light"] {
     --tavern-bg: rgba(248, 240, 220, 0.94);
     --tavern-bg-2: rgba(232, 220, 196, 0.85);
+    --tavern-bg-3: rgba(216, 200, 168, 0.75);
     --tavern-fg: #2a1a08;
     --tavern-fg-dim: #6b5030;
     --tavern-gold: #8b6914;
     --tavern-border: rgba(139, 105, 20, 0.35);
     --tavern-input-bg: rgba(255, 250, 232, 0.9);
     --tavern-self-bg: rgba(139, 105, 20, 0.10);
+    --tavern-row-hover: rgba(139, 105, 20, 0.10);
+    --tavern-row-active: rgba(139, 105, 20, 0.18);
 }
 
 html, body {
@@ -30,7 +36,7 @@ html, body {
     height: 100%;
 }
 
-/* ── Full app ───────────────────────────────────────────── */
+/* ── Full app shell ─────────────────────────────────────── */
 .tavern-app {
     display: flex;
     flex-direction: column;
@@ -59,30 +65,8 @@ html, body {
     color: var(--tavern-fg-dim);
     font-style: italic;
 }
-.tavern-settings {
-    display: flex;
-    gap: 10px;
-    padding: 10px 16px;
-    border-bottom: 1px solid var(--tavern-border);
-    align-items: flex-end;
-    flex-shrink: 0;
-}
-.tavern-leave-btn {
-    background: rgba(251, 113, 133, 0.12);
-    color: #fb7185;
-    border: 1px solid rgba(251, 113, 133, 0.35);
-    border-radius: 6px;
-    padding: 6px 12px;
-    font-family: 'Cinzel', Georgia, serif;
-    font-size: 0.72rem;
-    letter-spacing: 0.08em;
-    cursor: pointer;
-    transition: background 0.15s;
-    height: 32px;
-    align-self: flex-end;
-}
-.tavern-leave-btn:hover { background: rgba(251, 113, 133, 0.22); }
 
+/* ── Setup screen ───────────────────────────────────────── */
 .tavern-setup {
     flex: 1;
     display: flex;
@@ -98,25 +82,7 @@ html, body {
     font-style: italic;
     margin: 0 0 6px;
 }
-.tavern-join-btn {
-    margin-top: 8px;
-    background: rgba(255, 200, 87, 0.18);
-    color: var(--tavern-gold);
-    border: 1px solid var(--tavern-gold);
-    border-radius: 8px;
-    padding: 12px 24px;
-    font-family: 'Cinzel', Georgia, serif;
-    font-size: 0.95rem;
-    letter-spacing: 0.12em;
-    cursor: pointer;
-    transition: background 0.15s, box-shadow 0.15s;
-}
-.tavern-join-btn:hover {
-    background: rgba(255, 200, 87, 0.32);
-    box-shadow: 0 0 14px rgba(255, 200, 87, 0.25);
-}
 .tavern-field {
-    flex: 1;
     display: flex;
     flex-direction: column;
     gap: 4px;
@@ -140,6 +106,210 @@ html, body {
     border-color: var(--tavern-gold);
     box-shadow: 0 0 6px rgba(255, 200, 87, 0.25);
 }
+.tavern-field-compact {
+    flex: 1;
+    margin: 0;
+}
+.tavern-field-compact input { padding: 4px 8px; font-size: 0.78rem; }
+.tavern-join-btn {
+    margin-top: 8px;
+    background: rgba(255, 200, 87, 0.18);
+    color: var(--tavern-gold);
+    border: 1px solid var(--tavern-gold);
+    border-radius: 8px;
+    padding: 12px 24px;
+    font-family: 'Cinzel', Georgia, serif;
+    font-size: 0.95rem;
+    letter-spacing: 0.12em;
+    cursor: pointer;
+    transition: background 0.15s, box-shadow 0.15s;
+}
+.tavern-join-btn:hover {
+    background: rgba(255, 200, 87, 0.32);
+    box-shadow: 0 0 14px rgba(255, 200, 87, 0.25);
+}
+
+/* ── Main view (sidebar + chat pane) ────────────────────── */
+.tavern-main {
+    flex: 1;
+    display: flex;
+    flex-direction: row;
+    min-height: 0;
+}
+.tavern-app[data-side="right"] .tavern-main {
+    flex-direction: row-reverse;
+}
+
+/* Sidebar */
+.tavern-sidebar {
+    width: 180px;
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    background: var(--tavern-bg-2);
+    border-right: 1px solid var(--tavern-border);
+    border-left: none;
+}
+.tavern-app[data-side="right"] .tavern-sidebar {
+    border-right: none;
+    border-left: 1px solid var(--tavern-border);
+}
+.tavern-side-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--tavern-border);
+    flex-shrink: 0;
+}
+.tavern-side-title {
+    font-family: 'Cinzel', Georgia, serif;
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: var(--tavern-gold);
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+}
+.tavern-side-flip {
+    background: transparent;
+    border: 1px solid var(--tavern-border);
+    color: var(--tavern-fg-dim);
+    border-radius: 4px;
+    width: 24px;
+    height: 22px;
+    line-height: 1;
+    cursor: pointer;
+    font-size: 0.85rem;
+    transition: background 0.15s, color 0.15s;
+}
+.tavern-side-flip:hover {
+    background: var(--tavern-row-hover);
+    color: var(--tavern-gold);
+}
+
+.tavern-room-list {
+    flex: 1;
+    list-style: none;
+    margin: 0;
+    padding: 6px 0;
+    overflow-y: auto;
+}
+.tavern-room {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    font-size: 0.85rem;
+    color: var(--tavern-fg);
+    cursor: pointer;
+    transition: background 0.12s;
+    overflow: hidden;
+}
+.tavern-room:hover { background: var(--tavern-row-hover); }
+.tavern-room.is-active {
+    background: var(--tavern-row-active);
+    color: var(--tavern-gold);
+    font-weight: 600;
+    border-left: 2px solid var(--tavern-gold);
+    padding-left: 10px;
+}
+.tavern-app[data-side="right"] .tavern-room.is-active {
+    border-left: none;
+    border-right: 2px solid var(--tavern-gold);
+    padding-left: 12px;
+    padding-right: 10px;
+}
+.tavern-room-hash {
+    color: var(--tavern-fg-dim);
+    font-size: 0.78rem;
+    flex-shrink: 0;
+}
+.tavern-room.is-active .tavern-room-hash { color: var(--tavern-gold); }
+.tavern-room-label {
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.tavern-room-x {
+    background: none;
+    border: none;
+    color: var(--tavern-fg-dim);
+    font-size: 0.95rem;
+    line-height: 1;
+    padding: 0 4px;
+    cursor: pointer;
+    opacity: 0;
+    transition: opacity 0.12s, color 0.12s;
+}
+.tavern-room:hover .tavern-room-x { opacity: 0.7; }
+.tavern-room-x:hover { opacity: 1; color: #fb7185; }
+.tavern-room.is-active .tavern-room-x { display: none; } /* can't remove active room */
+
+.tavern-add-room {
+    padding: 6px 12px;
+    border-top: 1px solid var(--tavern-border);
+    flex-shrink: 0;
+}
+.tavern-add-room input {
+    width: 100%;
+    background: var(--tavern-input-bg);
+    color: var(--tavern-fg);
+    border: 1px solid var(--tavern-border);
+    border-radius: 4px;
+    padding: 5px 8px;
+    font: inherit;
+    font-size: 0.78rem;
+    box-sizing: border-box;
+}
+.tavern-add-room input:focus {
+    outline: none;
+    border-color: var(--tavern-gold);
+}
+
+.tavern-side-foot {
+    display: flex;
+    align-items: stretch;
+    gap: 6px;
+    padding: 8px 10px;
+    border-top: 1px solid var(--tavern-border);
+    background: var(--tavern-bg-3);
+    flex-shrink: 0;
+}
+.tavern-leave-btn {
+    background: rgba(251, 113, 133, 0.12);
+    color: #fb7185;
+    border: 1px solid rgba(251, 113, 133, 0.35);
+    border-radius: 6px;
+    padding: 4px 10px;
+    font-family: 'Cinzel', Georgia, serif;
+    font-size: 0.7rem;
+    letter-spacing: 0.06em;
+    cursor: pointer;
+    transition: background 0.15s;
+    flex-shrink: 0;
+}
+.tavern-leave-btn:hover { background: rgba(251, 113, 133, 0.22); }
+
+/* Chat pane */
+.tavern-chat-pane {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+}
+.tavern-room-banner {
+    padding: 8px 16px;
+    border-bottom: 1px solid var(--tavern-border);
+    background: var(--tavern-bg-3);
+    flex-shrink: 0;
+}
+.tavern-room-name {
+    font-family: 'Cinzel', Georgia, serif;
+    font-size: 0.95rem;
+    color: var(--tavern-gold);
+    letter-spacing: 0.04em;
+}
 .tavern-log {
     flex: 1;
     list-style: none;
@@ -155,7 +325,10 @@ html, body {
     border-radius: 6px;
     background: var(--tavern-bg-2);
 }
-.tavern-msg.is-self { background: var(--tavern-self-bg); border-left: 2px solid var(--tavern-gold); }
+.tavern-msg.is-self {
+    background: var(--tavern-self-bg);
+    border-left: 2px solid var(--tavern-gold);
+}
 .tavern-msg-head {
     display: flex;
     justify-content: space-between;
@@ -208,6 +381,25 @@ html, body {
     transition: background 0.15s;
 }
 .tavern-compose button:hover { background: rgba(255, 200, 87, 0.32); }
+
+/* Narrow window: stack sidebar above chat to avoid squashing both. */
+@media (max-width: 560px) {
+    .tavern-main, .tavern-app[data-side="right"] .tavern-main {
+        flex-direction: column;
+    }
+    .tavern-sidebar {
+        width: 100%;
+        max-height: 38%;
+        border-right: none;
+        border-left: none;
+        border-bottom: 1px solid var(--tavern-border);
+    }
+    .tavern-app[data-side="right"] .tavern-sidebar {
+        border-bottom: none;
+        border-top: 1px solid var(--tavern-border);
+        order: 2;
+    }
+}
 
 /* ── Widget (compact) ───────────────────────────────────── */
 .tavern-widget {
@@ -279,5 +471,5 @@ html, body {
 }
 
 @media (prefers-reduced-motion: reduce) {
-    .tavern-msg, .tavern-widget-msg, .tavern-compose button { transition: none; }
+    .tavern-msg, .tavern-widget-msg, .tavern-compose button, .tavern-room { transition: none; }
 }
