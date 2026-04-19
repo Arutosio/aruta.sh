@@ -244,7 +244,13 @@ html, body {
 }
 .tavern-room:hover .tavern-room-x { opacity: 0.7; }
 .tavern-room-x:hover { opacity: 1; color: #fb7185; }
-.tavern-room.is-active .tavern-room-x { display: none; } /* can't remove active room */
+/* Active room keeps the × visible — clicking it leaves the room and either
+   switches to the next bookmarked room or returns to the setup screen. */
+.tavern-room.is-active .tavern-room-x {
+    opacity: 0.85;
+    color: #fb7185;
+}
+.tavern-room.is-active .tavern-room-x:hover { opacity: 1; }
 
 .tavern-add-room {
     padding: 6px 12px;
@@ -269,27 +275,14 @@ html, body {
 
 .tavern-side-foot {
     display: flex;
-    align-items: stretch;
+    flex-direction: column;
     gap: 6px;
     padding: 8px 10px;
     border-top: 1px solid var(--tavern-border);
     background: var(--tavern-bg-3);
     flex-shrink: 0;
 }
-.tavern-leave-btn {
-    background: rgba(251, 113, 133, 0.12);
-    color: #fb7185;
-    border: 1px solid rgba(251, 113, 133, 0.35);
-    border-radius: 6px;
-    padding: 4px 10px;
-    font-family: 'Cinzel', Georgia, serif;
-    font-size: 0.7rem;
-    letter-spacing: 0.06em;
-    cursor: pointer;
-    transition: background 0.15s;
-    flex-shrink: 0;
-}
-.tavern-leave-btn:hover { background: rgba(251, 113, 133, 0.22); }
+.tavern-side-foot .tavern-field { width: 100%; }
 
 /* Chat pane */
 .tavern-chat-pane {
@@ -297,6 +290,8 @@ html, body {
     display: flex;
     flex-direction: column;
     min-width: 0;
+    min-height: 0;
+    overflow: hidden;
 }
 .tavern-room-banner {
     padding: 8px 16px;
@@ -316,14 +311,19 @@ html, body {
     margin: 0;
     padding: 12px 16px;
     overflow-y: auto;
+    overflow-x: hidden;
     font-size: 0.85rem;
     line-height: 1.45;
+    min-height: 0;
 }
 .tavern-msg {
     padding: 6px 10px;
     margin-bottom: 6px;
     border-radius: 6px;
     background: var(--tavern-bg-2);
+    max-width: 100%;
+    overflow-wrap: anywhere;
+    word-break: break-word;
 }
 .tavern-msg.is-self {
     background: var(--tavern-self-bg);
@@ -335,10 +335,21 @@ html, body {
     gap: 8px;
     font-size: 0.72rem;
     margin-bottom: 2px;
+    min-width: 0;
 }
-.tavern-nick { font-weight: 700; }
-.tavern-msg-head time { color: var(--tavern-fg-dim); font-variant-numeric: tabular-nums; }
-.tavern-msg-text { display: block; word-break: break-word; }
+.tavern-nick {
+    font-weight: 700;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    min-width: 0;
+}
+.tavern-msg-head time { color: var(--tavern-fg-dim); font-variant-numeric: tabular-nums; flex-shrink: 0; }
+.tavern-msg-text {
+    display: block;
+    word-break: break-word;
+    overflow-wrap: anywhere;
+}
 .tavern-system {
     color: var(--tavern-fg-dim);
     font-style: italic;
@@ -382,22 +393,62 @@ html, body {
 }
 .tavern-compose button:hover { background: rgba(255, 200, 87, 0.32); }
 
-/* Narrow window: stack sidebar above chat to avoid squashing both. */
+/* Narrow window: collapse the sidebar into a horizontal tab strip on top
+   of the chat pane. Keeps everything visible without sacrificing chat
+   real estate. The flip toggle, nick footer and add input are hidden —
+   the user adjusts them on desktop or after returning to setup. */
 @media (max-width: 560px) {
     .tavern-main, .tavern-app[data-side="right"] .tavern-main {
         flex-direction: column;
     }
-    .tavern-sidebar {
+    .tavern-sidebar, .tavern-app[data-side="right"] .tavern-sidebar {
         width: 100%;
-        max-height: 38%;
+        max-height: none;
+        flex-direction: row;
+        align-items: center;
+        gap: 0;
         border-right: none;
         border-left: none;
         border-bottom: 1px solid var(--tavern-border);
+        order: 0;
+        flex-shrink: 0;
     }
-    .tavern-app[data-side="right"] .tavern-sidebar {
-        border-bottom: none;
-        border-top: 1px solid var(--tavern-border);
-        order: 2;
+    .tavern-side-head { display: none; }
+    .tavern-side-foot { display: none; }
+    .tavern-add-room {
+        padding: 4px 6px;
+        border-top: none;
+        flex-shrink: 0;
+    }
+    .tavern-add-room input {
+        width: 110px;
+        font-size: 0.72rem;
+        padding: 4px 6px;
+    }
+    .tavern-room-list {
+        flex: 1;
+        flex-direction: row;
+        padding: 4px 6px;
+        overflow-x: auto;
+        overflow-y: hidden;
+        gap: 2px;
+        white-space: nowrap;
+    }
+    .tavern-room-list::-webkit-scrollbar { display: none; }
+    .tavern-room {
+        flex-shrink: 0;
+        padding: 5px 10px;
+        border-radius: 4px;
+        font-size: 0.78rem;
+    }
+    .tavern-room.is-active,
+    .tavern-app[data-side="right"] .tavern-room.is-active {
+        border-left: none;
+        border-right: none;
+        border-bottom: 2px solid var(--tavern-gold);
+        padding-left: 10px;
+        padding-right: 10px;
+        border-radius: 4px 4px 0 0;
     }
 }
 

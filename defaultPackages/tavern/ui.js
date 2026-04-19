@@ -51,7 +51,6 @@ export default {
                                 <span>Nick</span>
                                 <input type="text" data-nick-live maxlength="32">
                             </label>
-                            <button type="button" class="tavern-leave-btn" data-leave>Leave</button>
                         </div>
                     </aside>
 
@@ -84,7 +83,6 @@ export default {
         const $addForm = root.querySelector('[data-add]');
         const $addInput = root.querySelector('[data-add-input]');
         const $flipBtn = root.querySelector('[data-flip]');
-        const $leaveBtn = root.querySelector('[data-leave]');
         const $roomName = root.querySelector('[data-room-name]');
 
         const chat = new TavernChat(ctx);
@@ -171,11 +169,37 @@ export default {
         }
 
         async function removeRoom(name) {
-            if (rooms.length <= 1) return; // keep at least one bookmark
-            if (name === chat.roomName) return; // can't remove the active room
-            rooms = rooms.filter(r => r !== name);
-            rooms = await tavernSaveRooms(ctx, rooms);
-            renderRooms();
+            const isActive = name === chat.roomName;
+            if (!isActive) {
+                // Just unpin the bookmark.
+                rooms = rooms.filter(r => r !== name);
+                rooms = await tavernSaveRooms(ctx, rooms);
+                renderRooms();
+                return;
+            }
+            // Active room — leave broadcast first, then drop the bookmark.
+            // If other rooms remain, hop to the first one; otherwise return
+            // to the setup screen so the user can pick a fresh entry.
+            chat.announcePresence('leave');
+            const remaining = rooms.filter(r => r !== name);
+            if (remaining.length > 0) {
+                rooms = remaining;
+                rooms = await tavernSaveRooms(ctx, rooms);
+                await chat.setRoom(rooms[0]);
+                $log.innerHTML = '';
+                appendSystem('Moved to room "' + chat.roomName + '"');
+                chat.announcePresence('join');
+                renderRooms();
+                refreshStatus();
+            } else {
+                await chat.destroy();
+                connected = false;
+                $log.innerHTML = '';
+                $main.style.display = 'none';
+                $setup.style.display = '';
+                $status.textContent = 'not connected';
+                rooms = await tavernSaveRooms(ctx, []); // reset to default ['public']
+            }
         }
 
         async function doJoin() {
@@ -258,17 +282,6 @@ export default {
             side = side === 'left' ? 'right' : 'left';
             $app.dataset.side = side;
             await tavernSaveSide(ctx, side);
-        });
-
-        $leaveBtn.addEventListener('click', async () => {
-            if (!connected) return;
-            chat.announcePresence('leave');
-            await chat.destroy();
-            connected = false;
-            $log.innerHTML = '';
-            $main.style.display = 'none';
-            $setup.style.display = '';
-            $status.textContent = 'not connected';
         });
 
         return {
