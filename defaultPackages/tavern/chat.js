@@ -14,7 +14,47 @@ const TAVERN_STRATEGY_KEY = 'strategy';
 const TAVERN_STRATEGIES = ['torrent', 'nostr', 'mqtt'];
 const TAVERN_STRATEGY_DEFAULT = 'torrent';
 const TAVERN_PASSWORD_KEY = 'password';
-const TAVERN_RATE_LIMIT_MS = 200;   // drop msgs from same peer faster than this
+const TAVERN_KEYPAIR_KEY   = '_keyPair';      // { pub: jwk, priv: jwk }
+const TAVERN_BLOCKLIST_KEY = '_blockedKeys';  // array of public key thumbprints
+const TAVERN_RATE_LIMIT_MS = 200;             // drop msgs from same peer faster than this
+const TAVERN_TS_WINDOW_MS  = 5 * 60 * 1000;   // anti-replay: ±5 min tolerance
+const TAVERN_MAX_TEXT_LEN  = 1000;
+const TAVERN_MAX_NICK_LEN  = 32;
+const TAVERN_CRYPTO_ALGO   = { name: 'ECDSA', namedCurve: 'P-256' };
+const TAVERN_SIGN_ALGO     = { name: 'ECDSA', hash: 'SHA-256' };
+
+/**
+ * Canonical JSON stringify — sorted keys, so independent peers
+ * serialize the same object to the same bytes for signing/verifying.
+ */
+function tavernCanonical(obj) {
+    if (obj === null || typeof obj !== 'object') return JSON.stringify(obj);
+    if (Array.isArray(obj)) return '[' + obj.map(tavernCanonical).join(',') + ']';
+    const keys = Object.keys(obj).sort();
+    return '{' + keys.map(k => JSON.stringify(k) + ':' + tavernCanonical(obj[k])).join(',') + '}';
+}
+
+function tavernB64(bytes) {
+    let s = '';
+    for (let i = 0; i < bytes.length; i++) s += String.fromCharCode(bytes[i]);
+    return btoa(s);
+}
+function tavernUnB64(s) {
+    const bin = atob(s);
+    const out = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i);
+    return out;
+}
+
+/** Stable short thumbprint of a public key JWK — used to identify peers. */
+async function tavernThumbprint(jwk) {
+    if (!jwk || typeof jwk !== 'object') return '';
+    // RFC 7638: canonical form of kty, crv, x, y for EC keys.
+    const canonical = tavernCanonical({ crv: jwk.crv, kty: jwk.kty, x: jwk.x, y: jwk.y });
+    const bytes = new TextEncoder().encode(canonical);
+    const hash = await crypto.subtle.digest('SHA-256', bytes);
+    return tavernB64(new Uint8Array(hash)).replace(/=+$/, '');
+}
 
 async function tavernLoadRooms(ctx) {
     const stored = await ctx.storage.get(TAVERN_ROOMS_KEY);
@@ -84,10 +124,76 @@ class TavernChat {
         this.color = '';
         this.roomName = TAVERN_DEFAULT_ROOM;
         this.password = '';
-        // Per-session security state (cleared on room/strategy change).
+        // Crypto identity: persistent ECDSA keypair tied to this app's
+        // storage. Other peers verify messages against our public key.
+        this.privKey = null;
+        this.pubKey = null;
+        this.pubKeyJwk = null;
+        this.selfThumbprint = '';
+        // Per-session state
         this.peerFirstNick = new Map();   // peerId -> first declared nick
         this.peerLastMsgTs = new Map();   // peerId -> last msg timestamp
-        this.blockedPeers = new Set();    // peerIds user has muted
+        this.peerKeys = new Map();        // peerId -> { pub, jwk, thumbprint }
+        this.blockedPeers = new Set();    // peerIds muted this session
+        // Persistent blocklist — public key thumbprints so a mute
+        // survives peerId changes between sessions.
+        this.blockedThumbs = new Set();
+    }
+
+    /**
+     * Load or generate the peer identity keypair + persistent blocklist.
+     * Called once during loadProfile. Private key stays inside app-scoped
+     * IndexedDB (ctx.storage namespace) — never broadcast, never exposed
+     * to the page.
+     */
+    async _initCrypto() {
+        if (!(globalThis.crypto && globalThis.crypto.subtle)) {
+            throw new Error('WebCrypto not available — Tavern requires HTTPS');
+        }
+        let stored = await this.ctx.storage.get(TAVERN_KEYPAIR_KEY);
+        if (stored && stored.pub && stored.priv) {
+            try {
+                this.pubKey = await crypto.subtle.importKey('jwk', stored.pub, TAVERN_CRYPTO_ALGO, true, ['verify']);
+                this.privKey = await crypto.subtle.importKey('jwk', stored.priv, TAVERN_CRYPTO_ALGO, false, ['sign']);
+                this.pubKeyJwk = stored.pub;
+            } catch (_) {
+                stored = null; // corrupt — regenerate below
+            }
+        }
+        if (!stored) {
+            const kp = await crypto.subtle.generateKey(TAVERN_CRYPTO_ALGO, true, ['sign', 'verify']);
+            this.pubKey = kp.publicKey;
+            this.privKey = kp.privateKey;
+            this.pubKeyJwk = await crypto.subtle.exportKey('jwk', kp.publicKey);
+            const privJwk = await crypto.subtle.exportKey('jwk', kp.privateKey);
+            await this.ctx.storage.set(TAVERN_KEYPAIR_KEY, { pub: this.pubKeyJwk, priv: privJwk });
+        }
+        this.selfThumbprint = await tavernThumbprint(this.pubKeyJwk);
+        const blocklist = await this.ctx.storage.get(TAVERN_BLOCKLIST_KEY);
+        this.blockedThumbs = new Set(Array.isArray(blocklist) ? blocklist : []);
+    }
+
+    async _sign(obj) {
+        const bytes = new TextEncoder().encode(tavernCanonical(obj));
+        const sig = await crypto.subtle.sign(TAVERN_SIGN_ALGO, this.privKey, bytes);
+        return tavernB64(new Uint8Array(sig));
+    }
+
+    async _verify(peerJwk, obj, sigB64) {
+        if (!peerJwk || !sigB64) return false;
+        try {
+            const key = await crypto.subtle.importKey('jwk', peerJwk, TAVERN_CRYPTO_ALGO, true, ['verify']);
+            const bytes = new TextEncoder().encode(tavernCanonical(obj));
+            const sig = tavernUnB64(sigB64);
+            return await crypto.subtle.verify(TAVERN_SIGN_ALGO, key, sig, bytes);
+        } catch (_) {
+            return false;
+        }
+    }
+
+    async _persistBlocklist() {
+        try { await this.ctx.storage.set(TAVERN_BLOCKLIST_KEY, Array.from(this.blockedThumbs)); }
+        catch (_) {}
     }
 
     async loadProfile() {
@@ -109,6 +215,7 @@ class TavernChat {
         this.strategy = TAVERN_STRATEGIES.includes(strategy) ? strategy : TAVERN_STRATEGY_DEFAULT;
         const pwd = await this.ctx.storage.get(TAVERN_PASSWORD_KEY);
         this.password = typeof pwd === 'string' ? pwd : '';
+        await this._initCrypto();
     }
 
     async setPassword(pwd) {
@@ -123,10 +230,29 @@ class TavernChat {
     }
 
     blockPeer(peerId) {
-        if (peerId && peerId !== 'self') this.blockedPeers.add(peerId);
+        if (!peerId || peerId === 'self') return;
+        this.blockedPeers.add(peerId);
+        // Persistent block: add the peer's public key thumbprint so the
+        // mute survives peerId churn between sessions.
+        const info = this.peerKeys.get(peerId);
+        if (info?.thumbprint) {
+            this.blockedThumbs.add(info.thumbprint);
+            this._persistBlocklist();
+        }
     }
-    unblockPeer(peerId) { this.blockedPeers.delete(peerId); }
-    isBlocked(peerId)   { return this.blockedPeers.has(peerId); }
+    unblockPeer(peerId) {
+        this.blockedPeers.delete(peerId);
+        const info = this.peerKeys.get(peerId);
+        if (info?.thumbprint) {
+            this.blockedThumbs.delete(info.thumbprint);
+            this._persistBlocklist();
+        }
+    }
+    isBlocked(peerId) {
+        if (this.blockedPeers.has(peerId)) return true;
+        const info = this.peerKeys.get(peerId);
+        return !!(info?.thumbprint && this.blockedThumbs.has(info.thumbprint));
+    }
 
     async setStrategy(name) {
         const trimmed = TAVERN_STRATEGIES.includes(name) ? name : TAVERN_STRATEGY_DEFAULT;
@@ -181,68 +307,138 @@ class TavernChat {
         this.sendMsg = sendMsg;
         this.getMsg = getMsg;
         this.sendPresence = sendPresence;
-        this.getMsg((msg, peerId) => {
-            // Muted peer — drop silently.
-            if (this.blockedPeers.has(peerId)) return;
-            // Per-peer rate limit. Prevents spam flood from a single source.
+        this.getMsg(async (msg, peerId) => {
+            // Reject anything from blocked peers (by peerId OR thumbprint).
+            if (this.isBlocked(peerId)) return;
+
+            // Payload shape validation — silent drop on anything malformed.
+            if (!msg || typeof msg !== 'object') return;
+            if (typeof msg.text !== 'string' || typeof msg.nick !== 'string' || typeof msg.color !== 'string') return;
+            if (typeof msg.ts !== 'number' || typeof msg.sig !== 'string') return;
+            if (msg.text.length === 0 || msg.text.length > TAVERN_MAX_TEXT_LEN) return;
+            if (msg.nick.length === 0 || msg.nick.length > TAVERN_MAX_NICK_LEN) return;
+            if (msg.color.length > 48) return;
+
+            // Anti-replay: reject anything too far from now.
             const now = Date.now();
+            if (Math.abs(now - msg.ts) > TAVERN_TS_WINDOW_MS) return;
+
+            // Must have seen this peer's public key via presence first.
+            const keyInfo = this.peerKeys.get(peerId);
+            if (!keyInfo) return;
+
+            // Per-peer rate limit (after validation so spam doesn't OOM the verify queue).
             const last = this.peerLastMsgTs.get(peerId) || 0;
             if (now - last < TAVERN_RATE_LIMIT_MS) return;
             this.peerLastMsgTs.set(peerId, now);
+
+            // Cryptographic verification — invalid signatures drop silently.
+            const payload = { text: msg.text, nick: msg.nick, color: msg.color, ts: msg.ts };
+            const ok = await this._verify(keyInfo.jwk, payload, msg.sig);
+            if (!ok) return;
+
+            // Nick lock: reject display nick that differs from the
+            // locked-in nick for this identity (thumbprint). Attacker
+            // can't impersonate someone else even with valid signature.
+            const firstNick = this.peerFirstNick.get(peerId);
+            const declaredNick = msg.nick.slice(0, TAVERN_MAX_NICK_LEN);
+            const spoofed = !!(firstNick && firstNick !== declaredNick);
+            const nick = spoofed ? firstNick : declaredNick;
+
             if (typeof this.onMessageCb === 'function') {
-                // Nick lock: if peer's declared msg nick differs from the
-                // first nick we saw from them (via presence), surface the
-                // attempt but display the original — don't let them
-                // impersonate someone else mid-stream.
-                const firstNick = this.peerFirstNick.get(peerId);
-                const declaredNick = String(msg?.nick || 'Stranger').slice(0, 32);
-                const nick = firstNick && firstNick !== declaredNick ? firstNick : declaredNick;
-                const spoofed = !!(firstNick && firstNick !== declaredNick);
                 this.onMessageCb({
-                    text: String(msg?.text || '').slice(0, 1000),
+                    text: msg.text.slice(0, TAVERN_MAX_TEXT_LEN),
                     nick,
-                    color: String(msg?.color || '#a78bfa'),
-                    ts: Number(msg?.ts) || Date.now(),
+                    color: msg.color,
+                    ts: msg.ts,
                     self: false,
                     peerId,
+                    verified: true,
                     spoofed,
                 });
-                if (spoofed && typeof this.onSpoofCb === 'function') {
-                    this.onSpoofCb({ peerId, declared: declaredNick, actual: firstNick });
-                }
+            }
+            if (spoofed && typeof this.onSpoofCb === 'function') {
+                this.onSpoofCb({ peerId, declared: declaredNick, actual: firstNick });
             }
         });
-        getPresence((info, peerId) => {
-            const nick  = String(info?.nick  || 'Stranger').slice(0, 32);
-            const color = String(info?.color || '#a78bfa');
-            const type  = info?.type === 'leave' ? 'leave' : 'join';
+        getPresence(async (info, peerId) => {
+            if (!info || typeof info !== 'object') return;
+            if (typeof info.nick !== 'string' || typeof info.color !== 'string') return;
+            if (typeof info.ts !== 'number' || typeof info.sig !== 'string') return;
+            if (info.type !== 'join' && info.type !== 'leave') return;
+            if (info.nick.length === 0 || info.nick.length > TAVERN_MAX_NICK_LEN) return;
+            if (info.color.length > 48) return;
+            // Public key only needed on join (leave can trust the peerId we
+            // already know) but validate shape when present.
+            if (info.type === 'join') {
+                if (!info.pub || typeof info.pub !== 'object' || info.pub.kty !== 'EC' || info.pub.crv !== 'P-256') return;
+            }
+
+            // Anti-replay on presence too.
+            const now = Date.now();
+            if (Math.abs(now - info.ts) > TAVERN_TS_WINDOW_MS) return;
+
+            const nick  = info.nick.slice(0, TAVERN_MAX_NICK_LEN);
+            const color = info.color;
+            const type  = info.type;
+
             if (type === 'join') {
-                // Track join timestamp so the UI can show "X min ago"
-                // entries in the peer list. Preserve original joinedAt if
-                // the same peer re-announces (e.g. on room hop).
+                // Verify signature using the public key carried in the payload.
+                const payload = { type: 'join', nick, color, ts: info.ts, pub: info.pub };
+                const ok = await this._verify(info.pub, payload, info.sig);
+                if (!ok) return;
+
+                const thumbprint = await tavernThumbprint(info.pub);
+
+                // Persistent blocklist hit — drop silently.
+                if (this.blockedThumbs.has(thumbprint)) return;
+
+                // Identity lock: once a peerId is associated with a public
+                // key, later presence from the same peerId with a DIFFERENT
+                // key is a spoof attempt — reject + surface warn.
+                const existingKey = this.peerKeys.get(peerId);
+                if (existingKey && existingKey.thumbprint !== thumbprint) {
+                    if (typeof this.onSpoofCb === 'function') {
+                        this.onSpoofCb({ peerId, declared: nick, actual: this.peerFirstNick.get(peerId) || '?' });
+                    }
+                    return;
+                }
+
+                this.peerKeys.set(peerId, { jwk: info.pub, thumbprint });
                 const prev = this.peerNicks.get(peerId);
                 this.peerNicks.set(peerId, {
                     nick, color,
                     joinedAt: prev?.joinedAt || Date.now()
                 });
-                // Lock the first nick we saw from this peer — any later
-                // attempt to change nick is treated as a spoof attempt.
                 if (!this.peerFirstNick.has(peerId)) {
                     this.peerFirstNick.set(peerId, nick);
                 }
             } else {
+                // Leave: verify signature if we have the key already.
+                const keyInfo = this.peerKeys.get(peerId);
+                if (keyInfo) {
+                    const payload = { type: 'leave', nick, color, ts: info.ts };
+                    const ok = await this._verify(keyInfo.jwk, payload, info.sig);
+                    if (!ok) return;
+                }
                 this.peerNicks.delete(peerId);
                 this.peerFirstNick.delete(peerId);
                 this.peerLastMsgTs.delete(peerId);
+                this.peerKeys.delete(peerId);
             }
             if (typeof this.onPresenceCb === 'function') {
-                this.onPresenceCb({ type, nick, color, peerId, ts: Number(info?.ts) || Date.now() });
+                this.onPresenceCb({ type, nick, color, peerId, ts: info.ts });
             }
         });
-        this.room.onPeerJoin((peerId) => {
+        this.room.onPeerJoin(async (peerId) => {
             this.peerCount++;
-            // Re-announce ourselves so the new peer learns who we are.
-            try { this.sendPresence({ type: 'join', nick: this.nick, color: this.color, ts: Date.now() }, peerId); } catch (_) {}
+            // Re-announce ourselves (signed) so the new peer learns who we are.
+            try {
+                const ts = Date.now();
+                const payload = { type: 'join', nick: this.nick, color: this.color, ts, pub: this.pubKeyJwk };
+                const sig = await this._sign(payload);
+                this.sendPresence({ ...payload, sig }, peerId);
+            } catch (_) {}
             if (typeof this.onPeerJoinCb === 'function') this.onPeerJoinCb(peerId, this.peerCount);
         });
         this.room.onPeerLeave((peerId) => {
@@ -258,24 +454,37 @@ class TavernChat {
         await this._connect();
     }
 
-    /** Broadcast a presence event so other peers can render the join/leave note. */
-    announcePresence(type) {
+    /** Broadcast a signed presence event so other peers can render the join/leave note. */
+    async announcePresence(type) {
         if (!this.sendPresence) return;
         if (type === 'join') this.selfJoinedAt = Date.now();
-        try { this.sendPresence({ type, nick: this.nick, color: this.color, ts: Date.now() }); } catch (_) {}
+        try {
+            const ts = Date.now();
+            const payload = type === 'join'
+                ? { type: 'join', nick: this.nick, color: this.color, ts, pub: this.pubKeyJwk }
+                : { type: 'leave', nick: this.nick, color: this.color, ts };
+            const sig = await this._sign(payload);
+            this.sendPresence({ ...payload, sig });
+        } catch (_) {}
     }
 
-    send(text) {
-        const trimmed = String(text || '').trim().slice(0, 1000);
-        if (!trimmed || !this.sendMsg) return null;
+    async send(text) {
+        const trimmed = String(text || '').trim().slice(0, TAVERN_MAX_TEXT_LEN);
+        if (!trimmed || !this.sendMsg || !this.privKey) return null;
         const payload = {
             text: trimmed,
             nick: this.nick,
             color: this.color,
             ts: Date.now(),
         };
-        try { this.sendMsg(payload); } catch (e) { console.warn('[tavern] send failed', e); return null; }
-        return { ...payload, self: true };
+        try {
+            const sig = await this._sign(payload);
+            this.sendMsg({ ...payload, sig });
+        } catch (e) {
+            console.warn('[tavern] send failed', e);
+            return null;
+        }
+        return { ...payload, self: true, verified: true };
     }
 
     onMessage(cb) { this.onMessageCb = cb; }

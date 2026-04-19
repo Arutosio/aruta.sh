@@ -133,11 +133,15 @@ export default {
 
         function append(msg) {
             const li = document.createElement('li');
-            li.className = 'tavern-msg' + (msg.self ? ' is-self' : '') + (msg.spoofed ? ' is-spoofed' : '');
+            li.className = 'tavern-msg'
+                + (msg.self ? ' is-self' : '')
+                + (msg.spoofed ? ' is-spoofed' : '')
+                + (msg.verified ? ' is-verified' : '');
             const time = tavernFmtTime(msg.ts);
+            const check = msg.verified ? '<span class="tavern-msg-check" title="Signature verified">✓</span>' : '';
             li.innerHTML = `<span class="tavern-msg-head">
                     <span class="tavern-nick" style="color:${tavernEscapeHtml(msg.color)};">${tavernEscapeHtml(msg.nick)}</span>
-                    <time>${time}</time>
+                    <time>${time}${check}</time>
                 </span>
                 <span class="tavern-msg-text"></span>`;
             li.querySelector('.tavern-msg-text').textContent = msg.text;
@@ -377,18 +381,15 @@ export default {
         $joinBtn.addEventListener('click', () => { doJoin(); });
 
         let warnedEmpty = false;
-        $form.addEventListener('submit', (e) => {
+        $form.addEventListener('submit', async (e) => {
             e.preventDefault();
             const text = $input.value;
-            // Warn the user once per empty-room session that no one is
-            // listening yet — Trystero send is fire-and-forget, so an
-            // unattended room silently swallows everything otherwise.
             if (chat.peerCount === 0 && !warnedEmpty && text.trim()) {
                 appendSystem('No one else is in this room yet — your message will only reach travelers who join afterwards.');
                 warnedEmpty = true;
             }
-            if (chat.peerCount > 0) warnedEmpty = false; // reset if peers arrived
-            const sent = chat.send(text);
+            if (chat.peerCount > 0) warnedEmpty = false;
+            const sent = await chat.send(text);
             if (sent) { append(sent); $input.value = ''; }
         });
 

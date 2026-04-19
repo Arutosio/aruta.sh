@@ -78,10 +78,10 @@ export default {
         });
         chat.announcePresence('join');
 
-        $form.addEventListener('submit', (e) => {
+        $form.addEventListener('submit', async (e) => {
             e.preventDefault();
             const text = $input.value;
-            const sent = chat.send(text);
+            const sent = await chat.send(text);
             if (sent) { append(sent); $input.value = ''; }
         });
 

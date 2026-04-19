@@ -476,6 +476,13 @@ html, body {
     color: #fb7185;
     font-size: 0.72rem;
 }
+.tavern-msg-check {
+    color: #53fc18;
+    margin-left: 6px;
+    font-size: 0.72rem;
+    opacity: 0.85;
+}
+[data-theme="light"] .tavern-msg-check { color: #2f8a55; }
 .tavern-msg-head {
     display: flex;
     justify-content: space-between;
