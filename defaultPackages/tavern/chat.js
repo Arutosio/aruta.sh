@@ -13,7 +13,8 @@ const TAVERN_SIDE_KEY = 'sidebarSide';
 const TAVERN_STRATEGY_KEY = 'strategy';
 const TAVERN_STRATEGIES = ['torrent'];
 const TAVERN_STRATEGY_DEFAULT = 'torrent';
-const TAVERN_PASSWORD_KEY = 'password';
+const TAVERN_PASSWORD_KEY = 'password';       // legacy: last-used password
+const TAVERN_ROOM_PWDS_KEY = 'roomPasswords'; // { [roomName]: passwordString }
 const TAVERN_KEYPAIR_KEY   = '_keyPair';      // { pub: jwk, priv: jwk }
 const TAVERN_BLOCKLIST_KEY = '_blockedKeys';  // array of public key thumbprints
 const TAVERN_RATE_LIMIT_MS = 200;             // drop msgs from same peer faster than this
@@ -97,6 +98,27 @@ async function tavernSaveRooms(ctx, rooms) {
     if (cleaned.length === 0) cleaned.push(TAVERN_DEFAULT_ROOM);
     await ctx.storage.set(TAVERN_ROOMS_KEY, cleaned);
     return cleaned;
+}
+
+async function tavernLoadRoomPwds(ctx) {
+    const stored = await ctx.storage.get(TAVERN_ROOM_PWDS_KEY);
+    if (stored && typeof stored === 'object' && !Array.isArray(stored)) {
+        const out = {};
+        for (const [k, v] of Object.entries(stored)) {
+            if (typeof v === 'string') out[String(k).slice(0, 64)] = v;
+        }
+        return out;
+    }
+    return {};
+}
+
+async function tavernSaveRoomPwds(ctx, map) {
+    const clean = {};
+    for (const [k, v] of Object.entries(map || {})) {
+        if (typeof v === 'string' && v !== '') clean[String(k).slice(0, 64)] = v;
+    }
+    await ctx.storage.set(TAVERN_ROOM_PWDS_KEY, clean);
+    return clean;
 }
 
 async function tavernLoadSide(ctx) {
@@ -271,8 +293,17 @@ class TavernChat {
         if (room) this.roomName = room;
         const strategy = await this.ctx.storage.get(TAVERN_STRATEGY_KEY);
         this.strategy = TAVERN_STRATEGIES.includes(strategy) ? strategy : TAVERN_STRATEGY_DEFAULT;
-        const pwd = await this.ctx.storage.get(TAVERN_PASSWORD_KEY);
-        this.password = typeof pwd === 'string' ? pwd : '';
+        this.roomPasswords = await tavernLoadRoomPwds(this.ctx);
+        // If a password is explicitly saved for the current room use it;
+        // otherwise fall back to the legacy global TAVERN_PASSWORD_KEY so
+        // existing installs keep working on first load.
+        const saved = this.roomPasswords[this.roomName];
+        if (typeof saved === 'string') {
+            this.password = saved;
+        } else {
+            const pwd = await this.ctx.storage.get(TAVERN_PASSWORD_KEY);
+            this.password = typeof pwd === 'string' ? pwd : '';
+        }
         await this._initCrypto();
     }
 
@@ -331,12 +362,23 @@ class TavernChat {
         await this.ctx.storage.set(TAVERN_NICK_KEY, trimmed);
     }
 
-    async setRoom(newRoom) {
+    async setRoom(newRoom, newPwd) {
         const trimmed = tavernSanitize(newRoom, 64).trim() || TAVERN_DEFAULT_ROOM;
-        if (trimmed === this.roomName) return;
+        // If a password is explicitly provided for this room, remember it
+        // so later switches back to the same room reuse it automatically.
+        let pwdChanged = false;
+        if (typeof newPwd === 'string') {
+            const cleaned = newPwd.slice(0, 128);
+            if (cleaned) this.roomPasswords[trimmed] = cleaned;
+            else delete this.roomPasswords[trimmed];
+            this.roomPasswords = await tavernSaveRoomPwds(this.ctx, this.roomPasswords);
+            pwdChanged = (this.roomPasswords[trimmed] || '') !== this.password;
+        }
+        if (trimmed === this.roomName && !pwdChanged) return;
         this.roomName = trimmed;
+        this.password = this.roomPasswords[trimmed] || '';
         await this.ctx.storage.set(TAVERN_ROOM_KEY, trimmed);
-        // Reconnect to new room.
+        await this.ctx.storage.set(TAVERN_PASSWORD_KEY, this.password);
         if (this.room) {
             try { await this.room.leave(); } catch (_) {}
         }

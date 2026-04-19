@@ -388,10 +388,15 @@ html, body {
 
 .tavern-add-room {
     display: flex;
+    flex-direction: column;
     gap: 4px;
     padding: 6px 12px;
     border-top: 1px solid var(--tavern-border);
     flex-shrink: 0;
+}
+.tavern-add-row {
+    display: flex;
+    gap: 4px;
 }
 .tavern-add-room input {
     flex: 1;
@@ -403,6 +408,11 @@ html, body {
     padding: 5px 8px;
     font: inherit;
     font-size: 0.78rem;
+    box-sizing: border-box;
+    width: 100%;
+}
+.tavern-add-pwd {
+    width: 100%;
     box-sizing: border-box;
 }
 .tavern-add-room input:focus {

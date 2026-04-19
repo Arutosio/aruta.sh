@@ -52,8 +52,11 @@ export default {
                         </div>
                         <ul class="tavern-room-list" data-rooms></ul>
                         <div class="tavern-add-room" data-add>
-                            <input type="text" data-add-input maxlength="64" placeholder="+ add room">
-                            <button type="button" class="tavern-add-btn" data-add-btn title="Add room">+</button>
+                            <div class="tavern-add-row">
+                                <input type="text" data-add-input maxlength="64" placeholder="+ add room">
+                                <button type="button" class="tavern-add-btn" data-add-btn title="Add room">+</button>
+                            </div>
+                            <input type="password" data-add-pwd maxlength="128" placeholder="password (optional)" class="tavern-add-pwd">
                         </div>
                         <div class="tavern-side-foot">
                             <label class="tavern-field tavern-field-compact">
@@ -97,6 +100,7 @@ export default {
         const $roomsUl = root.querySelector('[data-rooms]');
         const $addBox = root.querySelector('[data-add]');
         const $addInput = root.querySelector('[data-add-input]');
+        const $addPwd = root.querySelector('[data-add-pwd]');
         const $addBtn = root.querySelector('[data-add-btn]');
         const $prefsBtn = root.querySelector('[data-prefs]');
         const $roomName = root.querySelector('[data-room-name]');
@@ -273,16 +277,18 @@ export default {
         }
 
         async function switchRoom(name) {
+            return switchRoomWithPwd(name, undefined);
+        }
+        async function switchRoomWithPwd(name, pwd) {
             if (!connected || name === chat.roomName) return;
             chat.announcePresence('leave');
-            await chat.setRoom(name);
-            // Bookmark the room if new.
+            await chat.setRoom(name, pwd);
             if (!rooms.includes(chat.roomName)) {
                 rooms.push(chat.roomName);
                 rooms = await tavernSaveRooms(ctx, rooms);
             }
             $log.innerHTML = '';
-            appendSystem('Moved to room "' + chat.roomName + '"');
+            appendSystem('Moved to room "' + chat.roomName + '"', 'info');
             chat.announcePresence('join');
             renderRooms();
             refreshStatus();
@@ -433,18 +439,34 @@ export default {
         async function commitAddRoom() {
             const name = ($addInput.value || '').trim().slice(0, 64);
             if (!name) return;
+            const pwd = $addPwd ? ($addPwd.value || '') : '';
             $addInput.value = '';
+            if ($addPwd) $addPwd.value = '';
             const wasNew = !rooms.includes(name);
             if (wasNew) {
                 rooms.push(name);
                 rooms = await tavernSaveRooms(ctx, rooms);
             }
+            // Always persist the password the user typed for this room (empty
+            // string clears any previous one).
+            if ($addPwd) {
+                chat.roomPasswords[name] = pwd;
+                chat.roomPasswords = await tavernSaveRoomPwds(ctx, chat.roomPasswords);
+            }
             if (name === chat.roomName) {
+                // Already in that room but password may have changed — reconnect
+                // via setRoom which picks up the new pwd and rebuilds the swarm.
+                if (pwd !== (chat.password || '')) {
+                    await chat.setRoom(name, pwd);
+                    $log.innerHTML = '';
+                    appendSystem('Password updated — reconnected to "' + name + '"', 'info');
+                } else {
+                    appendSystem(wasNew ? 'Bookmarked "' + name + '" (already here)' : 'Already in "' + name + '"', 'info');
+                }
                 renderRooms();
-                appendSystem(wasNew ? 'Bookmarked "' + name + '" (already here)' : 'Already in "' + name + '"');
                 return;
             }
-            await switchRoom(name);
+            await switchRoomWithPwd(name, pwd);
         }
         $addBtn.addEventListener('click', () => { commitAddRoom(); });
         $addInput.addEventListener('keydown', (e) => {
