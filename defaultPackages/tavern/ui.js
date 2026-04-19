@@ -205,12 +205,10 @@ export default {
                 const countBadge = isLive
                     ? `<button type="button" class="tavern-room-count" data-peers title="Show peers">${chat.peerCount + 1}</button>`
                     : '';
-                // Per-room connect/disconnect toggle. Shown on every row —
-                // unplug icon when that row is the live Trystero connection,
-                // plug icon otherwise (click reconnects / hops).
-                const connLabel = isLive ? 'Disconnect' : 'Connect';
-                const connGlyph = isLive ? '🔌' : '🔗';
-                const connBtn = `<button type="button" class="tavern-room-conn" data-conn title="${connLabel}">${connGlyph}</button>`;
+                // Status dot: green if this row is the live Trystero swarm,
+                // grey otherwise. Click toggles (connect / disconnect / hop).
+                const connLabel = isLive ? 'Disconnect' : (isActive ? 'Reconnect' : 'Connect');
+                const connBtn = `<button type="button" class="tavern-room-conn${isLive ? ' is-on' : ''}" data-conn title="${connLabel}" aria-label="${connLabel}"></button>`;
                 li.innerHTML = `${lock}<span class="tavern-room-hash">#</span><span class="tavern-room-label"></span>${countBadge}${connBtn}<button type="button" class="tavern-room-x" title="Close">×</button>`;
                 li.querySelector('.tavern-room-label').textContent = name;
                 $roomsUl.appendChild(li);
