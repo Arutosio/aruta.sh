@@ -38,9 +38,10 @@ export default {
                             <button type="button" class="tavern-side-flip" data-flip title="Move sidebar">⇄</button>
                         </div>
                         <ul class="tavern-room-list" data-rooms></ul>
-                        <form class="tavern-add-room" data-add>
+                        <div class="tavern-add-room" data-add>
                             <input type="text" data-add-input maxlength="64" placeholder="+ add room">
-                        </form>
+                            <button type="button" class="tavern-add-btn" data-add-btn title="Add room">+</button>
+                        </div>
                         <div class="tavern-side-foot">
                             <label class="tavern-field tavern-field-compact">
                                 <span>Nick</span>
@@ -76,8 +77,9 @@ export default {
         const $joinBtn = root.querySelector('[data-join]');
         const $nickLive = root.querySelector('[data-nick-live]');
         const $roomsUl = root.querySelector('[data-rooms]');
-        const $addForm = root.querySelector('[data-add]');
+        const $addBox = root.querySelector('[data-add]');
         const $addInput = root.querySelector('[data-add-input]');
+        const $addBtn = root.querySelector('[data-add-btn]');
         const $flipBtn = root.querySelector('[data-flip]');
         const $roomName = root.querySelector('[data-room-name]');
 
@@ -329,8 +331,10 @@ export default {
             if (li) switchRoom(li.dataset.room);
         });
 
-        $addForm.addEventListener('submit', async (e) => {
-            e.preventDefault();
+        // Iframe sandbox doesn't carry `allow-forms`, so we drive the
+        // add-room flow with a button + manual Enter key handling instead
+        // of a <form> submit. Avoids silently swallowed events.
+        async function commitAddRoom() {
             const name = ($addInput.value || '').trim().slice(0, 64);
             if (!name) return;
             $addInput.value = '';
@@ -339,13 +343,19 @@ export default {
                 rooms.push(name);
                 rooms = await tavernSaveRooms(ctx, rooms);
             }
-            // Already on it? Just confirm — no reconnect needed.
             if (name === chat.roomName) {
                 renderRooms();
                 appendSystem(wasNew ? 'Bookmarked "' + name + '" (already here)' : 'Already in "' + name + '"');
                 return;
             }
             await switchRoom(name);
+        }
+        $addBtn.addEventListener('click', () => { commitAddRoom(); });
+        $addInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                commitAddRoom();
+            }
         });
 
         $flipBtn.addEventListener('click', async () => {

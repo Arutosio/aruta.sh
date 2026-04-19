@@ -239,12 +239,15 @@ html, body {
 .tavern-room.is-active .tavern-room-x:hover { opacity: 1; }
 
 .tavern-add-room {
+    display: flex;
+    gap: 4px;
     padding: 6px 12px;
     border-top: 1px solid var(--tavern-border);
     flex-shrink: 0;
 }
 .tavern-add-room input {
-    width: 100%;
+    flex: 1;
+    min-width: 0;
     background: var(--tavern-input-bg);
     color: var(--tavern-fg);
     border: 1px solid var(--tavern-border);
@@ -256,6 +259,22 @@ html, body {
 }
 .tavern-add-room input:focus {
     outline: none;
+    border-color: var(--tavern-gold);
+}
+.tavern-add-btn {
+    background: rgba(255, 200, 87, 0.18);
+    color: var(--tavern-gold);
+    border: 1px solid var(--tavern-border);
+    border-radius: 4px;
+    width: 24px;
+    line-height: 1;
+    font-size: 0.95rem;
+    cursor: pointer;
+    flex-shrink: 0;
+    transition: background 0.12s, border-color 0.12s;
+}
+.tavern-add-btn:hover {
+    background: rgba(255, 200, 87, 0.32);
     border-color: var(--tavern-gold);
 }
 
