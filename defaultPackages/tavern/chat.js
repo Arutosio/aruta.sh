@@ -340,35 +340,33 @@ class TavernChat {
         this.sendPresence = sendPresence;
         this.getMsg(async (msg, peerId) => {
             // Reject anything from blocked peers (by peerId OR thumbprint).
-            if (this.isBlocked(peerId)) return;
+            if (this.isBlocked(peerId)) { console.debug('[tavern] drop: blocked', peerId); return; }
 
             // Payload shape validation — silent drop on anything malformed.
-            if (!msg || typeof msg !== 'object') return;
-            if (typeof msg.text !== 'string' || typeof msg.nick !== 'string' || typeof msg.color !== 'string') return;
-            if (typeof msg.ts !== 'number' || typeof msg.sig !== 'string') return;
-            if (msg.text.length === 0 || msg.text.length > TAVERN_MAX_TEXT_LEN) return;
-            if (msg.nick.length === 0 || msg.nick.length > TAVERN_MAX_NICK_LEN) return;
-            if (!tavernValidColor(msg.color)) return;
-            // Sanitize any remaining spoofing chars AFTER signature check
-            // (we verify the bytes as received, then strip for display).
+            if (!msg || typeof msg !== 'object') { console.debug('[tavern] drop: not object'); return; }
+            if (typeof msg.text !== 'string' || typeof msg.nick !== 'string' || typeof msg.color !== 'string') { console.debug('[tavern] drop: wrong types', msg); return; }
+            if (typeof msg.ts !== 'number' || typeof msg.sig !== 'string') { console.debug('[tavern] drop: missing ts/sig', msg); return; }
+            if (msg.text.length === 0 || msg.text.length > TAVERN_MAX_TEXT_LEN) { console.debug('[tavern] drop: text length'); return; }
+            if (msg.nick.length === 0 || msg.nick.length > TAVERN_MAX_NICK_LEN) { console.debug('[tavern] drop: nick length'); return; }
+            if (!tavernValidColor(msg.color)) { console.debug('[tavern] drop: color invalid', msg.color); return; }
 
             // Anti-replay: reject anything too far from now.
             const now = Date.now();
-            if (Math.abs(now - msg.ts) > TAVERN_TS_WINDOW_MS) return;
+            if (Math.abs(now - msg.ts) > TAVERN_TS_WINDOW_MS) { console.debug('[tavern] drop: ts outside window', msg.ts, 'vs', now); return; }
 
             // Must have seen this peer's public key via presence first.
             const keyInfo = this.peerKeys.get(peerId);
-            if (!keyInfo) return;
+            if (!keyInfo) { console.debug('[tavern] drop: no key for peer', peerId); return; }
 
             // Per-peer rate limit (after validation so spam doesn't OOM the verify queue).
             const last = this.peerLastMsgTs.get(peerId) || 0;
-            if (now - last < TAVERN_RATE_LIMIT_MS) return;
+            if (now - last < TAVERN_RATE_LIMIT_MS) { console.debug('[tavern] drop: rate limit'); return; }
             this.peerLastMsgTs.set(peerId, now);
 
             // Cryptographic verification — invalid signatures drop silently.
             const payload = { text: msg.text, nick: msg.nick, color: msg.color, ts: msg.ts };
             const ok = await this._verify(keyInfo.jwk, payload, msg.sig);
-            if (!ok) return;
+            if (!ok) { console.debug('[tavern] drop: sig verify failed'); return; }
 
             // Nick lock: reject display nick that differs from the
             // locked-in nick for this identity (thumbprint). Attacker
@@ -395,12 +393,12 @@ class TavernChat {
             }
         });
         getPresence(async (info, peerId) => {
-            if (!info || typeof info !== 'object') return;
-            if (typeof info.nick !== 'string' || typeof info.color !== 'string') return;
-            if (typeof info.ts !== 'number' || typeof info.sig !== 'string') return;
-            if (info.type !== 'join' && info.type !== 'leave') return;
-            if (info.nick.length === 0 || info.nick.length > TAVERN_MAX_NICK_LEN) return;
-            if (!tavernValidColor(info.color)) return;
+            if (!info || typeof info !== 'object') { console.debug('[tavern] presence drop: not object'); return; }
+            if (typeof info.nick !== 'string' || typeof info.color !== 'string') { console.debug('[tavern] presence drop: wrong types'); return; }
+            if (typeof info.ts !== 'number' || typeof info.sig !== 'string') { console.debug('[tavern] presence drop: missing ts/sig'); return; }
+            if (info.type !== 'join' && info.type !== 'leave') { console.debug('[tavern] presence drop: bad type'); return; }
+            if (info.nick.length === 0 || info.nick.length > TAVERN_MAX_NICK_LEN) { console.debug('[tavern] presence drop: nick len'); return; }
+            if (!tavernValidColor(info.color)) { console.debug('[tavern] presence drop: color invalid', info.color); return; }
             // Public key only needed on join (leave can trust the peerId we
             // already know) but validate shape when present.
             if (info.type === 'join') {
@@ -506,7 +504,9 @@ class TavernChat {
 
     async send(text) {
         const trimmed = tavernSanitize(text, TAVERN_MAX_TEXT_LEN).trim();
-        if (!trimmed || !this.sendMsg || !this.privKey) return null;
+        if (!trimmed) { console.debug('[tavern] send: empty'); return null; }
+        if (!this.sendMsg) { console.warn('[tavern] send: not connected'); return null; }
+        if (!this.privKey) { console.warn('[tavern] send: no privkey'); return null; }
         const payload = {
             text: trimmed,
             nick: this.nick,
@@ -516,6 +516,7 @@ class TavernChat {
         try {
             const sig = await this._sign(payload);
             this.sendMsg({ ...payload, sig });
+            console.debug('[tavern] sent', { nick: this.nick, len: trimmed.length });
         } catch (e) {
             console.warn('[tavern] send failed', e);
             return null;
