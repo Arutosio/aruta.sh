@@ -70,6 +70,38 @@ function _clampPosition(x, y, w, h) {
     };
 }
 
+/**
+ * Determine which screen edge the widget is "stuck" to so resize can
+ * preserve that relationship. Returns horizontal + vertical anchors
+ * plus the pixel offset from the chosen edge — the values feed
+ * _applyAnchor() to recompute coordinates on a new viewport.
+ */
+function _computeAnchor(x, y, w, h) {
+    const vw = window.innerWidth, vh = window.innerHeight;
+    const distLeft   = x;
+    const distRight  = vw - x - w;
+    const distTop    = y - WIDGET_TASKBAR_MARGIN;
+    const distBottom = vh - y - h;
+    return {
+        h: distLeft <= distRight ? 'left' : 'right',
+        v: distTop  <= distBottom ? 'top'  : 'bottom',
+        offsetH: Math.max(0, Math.min(distLeft, distRight)),
+        offsetV: Math.max(0, Math.min(distTop,  distBottom)),
+    };
+}
+
+/** Convert an anchor + size to a clamped {x, y} for the current viewport. */
+function _applyAnchor(anchor, w, h) {
+    const vw = window.innerWidth, vh = window.innerHeight;
+    const x = anchor.h === 'left'
+        ? anchor.offsetH
+        : (vw - w - anchor.offsetH);
+    const y = anchor.v === 'top'
+        ? (WIDGET_TASKBAR_MARGIN + anchor.offsetV)
+        : (vh - h - anchor.offsetV);
+    return _clampPosition(x, y, w, h);
+}
+
 function _createFrame(manifest, initialState) {
     const frame = document.createElement('div');
     frame.className = 'widget-frame';
@@ -171,9 +203,19 @@ async function enable(id) {
         width: Number.isFinite(existing.width) ? existing.width : def.width,
         height: Number.isFinite(existing.height) ? existing.height : def.height,
     };
-    // Re-clamp in case viewport shrunk since last save.
-    const clamped = _clampPosition(initial.x, initial.y, initial.width, initial.height);
-    initial.x = clamped.x; initial.y = clamped.y;
+    // Prefer the saved edge-anchor so the widget keeps the same gap from
+    // its nearest edge across viewport changes (window resize, screen
+    // rotation, devtools toggle). Fall back to absolute coords if no
+    // anchor was ever saved (legacy state).
+    if (existing.anchor) {
+        const pos = _applyAnchor(existing.anchor, initial.width, initial.height);
+        initial.x = pos.x; initial.y = pos.y;
+        initial.anchor = existing.anchor;
+    } else {
+        const clamped = _clampPosition(initial.x, initial.y, initial.width, initial.height);
+        initial.x = clamped.x; initial.y = clamped.y;
+        initial.anchor = _computeAnchor(initial.x, initial.y, initial.width, initial.height);
+    }
 
     _state[id] = initial;
     _saveState(_state);
@@ -207,6 +249,11 @@ function disable(id) {
 function savePosition(id, x, y) {
     const s = _state[id] || {};
     s.x = x; s.y = y;
+    // Recompute the edge anchor so future resizes keep the same gap
+    // from the nearest edge instead of just clamping to it.
+    const w = s.width  || 280;
+    const h = s.height || 360;
+    s.anchor = _computeAnchor(x, y, w, h);
     _state[id] = s;
     _saveState(_state);
 }
@@ -280,18 +327,30 @@ function renderSettings() {
     });
 }
 
-// Re-clamp on window resize so widgets never drift off-screen.
+// Re-anchor on window resize: keep each widget the same gap from its
+// nearest edge so the layout adapts instead of drifting off-screen
+// (or worse, getting hidden behind the taskbar).
+let _resizeRaf = 0;
 window.addEventListener('resize', () => {
-    for (const frame of document.querySelectorAll('.widget-frame')) {
-        const id = frame.dataset.widget;
-        const r = frame.getBoundingClientRect();
-        const c = _clampPosition(r.left, r.top, frame.offsetWidth, frame.offsetHeight);
-        if (c.x !== r.left || c.y !== r.top) {
-            frame.style.left = c.x + 'px';
-            frame.style.top = c.y + 'px';
-            savePosition(id, Math.round(c.x), Math.round(c.y));
+    if (_resizeRaf) return;
+    _resizeRaf = requestAnimationFrame(() => {
+        _resizeRaf = 0;
+        for (const frame of document.querySelectorAll('.widget-frame')) {
+            const id = frame.dataset.widget;
+            const s = _state[id];
+            if (!s) continue;
+            const w = frame.offsetWidth, h = frame.offsetHeight;
+            const pos = s.anchor
+                ? _applyAnchor(s.anchor, w, h)
+                : _clampPosition(s.x || 0, s.y || 0, w, h);
+            frame.style.left = pos.x + 'px';
+            frame.style.top  = pos.y + 'px';
+            // Persist the new absolute coords (anchor stays the same).
+            s.x = pos.x; s.y = pos.y;
+            _state[id] = s;
         }
-    }
+        _saveState(_state);
+    });
 });
 
 window.widgets = {
