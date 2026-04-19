@@ -378,7 +378,13 @@ function ensureAppWindow(manifest) {
         e.stopPropagation();
         if (typeof closeWindow === 'function') closeWindow(id);
         // Keep iframe alive so app state (game progress, form input, ...) survives close/reopen.
-        // Full teardown happens only on uninstall via unregisterAppFromOS → sandbox.unmount.
+        // Packages that must not linger in background (e.g. Tavern keeping
+        // a P2P swarm open) can opt in with manifest.unmountOnClose: true —
+        // closing the window then tears the iframe down so no connection
+        // stays active. Next openWindow remounts fresh.
+        if (manifest.unmountOnClose) {
+            try { window.sandbox?.unmount(id); } catch (_) {}
+        }
     });
 }
 

@@ -88,6 +88,9 @@ function validateManifest(m) {
     if (m.allowOrigin != null && typeof m.allowOrigin !== 'boolean') {
         return 'allowOrigin must be a boolean';
     }
+    if (m.unmountOnClose != null && typeof m.unmountOnClose !== 'boolean') {
+        return 'unmountOnClose must be a boolean';
+    }
     // Widget options block — only valid when 'widget' role is declared.
     if (m.widget != null) {
         if (typeof m.widget !== 'object' || Array.isArray(m.widget)) return 'widget must be an object';
