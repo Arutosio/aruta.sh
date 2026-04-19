@@ -332,6 +332,17 @@ class TavernChat {
         // no password. Empty string = open room.
         const config = { appId: TAVERN_APP_ID };
         if (this.password) config.password = this.password;
+        // Override Trystero's default tracker list — some shipped defaults
+        // (btorrent.xyz) have been offline for months, leaving peer
+        // discovery silently dead. Current working public trackers:
+        if (strategy === 'torrent') {
+            config.trackerUrls = [
+                'wss://tracker.openwebtorrent.com',
+                'wss://tracker.webtorrent.dev',
+                'wss://tracker.files.fm:7073/announce',
+                'wss://tracker.ghostchu-services.top',
+            ];
+        }
         this.room = T.joinRoom(config, this.roomName);
         const [sendMsg, getMsg] = this.room.makeAction('msg');
         const [sendPresence, getPresence] = this.room.makeAction('presence');
