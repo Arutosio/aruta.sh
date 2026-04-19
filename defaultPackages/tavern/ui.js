@@ -1,12 +1,10 @@
 // Tavern — full app UI. Adventurer's chat by the firelight.
 // Anonymous P2P chat via Trystero (BitTorrent trackers, no backend).
 //
-// Layout:
-//   [Setup screen] -> click "Enter the tavern" -> [Main view]
-//   Main view = sidebar (room bookmarks) + chat pane.
-//   Sidebar position is user-configurable (left/right) and persists
-//   in ctx.storage. One room is active at a time; switching tears
-//   down the current Trystero connection and joins the new one.
+// Multi-room: the user can stay connected to several rooms at once.
+// Each connected room has its own TavernChat instance inside `chats`.
+// Clicking a row only switches what's displayed; clicking the dot is
+// the sole gesture that opens/closes a connection.
 
 const TAVERN_WIDGET_ALIVE_KEY = '_widgetAlive';
 const TAVERN_WIDGET_FRESH_MS = 20000;
@@ -87,7 +85,6 @@ export default {
         const $setup = root.querySelector('[data-setup]');
         const $main = root.querySelector('[data-main]');
         const $log = root.querySelector('[data-log]');
-        const $form = root.querySelector('[data-compose]');
         const $input = root.querySelector('[data-input]');
         const $sendBtn = root.querySelector('[data-send]');
         const $nickSetup = root.querySelector('[data-nick]');
@@ -96,43 +93,45 @@ export default {
         const $passwordSetup = root.querySelector('[data-password]');
         const $joinBtn = root.querySelector('[data-join]');
         const $nickLive = root.querySelector('[data-nick-live]');
-        const $strategyLive = root.querySelector('[data-strategy-live]');
         const $roomsUl = root.querySelector('[data-rooms]');
-        const $addBox = root.querySelector('[data-add]');
         const $addInput = root.querySelector('[data-add-input]');
         const $addPwd = root.querySelector('[data-add-pwd]');
         const $addBtn = root.querySelector('[data-add-btn]');
         const $prefsBtn = root.querySelector('[data-prefs]');
         const $roomName = root.querySelector('[data-room-name]');
 
-        const chat = new TavernChat(ctx);
-        let connected = false;
-        let nickTimer = null;
+        // Shared identity (one per user): nick, keypair, passwords, side.
+        // A throwaway TavernChat is spun up once to load + expose these —
+        // it never connects, it's just the cheapest way to reuse the chat
+        // crypto/profile loader. Connected rooms get their own instances.
+        const identity = new TavernChat(ctx);
+        await identity.loadProfile();
+
+        // One TavernChat per connected room. Disconnecting tears the entry
+        // down; reconnecting creates a fresh one. Identity is re-applied
+        // from `identity` at create time.
+        const chats = new Map();
         let rooms = [];
         let side = 'right';
         let showSystemMsgs = true;
+        let started = false;
+        let nickTimer = null;
         const offlineRooms = new Set();
-        // Log cache per room — lets the user browse history of a room they
-        // are not currently connected to, and receive-into-buffer messages
-        // for rooms they are connected to but not viewing.
         const roomLogs = new Map();
-        // The room currently shown in the log area — independent of the
-        // live Trystero connection target (chat.roomName).
         let viewingRoom = '';
 
-        // Pre-load identity + room bookmarks + sidebar pref so the setup
-        // screen and the eventual sidebar both render with saved state.
-        await chat.loadProfile();
         rooms = await tavernLoadRooms(ctx);
-        if (!rooms.includes(chat.roomName)) rooms.push(chat.roomName);
+        if (!rooms.includes(identity.roomName)) rooms.push(identity.roomName);
         side = await tavernLoadSide(ctx);
         $app.dataset.side = side;
         const storedSys = await ctx.storage.get(TAVERN_SHOW_SYS_KEY);
-        showSystemMsgs = storedSys !== false; // default true
-        $nickSetup.value = chat.nick;
-        $roomSetup.value = chat.roomName;
-        $strategySetup.value = chat.strategy;
-        $passwordSetup.value = chat.password || '';
+        showSystemMsgs = storedSys !== false;
+        $nickSetup.value = identity.nick;
+        $roomSetup.value = identity.roomName;
+        $strategySetup.value = identity.strategy;
+        $passwordSetup.value = identity.password || '';
+
+        function view() { return chats.get(viewingRoom); }
 
         function buildMsgHtml(msg) {
             const klass = 'tavern-msg'
@@ -141,8 +140,6 @@ export default {
                 + (msg.verified ? ' is-verified' : '');
             const time = tavernFmtTime(msg.ts);
             const check = msg.verified ? '<span class="tavern-msg-check" title="Signature verified">✓</span>' : '';
-            // Build via DOM → outerHTML so we get safe textContent handling
-            // for the user text while still yielding a string for the cache.
             const li = document.createElement('li');
             li.className = klass;
             li.innerHTML = `<span class="tavern-msg-head">
@@ -165,68 +162,57 @@ export default {
                 $log.scrollTop = $log.scrollHeight;
                 while ($log.children.length > 200) $log.removeChild($log.firstChild);
             } else {
-                // Buffering into the cache as an HTML string so switching
-                // back to that room restores everything with one innerHTML set.
                 const prev = roomLogs.get(roomName) || '';
                 let next = prev + node.outerHTML;
-                // Hard cap cache per room so we don't grow unbounded.
                 if (next.length > 200000) next = next.slice(next.length - 200000);
                 roomLogs.set(roomName, next);
             }
         }
-        function append(msg) {
-            const targetRoom = chat.roomName || viewingRoom;
-            appendToRoom(targetRoom, buildMsgHtml(msg));
-        }
-
         function appendSystem(text, kind, roomName) {
             if (!showSystemMsgs) return;
-            // Default to logging system events into whichever room the user
-            // is currently viewing, so switching away doesn't hide them.
             appendToRoom(roomName || viewingRoom, buildSystemHtml(text, kind));
         }
 
-        // Diagnostic status transitions through phases while waiting for
-        // the first peer: connecting → searching → stuck (suggest switch).
-        // refreshStatus() takes over once anyone shows up.
         let statusTimers = [];
-        function clearStatusTimers() {
-            statusTimers.forEach(clearTimeout);
-            statusTimers = [];
-        }
+        function clearStatusTimers() { statusTimers.forEach(clearTimeout); statusTimers = []; }
         function setConnectingStatus() {
             clearStatusTimers();
-            $status.textContent = 'connecting via ' + chat.strategy + '…';
+            $status.textContent = 'connecting via ' + identity.strategy + '…';
             statusTimers.push(setTimeout(() => {
-                if (chat.peerCount === 0) $status.textContent = 'searching peers via ' + chat.strategy + '…';
+                const c = view();
+                if (!c || c.peerCount === 0) $status.textContent = 'searching peers via ' + identity.strategy + '…';
             }, 3000));
             statusTimers.push(setTimeout(() => {
-                if (chat.peerCount === 0) $status.textContent = 'still alone — try another strategy below';
+                const c = view();
+                if (!c || c.peerCount === 0) $status.textContent = 'still alone — try another strategy';
             }, 15000));
         }
 
         function refreshStatus() {
-            const peers = chat.peerCount;
-            if (peers === 0) {
-                // Don't overwrite the diagnostic sequence while it's running.
-                if ($status.textContent && $status.textContent.includes('fellow')) {
-                    $status.textContent = 'alone in the tavern';
-                }
+            const c = view();
+            if (!c) {
+                $status.textContent = 'not connected';
             } else {
-                clearStatusTimers();
-                $status.textContent = peers === 1 ? '1 fellow nearby' : peers + ' fellows nearby';
+                const peers = c.peerCount;
+                if (peers === 0) {
+                    if ($status.textContent && $status.textContent.includes('fellow')) {
+                        $status.textContent = 'alone in the tavern';
+                    }
+                } else {
+                    clearStatusTimers();
+                    $status.textContent = peers === 1 ? '1 fellow nearby' : peers + ' fellows nearby';
+                }
             }
-            // Re-render the sidebar so the active-room count badge stays in
-            // sync as peers join/leave. Cheap (just innerHTML rewrite).
             renderRooms();
         }
 
         function renderRooms() {
             $roomsUl.innerHTML = '';
             for (const name of rooms) {
-                const isActive = name === viewingRoom;             // selected in UI
-                const isLive = name === chat.roomName && chat.isConnected; // live Trystero
-                const hasPwd = !!(chat.roomPasswords && chat.roomPasswords[name]);
+                const isActive = name === viewingRoom;
+                const c = chats.get(name);
+                const isLive = !!(c && c.isConnected);
+                const hasPwd = !!(identity.roomPasswords && identity.roomPasswords[name]);
                 const li = document.createElement('li');
                 li.className = 'tavern-room'
                     + (isActive ? ' is-active' : '')
@@ -234,12 +220,8 @@ export default {
                 li.dataset.room = name;
                 const lock = hasPwd ? `<span class="tavern-room-lock" title="Password protected">🔒</span>` : '';
                 const countBadge = isLive
-                    ? `<button type="button" class="tavern-room-count" data-peers title="Show peers">${chat.peerCount + 1}</button>`
+                    ? `<button type="button" class="tavern-room-count" data-peers title="Show peers">${c.peerCount + 1}</button>`
                     : '';
-                // Status dot:
-                //   green = this row is the live Trystero swarm
-                //   red   = user explicitly disconnected from this room
-                //   grey  = idle (never connected this session, or switched away)
                 const isExplicitOff = offlineRooms.has(name);
                 const dotClass = isLive ? ' is-on' : (isExplicitOff ? ' is-off' : '');
                 const connLabel = isLive ? 'Disconnect' : 'Connect';
@@ -248,12 +230,9 @@ export default {
                 li.querySelector('.tavern-room-label').textContent = name;
                 $roomsUl.appendChild(li);
             }
-            // Banner reflects the room currently being viewed. A colored
-            // dot mirrors the sidebar dot: green if that viewed room is
-            // the live Trystero swarm, red if it's an explicit disconnect,
-            // grey otherwise (never connected / idle).
-            const viewName = viewingRoom || chat.roomName;
-            const isViewingLive = viewName === chat.roomName && chat.isConnected;
+            const viewName = viewingRoom || identity.roomName;
+            const viewChat = chats.get(viewName);
+            const isViewingLive = !!(viewChat && viewChat.isConnected);
             const isViewingOff = offlineRooms.has(viewName);
             const dotClass = isViewingLive ? 'is-on' : (isViewingOff ? 'is-off' : '');
             $roomName.innerHTML = '# ' + tavernEscapeHtml(viewName) +
@@ -273,17 +252,18 @@ export default {
             const existing = document.querySelector('.tavern-peers-popover');
             if (existing) existing.remove();
         }
-
         function showPeersPopover(anchor) {
             closePeersPopover();
-            const peers = chat.getPeers();
+            const c = view();
+            if (!c) return;
+            const peers = c.getPeers();
             const pop = document.createElement('div');
             pop.className = 'tavern-peers-popover';
-            pop.innerHTML = `<div class="tavern-peers-head">In # ${tavernEscapeHtml(chat.roomName)} (${peers.length})</div><ul class="tavern-peers-list"></ul>`;
+            pop.innerHTML = `<div class="tavern-peers-head">In # ${tavernEscapeHtml(c.roomName)} (${peers.length})</div><ul class="tavern-peers-list"></ul>`;
             const ul = pop.querySelector('.tavern-peers-list');
             for (const p of peers) {
                 const li = document.createElement('li');
-                const blocked = chat.isBlocked(p.peerId);
+                const blocked = c.isBlocked(p.peerId);
                 li.className = 'tavern-peer' + (p.self ? ' is-self' : '') + (blocked ? ' is-blocked' : '');
                 li.innerHTML = `<span class="tavern-peer-nick" style="color:${tavernEscapeHtml(p.color)};"></span><span class="tavern-peer-time"></span>` +
                     (p.self ? '' : `<button type="button" class="tavern-peer-block" data-peer="${tavernEscapeHtml(p.peerId)}" title="${blocked ? 'Unmute' : 'Mute'} this peer">${blocked ? '🔊' : '🔇'}</button>`);
@@ -295,23 +275,15 @@ export default {
                 const btn = e.target.closest('.tavern-peer-block');
                 if (!btn) return;
                 const pid = btn.dataset.peer;
-                if (chat.isBlocked(pid)) {
-                    chat.unblockPeer(pid);
-                    appendSystem('Unmuted peer');
-                } else {
-                    chat.blockPeer(pid);
-                    appendSystem('Muted peer — their messages will no longer appear');
-                }
-                // Refresh the popover so the button state updates.
+                if (c.isBlocked(pid)) { c.unblockPeer(pid); appendSystem('Unmuted peer'); }
+                else                   { c.blockPeer(pid);   appendSystem('Muted peer — their messages will no longer appear'); }
                 showPeersPopover(anchor);
             });
-            // Anchor to the badge inside the room list.
             const r = anchor.getBoundingClientRect();
             pop.style.position = 'fixed';
             pop.style.left = Math.min(window.innerWidth - 220, r.left) + 'px';
             pop.style.top = (r.bottom + 6) + 'px';
             document.body.appendChild(pop);
-            // Close on outside click.
             const offClick = (e) => {
                 if (pop.contains(e.target) || anchor.contains(e.target)) return;
                 closePeersPopover();
@@ -327,206 +299,169 @@ export default {
             } catch { return false; }
         }
 
-        async function switchRoom(name) {
-            return switchRoomWithPwd(name, undefined);
+        /** Wire all event handlers for a freshly created TavernChat. */
+        function wireChat(c) {
+            c.onMessage(msg => appendToRoom(c.roomName, buildMsgHtml(msg)));
+            c.onPeerJoin(() => refreshStatus());
+            c.onPeerLeave((id, count, info) => {
+                refreshStatus();
+                if (info?.nick) appendSystem(info.nick + ' left the tavern', 'warning', c.roomName);
+            });
+            c.onPresence(({ type, nick }) => {
+                if (type === 'join') appendSystem(nick + ' entered the tavern', 'success', c.roomName);
+                else                 appendSystem(nick + ' left the tavern', 'warning', c.roomName);
+                refreshStatus();
+            });
+            c.onSpoof(({ declared, actual }) => {
+                appendSystem('⚠ A peer tried to impersonate "' + declared + '" (real nick: ' + actual + ')', 'error', c.roomName);
+            });
         }
-        async function switchRoomWithPwd(name, pwd) {
-            if (!connected || name === chat.roomName) return;
-            chat.announcePresence('leave');
-            await chat.setRoom(name, pwd);
-            if (!rooms.includes(chat.roomName)) {
-                rooms.push(chat.roomName);
-                rooms = await tavernSaveRooms(ctx, rooms);
+
+        async function connectRoom(name, pwd) {
+            if (chats.has(name)) return chats.get(name);
+            const c = new TavernChat(ctx);
+            await c.loadProfile();
+            // Honor any password provided explicitly for this add-room call.
+            if (typeof pwd === 'string') {
+                c.roomPasswords[name] = pwd;
+                c.roomPasswords = await tavernSaveRoomPwds(ctx, c.roomPasswords);
+                identity.roomPasswords = c.roomPasswords;
             }
-            // Target room is now live — can no longer be in the red set.
-            offlineRooms.delete(chat.roomName);
-            $log.innerHTML = '';
-            appendSystem('Moved to room "' + chat.roomName + '"', 'info');
-            chat.announcePresence('join');
-            renderRooms();
-            refreshStatus();
+            c.roomName = name;
+            c.password = c.roomPasswords[name] || '';
+            await c.ctx.storage.set('room', name);
+            await c._connect();
+            wireChat(c);
+            c.announcePresence('join');
+            chats.set(name, c);
+            offlineRooms.delete(name);
+            return c;
+        }
+
+        async function disconnectRoom(name) {
+            const c = chats.get(name);
+            if (!c) return;
+            await c.destroy();
+            chats.delete(name);
+        }
+
+        async function setNickEverywhere(newNick) {
+            await identity.setNick(newNick);
+            for (const c of chats.values()) await c.setNick(newNick);
         }
 
         async function removeRoom(name) {
-            const isActive = name === chat.roomName;
-            if (!isActive) {
-                // Just unpin the bookmark.
-                rooms = rooms.filter(r => r !== name);
-                rooms = await tavernSaveRooms(ctx, rooms);
-                renderRooms();
-                return;
+            rooms = rooms.filter(r => r !== name);
+            rooms = await tavernSaveRooms(ctx, rooms);
+            // If the removed room was connected, tear it down.
+            if (chats.has(name)) await disconnectRoom(name);
+            offlineRooms.delete(name);
+            roomLogs.delete(name);
+            if (viewingRoom === name) {
+                // Pick another viewable room or return to setup.
+                const next = rooms[0];
+                if (next) {
+                    viewingRoom = next;
+                    $log.innerHTML = roomLogs.get(next) || '';
+                } else {
+                    started = false;
+                    $main.style.display = 'none';
+                    $setup.style.display = '';
+                    $status.textContent = 'not connected';
+                    rooms = await tavernSaveRooms(ctx, []);
+                }
             }
-            // Active room — leave broadcast first, then drop the bookmark.
-            // If other rooms remain, hop to the first one; otherwise return
-            // to the setup screen so the user can pick a fresh entry.
-            chat.announcePresence('leave');
-            const remaining = rooms.filter(r => r !== name);
-            if (remaining.length > 0) {
-                rooms = remaining;
-                rooms = await tavernSaveRooms(ctx, rooms);
-                await chat.setRoom(rooms[0]);
-                $log.innerHTML = '';
-                appendSystem('Moved to room "' + chat.roomName + '"');
-                chat.announcePresence('join');
-                renderRooms();
-                refreshStatus();
-            } else {
-                await chat.destroy();
-                connected = false;
-                $log.innerHTML = '';
-                $main.style.display = 'none';
-                $setup.style.display = '';
-                $status.textContent = 'not connected';
-                rooms = await tavernSaveRooms(ctx, []); // reset to default ['public']
-            }
+            renderRooms();
+            refreshStatus();
         }
 
         async function doJoin() {
-            await chat.setNick($nickSetup.value);
-            await chat.setRoom($roomSetup.value);
-            chat.strategy = $strategySetup.value; // picker value
-            await ctx.storage.set(TAVERN_STRATEGY_KEY_UI, chat.strategy);
-            // Password: apply without triggering an extra reconnect —
-            // _connect is about to run anyway.
-            chat.password = String($passwordSetup.value || '');
-            await ctx.storage.set(TAVERN_PASSWORD_KEY_UI, chat.password);
+            await identity.setNick($nickSetup.value);
+            identity.strategy = $strategySetup.value;
+            await ctx.storage.set(TAVERN_STRATEGY_KEY_UI, identity.strategy);
+            const firstRoom = tavernSanitize($roomSetup.value, 64).trim() || 'public';
+            const pwd = String($passwordSetup.value || '');
             try {
-                await chat._connect();
+                await connectRoom(firstRoom, pwd);
             } catch (e) {
                 $status.textContent = 'connection failed';
-                appendSystem('Could not reach the tavern: ' + (e.message || e), 'error');
-                $main.style.display = '';
-                $setup.style.display = 'none';
+                appendSystem('Could not reach the tavern: ' + (e.message || e), 'error', firstRoom);
                 return;
             }
-            connected = true;
+            started = true;
             setConnectingStatus();
             $setup.style.display = 'none';
             $main.style.display = '';
-            $nickLive.value = chat.nick;
-            $strategyLive.value = chat.strategy;
-            // Make sure the chosen room is bookmarked.
-            if (!rooms.includes(chat.roomName)) rooms.push(chat.roomName);
+            $nickLive.value = identity.nick;
+            if (!rooms.includes(firstRoom)) rooms.push(firstRoom);
             rooms = await tavernSaveRooms(ctx, rooms);
-            viewingRoom = chat.roomName;
+            viewingRoom = firstRoom;
             renderRooms();
             refreshStatus();
-            appendSystem('You entered "' + chat.roomName + '" as ' + chat.nick);
-
-            chat.onMessage(append);
-            chat.onPeerJoin(refreshStatus);
-            chat.onPeerLeave((id, count, info) => {
-                refreshStatus();
-                if (info?.nick) appendSystem(info.nick + ' left the tavern', 'warning');
-            });
-            chat.onPresence(({ type, nick }) => {
-                if (type === 'join') appendSystem(nick + ' entered the tavern', 'success');
-                else                 appendSystem(nick + ' left the tavern', 'warning');
-                refreshStatus();
-            });
-            chat.onSpoof(({ declared, actual }) => {
-                appendSystem('⚠ A peer tried to impersonate "' + declared + '" (real nick: ' + actual + ')', 'error');
-            });
-            chat.announcePresence('join');
+            appendSystem('You entered "' + firstRoom + '" as ' + identity.nick, 'info', firstRoom);
         }
-
         $joinBtn.addEventListener('click', () => { doJoin(); });
-
-        let warnedEmpty = false;
-        async function commitSend() {
-            const text = $input.value;
-            if (chat.peerCount === 0 && !warnedEmpty && text.trim()) {
-                appendSystem('No one else is in this room yet — your message will only reach travelers who join afterwards.', 'warning');
-                warnedEmpty = true;
-            }
-            if (chat.peerCount > 0) warnedEmpty = false;
-            const sent = await chat.send(text);
-            if (sent) { append(sent); $input.value = ''; }
-        }
-        $sendBtn.addEventListener('click', () => { commitSend(); });
-        $input.addEventListener('keydown', (e) => {
-            if (e.key === 'Enter') {
-                e.preventDefault();
-                commitSend();
-            }
-        });
-
-        $nickLive.addEventListener('input', () => {
-            clearTimeout(nickTimer);
-            nickTimer = setTimeout(() => chat.setNick($nickLive.value), 400);
-        });
-
-        $strategyLive.addEventListener('change', async () => {
-            if (!connected) return;
-            const newStrat = $strategyLive.value;
-            if (newStrat === chat.strategy) return;
-            chat.announcePresence('leave');
-            await chat.setStrategy(newStrat);
-            $log.innerHTML = '';
-            appendSystem('Reconnected via ' + chat.strategy);
-            setConnectingStatus();
-            chat.announcePresence('join');
-            renderRooms();
-        });
 
         function switchView(name) {
             if (!name || name === viewingRoom) return;
-            const beforeRoom = chat.roomName;
-            const beforeConn = chat.isConnected;
-            // Persist current viewing room's DOM to cache before switching.
             if (viewingRoom) roomLogs.set(viewingRoom, $log.innerHTML);
             viewingRoom = name;
             $log.innerHTML = roomLogs.get(name) || '';
             $log.scrollTop = $log.scrollHeight;
             renderRooms();
             refreshStatus();
-            // Invariant: view switching must NEVER alter connection state.
-            if (chat.roomName !== beforeRoom || chat.isConnected !== beforeConn) {
-                console.warn('[tavern] switchView mutated connection state',
-                    { beforeRoom, beforeConn, afterRoom: chat.roomName, afterConn: chat.isConnected });
-            }
         }
+
+        const warnedEmpty = new Set();
+        async function commitSend() {
+            const text = $input.value;
+            if (!text.trim()) return;
+            const c = view();
+            if (!c || !c.isConnected) {
+                appendSystem('Not connected to this room. Click the dot to connect.', 'warning');
+                return;
+            }
+            if (c.peerCount === 0 && !warnedEmpty.has(c.roomName)) {
+                appendSystem('No one else is in this room yet — your message will only reach travelers who join afterwards.', 'warning', c.roomName);
+                warnedEmpty.add(c.roomName);
+            }
+            if (c.peerCount > 0) warnedEmpty.delete(c.roomName);
+            const sent = await c.send(text);
+            if (sent) { appendToRoom(c.roomName, buildMsgHtml(sent)); $input.value = ''; }
+        }
+        $sendBtn.addEventListener('click', () => { commitSend(); });
+        $input.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') { e.preventDefault(); commitSend(); }
+        });
+
+        $nickLive.addEventListener('input', () => {
+            clearTimeout(nickTimer);
+            nickTimer = setTimeout(() => setNickEverywhere($nickLive.value), 400);
+        });
 
         $roomsUl.addEventListener('click', async (e) => {
             const peers = e.target.closest('.tavern-room-count');
-            if (peers) {
-                e.stopPropagation();
-                showPeersPopover(peers);
-                return;
-            }
+            if (peers) { e.stopPropagation(); showPeersPopover(peers); return; }
             const conn = e.target.closest('.tavern-room-conn');
             if (conn) {
                 e.stopPropagation();
                 const li = conn.closest('.tavern-room');
                 if (!li) return;
                 const name = li.dataset.room;
-                const isLive = name === chat.roomName && chat.isConnected;
-                if (isLive) {
-                    // Disconnect from the live room — flip its dot to red.
-                    await chat.disconnect();
+                const c = chats.get(name);
+                if (c && c.isConnected) {
+                    await disconnectRoom(name);
                     offlineRooms.add(name);
-                    // Double-write: log the notice in the affected room AND
-                    // (if different) in the currently viewed room so the
-                    // user sees the feedback no matter where they are.
                     appendSystem('Disconnected from "' + name + '"', 'warning', name);
-                    if (viewingRoom !== name) {
-                        appendSystem('Disconnected from "' + name + '"', 'warning', viewingRoom);
-                    }
+                    if (viewingRoom !== name) appendSystem('Disconnected from "' + name + '"', 'warning', viewingRoom);
                 } else {
                     try {
-                        if (chat.isConnected) await chat.disconnect();
-                        await chat.setRoom(name);
-                        offlineRooms.delete(name);
-                        chat.announcePresence('join');
+                        await connectRoom(name);
                         appendSystem('Connected to "' + name + '"', 'success', name);
-                        if (viewingRoom !== name) {
-                            appendSystem('Connected to "' + name + '"', 'success', viewingRoom);
-                        }
+                        if (viewingRoom !== name) appendSystem('Connected to "' + name + '"', 'success', viewingRoom);
                     } catch (err) {
                         appendSystem('Could not connect: ' + (err.message || err), 'error', name);
-                        if (viewingRoom !== name) {
-                            appendSystem('Could not connect to "' + name + '": ' + (err.message || err), 'error', viewingRoom);
-                        }
+                        if (viewingRoom !== name) appendSystem('Could not connect to "' + name + '": ' + (err.message || err), 'error', viewingRoom);
                     }
                 }
                 renderRooms();
@@ -540,15 +475,10 @@ export default {
                 if (li) removeRoom(li.dataset.room);
                 return;
             }
-            // Plain row click = change the viewing room only. Connection
-            // state is untouched — use the dot to connect/disconnect.
             const li = e.target.closest('.tavern-room');
             if (li) switchView(li.dataset.room);
         });
 
-        // Iframe sandbox doesn't carry `allow-forms`, so we drive the
-        // add-room flow with a button + manual Enter key handling instead
-        // of a <form> submit. Avoids silently swallowed events.
         async function commitAddRoom() {
             const name = ($addInput.value || '').trim().slice(0, 64);
             if (!name) return;
@@ -560,36 +490,26 @@ export default {
                 rooms.push(name);
                 rooms = await tavernSaveRooms(ctx, rooms);
             }
-            // Always persist the password the user typed for this room (empty
-            // string clears any previous one).
             if ($addPwd) {
-                chat.roomPasswords[name] = pwd;
-                chat.roomPasswords = await tavernSaveRoomPwds(ctx, chat.roomPasswords);
+                identity.roomPasswords[name] = pwd;
+                identity.roomPasswords = await tavernSaveRoomPwds(ctx, identity.roomPasswords);
             }
-            if (name === chat.roomName) {
-                // Already in that room but password may have changed — reconnect
-                // via setRoom which picks up the new pwd and rebuilds the swarm.
-                if (pwd !== (chat.password || '')) {
-                    await chat.setRoom(name, pwd);
-                    $log.innerHTML = '';
-                    appendSystem('Password updated — reconnected to "' + name + '"', 'info');
-                } else {
-                    appendSystem(wasNew ? 'Bookmarked "' + name + '" (already here)' : 'Already in "' + name + '"', 'info');
-                }
-                renderRooms();
-                return;
+            try {
+                await connectRoom(name, pwd);
+                appendSystem('Connected to "' + name + '"', 'success', name);
+                if (viewingRoom !== name) appendSystem('Connected to "' + name + '"', 'success', viewingRoom);
+            } catch (err) {
+                appendSystem('Could not connect: ' + (err.message || err), 'error', name);
             }
-            await switchRoomWithPwd(name, pwd);
+            switchView(name);
+            renderRooms();
+            refreshStatus();
         }
         $addBtn.addEventListener('click', () => { commitAddRoom(); });
         $addInput.addEventListener('keydown', (e) => {
-            if (e.key === 'Enter') {
-                e.preventDefault();
-                commitAddRoom();
-            }
+            if (e.key === 'Enter') { e.preventDefault(); commitAddRoom(); }
         });
 
-        // Preferences popover anchored under the gear button.
         function closePrefsPopover() {
             const existing = document.querySelector('.tavern-prefs-popover');
             if (existing) existing.remove();
@@ -602,14 +522,14 @@ export default {
                 <div class="tavern-prefs-head">Preferences</div>
                 <div class="tavern-prefs-section">
                     <label class="tavern-prefs-label">Sidebar side</label>
-                    <div class="tavern-prefs-btn-group" data-side-group>
+                    <div class="tavern-prefs-btn-group">
                         <button type="button" data-side-choice="left"${side === 'left' ? ' class="is-active"' : ''}>Left</button>
                         <button type="button" data-side-choice="right"${side === 'right' ? ' class="is-active"' : ''}>Right</button>
                     </div>
                 </div>
                 <div class="tavern-prefs-section">
                     <label class="tavern-prefs-label">Signaling strategy</label>
-                    <div class="tavern-prefs-readonly">${tavernEscapeHtml(chat.strategy)} <small>(only option available)</small></div>
+                    <div class="tavern-prefs-readonly">${tavernEscapeHtml(identity.strategy)} <small>(only option available)</small></div>
                 </div>
                 <div class="tavern-prefs-section">
                     <label class="tavern-prefs-row">
@@ -620,8 +540,8 @@ export default {
                 </div>
                 <div class="tavern-prefs-section">
                     <label class="tavern-prefs-label">Identity</label>
-                    <div class="tavern-prefs-readonly">Nick: <strong>${tavernEscapeHtml(chat.nick)}</strong></div>
-                    <div class="tavern-prefs-readonly">Key thumbprint: <code>${tavernEscapeHtml((chat.selfThumbprint || '').slice(0, 16))}…</code></div>
+                    <div class="tavern-prefs-readonly">Nick: <strong>${tavernEscapeHtml(identity.nick)}</strong></div>
+                    <div class="tavern-prefs-readonly">Key thumbprint: <code>${tavernEscapeHtml((identity.selfThumbprint || '').slice(0, 16))}…</code></div>
                 </div>
                 <div class="tavern-prefs-section">
                     <button type="button" class="tavern-prefs-close" data-close>Close</button>
@@ -632,7 +552,6 @@ export default {
             pop.style.left = Math.min(window.innerWidth - 260, r.left) + 'px';
             pop.style.top = (r.bottom + 6) + 'px';
             document.body.appendChild(pop);
-
             pop.querySelectorAll('[data-side-choice]').forEach(btn => {
                 btn.addEventListener('click', async () => {
                     const next = btn.dataset.sideChoice;
@@ -649,7 +568,6 @@ export default {
                 await ctx.storage.set(TAVERN_SHOW_SYS_KEY, showSystemMsgs);
             });
             pop.querySelector('[data-close]').addEventListener('click', closePrefsPopover);
-
             const offClick = (e) => {
                 if (pop.contains(e.target) || $prefsBtn.contains(e.target)) return;
                 closePrefsPopover();
@@ -666,11 +584,18 @@ export default {
             async unmount() {
                 clearTimeout(nickTimer);
                 clearStatusTimers();
-                if (!connected) return;
-                if (!(await widgetIsAlive())) {
-                    chat.announcePresence('leave');
+                if (!started) return;
+                // Tear down every live connection. If the widget heartbeat
+                // is fresh we suppress the leave broadcast — user is still
+                // listening through the pinned widget.
+                const widgetUp = await widgetIsAlive();
+                for (const c of chats.values()) {
+                    if (!widgetUp) {
+                        try { c.announcePresence('leave'); } catch (_) {}
+                    }
+                    try { await c.destroy(); } catch (_) {}
                 }
-                await chat.destroy();
+                chats.clear();
             }
         };
     },
