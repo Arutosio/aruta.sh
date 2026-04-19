@@ -99,6 +99,15 @@
     .tray-btn-sys { width: 30px; min-width: 30px; padding: 0; }
 }
 
+/* Touch targets — meet WCAG 2.5.5 (min 44x44 CSS px) on touch devices.
+   Desktop keeps the compact 28-34px sizing because mouse precision is fine. */
+@media (pointer: coarse) {
+    .taskbar-start { width: 44px; height: 44px; }
+    .tray-btn      { width: 44px; height: 44px; }
+    .tray-btn-sys  { min-width: 44px; height: 44px; }
+    .win-btn       { width: 36px; height: 36px; }
+}
+
 /* Taskbar clock */
 .taskbar-clock {
     display: flex; align-items: center; gap: 3px; padding: 0 8px;

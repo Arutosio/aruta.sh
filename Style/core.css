@@ -152,8 +152,8 @@
     --gold-light:  #a07a20;
     --purple:      #7a4e06;
     --text:        #2a1a08;
-    --text-dim:    #6b5030;
-    --text-faint:  #997755;
+    --text-dim:    #4a3520;
+    --text-faint:  #7a5c40;
     --seal-bg:     rgba(139, 90, 43, 0.06);
     --seal-border: rgba(139, 90, 43, 0.18);
     --hud-bg:      rgba(240, 232, 216, 0.92);
@@ -228,6 +228,19 @@ a:focus-visible,
     outline: 2px solid var(--gold);
     outline-offset: 2px;
     border-radius: var(--radius-sm);
+}
+
+/* § ACCESSIBILITY — reduced motion
+ * Honor user OS preference: kill all animations + transitions for users
+ * with vestibular sensitivity. Keeps the interface usable but static.
+ * ──────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+        scroll-behavior: auto !important;
+    }
 }
 
 /* § RESET & BASE

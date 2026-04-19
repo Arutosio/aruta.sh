@@ -157,7 +157,7 @@ export default {
 
         const pickedWorldId = await showWorldSelect(root, worlds, async (newWorlds) => {
             worlds = newWorlds;
-            await sdk.storage.set('worlds', worlds).catch(() => {});
+            await sdk.storage.set('worlds', worlds).catch(e => console.warn('[ultima-aruta] save worlds failed', e));
         });
         if (!pickedWorldId) return; // user closed the window while selecting
 
@@ -402,9 +402,9 @@ export default {
             return ch;
         };
 
-        function saveInventory()    { sdk.storage.set(INV_KEY,   inventory).catch(() => {}); }
-        function saveWorldDeltas()  { sdk.storage.set(DELTA_KEY, worldDeltas).catch(() => {}); }
-        function saveEquipment()    { sdk.storage.set(EQUIP_KEY, equipment).catch(() => {}); }
+        function saveInventory()    { sdk.storage.set(INV_KEY,   inventory).catch(e => console.warn('[ultima-aruta] save inventory failed', e)); }
+        function saveWorldDeltas()  { sdk.storage.set(DELTA_KEY, worldDeltas).catch(e => console.warn('[ultima-aruta] save world deltas failed', e)); }
+        function saveEquipment()    { sdk.storage.set(EQUIP_KEY, equipment).catch(e => console.warn('[ultima-aruta] save equipment failed', e)); }
 
         function removeWorldItem(wx, wy) {
             const cx = Math.floor(wx / CHUNK_SIZE), cy = Math.floor(wy / CHUNK_SIZE);
@@ -943,7 +943,7 @@ export default {
                     hp: player.hp, mana: player.mana, stamina: player.stamina,
                     level: player.level, xp: player.xp, xpNext: player.xpNext,
                     maxHp: player.maxHp, maxMana: player.maxMana, maxStamina: player.maxStamina, baseDmg: player.baseDmg, kills: player.kills, days: player.days,
-                }).catch(() => {});
+                }).catch(e => console.warn('[ultima-aruta] save state failed', e));
                 root.__uaCleanup?.();
                 // Reload by re-invoking mount — simplest way.
                 location.reload();
@@ -2327,12 +2327,12 @@ export default {
                     hp: player.hp, mana: player.mana, stamina: player.stamina,
                     level: player.level, xp: player.xp, xpNext: player.xpNext,
                     maxHp: player.maxHp, maxMana: player.maxMana, maxStamina: player.maxStamina, baseDmg: player.baseDmg, kills: player.kills, days: player.days,
-                }).catch(() => {});
+                }).catch(e => console.warn('[ultima-aruta] save state failed', e));
                 worldRow.lastPlayed = Date.now();
                 worldRow.playerClass = playerClass;
                 worldRow.level = player.level;
                 worldRow.kills = player.kills;
-                sdk.storage.set('worlds', worlds).catch(() => {});
+                sdk.storage.set('worlds', worlds).catch(e => console.warn('[ultima-aruta] save worlds failed', e));
             }
 
             rafId = requestAnimationFrame(loop);

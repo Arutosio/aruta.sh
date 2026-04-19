@@ -192,9 +192,10 @@ function initMagicCircleInteraction() {
     });
 
     /** Animation loop — auto-rotate with friction + apply transform */
+    let ringsRaf = 0;
     function tickRings() {
-        if (!_tabVisible) { requestAnimationFrame(tickRings); return; }
-        if (window._circleRotationEnabled === false) { requestAnimationFrame(tickRings); return; }
+        if (!_tabVisible) { ringsRaf = requestAnimationFrame(tickRings); return; }
+        if (window._circleRotationEnabled === false) { ringsRaf = requestAnimationFrame(tickRings); return; }
         // Ramp up speed over first 2 seconds
         const elapsed = performance.now() - ringsStartTime;
         const rampUp = Math.min(1, elapsed / 2000);
@@ -216,9 +217,10 @@ function initMagicCircleInteraction() {
             r.el.style.transform = `rotate(${r.angle}deg)`;
         }
         checkAlignment();
-        requestAnimationFrame(tickRings);
+        ringsRaf = requestAnimationFrame(tickRings);
     }
     tickRings();
+    window._cancelMagicCircle = () => { if (ringsRaf) cancelAnimationFrame(ringsRaf); ringsRaf = 0; };
 }
 
 /* ────────────────────────────────

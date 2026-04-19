@@ -39,6 +39,17 @@ export default {
 
         const gctx = $canvas.getContext('2d');
 
+        // Theme-aware palette — host syncs data-theme on <html> and pushes
+        // {type:'theme'} messages on change. Read it live so the canvas
+        // matches the surrounding chrome.
+        const PALETTES = {
+            dark:  { bg: '#0a0515', grid: 'rgba(255,200,87,0.06)', food: '#fb7185', head: '#ffc857', body: '#a78bfa' },
+            light: { bg: '#f5efdc', grid: 'rgba(139,105,20,0.10)',  food: '#c23a4f', head: '#8b6914', body: '#7a4e06' },
+        };
+        function palette() {
+            return PALETTES[document.documentElement.dataset.theme === 'light' ? 'light' : 'dark'];
+        }
+
         let cols = MIN_COLS, rows = MIN_ROWS;
         let snake;          // [{x,y}, ...] head first
         let dir;            // {x,y}
@@ -125,7 +136,7 @@ export default {
             if (score > best) {
                 best = score;
                 $best.textContent = String(best);
-                ctx.storage.set('best', best);
+                ctx.storage.set('best', best).catch(e => console.warn('[snake] save best failed', e));
             }
             showOverlay('Game Over', `Score: ${score} · Best: ${best}`);
             $pauseBtn.textContent = 'Pause';
@@ -158,11 +169,12 @@ export default {
 
         function draw() {
             const w = cols * CELL, h = rows * CELL;
+            const p = palette();
             // Fill, then draw a subtle grid.
-            gctx.fillStyle = '#0a0515';
+            gctx.fillStyle = p.bg;
             gctx.fillRect(0, 0, w, h);
 
-            gctx.strokeStyle = 'rgba(255,200,87,0.06)';
+            gctx.strokeStyle = p.grid;
             gctx.lineWidth = 1;
             gctx.beginPath();
             for (let x = 0; x <= cols; x++) {
@@ -176,7 +188,7 @@ export default {
             gctx.stroke();
 
             if (food) {
-                gctx.fillStyle = '#fb7185';
+                gctx.fillStyle = p.food;
                 const fx = food.x * CELL, fy = food.y * CELL;
                 gctx.beginPath();
                 gctx.arc(fx + CELL / 2, fy + CELL / 2, CELL / 2 - 2, 0, Math.PI * 2);
@@ -186,7 +198,7 @@ export default {
             if (snake) {
                 for (let i = 0; i < snake.length; i++) {
                     const s = snake[i];
-                    gctx.fillStyle = i === 0 ? '#ffc857' : '#a78bfa';
+                    gctx.fillStyle = i === 0 ? p.head : p.body;
                     gctx.fillRect(s.x * CELL + 1, s.y * CELL + 1, CELL - 2, CELL - 2);
                 }
             }
@@ -256,9 +268,29 @@ export default {
         ro.observe($boardBox);
         resize();
 
+        // Repaint when the host pushes a theme change. Sandbox forwards
+        // {type:'theme', value} via postMessage; the SDK already mirrors
+        // it onto <html data-theme>, so we just need to redraw.
+        const themeHandler = (e) => {
+            const d = e.data;
+            if (d && d.__aruta_sdk && d.type === 'theme') draw();
+        };
+        window.addEventListener('message', themeHandler);
+
         // Idle state: show some snake on the board as a teaser.
         reset();
         draw();
         showOverlay('🐍 SNAKE', 'Click or press any arrow to start');
+
+        // Expose cleanup so the host can stop the loop, free the listener,
+        // and disconnect the observer when the iframe is unmounted.
+        return {
+            unmount() {
+                if (tickHandle) { clearInterval(tickHandle); tickHandle = null; }
+                window.removeEventListener('keydown', keyHandler);
+                window.removeEventListener('message', themeHandler);
+                ro.disconnect();
+            }
+        };
     },
 };
