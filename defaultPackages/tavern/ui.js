@@ -111,10 +111,14 @@ export default {
         let rooms = [];
         let side = 'right';
         let showSystemMsgs = true;
-        // Session-only set of rooms the user explicitly disconnected from.
-        // Used to paint the status dot red (explicit disconnect) vs grey
-        // (never connected this session / idle after switching away).
         const offlineRooms = new Set();
+        // Log cache per room — lets the user browse history of a room they
+        // are not currently connected to, and receive-into-buffer messages
+        // for rooms they are connected to but not viewing.
+        const roomLogs = new Map();
+        // The room currently shown in the log area — independent of the
+        // live Trystero connection target (chat.roomName).
+        let viewingRoom = '';
 
         // Pre-load identity + room bookmarks + sidebar pref so the setup
         // screen and the eventual sidebar both render with saved state.
@@ -130,33 +134,56 @@ export default {
         $strategySetup.value = chat.strategy;
         $passwordSetup.value = chat.password || '';
 
-        function append(msg) {
-            const li = document.createElement('li');
-            li.className = 'tavern-msg'
+        function buildMsgHtml(msg) {
+            const klass = 'tavern-msg'
                 + (msg.self ? ' is-self' : '')
                 + (msg.spoofed ? ' is-spoofed' : '')
                 + (msg.verified ? ' is-verified' : '');
             const time = tavernFmtTime(msg.ts);
             const check = msg.verified ? '<span class="tavern-msg-check" title="Signature verified">✓</span>' : '';
+            // Build via DOM → outerHTML so we get safe textContent handling
+            // for the user text while still yielding a string for the cache.
+            const li = document.createElement('li');
+            li.className = klass;
             li.innerHTML = `<span class="tavern-msg-head">
                     <span class="tavern-nick" style="color:${tavernEscapeHtml(msg.color)};">${tavernEscapeHtml(msg.nick)}</span>
                     <time>${time}${check}</time>
                 </span>
                 <span class="tavern-msg-text"></span>`;
             li.querySelector('.tavern-msg-text').textContent = msg.text;
-            $log.appendChild(li);
-            $log.scrollTop = $log.scrollHeight;
-            while ($log.children.length > 200) $log.removeChild($log.firstChild);
+            return li;
         }
-
-        function appendSystem(text, kind) {
-            if (!showSystemMsgs) return;
+        function buildSystemHtml(text, kind) {
             const li = document.createElement('li');
             li.className = 'tavern-system is-' + (kind || 'info');
             li.textContent = text;
-            $log.appendChild(li);
-            $log.scrollTop = $log.scrollHeight;
-            while ($log.children.length > 200) $log.removeChild($log.firstChild);
+            return li;
+        }
+        function appendToRoom(roomName, node) {
+            if (roomName === viewingRoom) {
+                $log.appendChild(node);
+                $log.scrollTop = $log.scrollHeight;
+                while ($log.children.length > 200) $log.removeChild($log.firstChild);
+            } else {
+                // Buffering into the cache as an HTML string so switching
+                // back to that room restores everything with one innerHTML set.
+                const prev = roomLogs.get(roomName) || '';
+                let next = prev + node.outerHTML;
+                // Hard cap cache per room so we don't grow unbounded.
+                if (next.length > 200000) next = next.slice(next.length - 200000);
+                roomLogs.set(roomName, next);
+            }
+        }
+        function append(msg) {
+            const targetRoom = chat.roomName || viewingRoom;
+            appendToRoom(targetRoom, buildMsgHtml(msg));
+        }
+
+        function appendSystem(text, kind, roomName) {
+            if (!showSystemMsgs) return;
+            // Default to logging system events into whichever room the user
+            // is currently viewing, so switching away doesn't hide them.
+            appendToRoom(roomName || viewingRoom, buildSystemHtml(text, kind));
         }
 
         // Diagnostic status transitions through phases while waiting for
@@ -197,8 +224,8 @@ export default {
         function renderRooms() {
             $roomsUl.innerHTML = '';
             for (const name of rooms) {
-                const isActive = name === chat.roomName;
-                const isLive = isActive && chat.isConnected;
+                const isActive = name === viewingRoom;             // selected in UI
+                const isLive = name === chat.roomName && chat.isConnected; // live Trystero
                 const hasPwd = !!(chat.roomPasswords && chat.roomPasswords[name]);
                 const li = document.createElement('li');
                 li.className = 'tavern-room'
@@ -221,8 +248,11 @@ export default {
                 li.querySelector('.tavern-room-label').textContent = name;
                 $roomsUl.appendChild(li);
             }
-            const liveMarker = chat.isConnected ? '' : ' (offline)';
-            $roomName.textContent = '# ' + chat.roomName + liveMarker;
+            // Banner reflects the room currently being VIEWED, with a live
+            // marker only when that room also happens to be the connected one.
+            const isViewingLive = viewingRoom === chat.roomName && chat.isConnected;
+            const marker = isViewingLive ? '' : (offlineRooms.has(viewingRoom) ? ' (disconnected)' : ' (offline)');
+            $roomName.textContent = '# ' + (viewingRoom || chat.roomName) + marker;
         }
 
         function fmtAgo(ts) {
@@ -373,6 +403,7 @@ export default {
             // Make sure the chosen room is bookmarked.
             if (!rooms.includes(chat.roomName)) rooms.push(chat.roomName);
             rooms = await tavernSaveRooms(ctx, rooms);
+            viewingRoom = chat.roomName;
             renderRooms();
             refreshStatus();
             appendSystem('You entered "' + chat.roomName + '" as ' + chat.nick);
@@ -433,6 +464,17 @@ export default {
             renderRooms();
         });
 
+        function switchView(name) {
+            if (!name || name === viewingRoom) return;
+            // Persist current viewing room's DOM to cache before switching.
+            if (viewingRoom) roomLogs.set(viewingRoom, $log.innerHTML);
+            viewingRoom = name;
+            $log.innerHTML = roomLogs.get(name) || '';
+            $log.scrollTop = $log.scrollHeight;
+            renderRooms();
+            refreshStatus();
+        }
+
         $roomsUl.addEventListener('click', async (e) => {
             const peers = e.target.closest('.tavern-room-count');
             if (peers) {
@@ -446,31 +488,24 @@ export default {
                 const li = conn.closest('.tavern-room');
                 if (!li) return;
                 const name = li.dataset.room;
-                const isActive = name === chat.roomName;
-                if (isActive && chat.isConnected) {
-                    // Explicit disconnect — mark the room red so the user
-                    // can see it's intentionally off, not just idle.
+                const isLive = name === chat.roomName && chat.isConnected;
+                if (isLive) {
+                    // Disconnect from the live room — flip its dot to red.
                     await chat.disconnect();
                     offlineRooms.add(name);
-                    appendSystem('Disconnected from "' + name + '"', 'warning');
-                } else if (isActive && !chat.isConnected) {
-                    try {
-                        await chat.reconnect();
-                        offlineRooms.delete(name);
-                        appendSystem('Reconnected to "' + name + '"', 'success');
-                    } catch (err) {
-                        appendSystem('Could not reconnect: ' + (err.message || err), 'error');
-                    }
+                    appendSystem('Disconnected from "' + name + '"', 'warning', name);
                 } else {
-                    // Connect to a different bookmarked room. Any currently
-                    // live room flips to idle (grey), not red — the user
-                    // didn't disconnect it, they moved on.
-                    if (chat.isConnected) await chat.disconnect();
-                    await chat.setRoom(name);
-                    offlineRooms.delete(name);
-                    $log.innerHTML = '';
-                    appendSystem('Moved to room "' + chat.roomName + '"', 'info');
-                    chat.announcePresence('join');
+                    // Connect to this room: if we were connected elsewhere,
+                    // leave that swarm first (it flips grey, not red).
+                    try {
+                        if (chat.isConnected) await chat.disconnect();
+                        await chat.setRoom(name);
+                        offlineRooms.delete(name);
+                        chat.announcePresence('join');
+                        appendSystem('Connected to "' + name + '"', 'success', name);
+                    } catch (err) {
+                        appendSystem('Could not connect: ' + (err.message || err), 'error', name);
+                    }
                 }
                 renderRooms();
                 refreshStatus();
@@ -483,8 +518,10 @@ export default {
                 if (li) removeRoom(li.dataset.room);
                 return;
             }
+            // Plain row click = change the viewing room only. Connection
+            // state is untouched — use the dot to connect/disconnect.
             const li = e.target.closest('.tavern-room');
-            if (li) switchRoom(li.dataset.room);
+            if (li) switchView(li.dataset.room);
         });
 
         // Iframe sandbox doesn't carry `allow-forms`, so we drive the
