@@ -194,19 +194,29 @@ export default {
             $roomsUl.innerHTML = '';
             for (const name of rooms) {
                 const isActive = name === chat.roomName;
+                const isLive = isActive && chat.isConnected;
+                const hasPwd = !!(chat.roomPasswords && chat.roomPasswords[name]);
                 const li = document.createElement('li');
-                li.className = 'tavern-room' + (isActive ? ' is-active' : '');
+                li.className = 'tavern-room'
+                    + (isActive ? ' is-active' : '')
+                    + (isLive ? ' is-live' : ' is-offline');
                 li.dataset.room = name;
-                // Active room shows a peer-count badge (self + remote peers).
-                // Click on the badge opens the peer list popover.
-                const countBadge = isActive
+                const lock = hasPwd ? `<span class="tavern-room-lock" title="Password protected">🔒</span>` : '';
+                const countBadge = isLive
                     ? `<button type="button" class="tavern-room-count" data-peers title="Show peers">${chat.peerCount + 1}</button>`
                     : '';
-                li.innerHTML = `<span class="tavern-room-hash">#</span><span class="tavern-room-label"></span>${countBadge}<button type="button" class="tavern-room-x" title="Close">×</button>`;
+                // Per-room connect/disconnect toggle. Shown on every row —
+                // unplug icon when that row is the live Trystero connection,
+                // plug icon otherwise (click reconnects / hops).
+                const connLabel = isLive ? 'Disconnect' : 'Connect';
+                const connGlyph = isLive ? '🔌' : '🔗';
+                const connBtn = `<button type="button" class="tavern-room-conn" data-conn title="${connLabel}">${connGlyph}</button>`;
+                li.innerHTML = `${lock}<span class="tavern-room-hash">#</span><span class="tavern-room-label"></span>${countBadge}${connBtn}<button type="button" class="tavern-room-x" title="Close">×</button>`;
                 li.querySelector('.tavern-room-label').textContent = name;
                 $roomsUl.appendChild(li);
             }
-            $roomName.textContent = '# ' + chat.roomName;
+            const liveMarker = chat.isConnected ? '' : ' (offline)';
+            $roomName.textContent = '# ' + chat.roomName + liveMarker;
         }
 
         function fmtAgo(ts) {
@@ -415,11 +425,43 @@ export default {
             renderRooms();
         });
 
-        $roomsUl.addEventListener('click', (e) => {
+        $roomsUl.addEventListener('click', async (e) => {
             const peers = e.target.closest('.tavern-room-count');
             if (peers) {
                 e.stopPropagation();
                 showPeersPopover(peers);
+                return;
+            }
+            const conn = e.target.closest('.tavern-room-conn');
+            if (conn) {
+                e.stopPropagation();
+                const li = conn.closest('.tavern-room');
+                if (!li) return;
+                const name = li.dataset.room;
+                const isActive = name === chat.roomName;
+                if (isActive && chat.isConnected) {
+                    // Disconnect the currently live room (stay bookmarked).
+                    await chat.disconnect();
+                    appendSystem('Disconnected from "' + name + '"', 'warning');
+                } else if (isActive && !chat.isConnected) {
+                    // Reconnect the currently viewed room.
+                    try {
+                        await chat.reconnect();
+                        appendSystem('Reconnected to "' + name + '"', 'success');
+                    } catch (err) {
+                        appendSystem('Could not reconnect: ' + (err.message || err), 'error');
+                    }
+                } else {
+                    // Not active: disconnect any live room, then hop + connect
+                    // to this one (picks up per-room password automatically).
+                    if (chat.isConnected) await chat.disconnect();
+                    await chat.setRoom(name);
+                    $log.innerHTML = '';
+                    appendSystem('Moved to room "' + chat.roomName + '"', 'info');
+                    chat.announcePresence('join');
+                }
+                renderRooms();
+                refreshStatus();
                 return;
             }
             const x = e.target.closest('.tavern-room-x');

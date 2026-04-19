@@ -189,6 +189,7 @@ class TavernChat {
     constructor(ctx) {
         this.ctx = ctx;
         this.room = null;
+        this.isConnected = false;
         this.sendMsg = null;
         this.getMsg = null;
         this.onPeerJoinCb = null;
@@ -412,6 +413,7 @@ class TavernChat {
             ];
         }
         this.room = T.joinRoom(config, this.roomName);
+        this.isConnected = true;
         const [sendMsg, getMsg] = this.room.makeAction('msg');
         const [sendPresence, getPresence] = this.room.makeAction('presence');
         this.sendMsg = sendMsg;
@@ -639,7 +641,32 @@ class TavernChat {
             try { await this.room.leave(); } catch (_) {}
         }
         this.room = null;
+        this.isConnected = false;
         this.sendMsg = null;
         this.getMsg = null;
+    }
+
+    /** Leave Trystero without wiping crypto / state — user can later
+     *  reconnect by calling reconnect(). */
+    async disconnect() {
+        if (this.room) {
+            try { this.announcePresence('leave'); } catch (_) {}
+            try { await this.room.leave(); } catch (_) {}
+        }
+        this.room = null;
+        this.isConnected = false;
+        this.sendMsg = null;
+        this.getMsg = null;
+        this.peerCount = 0;
+        this.peerNicks = new Map();
+        this.peerKeys = new Map();
+        this.peerLastMsgTs = new Map();
+        this.peerFirstNick = new Map();
+    }
+
+    async reconnect() {
+        if (this.isConnected) return;
+        await this._connect();
+        this.announcePresence('join');
     }
 }
