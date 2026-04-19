@@ -40,7 +40,6 @@ export default {
                         <select data-strategy>
                             <option value="torrent">BitTorrent trackers (default)</option>
                             <option value="nostr">Nostr relays</option>
-                            <option value="mqtt">MQTT brokers</option>
                         </select>
                         <small class="tavern-field-hint">If you can't find peers, try switching — some networks block one protocol but not another.</small>
                     </label>
@@ -71,7 +70,6 @@ export default {
                                 <select data-strategy-live>
                                     <option value="torrent">torrent</option>
                                     <option value="nostr">nostr</option>
-                                    <option value="mqtt">mqtt</option>
                                 </select>
                             </label>
                         </div>
