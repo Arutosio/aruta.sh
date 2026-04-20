@@ -1015,6 +1015,10 @@ export default {
                     Chopping trees occasionally drops a 🌱 Sapling (18%).<br>
                     Press G on grass / forest / swamp / savanna / tundra to<br>
                     plant it. After ~2 min it grows into a harvestable 🌳 tree.<br><br>
+                    <b>Weather</b><br>
+                    Biomes with high moisture trigger ☔/⛈️ rain. Under<br>
+                    rain: saplings grow up to 2.5× faster, but campfires<br>
+                    burn through fuel up to 2× faster. Plan your camps.<br><br>
                     <b>Mining</b><br>
                     Mountain biomes now spawn ⛰️ peaks and 🪨 boulders. Click<br>
                     within 2 tiles to mine. Peaks are rich in 🔩 Iron Ingots<br>
@@ -1334,6 +1338,18 @@ export default {
             armor: 120, robe: 60, gloves: 50, boots: 60, sandals: 40,
             cape: 40, spellbook: 100, crystal: 80,
         };
+        // ── Weather ──────────────────────────────────────────────
+        // Sample the moisture noise field at the player's tile. Rain starts
+        // at moist > 0.55 and scales up from there; intensity 0..1 drives
+        // the rain particle density in render() and gameplay modifiers
+        // (sapling growth + campfire fuel drain) in the structure tick.
+        function rainIntensity() {
+            if (_dungeon) return 0;
+            const moist = fbm2D(player.wx / 120, player.wy / 120, world.seed + 9999, 3, 0.5);
+            if (moist <= 0.55) return 0;
+            return Math.min(1, (moist - 0.55) * 4);
+        }
+
         // ── Skill XP ─────────────────────────────────────────────
         // Skill level grows with total XP on a soft sqrt curve so early
         // levels come quickly but mastery is a long grind — classic UO pacing.
@@ -1917,22 +1933,26 @@ export default {
             ctx.fillText('SP',  barX + barW + 4, barY - (barH + barGap) * 2 + barH / 2);
             ctx.fillText('🍗',  barX + barW + 4, barY - (barH + barGap) * 3 + barH / 2);
 
-            // ── Rain particles (when moisture is high) ──────
-            if (!_dungeon) {
-                const moist = fbm2D(player.wx / 120, player.wy / 120, world.seed + 9999, 3, 0.5);
-                if (moist > 0.55) {
-                    const intensity = Math.min(40, Math.floor((moist - 0.55) * 200));
-                    ctx.strokeStyle = 'rgba(150,180,220,0.25)';
-                    ctx.lineWidth = 1;
-                    for (let i = 0; i < intensity; i++) {
-                        const rx = Math.random() * W;
-                        const ry = Math.random() * H;
-                        ctx.beginPath();
-                        ctx.moveTo(rx, ry);
-                        ctx.lineTo(rx + 2, ry + 6);
-                        ctx.stroke();
-                    }
+            // ── Rain particles + HUD indicator ──────────────
+            const rainI = rainIntensity();
+            if (rainI > 0) {
+                const intensity = Math.floor(rainI * 40);
+                ctx.strokeStyle = 'rgba(150,180,220,0.25)';
+                ctx.lineWidth = 1;
+                for (let i = 0; i < intensity; i++) {
+                    const rx = Math.random() * W;
+                    const ry = Math.random() * H;
+                    ctx.beginPath();
+                    ctx.moveTo(rx, ry);
+                    ctx.lineTo(rx + 2, ry + 6);
+                    ctx.stroke();
                 }
+                // Weather badge in the top-right corner.
+                ctx.font = "13px 'Apple Color Emoji', 'Segoe UI Emoji', sans-serif";
+                ctx.textAlign = 'right'; ctx.textBaseline = 'top';
+                ctx.globalAlpha = 0.6 + rainI * 0.3;
+                ctx.fillText(rainI > 0.6 ? '⛈️' : '☔', W - 6, 6);
+                ctx.globalAlpha = 1;
             }
 
             // ── Target creature name ─────────────────────────
@@ -2370,6 +2390,10 @@ export default {
         function tickStructures(dt) {
             if (_dungeon) return;
             const cx0 = Math.floor(player.wx / CHUNK_SIZE), cy0 = Math.floor(player.wy / CHUNK_SIZE);
+            // Weather modifiers — rain speeds growth and drowns fuel.
+            const rain = rainIntensity();
+            const fuelMult   = 1 + rain;       // 1x .. 2x drain under heavy rain
+            const growthMult = 1 + rain * 1.5; // 1x .. 2.5x growth under heavy rain
             let anyChanged = false;
             for (let dcy = -1; dcy <= 1; dcy++) {
                 for (let dcx = -1; dcx <= 1; dcx++) {
@@ -2382,7 +2406,7 @@ export default {
                         if (!f.structure) continue;
                         // Fuel decay → auto-despawn (campfires).
                         if (typeof f.fuel === 'number') {
-                            f.fuel -= dt;
+                            f.fuel -= dt * fuelMult;
                             if (f.fuel <= 0) {
                                 const wx = (cx0 + dcx) * CHUNK_SIZE + f.c;
                                 const wy = (cy0 + dcy) * CHUNK_SIZE + f.r;
@@ -2398,7 +2422,7 @@ export default {
                         }
                         // Growth evolution → morph into grownKey.
                         if (typeof f.growth === 'number') {
-                            f.growth -= dt;
+                            f.growth -= dt * growthMult;
                             if (f.growth <= 0) {
                                 const currentDef = ITEMS[f.structKey];
                                 const grownKey = currentDef?.structure?.grownKey;
