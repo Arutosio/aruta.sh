@@ -3200,6 +3200,8 @@ export default {
             // Aggressive kills return more than passive — reflects risk.
             const soul = cr.ai === 'aggressive' ? 3 : 1;
             player.mana = Math.min(player.maxMana, player.mana + soul);
+            // Dungeon kills give +50% XP to reward venturing underground.
+            const xpMult = _dungeon ? 1.5 : 1;
             // Quest progress (kill-type): match by emoji regardless of dungeon/overworld.
             if (activeQuest && activeQuest.kind === 'kill' && activeQuest.target === cr.emoji && activeQuest.current < activeQuest.needed) {
                 activeQuest.current++;
@@ -3207,8 +3209,9 @@ export default {
                     `📜 ${activeQuest.current}/${activeQuest.needed}`, '#e0c080');
             }
             const def = CREATURE_DEFS[cr.emoji] || { xp: 1, loot: [] };
-            player.xp += def.xp;
-            addFloater(chCx * CHUNK_SIZE + cr.c, chCy * CHUNK_SIZE + cr.r, '+' + def.xp + ' XP', '#ffc857');
+            const xpGain = Math.ceil(def.xp * xpMult);
+            player.xp += xpGain;
+            addFloater(chCx * CHUNK_SIZE + cr.c, chCy * CHUNK_SIZE + cr.r, '+' + xpGain + ' XP', '#ffc857');
             while (player.xp >= player.xpNext) {
                 player.xp -= player.xpNext;
                 player.level++;
