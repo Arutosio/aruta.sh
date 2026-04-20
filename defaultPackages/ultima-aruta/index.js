@@ -1081,10 +1081,12 @@ export default {
                     🍗 decays over time. At 0 you stop regenerating and<br>
                     starvation drains HP. Eat food (berries, apples, bread,<br>
                     meat...) to refill.<br><br>
-                    <b>Cooking</b><br>
+                    <b>Cooking & Brewing</b><br>
                     Hunt passive creatures (🐑 🐇 🦌 🐗 🐄 🐓 🦆) for 🥩 Raw Meat.<br>
                     Stand next to a burning 🔥 campfire; raw meat roasts into<br>
-                    🍖 Roast Meat every ~3 s (a big hunger refill).<br><br>
+                    🍖 Roast Meat every ~3 s (a big hunger refill). When no<br>
+                    raw meat is left, the fire brews 🌿 herb + 🍄 mushroom<br>
+                    into a 🧪 potion on the same cycle (and burns extra fuel).<br><br>
                     <b>Skills</b><br>
                     Every chop, mine, cook, fish, tame, and swing feeds a<br>
                     per-skill XP counter (level 0–100, sqrt curve).<br>
@@ -2818,31 +2820,55 @@ export default {
             return null;
         }
         function tickCooking(dt) {
-            const rawIdx = inventory.items.findIndex(i => i.key === 'raw_meat');
-            if (rawIdx < 0) { _cookTimer = 0; return; }
             const hit = isAdjacentToBurningStructure('campfire');
             if (!hit) { _cookTimer = 0; return; }
-            _cookTimer += dt;
-            // Cooking mastery shortens the roast cycle from 3s toward 1s.
             const cookLvl = skillLevel(player.skills.cooking);
             const need = Math.max(1000, 3000 - cookLvl * 20);
+            // Roasting — raw_meat is always prioritized over brewing.
+            const rawIdx = inventory.items.findIndex(i => i.key === 'raw_meat');
+            if (rawIdx >= 0) {
+                _cookTimer += dt;
+                if (_cookTimer < need) return;
+                _cookTimer = 0;
+                const raw = inventory.items[rawIdx];
+                const cookedDef = ITEMS.meat;
+                inventory.items[rawIdx] = {
+                    ...raw,
+                    id: 'it_' + Math.random().toString(36).slice(2, 9),
+                    key: 'meat', emoji: cookedDef.emoji, name: cookedDef.name,
+                };
+                saveInventory();
+                if ($pack.style.display !== 'none') renderBackpack();
+                addFloater(hit.wx, hit.wy, '🍖 Roasted!', '#ffb070');
+                _sfx(720, 0.08, 'triangle', 0.04);
+                addSkillXp('cooking', 3);
+                hit.f.fuel = Math.max(0, (hit.f.fuel || 0) - 2500);
+                return;
+            }
+            // Brewing — consume one herb + one mushroom and produce a potion.
+            const herbIdx = inventory.items.findIndex(i => i.key === 'herb');
+            const shroomIdx = inventory.items.findIndex(i => i.key === 'mushroom');
+            if (herbIdx < 0 || shroomIdx < 0) { _cookTimer = 0; return; }
+            _cookTimer += dt;
             if (_cookTimer < need) return;
             _cookTimer = 0;
-            // Replace one raw_meat with cooked meat.
-            const raw = inventory.items[rawIdx];
-            const cookedDef = ITEMS.meat;
-            inventory.items[rawIdx] = {
-                ...raw,
+            // Remove highest index first so the other index stays valid.
+            const [first, second] = herbIdx > shroomIdx ? [herbIdx, shroomIdx] : [shroomIdx, herbIdx];
+            inventory.items.splice(first, 1);
+            inventory.items.splice(second, 1);
+            const potionDef = ITEMS.potion;
+            inventory.items.push({
                 id: 'it_' + Math.random().toString(36).slice(2, 9),
-                key: 'meat', emoji: cookedDef.emoji, name: cookedDef.name,
-            };
+                key: 'potion', emoji: potionDef.emoji, name: potionDef.name,
+                x: 6 + (inventory.items.length % 7) * 36,
+                y: 6 + Math.floor(inventory.items.length / 7) * 36,
+            });
             saveInventory();
             if ($pack.style.display !== 'none') renderBackpack();
-            addFloater(hit.wx, hit.wy, '🍖 Roasted!', '#ffb070');
-            _sfx(720, 0.08, 'triangle', 0.04);
-            addSkillXp('cooking', 3);
-            // Extra fuel drain for the roast.
-            hit.f.fuel = Math.max(0, (hit.f.fuel || 0) - 2500);
+            addFloater(hit.wx, hit.wy, '🧪 Brewed!', '#80d0ff');
+            _sfx(640, 0.08, 'sine', 0.04);
+            addSkillXp('cooking', 4);
+            hit.f.fuel = Math.max(0, (hit.f.fuel || 0) - 4000);
         }
 
         // Collect visible structure light sources for the fog-of-war pass.
