@@ -1,7 +1,9 @@
 /* Ultima Aruta — data.js: all game constants */
-// Top-down square tiles (Pokémon-style). TILE_W and TILE_H are kept identical
-// so all existing call sites that reference them as width/height still work.
-const TILE_SIZE = 32;
+// Top-down square tiles (Pokémon-style). 24px gives ~23×16 visible tiles in
+// the 560×380 viewport — similar density to a GBA-era RPG. TILE_W and TILE_H
+// remain identical and equal to TILE_SIZE so legacy width/height call sites
+// keep compiling. Change TILE_SIZE in one place to rescale the whole game.
+const TILE_SIZE = 24;
 const TILE_W = TILE_SIZE;
 const TILE_H = TILE_SIZE;
 const CHUNK_SIZE = 32;
@@ -264,30 +266,33 @@ const DIALOGS = [
     'They say a demon lurks in the deepest dungeon chamber.',
 ];
 
-// Sprite sizes by emoji — used by the renderer.
+// Sprite sizes by emoji — used by the renderer. Scaled for 24px tiles:
+// large props (trees/buildings) cap near TILE_SIZE×1.4 so they read as
+// "bigger than a walkable cell" without drowning neighbors; actors fit
+// inside one tile; pickups sit ~half-tile.
 const SPRITE_SIZES = {
-    '🌲': 46, '🌳': 46, '🌴': 42,
-    '🪨': 14, '🌿': 14, '🌾': 16, '🍄': 14, '⛄': 24,
-    '⛪': 44, '🏛️': 44, '🏰': 46, '🏠': 38, '🏡': 38, '🛖': 36,
-    '🐑': 22, '🐇': 18, '🦊': 22, '🦌': 26, '🐗': 24, '🦉': 18, '🦝': 22,
-    '🦀': 18, '🦎': 18, '🐟': 20, '🐠': 20, '🐺': 24,
-    '🧙': 28, '🧝': 26, '🧑‍🌾': 26, '🧑‍🍳': 26, '🧑‍💼': 28,
-    '🪙': 12, '💎': 14, '🍓': 12, '🍎': 14, '🌸': 12,
-    '🗝️': 14, '🧪': 14, '📜': 14,
-    '⚔️': 20, '🪓': 20, '🏹': 22, '🗡️': 18, '🛡️': 22,
-    '⛑️': 20, '👑': 18, '🎩': 20, '🦺': 22, '🥼': 22,
-    '🧤': 16, '🥾': 18, '👡': 16, '🧣': 18, '📿': 16,
-    '💍': 12, '📖': 20,
-    '🕳️': 32, '🏚️': 38, '🪜': 30, '🧰': 24,
-    '💀': 26, '👻': 24, '🦇': 20, '🕷️': 22, '⛰️': 36,
-    '🐻': 28, '🐍': 20, '🐉': 42, '🐸': 16,
-    '🐲': 38, '👹': 34, '🧟': 28,
-    '🦅': 22, '🦈': 26, '🐊': 24, '🦂': 18, '🐄': 26, '🐴': 28, '🦄': 30,
-    '🧛': 28, '🧌': 30, '👿': 36, '🐓': 16, '🦆': 18, '💂': 28,
-    '🪄': 20, '🍖': 16, '🍞': 16, '🍷': 16, '🪶': 14, '🪵': 18,
-    '🔮': 22, '🔦': 18, '🧭': 16,
-    '⛲': 34, '🪦': 22, '⛺': 32, '🕯️': 16, '🗿': 30, '🕸️': 18, '⚗️': 16,
-    '🛶': 28, '⛵': 32,
+    '🌲': 35, '🌳': 35, '🌴': 32,
+    '🪨': 11, '🌿': 11, '🌾': 12, '🍄': 11, '⛄': 18,
+    '⛪': 33, '🏛️': 33, '🏰': 35, '🏠': 29, '🏡': 29, '🛖': 27,
+    '🐑': 17, '🐇': 14, '🦊': 17, '🦌': 20, '🐗': 18, '🦉': 14, '🦝': 17,
+    '🦀': 14, '🦎': 14, '🐟': 15, '🐠': 15, '🐺': 18,
+    '🧙': 21, '🧝': 20, '🧑‍🌾': 20, '🧑‍🍳': 20, '🧑‍💼': 21,
+    '🪙':  9, '💎': 11, '🍓':  9, '🍎': 11, '🌸':  9,
+    '🗝️': 11, '🧪': 11, '📜': 11,
+    '⚔️': 15, '🪓': 15, '🏹': 17, '🗡️': 14, '🛡️': 17,
+    '⛑️': 15, '👑': 14, '🎩': 15, '🦺': 17, '🥼': 17,
+    '🧤': 12, '🥾': 14, '👡': 12, '🧣': 14, '📿': 12,
+    '💍':  9, '📖': 15,
+    '🕳️': 24, '🏚️': 29, '🪜': 23, '🧰': 18,
+    '💀': 20, '👻': 18, '🦇': 15, '🕷️': 17, '⛰️': 27,
+    '🐻': 21, '🐍': 15, '🐉': 32, '🐸': 12,
+    '🐲': 29, '👹': 26, '🧟': 21,
+    '🦅': 17, '🦈': 20, '🐊': 18, '🦂': 14, '🐄': 20, '🐴': 21, '🦄': 23,
+    '🧛': 21, '🧌': 23, '👿': 27, '🐓': 12, '🦆': 14, '💂': 21,
+    '🪄': 15, '🍖': 12, '🍞': 12, '🍷': 12, '🪶': 11, '🪵': 14,
+    '🔮': 17, '🔦': 14, '🧭': 12,
+    '⛲': 26, '🪦': 17, '⛺': 24, '🕯️': 12, '🗿': 23, '🕸️': 14, '⚗️': 12,
+    '🛶': 21, '⛵': 24,
 };
 /* ╔══════════════════════════════════════════════════════════╗
  * ║  ULTIMA ARUTA — engine.js                                  ║

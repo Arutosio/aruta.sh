@@ -1419,19 +1419,20 @@ export default {
                     }
                 }
             }
-            sprites.push({ wx: player.rx, wy: player.ry, emoji: player.emoji, size: 32, isPlayer: true, flash: _playerFlash });
+            sprites.push({ wx: player.rx, wy: player.ry, emoji: player.emoji, size: 24, isPlayer: true, flash: _playerFlash });
             sprites.sort((a, b) => (a.wx + a.wy) - (b.wx + b.wy) || a.wx - b.wx);
             for (const s of sprites) {
+                // iso() returns the tile CENTER in screen-local coords. The
+                // sprite helpers (drawEmoji, drawShadow, HP bars) all expect a
+                // tile TOP-LEFT and center their own content inside TILE_W x
+                // TILE_H — so subtract a half-tile on both axes here.
                 const p = iso(s.wx, s.wy);
                 const rawSx = p.x + cam.cx;
                 const rawSy = p.y + cam.cy;
-                const elev = elevAtDg(Math.round(s.wx), Math.round(s.wy));
-                const lift = (elev - 0.35) * ELEV_PX;
-                const spriteScreenY = rawSy - lift + TILE_H / 2;
-                const ps = perspScale(spriteScreenY, H);
-                const sx = W / 2 + (rawSx - W / 2) * ps - (TILE_W * ps) / 2;
-                const sy = H / 2 + ((rawSy - lift) - H / 2) * ps;
-                const scaledSize = Math.round(s.size * ps);
+                const ps = 1; // perspective disabled in top-down; kept as constant for HUD math below
+                const sx = rawSx - TILE_SIZE / 2;
+                const sy = rawSy - TILE_SIZE / 2;
+                const scaledSize = s.size;
                 drawShadow(ctx, sx, sy, scaledSize);
                 // Item sparkle (ground items pulse softly to attract attention).
                 if (!s.isCreature && !s.isPlayer && !s.aggro) {
@@ -1555,18 +1556,17 @@ export default {
                     const twx = (_dungeon ? 0 : Math.floor(player.wx / CHUNK_SIZE) * CHUNK_SIZE) + _autoTarget.rc;
                     const twy = (_dungeon ? 0 : Math.floor(player.wy / CHUNK_SIZE) * CHUNK_SIZE) + _autoTarget.rr;
                     const tp = iso(twx, twy);
-                    const elev = elevAtDg(Math.round(twx), Math.round(twy));
-                    const lift = (elev - 0.35) * ELEV_PX;
-                    const tps = perspScale(tp.y + cam.cy - lift + TILE_H / 2, H);
-                    const tsx = W / 2 + (tp.x + cam.cx - W / 2) * tps;
-                    const tsy = H / 2 + ((tp.y + cam.cy - lift) - H / 2) * tps;
+                    // Tile center in screen space. Label sits just above the
+                    // tile (tile top = center - TILE_SIZE/2, then -8px margin).
+                    const tcx = tp.x + cam.cx;
+                    const ttop = tp.y + cam.cy - TILE_SIZE / 2;
                     ctx.font = "bold 9px 'Inter', sans-serif";
                     ctx.textAlign = 'center'; ctx.textBaseline = 'bottom';
                     ctx.fillStyle = '#ffc857';
                     ctx.strokeStyle = 'rgba(0,0,0,0.7)'; ctx.lineWidth = 2;
                     const label = `${_autoTarget.emoji} HP ${Math.round(_autoTarget.hp)}/${_autoTarget.maxHp}`;
-                    ctx.strokeText(label, tsx + TILE_W * tps / 2, tsy - 8);
-                    ctx.fillText(label, tsx + TILE_W * tps / 2, tsy - 8);
+                    ctx.strokeText(label, tcx, ttop - 4);
+                    ctx.fillText(label, tcx, ttop - 4);
                 }
             }
 
@@ -1576,10 +1576,9 @@ export default {
             ctx.textBaseline = 'middle';
             for (const fl of _floaters) {
                 const p = iso(fl.wx, fl.wy);
-                const elev = world.elevAt(Math.round(fl.wx), Math.round(fl.wy));
-                const lift = (elev - 0.35) * ELEV_PX;
+                // Start at tile center, drift upward over the floater lifetime.
                 const fx = p.x + cam.cx;
-                const fy = p.y + cam.cy + TILE_H / 2 - lift - (fl.age / fl.maxAge) * 20;
+                const fy = p.y + cam.cy - (fl.age / fl.maxAge) * 24;
                 const alpha = 1 - fl.age / fl.maxAge;
                 ctx.fillStyle = fl.color.replace(')', ',' + alpha.toFixed(2) + ')').replace('rgb', 'rgba');
                 // Fallback for hex colours.
