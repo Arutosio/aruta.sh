@@ -185,6 +185,8 @@ const ITEMS = {
     sapling:     { emoji: '🌱', name: 'Sapling',       structure: { growth: 120000, grownKey: 'grown_tree' } },
     // Internal-only grown tree structure (player never holds one in inventory).
     grown_tree:  { emoji: '🌳', name: 'Tree',          structure: { mature: true } },
+    // Stone wall — blocks walking and creature AI. Mineable (click within 2).
+    wall:        { emoji: '🧱', name: 'Stone Wall',    structure: { blocks: true } },
 };
 
 const ITEM_DROPS = {
@@ -248,6 +250,7 @@ const RECIPES = [
     { name: 'Canoe',         inputs: ['wood', 'wood', 'wood', 'herb'],  output: 'canoe' },
     { name: 'Sailboat',      inputs: ['wood', 'wood', 'wood', 'wood', 'feather'], output: 'sailboat' },
     { name: 'Campfire',      inputs: ['wood', 'wood'],                  output: 'campfire' },
+    { name: 'Stone Wall',    inputs: ['stone', 'stone', 'stone'],       output: 'wall' },
     // Iron upgrades — stronger than stone equivalents, require mined iron.
     { name: 'Iron Sword',    inputs: ['iron', 'iron', 'wood'],          output: 'sword' },
     { name: 'Iron Armor',    inputs: ['iron', 'iron', 'iron', 'wood'],  output: 'armor' },
@@ -313,7 +316,7 @@ const SPRITE_SIZES = {
     '🔮': 17, '🔦': 14, '🧭': 12, '🔩': 11,
     '⛲': 26, '🪦': 17, '⛺': 24, '🕯️': 12, '🗿': 23, '🕸️': 14, '⚗️': 12,
     '🛶': 21, '⛵': 24,
-    '🔥': 22,
+    '🔥': 22, '🧱': 22,
 };
 /* ╔══════════════════════════════════════════════════════════╗
  * ║  ULTIMA ARUTA — engine.js                                  ║

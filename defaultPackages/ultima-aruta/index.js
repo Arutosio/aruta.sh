@@ -400,6 +400,7 @@ export default {
                             c: a.c, r: a.r, emoji: def.emoji,
                             structure: true, structKey: a.key,
                         };
+                        if (def.structure?.blocks) feat.blocks = true;
                         if (typeof a.fuel === 'number') feat.fuel = a.fuel;
                         else if (def.structure?.fuel != null) feat.fuel = def.structure.fuel;
                         if (typeof a.growth === 'number') feat.growth = a.growth;
@@ -463,6 +464,7 @@ export default {
             const ch = world.getChunk(cx, cy);
             if (ch.features.find(f => f.c === lc && f.r === lr)) return null;
             const f = { c: lc, r: lr, emoji: def.emoji, structure: true, structKey };
+            if (def.structure.blocks) f.blocks = true;
             const delta = { c: lc, r: lr, key: structKey, kind: 'structure' };
             if (def.structure.fuel != null) {
                 f.fuel = def.structure.fuel;
@@ -980,6 +982,13 @@ export default {
                     hold 🥩 or 🍖 and press T. 50% chance (+25% if wounded).<br>
                     Tamed pets follow you and attack aggressive enemies<br>
                     within 5 tiles. Max 3 pets at once.<br><br>
+                    <b>Building</b><br>
+                    Craft 🧱 Stone Walls (3×🪨) and drag them from the<br>
+                    backpack onto an adjacent empty tile (≤ 2 away) to<br>
+                    deploy. Walls block player and creature movement —<br>
+                    use them to fence camps, funnel enemies, or close off<br>
+                    a safe sleeping spot. Mine walls back to stone by<br>
+                    clicking them (several hits).<br><br>
                     <b>Forestry</b><br>
                     Chopping trees occasionally drops a 🌱 Sapling (18%).<br>
                     Press G on grass / forest / swamp / savanna / tundra to<br>
@@ -2666,7 +2675,11 @@ export default {
                 const dist = Math.max(Math.abs(wx - player.wx), Math.abs(wy - player.wy));
                 if (dist <= 2) {
                     const f = world.featureAt(wx, wy);
-                    if (f && !f.item && !f.npc && !f.merchant && !f.dungeon && !f.village && !f.blocks) {
+                    // Block player's own placed walls even though they set blocks:true —
+                    // structures are always allowed as gather targets, but village
+                    // houses / NPC props remain blocked as before.
+                    const gatherAllowed = f && !f.item && !f.npc && !f.merchant && !f.dungeon && !f.village && (!f.blocks || f.structure);
+                    if (gatherAllowed) {
                         const GATHER = {
                             '🌲': [{ key: 'wood', rate: 0.5 }, { key: 'herb', rate: 0.3 }, { key: 'apple', rate: 0.1 }],
                             '🌳': [{ key: 'wood', rate: 0.5 }, { key: 'herb', rate: 0.3 }, { key: 'apple', rate: 0.2 }],
@@ -2680,6 +2693,8 @@ export default {
                             '🌿': [{ key: 'herb', rate: 0.8 }],
                             '🌾': [{ key: 'berry', rate: 0.7 }],
                             '⛄': [{ key: 'stone', rate: 0.3 }],
+                            // Mining a placed wall returns one stone reliably.
+                            '🧱': [{ key: 'stone', rate: 1.0 }],
                         };
                         const table = GATHER[f.emoji];
                         if (table) {
