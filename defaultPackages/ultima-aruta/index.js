@@ -729,6 +729,25 @@ export default {
                             return rows.length ? rows.join('') : '<div style="opacity:0.5;padding:6px;">All gear at full durability.</div>';
                         })()}
                     </div>
+                    <div class="ua-shop-section"><b>Enchant</b> <span style="font-size:10px;opacity:0.6;">(1 gem + 20 gold, max +3)</span></div>
+                    <div class="ua-shop-list">
+                        ${(() => {
+                            const gemCount = inventory.items.filter(i => i.key === 'gem').length;
+                            const rows = Object.entries(equipment)
+                                .filter(([, it]) => it && (typeof it.dur === 'number' || it.key === 'ring' || it.key === 'necklace'))
+                                .map(([slot, it]) => {
+                                    const lvl = it.enchant || 0;
+                                    const canEnchant = lvl < 3 && gemCount >= 1 && gold >= 20;
+                                    const label = lvl > 0 ? ` +${lvl}` : '';
+                                    return `<div class="ua-shop-row">
+                                        <span>${it.emoji} ${it.name}${label}</span>
+                                        <span class="ua-shop-price">1💎 + 20🪙</span>
+                                        <button class="ua-btn ua-shop-enchant" data-slot="${slot}" ${canEnchant ? '' : 'disabled'}>${lvl >= 3 ? 'Maxed' : 'Enchant'}</button>
+                                    </div>`;
+                                });
+                            return rows.length ? rows.join('') : '<div style="opacity:0.5;padding:6px;">Equip gear to enchant.</div>';
+                        })()}
+                    </div>
                 `;
                 shopEl.querySelector('#ua-shop-close').addEventListener('click', () => shopEl.remove());
                 shopEl.querySelectorAll('.ua-shop-buy').forEach(btn => {
@@ -755,6 +774,30 @@ export default {
                         _sfx(880, 0.06, 'sine', 0.04);
                         renderShop();
                         if ($pack.style.display !== 'none') renderBackpack();
+                    });
+                });
+                shopEl.querySelectorAll('.ua-shop-enchant').forEach(btn => {
+                    btn.addEventListener('click', () => {
+                        const slot = btn.dataset.slot;
+                        const it = equipment[slot];
+                        if (!it) return;
+                        const lvl = it.enchant || 0;
+                        if (lvl >= 3) return;
+                        const gemIdx = inventory.items.findIndex(i => i.key === 'gem');
+                        if (gemIdx < 0 || goldCount() < 20) return;
+                        inventory.items.splice(gemIdx, 1);
+                        let removed = 0;
+                        inventory.items = inventory.items.filter(i => {
+                            if (i.key === 'gold' && removed < 20) { removed++; return false; }
+                            return true;
+                        });
+                        it.enchant = lvl + 1;
+                        saveInventory(); saveEquipment();
+                        addFloater(player.wx, player.wy, '✨ ' + it.name + ' +' + it.enchant, '#c080ff');
+                        _sfx(900, 0.18, 'sine', 0.05);
+                        renderShop();
+                        if ($pack.style.display !== 'none') renderBackpack();
+                        if ($doll.style.display !== 'none') renderPaperdoll();
                     });
                 });
                 shopEl.querySelectorAll('.ua-shop-repair').forEach(btn => {
@@ -1060,6 +1103,10 @@ export default {
                     Chopping trees occasionally drops a 🌱 Sapling (18%).<br>
                     Press G on grass / forest / swamp / savanna / tundra to<br>
                     plant it. After ~2 min it grows into a harvestable 🌳 tree.<br><br>
+                    <b>Enchanting</b><br>
+                    Visit a merchant with 💎 gems to enchant equipped gear.<br>
+                    Each level costs 1 gem + 20 gold (max +3 per piece).<br>
+                    Weapons gain +2 damage per enchant, armor gains +1 def.<br><br>
                     <b>Quests</b><br>
                     Talk to villagers (Space / E adjacent to an NPC) —<br>
                     60% they'll hand you a gather or kill quest. One<br>
@@ -1106,7 +1153,8 @@ export default {
                                  `<div style="width:${(pct * 100).toFixed(0)}%;height:100%;background:${color};border-radius:1px;"></div></div>`;
                     }
                     const durTitle = typeof it.dur === 'number' ? ` (${Math.ceil(it.dur)}/${it.durMax})` : '';
-                    inner = `<div class="ua-item ua-slot-item" data-slot-of="${s.key}" title="${it.name}${durTitle}" style="position:relative;">${it.emoji}${durBar}</div>`;
+                    const enchTag = it.enchant ? `<span style="position:absolute;top:-2px;right:-2px;color:#c080ff;font-size:10px;text-shadow:0 0 3px #000;">+${it.enchant}</span>` : '';
+                    inner = `<div class="ua-item ua-slot-item" data-slot-of="${s.key}" title="${it.name}${it.enchant ? ' +' + it.enchant : ''}${durTitle}" style="position:relative;">${it.emoji}${enchTag}${durBar}</div>`;
                 }
                 return `<div class="ua-slot" data-slot="${s.key}"><div class="ua-slot-label">${s.label}</div><div class="ua-slot-cell">${inner}</div></div>`;
             }).join('');
@@ -2242,15 +2290,17 @@ export default {
             const w = equipment.weapon;
             if (!w) return 0;
             const map = { sword: 8, axe: 10, bow: 7, dagger: 5, wand: 6 };
-            return map[w.key] || 4;
+            const base = map[w.key] || 4;
+            return base + (w.enchant || 0) * 2;
         }
 
-        /** Armor damage reduction — sums defence from all equipped armor pieces. */
+        /** Armor damage reduction — sums defence from all equipped armor pieces.
+         *  Each enchant level on an armor piece adds +1 flat defence. */
         function getArmorDef() {
             let def = 0;
             const map = { helm: 2, armor: 5, robe: 2, gloves: 1, boots: 1, shield: 4, cape: 1, crown: 1 };
-            for (const [slot, item] of Object.entries(equipment)) {
-                if (item && map[item.key]) def += map[item.key];
+            for (const [, item] of Object.entries(equipment)) {
+                if (item && map[item.key]) def += map[item.key] + (item.enchant || 0);
             }
             return def;
         }
