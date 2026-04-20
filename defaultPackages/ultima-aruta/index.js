@@ -2490,6 +2490,14 @@ export default {
             const combatBonus = Math.floor(skillLevel(player.skills.combat) / 20); // +0..+5
             let dmg = player.baseDmg + getWeaponDmg() + Math.floor(Math.random() * 3) + combatBonus;
             if (activeBuff?.dmgMult) dmg = Math.round(dmg * activeBuff.dmgMult);
+            // Bow ignores half the target's armor via the simplified creature
+            // armor model (creatures don't track armor today, so this hook
+            // exists as a dedicated +3 pierce bonus against naturally tough
+            // emoji classes — dragons, demons, ogres).
+            if (equipment.weapon?.key === 'bow') {
+                const tough = ['🐉', '🐲', '👿', '👹', '🧌', '🧟', '🐻'].includes(cr.emoji);
+                if (tough) dmg += 3;
+            }
             if (isCrit) dmg = Math.floor(dmg * 2);
 
             cr.hp = Math.max(0, cr.hp - dmg);
