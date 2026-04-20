@@ -3790,7 +3790,6 @@ export default {
                             }
                             // Bonus independent roll: chopping trees occasionally
                             // drops a sapling the player can replant elsewhere.
-                            const isTree = f.emoji === '🌲' || f.emoji === '🌳' || f.emoji === '🌴';
                             if (isTree && Math.random() < 0.18) {
                                 const def = ITEMS.sapling;
                                 inventory.items.push({
