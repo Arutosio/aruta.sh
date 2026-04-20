@@ -3476,6 +3476,14 @@ export default {
             } else {
                 _autoTarget = null;
             }
+            // Standing directly on a burning campfire burns the player
+            // (but not adjacent — adjacent is the safe-zone "resting" tile).
+            if (!_dungeon) {
+                const onFire = world.featureAt(player.wx, player.wy);
+                if (onFire && onFire.structKey === 'campfire' && typeof onFire.fuel === 'number' && onFire.fuel > 0) {
+                    player.hp = Math.max(1, player.hp - 4 * dt / 1000);
+                }
+            }
             // Poison DoT.
             if (player.poison > 0) {
                 player.poison -= dt;
