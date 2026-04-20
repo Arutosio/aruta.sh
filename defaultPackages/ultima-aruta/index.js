@@ -3604,12 +3604,17 @@ export default {
                         if (table) {
                             // Mining ⛰️ peaks is costly — higher stamina floor than other gathers.
                             const isMining = f.emoji === '⛰️' || f.emoji === '🪨';
+                            const isTree   = f.emoji === '🌲' || f.emoji === '🌳' || f.emoji === '🌴';
                             const mineLvl = skillLevel(player.skills.mining);
                             const woodLvl = skillLevel(player.skills.woodcutting);
                             // Mining mastery reduces swing cost by up to 3 stamina (at lvl 100).
                             const mineDiscount = Math.floor(mineLvl / 34);
-                            const costStam = Math.max(1, (isMining ? 6 : 3) - (isMining ? mineDiscount : 0));
-                            const minStam  = Math.max(1, (isMining ? 6 : 3) - (isMining ? mineDiscount : 0));
+                            // Woodcutting mastery shaves up to 2 stamina off tree chops.
+                            const woodDiscount = Math.floor(woodLvl / 50);
+                            const baseCost = isMining ? 6 : 3;
+                            const disc = isMining ? mineDiscount : (isTree ? woodDiscount : 0);
+                            const costStam = Math.max(1, baseCost - disc);
+                            const minStam  = costStam;
                             if (player.stamina < minStam) { addFloater(player.wx, player.wy, 'Exhausted!', '#ffaa00'); return; }
                             player.stamina -= costStam;
                             _sfx(isMining ? 180 : 300, 0.08, isMining ? 'sawtooth' : 'triangle', 0.05);
