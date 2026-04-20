@@ -636,6 +636,11 @@ export default {
                 tryTameAdjacent();
                 return;
             }
+            if (e.type === 'keydown' && k === 'y') {
+                e.preventDefault();
+                tryFeedPets();
+                return;
+            }
         }
 
         // ── Interaction: SPACE/E talks to an adjacent NPC or enters a
@@ -953,7 +958,8 @@ export default {
                     Space / E — interact (NPC, merchant, dungeon)<br>
                     Double-click item in bag — consume food/potion<br>
                     Q — quick potion · F — light a campfire 🔥 · G — plant sapling 🌱<br>
-                    T — tame an adjacent passive creature (needs meat)<br><br>
+                    T — tame an adjacent passive creature (needs meat)<br>
+                    Y — feed meat to wounded pets (raw +10, roast +25)<br><br>
                     <b>Panels</b><br>
                     I / B — Backpack · P — Paperdoll · C — Craft<br>
                     K — Spellbook · H — This guide<br><br>
@@ -2395,6 +2401,34 @@ export default {
         }
 
         function savePets() { /* pets are serialized with main state blob below */ }
+
+        // Y — feed every wounded pet nearby. Each piece of meat in the
+        // backpack heals one pet for a chunk of HP. Prefers raw first so
+        // cooked meat stays for the player. Roast heals more than raw.
+        function tryFeedPets() {
+            if (!pets.length) { addFloater(player.wx, player.wy, 'No pets', '#aaa'); return; }
+            const wounded = pets.filter(p => p.hp < p.maxHp);
+            if (!wounded.length) { addFloater(player.wx, player.wy, 'Pets at full HP', '#aaa'); return; }
+            let fed = 0;
+            for (const pet of wounded) {
+                const rawIdx = inventory.items.findIndex(i => i.key === 'raw_meat');
+                const cookedIdx = rawIdx < 0 ? inventory.items.findIndex(i => i.key === 'meat') : -1;
+                const idx = rawIdx >= 0 ? rawIdx : cookedIdx;
+                if (idx < 0) break;
+                const isRaw = inventory.items[idx].key === 'raw_meat';
+                pet.hp = Math.min(pet.maxHp, pet.hp + (isRaw ? 10 : 25));
+                inventory.items.splice(idx, 1);
+                fed++;
+                addFloater(pet.wx, pet.wy, (isRaw ? '🥩' : '🍖') + ' +' + (isRaw ? 10 : 25), '#ff80c0');
+            }
+            if (!fed) {
+                addFloater(player.wx, player.wy, 'No meat to feed', '#ffaa00');
+                return;
+            }
+            saveInventory();
+            if ($pack.style.display !== 'none') renderBackpack();
+            _sfx(500, 0.1, 'sine', 0.05);
+        }
 
         // Pet AI: each pet follows the player and engages aggressive creatures
         // within 5 tiles of the player. Uses discrete-step movement like the
