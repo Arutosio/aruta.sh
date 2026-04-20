@@ -2890,7 +2890,19 @@ export default {
             anchor.f.fuel = Math.max(0, (anchor.f.fuel || 0) - 30000);
             addFloater(player.wx, player.wy, '💤 Rested till dawn', '#c0a0ff');
             _sfx(220, 0.4, 'sine', 0.04);
-            showDialogBubble('🌅', 'You wake refreshed as the sun climbs. Crops have grown while you slept.');
+            // Occasional ambient dream line to flavor the rest.
+            const DREAMS = [
+                'You dream of endless green valleys.',
+                'A dragon watched you from a great distance, but did not move.',
+                'You dream of an iron key hidden beneath a stone.',
+                'Soft music plays somewhere at the edge of hearing.',
+                'You dream you are swimming through clouds.',
+                'A voice whispers your name, then fades.',
+                'The fire speaks in a language you almost understand.',
+                'You see a pet you have never tamed, watching you sleep.',
+            ];
+            const dream = DREAMS[Math.floor(Math.random() * DREAMS.length)];
+            showDialogBubble('🌅', `You wake refreshed as the sun climbs. ${dream}`);
         }
 
         // Y — feed every wounded pet nearby. Each piece of meat in the
