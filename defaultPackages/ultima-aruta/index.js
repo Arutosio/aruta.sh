@@ -1264,7 +1264,7 @@ export default {
                     hp: player.hp, mana: player.mana, stamina: player.stamina, hunger: player.hunger,
                     level: player.level, xp: player.xp, xpNext: player.xpNext,
                     maxHp: player.maxHp, maxMana: player.maxMana, maxStamina: player.maxStamina, maxHunger: player.maxHunger, baseDmg: player.baseDmg, kills: player.kills, days: player.days,
-                    pets: pets.map(p => ({ emoji: p.emoji, hp: p.hp, maxHp: p.maxHp, dmg: p.dmg, wx: p.wx, wy: p.wy, level: p.level, xp: p.xp, command: p.command })),
+                    pets: pets.map(p => ({ emoji: p.emoji, name: p.name, hp: p.hp, maxHp: p.maxHp, dmg: p.dmg, wx: p.wx, wy: p.wy, level: p.level, xp: p.xp, command: p.command })),
                     skills: player.skills,
                     activeQuest,
                 }).catch(e => console.warn('[ultima-aruta] save state failed', e));
@@ -2092,6 +2092,7 @@ export default {
                     isPet: true,
                     petLevel: pet.level || 1,
                     petCommand: pet.command,
+                    petName: pet.name,
                 });
             }
             sprites.push({ wx: player.rx, wy: player.ry, emoji: player.emoji, size: 24, isPlayer: true, flash: _playerFlash });
@@ -2190,14 +2191,16 @@ export default {
                     drawSy = sy + bounce;
                 }
                 drawEmoji(ctx, sx, drawSy, s.emoji, scaledSize);
-                // Pet level badge + stay-mode icon above the sprite.
+                // Pet name + level badge + stay-mode icon above the sprite.
                 if (s.isPet) {
+                    const nameText = (s.petCommand === 'stay' ? '🛑 ' : '') + (s.petName || '') + ' L' + s.petLevel;
                     ctx.font = "bold 9px 'Inter', sans-serif";
                     ctx.textAlign = 'center'; ctx.textBaseline = 'bottom';
+                    const w = ctx.measureText(nameText).width + 6;
                     ctx.fillStyle = 'rgba(0,0,0,0.7)';
-                    ctx.fillRect(sx + TILE_W / 2 - 10, sy - 10, 20, 10);
+                    ctx.fillRect(sx + TILE_W / 2 - w / 2, sy - 10, w, 10);
                     ctx.fillStyle = '#ff80c0';
-                    ctx.fillText((s.petCommand === 'stay' ? '🛑 ' : '') + 'L' + s.petLevel, sx + TILE_W / 2, sy - 2);
+                    ctx.fillText(nameText, sx + TILE_W / 2, sy - 2);
                 }
                 // Resting 💤 glyph above the player while near a campfire.
                 if (s.isPlayer && _resting) {
@@ -2678,8 +2681,10 @@ export default {
             // Success — lift creature out of the chunk into the pet roster.
             found.ch.creatures.splice(found.idx, 1);
             const def = CREATURE_DEFS[found.cr.emoji] || { hp: 10, dmg: 2 };
+            const NAMES = ['Ash', 'Briar', 'Cinder', 'Dusk', 'Ember', 'Fern', 'Glim', 'Hazel', 'Iris', 'Jet', 'Kit', 'Lark', 'Moss', 'Nox', 'Pip', 'Quill', 'Rune', 'Sage', 'Thorn', 'Vale', 'Wisp', 'Yarrow'];
             pets.push({
                 emoji: found.cr.emoji,
+                name: NAMES[Math.floor(Math.random() * NAMES.length)],
                 hp: found.cr.hp || def.hp,
                 maxHp: found.cr.maxHp || def.hp,
                 dmg: Math.max(3, Math.floor(def.hp / 6)),
@@ -2690,7 +2695,8 @@ export default {
                 level: 1, xp: 0,
                 command: 'follow',
             });
-            addFloater(found.wx, found.wy, '💖 Tamed!', '#ff60c0');
+            const newPet = pets[pets.length - 1];
+            addFloater(found.wx, found.wy, `💖 Tamed ${newPet.name}!`, '#ff60c0');
             _sfx(700, 0.2, 'sine', 0.06);
             addSkillXp('taming', 15);
             savePets();
@@ -3782,7 +3788,7 @@ export default {
                     hp: player.hp, mana: player.mana, stamina: player.stamina, hunger: player.hunger,
                     level: player.level, xp: player.xp, xpNext: player.xpNext,
                     maxHp: player.maxHp, maxMana: player.maxMana, maxStamina: player.maxStamina, maxHunger: player.maxHunger, baseDmg: player.baseDmg, kills: player.kills, days: player.days,
-                    pets: pets.map(p => ({ emoji: p.emoji, hp: p.hp, maxHp: p.maxHp, dmg: p.dmg, wx: p.wx, wy: p.wy, level: p.level, xp: p.xp, command: p.command })),
+                    pets: pets.map(p => ({ emoji: p.emoji, name: p.name, hp: p.hp, maxHp: p.maxHp, dmg: p.dmg, wx: p.wx, wy: p.wy, level: p.level, xp: p.xp, command: p.command })),
                     skills: player.skills,
                     activeQuest,
                 }).catch(e => console.warn('[ultima-aruta] save state failed', e));
