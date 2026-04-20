@@ -2180,7 +2180,14 @@ export default {
                     ctx.ellipse(sx + TILE_W / 2, sy + TILE_H / 2, 16, 10, 0, 0, Math.PI * 2);
                     ctx.fill();
                 }
-                drawEmoji(ctx, sx, sy, s.emoji, scaledSize);
+                // Hit-flash bounce: wounded sprites lift briefly so the
+                // impact reads without a sound cue.
+                let drawSy = sy;
+                if (s.hitFlash > 0) {
+                    const bounce = -Math.sin((250 - s.hitFlash) / 250 * Math.PI) * 4;
+                    drawSy = sy + bounce;
+                }
+                drawEmoji(ctx, sx, drawSy, s.emoji, scaledSize);
                 // Resting 💤 glyph above the player while near a campfire.
                 if (s.isPlayer && _resting) {
                     const bob = Math.sin(_renderTime * 0.004) * 1.5;
