@@ -1098,7 +1098,8 @@ export default {
                     Stand next to a burning 🔥 campfire; raw meat roasts into<br>
                     🍖 Roast Meat every ~3 s (a big hunger refill). When no<br>
                     raw meat is left, the fire brews 🌿 herb + 🍄 mushroom<br>
-                    into a 🧪 potion on the same cycle (and burns extra fuel).<br><br>
+                    into a 🧪 potion on the same cycle (and burns extra fuel).<br>
+                    Eating 🍖 grants a 30 s <b>Well Fed</b> buff: +20% damage.<br><br>
                     <b>Skills</b><br>
                     Every chop, mine, cook, fish, tame, and swing feeds a<br>
                     per-skill XP counter (level 0–100, sqrt curve).<br>
@@ -1582,6 +1583,18 @@ export default {
             showDialogBubble(f.emoji, f.dialog || DIALOGS[Math.floor(Math.random() * DIALOGS.length)]);
         }
 
+        // ── Buffs ────────────────────────────────────────────────
+        // Single active buff slot. Set by consuming certain foods. Drained
+        // per-frame in the combat tick; multiplies outgoing damage.
+        let activeBuff = null; // { type, dmgMult, remaining }
+        function applyFoodBuff(itemKey) {
+            // Roast meat grants +20% damage for 30 s.
+            if (itemKey === 'meat') {
+                activeBuff = { type: 'wellfed', dmgMult: 1.2, remaining: 30000 };
+                addFloater(player.wx, player.wy, '🍖 Well Fed +20% dmg', '#ffb070');
+            }
+        }
+
         // ── Weather ──────────────────────────────────────────────
         // Sample the moisture noise field at the player's tile. Rain starts
         // at moist > 0.55 and scales up from there; intensity 0..1 drives
@@ -1813,6 +1826,7 @@ export default {
             if (def.use.stamina) player.stamina = Math.min(player.maxStamina, player.stamina + def.use.stamina);
             if (def.use.hunger)  player.hunger  = Math.min(player.maxHunger,  player.hunger  + def.use.hunger);
             if (def.use.cure) { player.poison = 0; player.poisonDps = 0; }
+            applyFoodBuff(it.key);
             // Remove from inventory.
             inventory.items = inventory.items.filter(i => i.id !== id);
             saveInventory();
@@ -2179,6 +2193,14 @@ export default {
             ctx.fillText('SP',  barX + barW + 4, barY - (barH + barGap) * 2 + barH / 2);
             ctx.fillText('🍗',  barX + barW + 4, barY - (barH + barGap) * 3 + barH / 2);
 
+            // ── Active buff indicator ─────────────────────────
+            if (activeBuff) {
+                ctx.font = "12px 'Inter', sans-serif";
+                ctx.textAlign = 'right'; ctx.textBaseline = 'top';
+                ctx.fillStyle = '#ffb070';
+                const secs = Math.max(0, Math.ceil(activeBuff.remaining / 1000));
+                ctx.fillText(`🍖 +${Math.round((activeBuff.dmgMult - 1) * 100)}% dmg  ${secs}s`, W - 6, 26);
+            }
             // ── Rain particles + HUD indicator ──────────────
             const rainI = rainIntensity();
             if (rainI > 0) {
@@ -2362,6 +2384,7 @@ export default {
             const isCrit = Math.random() < critChance;
             const combatBonus = Math.floor(skillLevel(player.skills.combat) / 20); // +0..+5
             let dmg = player.baseDmg + getWeaponDmg() + Math.floor(Math.random() * 3) + combatBonus;
+            if (activeBuff?.dmgMult) dmg = Math.round(dmg * activeBuff.dmgMult);
             if (isCrit) dmg = Math.floor(dmg * 2);
 
             cr.hp = Math.max(0, cr.hp - dmg);
@@ -3542,6 +3565,13 @@ export default {
             tickStructures(dt);
             tickCooking(dt);
             tickPets(dt);
+            if (activeBuff) {
+                activeBuff.remaining -= dt;
+                if (activeBuff.remaining <= 0) {
+                    addFloater(player.wx, player.wy, '⏳ Buff faded', '#aaa');
+                    activeBuff = null;
+                }
+            }
             if (_playerFlash > 0) _playerFlash = Math.max(0, _playerFlash - dt);
             tickAmbientSound();
             render();
