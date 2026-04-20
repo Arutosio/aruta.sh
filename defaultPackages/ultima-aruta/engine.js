@@ -34,8 +34,8 @@ function generateDungeon(dungeonId) {
     }
     // Treasure chests — at least 1 per room (except the exit room).
     // Last room has guaranteed rare loot.
-    const commonPool = ['gold', 'gold', 'gold', 'gem', 'potion', 'herb', 'berry', 'scroll'];
-    const rarePool   = ['sword', 'shield', 'helm', 'armor', 'bow', 'spellbook', 'crown', 'ring', 'necklace'];
+    const commonPool = ['gold', 'gold', 'gold', 'gem', 'potion', 'herb', 'berry', 'scroll', 'iron'];
+    const rarePool   = ['sword', 'shield', 'helm', 'armor', 'bow', 'spellbook', 'crown', 'ring', 'necklace', 'treasure_map', 'iron', 'iron'];
     for (let i = 1; i < rooms.length; i++) {
         const chestCount = i === rooms.length - 1 ? 2 : (rnd() < 0.7 ? 1 : 0);
         for (let j = 0; j < chestCount; j++) {
