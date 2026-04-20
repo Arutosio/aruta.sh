@@ -651,6 +651,11 @@ export default {
                 trySleep();
                 return;
             }
+            if (e.type === 'keydown' && k === 'x') {
+                e.preventDefault();
+                togglePetCommand();
+                return;
+            }
         }
 
         // ── Interaction: SPACE/E talks to an adjacent NPC or enters a
@@ -1051,7 +1056,8 @@ export default {
                     T — tame an adjacent passive creature (needs meat)<br>
                     Y — feed meat to wounded pets (raw +10, roast +25)<br>
                     U — Recall (30 mana, next to 🔥) → nearest distant camp<br>
-                    Z — Sleep at 🔥 (night only) → full heal + dawn jump<br><br>
+                    Z — Sleep at 🔥 (night only) → full heal + dawn jump<br>
+                    X — Toggle pets between Follow and Stay (stay still guards)<br><br>
                     <b>Panels</b><br>
                     I / B — Backpack · P — Paperdoll · C — Craft<br>
                     K — Spellbook · H — This guide<br><br>
@@ -1235,7 +1241,7 @@ export default {
                     hp: player.hp, mana: player.mana, stamina: player.stamina, hunger: player.hunger,
                     level: player.level, xp: player.xp, xpNext: player.xpNext,
                     maxHp: player.maxHp, maxMana: player.maxMana, maxStamina: player.maxStamina, maxHunger: player.maxHunger, baseDmg: player.baseDmg, kills: player.kills, days: player.days,
-                    pets: pets.map(p => ({ emoji: p.emoji, hp: p.hp, maxHp: p.maxHp, dmg: p.dmg, wx: p.wx, wy: p.wy, level: p.level, xp: p.xp })),
+                    pets: pets.map(p => ({ emoji: p.emoji, hp: p.hp, maxHp: p.maxHp, dmg: p.dmg, wx: p.wx, wy: p.wy, level: p.level, xp: p.xp, command: p.command })),
                     skills: player.skills,
                     activeQuest,
                 }).catch(e => console.warn('[ultima-aruta] save state failed', e));
@@ -2448,7 +2454,22 @@ export default {
             moveT: 0, moveFrom: { wx: p.wx, wy: p.wy },
             attackCooldown: 0, timer: 0, _hitFlash: 0,
             level: p.level || 1, xp: p.xp || 0,
+            command: p.command || 'follow',
         })) : [];
+
+        // X — toggle all pets between follow (default) and stay. Stay pets
+        // stop chasing and returning, but still defend if an enemy walks
+        // onto an adjacent tile, so a stay pack can guard a camp.
+        function togglePetCommand() {
+            if (!pets.length) { addFloater(player.wx, player.wy, 'No pets', '#aaa'); return; }
+            const next = pets[0].command === 'stay' ? 'follow' : 'stay';
+            for (const p of pets) p.command = next;
+            addFloater(player.wx, player.wy,
+                next === 'stay' ? '🛑 Pets: Stay' : '🐾 Pets: Follow',
+                '#ff80c0');
+            _sfx(600, 0.08, 'sine', 0.04);
+            savePets();
+        }
 
         // T — tame an adjacent passive creature. Consumes one raw or roast
         // meat as bait. Success chance is 50% + 25% when the creature is
@@ -2507,6 +2528,7 @@ export default {
                 moveT: 0, moveFrom: { wx: found.wx, wy: found.wy },
                 attackCooldown: 0, timer: 0, _hitFlash: 0,
                 level: 1, xp: 0,
+                command: 'follow',
             });
             addFloater(found.wx, found.wy, '💖 Tamed!', '#ff60c0');
             _sfx(700, 0.2, 'sine', 0.06);
@@ -2687,6 +2709,9 @@ export default {
                     continue;
                 }
 
+                // Stay command: pet doesn't chase or return, just holds position
+                // and attacks when an enemy wanders adjacent (already handled above).
+                if (pet.command === 'stay') continue;
                 // Otherwise walk toward target (if any) or toward player.
                 const goal = target ? { wx: target.wx, wy: target.wy } : { wx: player.wx, wy: player.wy };
                 const distGoal = Math.max(Math.abs(goal.wx - pet.wx), Math.abs(goal.wy - pet.wy));
@@ -3515,7 +3540,7 @@ export default {
                     hp: player.hp, mana: player.mana, stamina: player.stamina, hunger: player.hunger,
                     level: player.level, xp: player.xp, xpNext: player.xpNext,
                     maxHp: player.maxHp, maxMana: player.maxMana, maxStamina: player.maxStamina, maxHunger: player.maxHunger, baseDmg: player.baseDmg, kills: player.kills, days: player.days,
-                    pets: pets.map(p => ({ emoji: p.emoji, hp: p.hp, maxHp: p.maxHp, dmg: p.dmg, wx: p.wx, wy: p.wy, level: p.level, xp: p.xp })),
+                    pets: pets.map(p => ({ emoji: p.emoji, hp: p.hp, maxHp: p.maxHp, dmg: p.dmg, wx: p.wx, wy: p.wy, level: p.level, xp: p.xp, command: p.command })),
                     skills: player.skills,
                     activeQuest,
                 }).catch(e => console.warn('[ultima-aruta] save state failed', e));
