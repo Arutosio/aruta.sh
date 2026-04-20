@@ -1118,10 +1118,12 @@ export default {
                     use them to fence camps, funnel enemies, or close off<br>
                     a safe sleeping spot. Mine walls back to stone by<br>
                     clicking them (several hits).<br><br>
-                    <b>Forestry</b><br>
+                    <b>Forestry & Farming</b><br>
                     Chopping trees occasionally drops a 🌱 Sapling (18%).<br>
-                    Press G on grass / forest / swamp / savanna / tundra to<br>
-                    plant it. After ~2 min it grows into a harvestable 🌳 tree.<br><br>
+                    Press G on fertile soil (grass / forest / swamp / savanna<br>
+                    / tundra) to plant. Priority: sapling (→ 🌳 in 2 min) →<br>
+                    herb (→ 🌿 in 1 min) → berry (→ 🌾 in 75 s) → mushroom<br>
+                    (→ 🍄 in 90 s). Mature crops gather like wild plants.<br><br>
                     <b>Enchanting</b><br>
                     Visit a merchant with 💎 gems to enchant equipped gear.<br>
                     Each level costs 1 gem + 20 gold (max +3 per piece).<br>
@@ -2701,24 +2703,36 @@ export default {
             }
         }
 
-        // Press G to plant a sapling on the player's current tile. Requires
-        // passable dirt-like biome (grass/forest/savanna/swamp/tundra); water,
-        // stone, and snow reject the plant.
+        // Press G to plant something on the player's current tile. Tries a
+        // priority list — sapling first, then herb/berry/mushroom crop seeds
+        // — and consumes the first matching inventory item. Water, stone,
+        // mountain, sand, snow all reject the plant.
         function tryPlantSapling() {
             if (_dungeon) { addFloater(player.wx, player.wy, 'Not in dungeons', '#ffaa00'); return; }
-            const idx = inventory.items.findIndex(i => i.key === 'sapling');
-            if (idx < 0) { addFloater(player.wx, player.wy, 'No sapling', '#ffaa00'); return; }
             const b = biomeAtDg(player.wx, player.wy);
             const fertile = b === 'grass' || b === 'forest' || b === 'savanna' || b === 'swamp' || b === 'tundra';
             if (!fertile) { addFloater(player.wx, player.wy, 'Soil too poor', '#c08060'); return; }
             if (world.featureAt(player.wx, player.wy)) { addFloater(player.wx, player.wy, 'Tile occupied', '#ffaa00'); return; }
-            const placed = placeStructure(player.wx, player.wy, 'sapling');
-            if (!placed) { addFloater(player.wx, player.wy, 'Cannot plant', '#ffaa00'); return; }
-            inventory.items.splice(idx, 1);
-            saveInventory();
-            if ($pack.style.display !== 'none') renderBackpack();
-            addFloater(player.wx, player.wy, '🌱 Planted', '#60d060');
-            _sfx(500, 0.08, 'sine', 0.03);
+            // Priority: trees first, then crops by tier.
+            const options = [
+                { invKey: 'sapling',  structKey: 'sapling',         label: '🌱 Sapling' },
+                { invKey: 'herb',     structKey: 'herb_seed',       label: '🌱 Herb sprout' },
+                { invKey: 'berry',    structKey: 'berry_seed',      label: '🌱 Berry sprout' },
+                { invKey: 'mushroom', structKey: 'mushroom_seed',   label: '🌱 Spore cluster' },
+            ];
+            for (const opt of options) {
+                const idx = inventory.items.findIndex(i => i.key === opt.invKey);
+                if (idx < 0) continue;
+                const placed = placeStructure(player.wx, player.wy, opt.structKey);
+                if (!placed) { addFloater(player.wx, player.wy, 'Cannot plant', '#ffaa00'); return; }
+                inventory.items.splice(idx, 1);
+                saveInventory();
+                if ($pack.style.display !== 'none') renderBackpack();
+                addFloater(player.wx, player.wy, opt.label, '#60d060');
+                _sfx(500, 0.08, 'sine', 0.03);
+                return;
+            }
+            addFloater(player.wx, player.wy, 'Nothing to plant', '#ffaa00');
         }
 
         // Tick structure timers on visible chunks: fuel-based structures

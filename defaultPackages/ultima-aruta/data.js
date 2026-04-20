@@ -188,6 +188,14 @@ const ITEMS = {
     grown_tree:  { emoji: '🌳', name: 'Tree',          structure: { mature: true } },
     // Stone wall — blocks walking and creature AI. Mineable (click within 2).
     wall:        { emoji: '🧱', name: 'Stone Wall',    structure: { blocks: true } },
+    // Crop seeds — internal-only structure keys, never held in inventory;
+    // planting consumes the raw ingredient (herb/berry/mushroom) directly.
+    herb_seed:      { emoji: '🌱', name: 'Herb Sprout',    structure: { growth: 60000, grownKey: 'grown_herb' } },
+    grown_herb:     { emoji: '🌿', name: 'Herb Bush',      structure: { mature: true } },
+    berry_seed:     { emoji: '🌱', name: 'Berry Sprout',   structure: { growth: 75000, grownKey: 'grown_berry' } },
+    grown_berry:    { emoji: '🌾', name: 'Berry Patch',    structure: { mature: true } },
+    mushroom_seed:  { emoji: '🌱', name: 'Spore Cluster',  structure: { growth: 90000, grownKey: 'grown_mushroom' } },
+    grown_mushroom: { emoji: '🍄', name: 'Mushroom Ring',  structure: { mature: true } },
 };
 
 const ITEM_DROPS = {
