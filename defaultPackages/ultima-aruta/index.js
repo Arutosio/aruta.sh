@@ -3970,6 +3970,13 @@ export default {
             const prevDay = timeOfDay;
             timeOfDay = (timeOfDay + dt / DAY_MS) % 1;
             if (timeOfDay < prevDay) player.days++; // midnight wrap = new day
+            // Dawn/dusk chimes — fire once when crossing the transition.
+            if (prevDay < 0.25 && timeOfDay >= 0.25) {
+                _sfx(520, 0.2, 'sine', 0.03); setTimeout(() => _sfx(780, 0.25, 'sine', 0.03), 200);
+            }
+            if (prevDay < 0.75 && timeOfDay >= 0.75) {
+                _sfx(400, 0.2, 'sine', 0.03); setTimeout(() => _sfx(280, 0.25, 'sine', 0.03), 200);
+            }
 
             // Save every ~2s.
             saveTimer += dt;
