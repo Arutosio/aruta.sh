@@ -729,7 +729,14 @@ export default {
                         ${inventory.items.filter(i => i.key !== 'gold').map(i => {
                             const def = ITEMS[i.key] || {};
                             const buyPrice = MERCHANT_STOCK.find(s => s.key === i.key)?.price;
-                            const sellPrice = buyPrice ? Math.max(1, Math.floor(buyPrice * SELL_RATIO)) : 1;
+                            // Special-cased buybacks: treasure maps are
+                            // premium curios, gems are always wanted.
+                            const fixed = i.key === 'treasure_map' ? 40
+                                        : i.key === 'gem'          ? 15
+                                        : null;
+                            const sellPrice = fixed != null
+                                ? fixed
+                                : (buyPrice ? Math.max(1, Math.floor(buyPrice * SELL_RATIO)) : 1);
                             return `<div class="ua-shop-row">
                                 <span>${def.emoji || '?'} ${def.name || i.key}</span>
                                 <span class="ua-shop-price">${sellPrice}🪙</span>
