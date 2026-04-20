@@ -641,6 +641,11 @@ export default {
                 tryFeedPets();
                 return;
             }
+            if (e.type === 'keydown' && k === 'u') {
+                e.preventDefault();
+                tryRecall();
+                return;
+            }
         }
 
         // ── Interaction: SPACE/E talks to an adjacent NPC or enters a
@@ -1039,7 +1044,8 @@ export default {
                     Double-click item in bag — consume food/potion<br>
                     Q — quick potion · F — light a campfire 🔥 · G — plant sapling 🌱<br>
                     T — tame an adjacent passive creature (needs meat)<br>
-                    Y — feed meat to wounded pets (raw +10, roast +25)<br><br>
+                    Y — feed meat to wounded pets (raw +10, roast +25)<br>
+                    U — Recall (30 mana, next to 🔥) → nearest distant camp<br><br>
                     <b>Panels</b><br>
                     I / B — Backpack · P — Paperdoll · C — Craft<br>
                     K — Spellbook · H — This guide<br><br>
@@ -2499,6 +2505,42 @@ export default {
         }
 
         function savePets() { /* pets are serialized with main state blob below */ }
+
+        // U — recall: if the player is next to a burning campfire, spend
+        // 30 mana to teleport to the nearest other burning campfire in the
+        // world. Looks across the full worldDeltas.added set so it finds
+        // camps placed in distant chunks the player is no longer near.
+        function tryRecall() {
+            if (_dungeon) { addFloater(player.wx, player.wy, 'Not in dungeons', '#ffaa00'); return; }
+            const anchor = isAdjacentToBurningStructure('campfire');
+            if (!anchor) { addFloater(player.wx, player.wy, 'Stand by a 🔥 campfire', '#ffaa00'); return; }
+            if (player.mana < 30) { addFloater(player.wx, player.wy, 'Need 30 mana', '#4080e0'); return; }
+            // Scan every chunk delta for 'campfire' structures, skipping the
+            // anchor tile itself.
+            const candidates = [];
+            for (const [key, adds] of Object.entries(worldDeltas.added || {})) {
+                if (!Array.isArray(adds)) continue;
+                const [cx, cy] = key.split(',').map(Number);
+                for (const a of adds) {
+                    if (a.kind !== 'structure' || a.key !== 'campfire') continue;
+                    const wx = cx * CHUNK_SIZE + a.c;
+                    const wy = cy * CHUNK_SIZE + a.r;
+                    if (wx === anchor.wx && wy === anchor.wy) continue;
+                    const d = Math.max(Math.abs(wx - player.wx), Math.abs(wy - player.wy));
+                    if (d < 10) continue; // must be a meaningful distance
+                    candidates.push({ wx, wy, d });
+                }
+            }
+            if (!candidates.length) { addFloater(player.wx, player.wy, 'No distant camp', '#ffaa00'); return; }
+            candidates.sort((a, b) => a.d - b.d);
+            const dest = candidates[0];
+            player.mana = Math.max(0, player.mana - 30);
+            player.wx = dest.wx; player.wy = dest.wy;
+            player.rx = dest.wx; player.ry = dest.wy;
+            player.moveT = 0;
+            addFloater(dest.wx, dest.wy, '✨ Recalled!', '#c080ff');
+            _sfx(900, 0.4, 'sine', 0.06);
+        }
 
         // Y — feed every wounded pet nearby. Each piece of meat in the
         // backpack heals one pet for a chunk of HP. Prefers raw first so
