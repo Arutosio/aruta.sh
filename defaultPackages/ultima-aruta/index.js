@@ -984,10 +984,14 @@ export default {
                     🍖 Roast Meat every ~3 s (a big hunger refill).<br><br>
                     <b>Skills</b><br>
                     Every chop, mine, cook, fish, tame, and swing feeds a<br>
-                    per-skill XP counter. Open the Stats panel (gear icon)<br>
-                    to watch each skill's level climb toward mastery (100).<br>
-                    Higher levels currently just signal mastery — bonuses<br>
-                    can be wired in later iterations.<br><br>
+                    per-skill XP counter (level 0–100, sqrt curve).<br>
+                    Bonuses at higher levels:<br>
+                    · Woodcutting — chance of a bonus drop per chop<br>
+                    · Mining — cheaper swings + bonus drop chance<br>
+                    · Cooking — faster roast cycles (3s → 1s at 100)<br>
+                    · Fishing — higher catch rate (40% → 75%)<br>
+                    · Taming — higher tame success (+up to 40%)<br>
+                    · Combat — +1 damage per 20 levels<br><br>
                     <b>Treasure Maps</b><br>
                     Rare 🗺️ drops from bosses (🐉 🐲 👿 👹 🧟). Each map<br>
                     points to a buried hoard 20–60 tiles away. Double-click<br>
@@ -2088,7 +2092,8 @@ export default {
             // Critical hit: 10% base, +5% with dagger.
             const critChance = 0.10 + (equipment.weapon?.key === 'dagger' ? 0.05 : 0);
             const isCrit = Math.random() < critChance;
-            let dmg = player.baseDmg + getWeaponDmg() + Math.floor(Math.random() * 3);
+            const combatBonus = Math.floor(skillLevel(player.skills.combat) / 20); // +0..+5
+            let dmg = player.baseDmg + getWeaponDmg() + Math.floor(Math.random() * 3) + combatBonus;
             if (isCrit) dmg = Math.floor(dmg * 2);
 
             cr.hp = Math.max(0, cr.hp - dmg);
@@ -2221,7 +2226,8 @@ export default {
             saveInventory();
             // Roll success.
             const wounded = found.cr.hp <= found.cr.maxHp * 0.5;
-            const chance = 0.5 + (wounded ? 0.25 : 0);
+            const tameBonus = skillLevel(player.skills.taming) / 250; // up to +0.4 at lvl 100
+            const chance = Math.min(0.95, 0.5 + (wounded ? 0.25 : 0) + tameBonus);
             if (Math.random() > chance) {
                 addFloater(found.wx, found.wy, '❌ Fled!', '#ff6060');
                 _sfx(200, 0.1, 'sawtooth', 0.04);
@@ -2458,7 +2464,10 @@ export default {
             const hit = isAdjacentToBurningStructure('campfire');
             if (!hit) { _cookTimer = 0; return; }
             _cookTimer += dt;
-            if (_cookTimer < 3000) return;
+            // Cooking mastery shortens the roast cycle from 3s toward 1s.
+            const cookLvl = skillLevel(player.skills.cooking);
+            const need = Math.max(1000, 3000 - cookLvl * 20);
+            if (_cookTimer < need) return;
             _cookTimer = 0;
             // Replace one raw_meat with cooked meat.
             const raw = inventory.items[rawIdx];
@@ -2800,7 +2809,9 @@ export default {
                     if (player.stamina < 3) { addFloater(player.wx, player.wy, 'Exhausted!', '#ffaa00'); return; }
                     player.stamina -= 3;
                     _sfx(250, 0.06, 'sine', 0.03);
-                    if (Math.random() < 0.4) {
+                    // Base catch rate 40%, +up to 35% from fishing skill (0.75 at lvl 100).
+                    const fishRate = 0.4 + skillLevel(player.skills.fishing) / 286;
+                    if (Math.random() < fishRate) {
                         const fishPool = ['gold', 'herb', 'gem'];
                         const fishKey = clickBiome === 'deep' ? (Math.random() < 0.3 ? 'gem' : 'gold') : fishPool[Math.floor(Math.random() * fishPool.length)];
                         const def = ITEMS[fishKey];
@@ -2849,9 +2860,13 @@ export default {
                         const table = GATHER[f.emoji];
                         if (table) {
                             // Mining ⛰️ peaks is costly — higher stamina floor than other gathers.
-                            const isMining = f.emoji === '⛰️';
-                            const costStam = isMining ? 6 : 3;
-                            const minStam  = isMining ? 6 : 3;
+                            const isMining = f.emoji === '⛰️' || f.emoji === '🪨';
+                            const mineLvl = skillLevel(player.skills.mining);
+                            const woodLvl = skillLevel(player.skills.woodcutting);
+                            // Mining mastery reduces swing cost by up to 3 stamina (at lvl 100).
+                            const mineDiscount = Math.floor(mineLvl / 34);
+                            const costStam = Math.max(1, (isMining ? 6 : 3) - (isMining ? mineDiscount : 0));
+                            const minStam  = Math.max(1, (isMining ? 6 : 3) - (isMining ? mineDiscount : 0));
                             if (player.stamina < minStam) { addFloater(player.wx, player.wy, 'Exhausted!', '#ffaa00'); return; }
                             player.stamina -= costStam;
                             _sfx(isMining ? 180 : 300, 0.08, isMining ? 'sawtooth' : 'triangle', 0.05);
@@ -2874,6 +2889,25 @@ export default {
                             const isRockEmoji = f.emoji === '🪨' || f.emoji === '⛰️' || f.emoji === '🧱';
                             if (isTreeEmoji) addSkillXp('woodcutting', 2);
                             else if (isRockEmoji) addSkillXp('mining', 3);
+                            // Skill bonus roll: chance of a second independent drop
+                            // scales linearly with the matching skill (0 → 50% at 100).
+                            const bonusChance = isTreeEmoji ? woodLvl / 200 : (isRockEmoji ? mineLvl / 200 : 0);
+                            if (bonusChance > 0 && Math.random() < bonusChance) {
+                                for (const drop of table) {
+                                    if (Math.random() < drop.rate) {
+                                        const def = ITEMS[drop.key];
+                                        inventory.items.push({
+                                            id: 'it_' + Math.random().toString(36).slice(2, 9),
+                                            key: drop.key, emoji: def.emoji, name: def.name,
+                                            x: 6 + (inventory.items.length % 7) * 36,
+                                            y: 6 + Math.floor(inventory.items.length / 7) * 36,
+                                        });
+                                        addFloater(wx, wy, '✨ +' + def.name, '#a0ffd0');
+                                        saveInventory();
+                                        break;
+                                    }
+                                }
+                            }
                             // Bonus independent roll: chopping trees occasionally
                             // drops a sapling the player can replant elsewhere.
                             const isTree = f.emoji === '🌲' || f.emoji === '🌳' || f.emoji === '🌴';
