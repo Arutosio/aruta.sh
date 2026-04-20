@@ -952,6 +952,9 @@ export default {
                     K — Spellbook · H — This guide<br><br>
                     <b>Combat</b><br>
                     Click a creature to attack. Damage = base + weapon bonus.<br>
+                    Weapons and armor now have durability — each swing and<br>
+                    each hit taken wears them down. At 0 they break. Watch<br>
+                    the green/orange/red bars on the paperdoll.<br>
                     Bow 🏹 has range 3; melee range 1.5.<br>
                     Stamina ⚡ drains on move (2) and attack (8).<br>
                     Below 5 stamina you can't attack. Regen 6/s standing, 2/s walking.<br><br>
@@ -1006,12 +1009,22 @@ export default {
         root.querySelectorAll('.ua-hub-btn').forEach(btn => btn.addEventListener('click', () => togglePanel(btn.dataset.hub)));
 
         function renderPaperdoll() {
-            $dollBody.innerHTML = SLOTS.map(s => `
-                <div class="ua-slot" data-slot="${s.key}">
-                    <div class="ua-slot-label">${s.label}</div>
-                    <div class="ua-slot-cell">${equipment[s.key] ? `<div class="ua-item ua-slot-item" data-slot-of="${s.key}">${equipment[s.key].emoji}</div>` : ''}</div>
-                </div>
-            `).join('');
+            $dollBody.innerHTML = SLOTS.map(s => {
+                const it = equipment[s.key];
+                let inner = '';
+                if (it) {
+                    let durBar = '';
+                    if (typeof it.dur === 'number' && typeof it.durMax === 'number' && it.durMax > 0) {
+                        const pct = Math.max(0, Math.min(1, it.dur / it.durMax));
+                        const color = pct > 0.5 ? '#4caf50' : pct > 0.25 ? '#ff9800' : '#f44336';
+                        durBar = `<div style="position:absolute;left:2px;right:2px;bottom:2px;height:3px;background:rgba(0,0,0,0.4);border-radius:1px;">` +
+                                 `<div style="width:${(pct * 100).toFixed(0)}%;height:100%;background:${color};border-radius:1px;"></div></div>`;
+                    }
+                    const durTitle = typeof it.dur === 'number' ? ` (${Math.ceil(it.dur)}/${it.durMax})` : '';
+                    inner = `<div class="ua-item ua-slot-item" data-slot-of="${s.key}" title="${it.name}${durTitle}" style="position:relative;">${it.emoji}${durBar}</div>`;
+                }
+                return `<div class="ua-slot" data-slot="${s.key}"><div class="ua-slot-label">${s.label}</div><div class="ua-slot-cell">${inner}</div></div>`;
+            }).join('');
             // Wire equipped items for drag (equip → inventory or swap).
             $dollBody.querySelectorAll('.ua-slot-item').forEach(el => {
                 el.addEventListener('pointerdown', (ev) => {
@@ -1260,15 +1273,69 @@ export default {
             }
         }
 
+        // Max durability per item key. Weapons/tools wear down on attack,
+        // armor wears down when the player takes a hit. Missing key → no
+        // durability (item is indestructible, e.g. jewelry).
+        const MAX_DURABILITY = {
+            sword: 80, axe: 100, bow: 70, dagger: 60, wand: 50,
+            shield: 90, helm: 60, crown: 120, hat: 50,
+            armor: 120, robe: 60, gloves: 50, boots: 60, sandals: 40,
+            cape: 40, spellbook: 100, crystal: 80,
+        };
+        function _ensureDur(itemRow) {
+            if (!itemRow) return;
+            const max = MAX_DURABILITY[itemRow.key];
+            if (max != null && typeof itemRow.dur !== 'number') itemRow.dur = max;
+            if (max != null && typeof itemRow.durMax !== 'number') itemRow.durMax = max;
+        }
+        // Retroactively seed durability on items loaded from older saves so
+        // the UI never flashes "—/—" for pre-existing gear.
+        for (const it of inventory.items) _ensureDur(it);
+        for (const slot of Object.keys(equipment)) _ensureDur(equipment[slot]);
         function _equipTo(slotKey, itemRow) {
             // If already equipped, the displaced item goes to the backpack.
             const prev = equipment[slotKey];
+            _ensureDur(itemRow);
             equipment[slotKey] = itemRow;
             if (prev && prev !== itemRow) {
                 inventory.items.push({ ...prev, x: 6, y: 6 });
             }
             saveEquipment(); saveInventory();
             renderPaperdoll(); renderBackpack();
+        }
+
+        // Wear down the equipped weapon by one tick. Breaks at 0, moving the
+        // item out of the slot with a warning floater.
+        function _wearWeapon() {
+            const w = equipment.weapon;
+            if (!w || typeof w.dur !== 'number') return;
+            w.dur -= 1;
+            if (w.dur <= 0) {
+                equipment.weapon = null;
+                addFloater(player.wx, player.wy, '💥 ' + w.name + ' broke!', '#ff8040');
+                _sfx(160, 0.2, 'sawtooth', 0.05);
+                saveEquipment();
+                if ($doll.style.display !== 'none') renderPaperdoll();
+            }
+        }
+        // Wear a random equipped armor piece. Called whenever the player
+        // soaks a hit. Jewelry (no durability) is skipped.
+        function _wearArmor() {
+            const slots = Object.keys(equipment).filter(s => {
+                const it = equipment[s];
+                return it && typeof it.dur === 'number' && s !== 'weapon' && s !== 'book';
+            });
+            if (!slots.length) return;
+            const slot = slots[Math.floor(Math.random() * slots.length)];
+            const it = equipment[slot];
+            it.dur -= 1;
+            if (it.dur <= 0) {
+                equipment[slot] = null;
+                addFloater(player.wx, player.wy, '💥 ' + it.name + ' broke!', '#ff8040');
+                _sfx(140, 0.2, 'sawtooth', 0.05);
+                saveEquipment();
+                if ($doll.style.display !== 'none') renderPaperdoll();
+            }
         }
 
         canvas.addEventListener('pointerdown', (ev) => {
@@ -1874,6 +1941,7 @@ export default {
             player.attackCooldown = 800;
             addFloater(cwx, cwy, isCrit ? 'CRIT -' + dmg + '!' : '-' + dmg, isCrit ? '#ffff00' : '#ff4040');
             sfxHit();
+            _wearWeapon();
             if (isCrit) _sfx(600, 0.08, 'triangle', 0.05);
             if (cr.ai === 'neutral') cr.ai = 'aggressive';
             if (cr.hp <= 0) killCreature(cr, chCx, chCy);
@@ -2344,6 +2412,7 @@ export default {
                         cr.attackCooldown = 1200;
                         addFloater(player.wx, player.wy, '-' + reduceDamage(cr.dmg), '#ff6060');
                         sfxHurt();
+                        _wearArmor();
                         _playerFlash = 300;
                         // Venomous creatures apply poison.
                         const venomous = ['🐍', '🦂', '🕷️'];
