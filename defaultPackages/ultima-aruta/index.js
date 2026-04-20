@@ -3197,14 +3197,18 @@ export default {
                     }
                 }
             }
-            // Hand-held torch: any Torch in inventory grants a personal halo.
+            // Hand-held torch + lantern: any Torch in inventory grants a
+            // small personal halo; a Lantern extends it much further. Effects
+            // stack — a lantern + 3 torches lights the biggest radius.
             const torches = inventory.items.filter(i => i.key === 'torch').length;
-            if (torches > 0) {
+            const lanterns = inventory.items.filter(i => i.key === 'lantern').length;
+            if (torches > 0 || lanterns > 0) {
                 const pp = iso(player.rx, player.ry);
+                const radius = (1 + Math.min(torches, 3) + Math.min(lanterns, 2) * 3) * TILE_W;
                 lights.push({
                     x: pp.x + cam.cx,
                     y: pp.y + cam.cy,
-                    radius: (2 + Math.min(torches, 3)) * TILE_W,
+                    radius,
                 });
             }
             // Tame pets emit a soft light so they're easier to find at night.
