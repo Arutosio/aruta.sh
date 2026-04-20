@@ -1254,6 +1254,15 @@ export default {
                     }).join('');
                 })()}
                 <div style="margin-top:6px">Inventory: ${inventory.items.length} items</div>
+                ${(() => {
+                    const earned = [];
+                    if (player._slayDragon) earned.push('🏆 Dragonslayer');
+                    if (player._slayDemon) earned.push('🏆 Demonbreaker');
+                    if (player._slayBrute) earned.push('🏆 Brutebane');
+                    if (!earned.length) return '';
+                    return `<div style="margin-top:6px"><b>Titles</b></div>
+                        <div style="font-size:11px;opacity:0.9;">${earned.join(' · ')}</div>`;
+                })()}
                 ${activeQuest ? `<div style="margin-top:6px;padding:6px;background:rgba(200,170,80,0.12);border-left:3px solid #ffc857;border-radius:2px;">
                     <b>📜 Active Quest</b><br>
                     <span style="font-size:11px">${_questProgressText(activeQuest)} → ${activeQuest.reward.gold}🪙</span>
