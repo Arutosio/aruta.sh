@@ -353,6 +353,8 @@ export default {
                 }
             }
             if (saved.slayDragon) player._slayDragon = true;
+            if (saved.slayDemon) player._slayDemon = true;
+            if (saved.slayBrute) player._slayBrute = true;
             if (saved.baseDmg != null) player.baseDmg = saved.baseDmg;
             if (saved.kills != null)  player.kills  = saved.kills;
             if (saved.days != null)   player.days   = saved.days;
@@ -1269,6 +1271,8 @@ export default {
                     skills: player.skills,
                     activeQuest,
                     slayDragon: player._slayDragon || false,
+                    slayDemon: player._slayDemon || false,
+                    slayBrute: player._slayBrute || false,
                 }).catch(e => console.warn('[ultima-aruta] save state failed', e));
                 root.__uaCleanup?.();
                 // Reload by re-invoking mount — simplest way.
@@ -3204,14 +3208,24 @@ export default {
             player.mana = Math.min(player.maxMana, player.mana + soul);
             // Dungeon kills give +50% XP to reward venturing underground.
             const xpMult = _dungeon ? 1.5 : 1;
-            // Dragon/wyvern slay — permanent +5 maxHp milestone (once per world).
-            if ((cr.emoji === '🐉' || cr.emoji === '🐲') && !player._slayDragon) {
-                player._slayDragon = true;
-                player.maxHp += 5;
-                player.hp = player.maxHp;
-                addFloater(chCx * CHUNK_SIZE + cr.c, chCy * CHUNK_SIZE + cr.r, '🏆 Dragonslayer +5 HP', '#ffd060');
-                showDialogBubble('🐉', "You've slain a dragon! Your resolve hardens. +5 max HP forever.");
+            // Milestone slayer bonuses — each fires once per world.
+            const emoji = cr.emoji;
+            const milestones = [
+                { keys: ['🐉', '🐲'], flag: '_slayDragon', hp: 5,   title: 'Dragonslayer',  line: "You've slain a dragon! Your resolve hardens." },
+                { keys: ['👿'],       flag: '_slayDemon',  mana: 20, title: 'Demonbreaker',  line: "The demon king lies dead. Your mana pool widens." },
+                { keys: ['👹', '🧌'], flag: '_slayBrute', stam: 15, title: 'Brutebane',     line: "The brutes fall before you. Stamina steels up." },
+            ];
+            for (const m of milestones) {
+                if (!m.keys.includes(emoji) || player[m.flag]) continue;
+                player[m.flag] = true;
+                if (m.hp)   { player.maxHp   += m.hp;   player.hp   = player.maxHp;   }
+                if (m.mana) { player.maxMana += m.mana; player.mana = player.maxMana; }
+                if (m.stam) { player.maxStamina += m.stam; player.stamina = player.maxStamina; }
+                const gain = m.hp ? `+${m.hp} HP` : m.mana ? `+${m.mana} MP` : `+${m.stam} SP`;
+                addFloater(chCx * CHUNK_SIZE + cr.c, chCy * CHUNK_SIZE + cr.r, `🏆 ${m.title} ${gain}`, '#ffd060');
+                showDialogBubble(emoji, `${m.line} ${gain} forever.`);
                 _sfx(300, 0.3, 'sawtooth', 0.06); setTimeout(() => _sfx(900, 0.3, 'sine', 0.05), 150);
+                break;
             }
             // Quest progress (kill-type): match by emoji regardless of dungeon/overworld.
             if (activeQuest && activeQuest.kind === 'kill' && activeQuest.target === cr.emoji && activeQuest.current < activeQuest.needed) {
@@ -3806,6 +3820,8 @@ export default {
                     skills: player.skills,
                     activeQuest,
                     slayDragon: player._slayDragon || false,
+                    slayDemon: player._slayDemon || false,
+                    slayBrute: player._slayBrute || false,
                 }).catch(e => console.warn('[ultima-aruta] save state failed', e));
                 worldRow.lastPlayed = Date.now();
                 worldRow.playerClass = playerClass;
