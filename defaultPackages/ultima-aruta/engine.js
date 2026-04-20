@@ -525,28 +525,34 @@ function _hexToRgb(hex) {
     return [parseInt(h.slice(0,2), 16), parseInt(h.slice(2,4), 16), parseInt(h.slice(4,6), 16)];
 }
 
-// ── Isometric projection ─────────────────────────────────
+// ── Top-down projection (Pokémon-era square tiles) ───────
+// iso() kept as name for compatibility with existing call sites. In the
+// top-down rebuild it returns the tile's CENTER in world→screen-local
+// coords (pre-camera). Matching the iso version's "sprite anchor = tile
+// midpoint" semantics keeps the sprite positioning code in index.js
+// working with only the new projection plugged in.
 function iso(wx, wy) {
     return {
-        x: (wx - wy) * (TILE_W / 2),
-        y: (wx + wy) * (TILE_H / 2),
+        x: wx * TILE_SIZE + TILE_SIZE / 2,
+        y: wy * TILE_SIZE + TILE_SIZE / 2,
     };
 }
 
-// Given canvas size + player (possibly tweened) world position, compute camera.
+// Camera centers the player sprite at the viewport midpoint. Because iso()
+// returns a tile center, adding cam to it gives a screen coord that matches
+// the existing sprite pipeline (which then subtracts TILE_W/2 to get the
+// top-left draw point).
 function camera(canvasW, canvasH, pwx, pwy) {
     const p = iso(pwx, pwy);
-    return { cx: canvasW / 2 - p.x, cy: canvasH / 2 - p.y };
+    return {
+        cx: Math.round(canvasW / 2 - p.x),
+        cy: Math.round(canvasH / 2 - p.y),
+    };
 }
 
-// Perspective scale: tiles/sprites near the bottom of the screen (close)
-// appear larger; those near the top (far) appear smaller. Returns a
-// multiplier centred on 1.0 at the viewport middle.
-// PERSP_STRENGTH loaded from data.js
-function perspScale(screenY, viewH) {
-    const norm = (screenY / viewH) - 0.5; // -0.5 (top) to +0.5 (bottom)
-    return 1.0 + norm * PERSP_STRENGTH;   // ~0.825 at top, ~1.175 at bottom
-}
+// Perspective is disabled in top-down — always 1.0 so any legacy call
+// site that still multiplies by this factor becomes a no-op.
+function perspScale(_screenY, _viewH) { return 1.0; }
 
 // ── Rendering ────────────────────────────────────────────
 // ELEV_PX loaded from data.js
@@ -596,72 +602,167 @@ function sfxKill()    { _sfx(440, 0.08); setTimeout(() => _sfx(660, 0.12), 60); 
 function sfxHurt()    { _sfx(120, 0.14, 'sawtooth', 0.08); }
 function sfxLevelUp() { _sfx(523, 0.12); setTimeout(() => _sfx(659, 0.14), 100); setTimeout(() => _sfx(784, 0.2), 240); }
 
-function drawTile(ctx, sx, sy, biome, elev = 0.5) {
-    const b = BIOMES[biome] || DUNGEON_BIOMES[biome];
-    const hx = TILE_W / 2, hy = TILE_H / 2;
-    // Elevation offset: higher tiles render higher on screen.
-    const lift = (elev - 0.35) * ELEV_PX;
-    const ty = sy - lift;
+// ── Procedural biome patterns ────────────────────────────
+// Each biome is baked once into an OffscreenCanvas at startup. Instead of
+// stroking geometry per tile every frame we just drawImage() the cached
+// pattern. This is both prettier than flat colour and faster than the
+// diamond gradient path it replaces.
+const _biomePatterns = new Map();
 
-    // Brightness shift: low tiles slightly darker, high tiles brighter.
-    let bright = 0.85 + elev * 0.3; // range ~0.85–1.15
-    // Water shimmer — gentle brightness wave.
-    if (biome === 'water' || biome === 'deep') {
-        bright += Math.sin(_renderTime * 0.002 + sx * 0.08 + sy * 0.12) * 0.12;
-    }
-
-    const g = ctx.createLinearGradient(sx, ty, sx, ty + TILE_H);
-    g.addColorStop(0, _adjustBright(b.color1, bright));
-    g.addColorStop(1, _adjustBright(b.color2, bright));
-    ctx.fillStyle = g;
-    ctx.beginPath();
-    ctx.moveTo(sx + hx, ty);
-    ctx.lineTo(sx + TILE_W, ty + hy);
-    ctx.lineTo(sx + hx, ty + TILE_H);
-    ctx.lineTo(sx, ty + hy);
-    ctx.closePath();
-    ctx.fill();
-    ctx.strokeStyle = 'rgba(0,0,0,0.10)';
-    ctx.lineWidth = 0.5;
-    ctx.stroke();
+function _seededRand(seed) {
+    let a = seed >>> 0;
+    return () => {
+        a |= 0; a = a + 0x6D2B79F5 | 0;
+        let t = Math.imul(a ^ a >>> 15, 1 | a);
+        t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+        return ((t ^ t >>> 14) >>> 0) / 4294967296;
+    };
 }
 
-/** Draw south-east "wall" face when this tile is elevated above its
- *  neighbours — gives a cliff / depth impression. */
-function drawTileDepth(ctx, sx, sy, elev, elevS, elevE) {
-    const lift = (elev - 0.35) * ELEV_PX;
-    const ty = sy - lift;
-    const hx = TILE_W / 2, hy = TILE_H / 2;
+function _paintBiomePattern(biome, def, size) {
+    const canvas = (typeof OffscreenCanvas !== 'undefined')
+        ? new OffscreenCanvas(size, size)
+        : Object.assign(document.createElement('canvas'), { width: size, height: size });
+    const c = canvas.getContext('2d');
+    // Vertical gradient base — reuses color1/color2 already defined in data.js.
+    const g = c.createLinearGradient(0, 0, 0, size);
+    g.addColorStop(0, def.color1);
+    g.addColorStop(1, def.color2);
+    c.fillStyle = g;
+    c.fillRect(0, 0, size, size);
 
-    // South face (bottom-right edge → tile below).
-    const sLift = (elevS - 0.35) * ELEV_PX;
-    const diff = lift - sLift;
-    if (diff > 1.5) {
-        const tyS = sy - sLift;
-        ctx.fillStyle = 'rgba(0,0,0,0.22)';
-        ctx.beginPath();
-        ctx.moveTo(sx + hx, ty + TILE_H);
-        ctx.lineTo(sx + TILE_W, ty + hy);
-        ctx.lineTo(sx + TILE_W, tyS + hy);
-        ctx.lineTo(sx + hx, tyS + TILE_H);
-        ctx.closePath();
-        ctx.fill();
+    // Hash biome name for deterministic-per-biome detail noise.
+    let seed = 0;
+    for (let i = 0; i < biome.length; i++) seed = (seed * 31 + biome.charCodeAt(i)) >>> 0;
+    const rand = _seededRand(seed || 1);
+
+    // Per-biome detail layer. Cheap, readable, zero asset files.
+    if (biome === 'grass' || biome === 'savanna') {
+        // Scattered grass blades + tiny dots.
+        c.fillStyle = _adjustBright(def.color1, 1.15);
+        for (let i = 0; i < 40; i++) {
+            c.fillRect(rand() * size, rand() * size, 1, 2);
+        }
+        c.fillStyle = _adjustBright(def.color2, 0.8);
+        for (let i = 0; i < 14; i++) {
+            c.fillRect(rand() * size, rand() * size, 1, 1);
+        }
+    } else if (biome === 'forest') {
+        // Darker speckle + few pine-needle marks.
+        c.fillStyle = _adjustBright(def.color2, 0.7);
+        for (let i = 0; i < 20; i++) c.fillRect(rand() * size, rand() * size, 2, 1);
+        c.fillStyle = _adjustBright(def.color1, 1.1);
+        for (let i = 0; i < 12; i++) c.fillRect(rand() * size, rand() * size, 1, 1);
+    } else if (biome === 'sand') {
+        // Dune dots + sparse pebbles.
+        c.fillStyle = _adjustBright(def.color2, 0.88);
+        for (let i = 0; i < 30; i++) c.fillRect(rand() * size, rand() * size, 1, 1);
+        c.fillStyle = _adjustBright(def.color1, 1.12);
+        for (let i = 0; i < 10; i++) c.fillRect(rand() * size, rand() * size, 2, 1);
+    } else if (biome === 'swamp') {
+        // Darker blotches for stagnant mud.
+        c.fillStyle = _adjustBright(def.color2, 0.75);
+        for (let i = 0; i < 12; i++) {
+            const r = 1 + rand() * 2;
+            c.beginPath();
+            c.arc(rand() * size, rand() * size, r, 0, Math.PI * 2);
+            c.fill();
+        }
+    } else if (biome === 'mountain') {
+        // Angular crack lines for stone.
+        c.strokeStyle = _adjustBright(def.color2, 0.7);
+        c.lineWidth = 1;
+        for (let i = 0; i < 5; i++) {
+            c.beginPath();
+            const x0 = rand() * size, y0 = rand() * size;
+            c.moveTo(x0, y0);
+            c.lineTo(x0 + (rand() - 0.5) * size * 0.4, y0 + (rand() - 0.5) * size * 0.4);
+            c.stroke();
+        }
+    } else if (biome === 'tundra') {
+        c.fillStyle = _adjustBright(def.color1, 0.9);
+        for (let i = 0; i < 18; i++) c.fillRect(rand() * size, rand() * size, 2, 1);
+    } else if (biome === 'snow') {
+        // Sparkles.
+        c.fillStyle = '#ffffff';
+        for (let i = 0; i < 18; i++) c.fillRect(rand() * size, rand() * size, 1, 1);
+    } else if (biome === 'water' || biome === 'deep') {
+        // Wave lines — slightly animated via time offset drawn at paint-time
+        // in the main loop (here we bake a base pattern; shimmer added on top).
+        c.strokeStyle = _adjustBright(def.color1, 1.25);
+        c.lineWidth = 1;
+        for (let i = 0; i < 3; i++) {
+            const yy = (i + 1) * size / 4 + (rand() - 0.5) * 4;
+            c.beginPath();
+            c.moveTo(0, yy);
+            for (let x = 0; x <= size; x += 4) {
+                c.lineTo(x, yy + Math.sin(x * 0.5 + i) * 1.2);
+            }
+            c.stroke();
+        }
+    } else if (biome === 'cave_floor') {
+        c.fillStyle = _adjustBright(def.color2, 0.7);
+        for (let i = 0; i < 14; i++) c.fillRect(rand() * size, rand() * size, 1, 1);
+    } else if (biome === 'cave_wall') {
+        c.strokeStyle = _adjustBright(def.color1, 1.4);
+        c.lineWidth = 1;
+        for (let i = 0; i < 3; i++) {
+            c.beginPath();
+            const x0 = rand() * size, y0 = rand() * size;
+            c.moveTo(x0, y0);
+            c.lineTo(x0 + rand() * size * 0.3, y0 + rand() * size * 0.3);
+            c.stroke();
+        }
+    } else if (biome === 'lava') {
+        c.fillStyle = '#ffb020';
+        for (let i = 0; i < 8; i++) {
+            const r = 1 + rand() * 2;
+            c.beginPath();
+            c.arc(rand() * size, rand() * size, r, 0, Math.PI * 2);
+            c.fill();
+        }
+    } else if (biome === 'exit') {
+        c.strokeStyle = _adjustBright(def.color1, 1.5);
+        c.lineWidth = 2;
+        c.strokeRect(4, 4, size - 8, size - 8);
     }
-    // East face (bottom-left edge).
-    const eLift = (elevE - 0.35) * ELEV_PX;
-    const diffE = lift - eLift;
-    if (diffE > 1.5) {
-        const tyE = sy - eLift;
-        ctx.fillStyle = 'rgba(0,0,0,0.30)';
-        ctx.beginPath();
-        ctx.moveTo(sx + hx, ty + TILE_H);
-        ctx.lineTo(sx, ty + hy);
-        ctx.lineTo(sx, tyE + hy);
-        ctx.lineTo(sx + hx, tyE + TILE_H);
-        ctx.closePath();
-        ctx.fill();
+    return canvas;
+}
+
+function buildBiomePatterns() {
+    _biomePatterns.clear();
+    const all = { ...BIOMES, ...DUNGEON_BIOMES };
+    for (const [key, def] of Object.entries(all)) {
+        _biomePatterns.set(key, _paintBiomePattern(key, def, TILE_SIZE));
     }
 }
+
+function getBiomePattern(biome) {
+    if (_biomePatterns.size === 0) buildBiomePatterns();
+    return _biomePatterns.get(biome) || _biomePatterns.get('grass');
+}
+
+// Top-down square tile. sx/sy is the top-left corner on screen.
+function drawTile(ctx, sx, sy, biome, _elev) {
+    const pat = getBiomePattern(biome);
+    if (pat) {
+        ctx.drawImage(pat, sx, sy);
+        // Live water shimmer on top of the baked base.
+        if (biome === 'water' || biome === 'deep') {
+            const shimmer = 0.08 + 0.08 * Math.sin(_renderTime * 0.002 + sx * 0.08 + sy * 0.12);
+            ctx.fillStyle = `rgba(255,255,255,${shimmer.toFixed(3)})`;
+            ctx.fillRect(sx, sy, TILE_SIZE, TILE_SIZE);
+        }
+    } else {
+        const b = BIOMES[biome] || DUNGEON_BIOMES[biome];
+        ctx.fillStyle = b ? b.color1 : '#333';
+        ctx.fillRect(sx, sy, TILE_SIZE, TILE_SIZE);
+    }
+}
+
+// Depth walls are meaningless on a flat top-down plane — kept as a no-op
+// so any legacy call site keeps compiling without changes.
+function drawTileDepth(_ctx, _sx, _sy, _elev, _elevS, _elevE) { /* no-op in top-down */ }
 
 function _adjustBright(hex, factor) {
     const h = hex.replace('#', '');

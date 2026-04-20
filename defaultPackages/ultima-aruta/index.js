@@ -1016,9 +1016,13 @@ export default {
             const { x: canvasX, y: canvasY } = _cssToInternal(cssRelX, cssRelY);
             const W = VIEW_W, H = VIEW_H;
             const cam = camera(W, H, player.rx, player.ry);
-            const a = (canvasY - cam.cy) * 2 / TILE_H;
-            const b = (canvasX - cam.cx) * 2 / TILE_W;
-            return { wx: Math.round((a + b) / 2), wy: Math.round((a - b) / 2) };
+            // Top-down inversion: each tile is TILE_SIZE square starting at
+            // (cam.cx, cam.cy) for world (0,0). Floor to hit the tile the
+            // pointer is over, not the nearest edge.
+            return {
+                wx: Math.floor((canvasX - cam.cx) / TILE_SIZE),
+                wy: Math.floor((canvasY - cam.cy) / TILE_SIZE),
+            };
         }
 
         function startDrag(source, data, pageX, pageY) {
@@ -1270,14 +1274,17 @@ export default {
         function tryStepFromHeld() {
             if (player.moveT > 0) return;
             let dx = 0, dy = 0;
-            if (held.has('n')) { dx -= 1; dy -= 1; }
-            if (held.has('s')) { dx += 1; dy += 1; }
-            if (held.has('e')) { dx += 1; dy -= 1; }
-            if (held.has('w')) { dx -= 1; dy += 1; }
+            // Top-down mapping: n/s/e/w are cardinal world-axis steps.
+            // (Iso mapping used to pair these with diagonal deltas so the
+            // diamond's top was visually "up" — no longer needed.)
+            if (held.has('n')) dy -= 1;
+            if (held.has('s')) dy += 1;
+            if (held.has('e')) dx += 1;
+            if (held.has('w')) dx -= 1;
 
-            // If right-mouse is held, steer toward the cursor. Compute the
-            // direction in screen space from the player's on-screen position
-            // to the cursor, then convert back to world delta via inverse iso.
+            // If right-mouse is held, steer toward the cursor. Convert the
+            // screen-space vector from the player to the cursor into a world
+            // delta — trivial in top-down since world axes align with screen.
             if (!dx && !dy && mouseWalk) {
                 const rect = canvas.getBoundingClientRect();
                 const { x: cx, y: cy } = _cssToInternal(
@@ -1290,19 +1297,13 @@ export default {
                 const vx = cx - px, vy = cy - py;
                 // Dead zone so tiny movements don't cause twitchy walking.
                 if (vx * vx + vy * vy < 22 * 22) return;
-                // Convert screen delta into world delta (inverse iso).
-                const a = vy * 2 / TILE_H;
-                const b = vx * 2 / TILE_W;
-                const wdx = (a + b) / 2;
-                const wdy = (a - b) / 2;
                 // Snap to one of the 8 compass directions. If one axis is
                 // much smaller than the other (ratio < 0.4), treat it as 0
-                // so the player can walk along a pure world-axis (which in
-                // screen space reads as a diagonal NE/NW/SE/SW).
-                const absX = Math.abs(wdx), absY = Math.abs(wdy);
+                // so the player can walk along a pure cardinal axis.
+                const absX = Math.abs(vx), absY = Math.abs(vy);
                 const bigger = Math.max(absX, absY);
-                dx = absX >= bigger * 0.4 ? Math.sign(wdx) : 0;
-                dy = absY >= bigger * 0.4 ? Math.sign(wdy) : 0;
+                dx = absX >= bigger * 0.4 ? Math.sign(vx) : 0;
+                dy = absY >= bigger * 0.4 ? Math.sign(vy) : 0;
             }
             if (dx || dy) {
                 const sdx = Math.sign(dx), sdy = Math.sign(dy);
@@ -1344,101 +1345,33 @@ export default {
 
             const cam = camera(W, H, player.rx, player.ry);
 
-            // Determine visible world-cell range.
-            // Convert screen corners to world coords (approx): invert iso projection.
-            // For a tile at (wx, wy): sx = (wx-wy)*TW/2 + cam.cx; sy = (wx+wy)*TH/2 + cam.cy
-            // So: wx + wy = (sy - cam.cy) * 2 / TH;  wx - wy = (sx - cam.cx) * 2 / TW
-            function screenToWorld(sx, sy) {
-                const a = (sy - cam.cy) * 2 / TILE_H;
-                const b = (sx - cam.cx) * 2 / TILE_W;
-                return { wx: Math.floor((a + b) / 2), wy: Math.floor((a - b) / 2) };
-            }
-            const tl = screenToWorld(-TILE_W, -TILE_H);
-            const tr = screenToWorld(W + TILE_W, -TILE_H);
-            const bl = screenToWorld(-TILE_W, H + TILE_H);
-            const br = screenToWorld(W + TILE_W, H + TILE_H);
-            const minX = Math.min(tl.wx, tr.wx, bl.wx, br.wx) - 1;
-            const maxX = Math.max(tl.wx, tr.wx, bl.wx, br.wx) + 1;
-            const minY = Math.min(tl.wy, tr.wy, bl.wy, br.wy) - 1;
-            const maxY = Math.max(tl.wy, tr.wy, bl.wy, br.wy) + 1;
+            // Determine visible world-cell range — simple top-down inversion.
+            // World (0,0) renders at (cam.cx, cam.cy). Floor after dividing
+            // by TILE_SIZE to snap to the tile the pixel belongs to.
+            const minX = Math.floor(-cam.cx / TILE_SIZE) - 1;
+            const maxX = Math.floor((W - cam.cx) / TILE_SIZE) + 1;
+            const minY = Math.floor(-cam.cy / TILE_SIZE) - 1;
+            const maxY = Math.floor((H - cam.cy) / TILE_SIZE) + 1;
 
-            // PASS 1 — tiles with elevation + depth walls.
-            // Each tile's 4 diamond vertices are individually perspective-
-            // projected so adjacent tiles share exact edge coordinates (no seams).
-            function perspPt(isoX, isoY) {
-                const screenY = isoY;
-                const ps = perspScale(screenY, H);
-                return {
-                    x: W / 2 + (isoX - W / 2) * ps,
-                    y: H / 2 + (isoY - H / 2) * ps,
-                };
-            }
+            // PASS 1 — tiles. Square tiles, cached procedural patterns per biome.
             for (let y = minY; y <= maxY; y++) {
                 for (let x = minX; x <= maxX; x++) {
-                    const p = iso(x, y);
-                    const cx2 = p.x + cam.cx;
-                    const cy2 = p.y + cam.cy;
-                    const elev = elevAtDg(x, y);
-                    const lift = (elev - 0.35) * ELEV_PX;
+                    const sx = x * TILE_SIZE + cam.cx;
+                    const sy = y * TILE_SIZE + cam.cy;
                     const b = biomeAtDg(x, y);
-                    const bio = ALL_BIOMES[b] || BIOMES.grass;
-                    const bright = 0.85 + elev * 0.3;
-                    let bri = bright;
-                    if (b === 'water' || b === 'deep') bri += Math.sin(_renderTime * 0.002 + cx2 * 0.08 + cy2 * 0.12) * 0.12;
-
-                    // 4 vertices of the diamond (top, right, bottom, left) with lift.
-                    const top    = perspPt(cx2,              cy2 - lift);
-                    const right  = perspPt(cx2 + TILE_W / 2, cy2 + TILE_H / 2 - lift);
-                    const bottom = perspPt(cx2,              cy2 + TILE_H - lift);
-                    const left   = perspPt(cx2 - TILE_W / 2, cy2 + TILE_H / 2 - lift);
-
-                    const g = ctx.createLinearGradient(top.x, top.y, bottom.x, bottom.y);
-                    g.addColorStop(0, _adjustBright(bio.color1, bri));
-                    g.addColorStop(1, _adjustBright(bio.color2, bri));
-                    ctx.fillStyle = g;
-                    ctx.beginPath();
-                    ctx.moveTo(top.x, top.y);
-                    ctx.lineTo(right.x, right.y);
-                    ctx.lineTo(bottom.x, bottom.y);
-                    ctx.lineTo(left.x, left.y);
-                    ctx.closePath();
-                    ctx.fill();
-                    ctx.strokeStyle = 'rgba(0,0,0,0.08)';
-                    ctx.lineWidth = 0.5;
-                    ctx.stroke();
-
-                    // Depth wall — south-east face.
-                    const elevS = elevAtDg(x + 1, y);
-                    const liftS = (elevS - 0.35) * ELEV_PX;
-                    if (lift - liftS > 1.5) {
-                        const botS = perspPt(cx2, cy2 + TILE_H - liftS);
-                        const rightS = perspPt(cx2 + TILE_W / 2, cy2 + TILE_H / 2 - liftS);
-                        ctx.fillStyle = 'rgba(0,0,0,0.22)';
-                        ctx.beginPath();
-                        ctx.moveTo(bottom.x, bottom.y); ctx.lineTo(right.x, right.y);
-                        ctx.lineTo(rightS.x, rightS.y); ctx.lineTo(botS.x, botS.y);
-                        ctx.closePath(); ctx.fill();
-                    }
-                    const elevE = elevAtDg(x, y + 1);
-                    const liftE = (elevE - 0.35) * ELEV_PX;
-                    if (lift - liftE > 1.5) {
-                        const botE = perspPt(cx2, cy2 + TILE_H - liftE);
-                        const leftE = perspPt(cx2 - TILE_W / 2, cy2 + TILE_H / 2 - liftE);
-                        ctx.fillStyle = 'rgba(0,0,0,0.30)';
-                        ctx.beginPath();
-                        ctx.moveTo(bottom.x, bottom.y); ctx.lineTo(left.x, left.y);
-                        ctx.lineTo(leftE.x, leftE.y); ctx.lineTo(botE.x, botE.y);
-                        ctx.closePath(); ctx.fill();
-                    }
+                    drawTile(ctx, sx, sy, b);
                 }
             }
 
             // ── Day/night fog of war (drawn on tiles, BEFORE sprites
             //    so entities stay fully opaque and visible in the dark).
+            //    iso() now returns a tile center, so adding the camera
+            //    offset lands exactly on the player sprite — no further
+            //    half-tile correction is needed.
             const pScreen = iso(player.rx, player.ry);
-            const pLift = (elevAtDg(player.wx, player.wy) - 0.35) * ELEV_PX;
             drawFogOfWar(ctx, W, H,
-                pScreen.x + cam.cx, pScreen.y + cam.cy + TILE_H / 2 - pLift,
+                pScreen.x + cam.cx,
+                pScreen.y + cam.cy,
                 timeOfDay);
 
             // PASS 2 — features + player, depth-sorted by wx+wy then wx.

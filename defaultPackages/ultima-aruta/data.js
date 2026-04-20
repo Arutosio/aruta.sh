@@ -1,12 +1,18 @@
 /* Ultima Aruta — data.js: all game constants */
-const TILE_W = 48;
-const TILE_H = 24;
+// Top-down square tiles (Pokémon-style). TILE_W and TILE_H are kept identical
+// so all existing call sites that reference them as width/height still work.
+const TILE_SIZE = 32;
+const TILE_W = TILE_SIZE;
+const TILE_H = TILE_SIZE;
 const CHUNK_SIZE = 32;
 const MOVE_MS = 440;
 const CREATURE_MOVE_MS = 600;
 const DAY_MS = 5 * 60 * 1000;
-const ELEV_PX = 18;
-const PERSP_STRENGTH = 0.65;
+// Elevation-driven lift and perspective scale are disabled in the top-down
+// rebuild; kept as 0 to neutralize any legacy call sites without having to
+// strip them. All tiles render at the same flat plane.
+const ELEV_PX = 0;
+const PERSP_STRENGTH = 0;
 const DUNGEON_SIZE = 24;
 const SELL_RATIO = 0.3;
 
