@@ -2506,6 +2506,8 @@ export default {
             addFloater(cwx, cwy, isCrit ? 'CRIT -' + dmg + '!' : '-' + dmg, isCrit ? '#ffff00' : '#ff4040');
             sfxHit();
             _wearWeapon();
+            // Crit adrenaline: +5 stamina as a reward for precise hits.
+            if (isCrit) player.stamina = Math.min(player.maxStamina, player.stamina + 5);
             addSkillXp('combat', isCrit ? 3 : 1);
             if (isCrit) _sfx(600, 0.08, 'triangle', 0.05);
             if (cr.ai === 'neutral') cr.ai = 'aggressive';
