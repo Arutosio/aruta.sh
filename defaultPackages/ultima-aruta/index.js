@@ -2361,6 +2361,18 @@ export default {
                     miniCtx.fillRect(mx, my, 1, 1);
                 }
             }
+            // Treasure map targets (pulse red ★ on the minimap for any map
+            // row carrying valid meta coords).
+            const pulse = 0.5 + 0.5 * Math.sin(_renderTime * 0.005);
+            for (const it of inventory.items) {
+                if (it.key !== 'treasure_map' || !it.meta) continue;
+                const mx = it.meta.tx - mpx + 70, my = it.meta.ty - mpy + 70;
+                if (mx < 0 || mx >= 140 || my < 0 || my >= 140) continue;
+                miniCtx.fillStyle = `rgba(255,200,60,${(0.6 + pulse * 0.4).toFixed(2)})`;
+                miniCtx.fillRect(mx - 1, my - 1, 3, 3);
+                miniCtx.strokeStyle = 'rgba(0,0,0,0.8)';
+                miniCtx.strokeRect(mx - 1.5, my - 1.5, 4, 4);
+            }
             // Player dot.
             miniCtx.fillStyle = '#ffc857';
             miniCtx.fillRect(69, 69, 3, 3);
