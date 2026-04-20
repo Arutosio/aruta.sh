@@ -2302,6 +2302,13 @@ export default {
             ctx.fillText('SP',  barX + barW + 4, barY - (barH + barGap) * 2 + barH / 2);
             ctx.fillText('🍗',  barX + barW + 4, barY - (barH + barGap) * 3 + barH / 2);
 
+            // ── Level-up gold flash overlay ───────────────────
+            if (_renderTime < _levelUpFlash) {
+                const remaining = _levelUpFlash - _renderTime;
+                const a = (remaining / 800) * 0.45;
+                ctx.fillStyle = `rgba(255,220,80,${a.toFixed(2)})`;
+                ctx.fillRect(0, 0, W, H);
+            }
             // ── Low-HP vignette (red pulse around the edges) ─
             const hpFrac = player.hp / Math.max(1, player.maxHp);
             if (hpFrac < 0.25) {
@@ -3134,6 +3141,8 @@ export default {
         // Timestamp (ms on _renderTime axis) while the Light spell is
         // active. Read by collectLightSources as a personal halo.
         let _spellLightUntil = -Infinity;
+        // Ticks down in the main loop; render paints a gold screen flash while > 0.
+        let _levelUpFlash = 0;
 
         // Whether the player is currently adjacent to a burning campfire
         // (set by tickCombat; read by render() for the 💤 resting indicator).
@@ -3319,6 +3328,7 @@ export default {
                 player.maxStamina += 5; player.stamina = player.maxStamina;
                 player.baseDmg += 1;
                 sfxLevelUp();
+                _levelUpFlash = _renderTime + 800; // end-time — render paints a gold overlay until then
                 showDialogBubble('✦', 'Level up! You are now level ' + player.level);
             }
             // Loot drop at the creature's tile.
