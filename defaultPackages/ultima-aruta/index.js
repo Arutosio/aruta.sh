@@ -2854,6 +2854,18 @@ export default {
                 }
                 if (pet.hp <= 0) {
                     addFloater(pet.wx, pet.wy, '💔 ' + pet.emoji + ' lost', '#ff6060');
+                    // Drop the base creature's loot table one last time so
+                    // a slain pet still yields raw_meat / herbs / feathers
+                    // for the player to recover.
+                    const def = CREATURE_DEFS[pet.emoji];
+                    if (def?.loot) {
+                        for (const l of def.loot) {
+                            if (Math.random() < l.rate) {
+                                placeWorldItem(pet.wx, pet.wy, l.key);
+                                break;
+                            }
+                        }
+                    }
                     pets.splice(pi, 1);
                     continue;
                 }
