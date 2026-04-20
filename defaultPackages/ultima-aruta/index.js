@@ -1061,7 +1061,10 @@ export default {
                     Craft 🔥 campfires (2×🪵) and press F to light a safe<br>
                     radius of warm light for 90 s. Standing next to one is<br>
                     <b>resting</b> 💤: 4× HP regen, 3× mana regen, 1.5× stamina<br>
-                    regen, and hunger pauses — camp out safely.<br><br>
+                    regen, and hunger pauses — camp out safely.<br>
+                    Carry 🔦 torches for a personal light halo (stacks up<br>
+                    to 3 for a wider radius). Tame pets also emit soft<br>
+                    auras so you don't lose them in the dark.<br><br>
                     <b>Hunger</b><br>
                     🍗 decays over time. At 0 you stop regenerating and<br>
                     starvation drains HP. Eat food (berries, apples, bread,<br>
@@ -2754,6 +2757,9 @@ export default {
         }
 
         // Collect visible structure light sources for the fog-of-war pass.
+        // Also emits a small personal halo around the player when they carry
+        // a 🔦 Torch, and tiny auras around tamed pets so they're readable in
+        // the dark.
         function collectLightSources(cam) {
             if (_dungeon) return [];
             const lights = [];
@@ -2777,6 +2783,25 @@ export default {
                         });
                     }
                 }
+            }
+            // Hand-held torch: any Torch in inventory grants a personal halo.
+            const torches = inventory.items.filter(i => i.key === 'torch').length;
+            if (torches > 0) {
+                const pp = iso(player.rx, player.ry);
+                lights.push({
+                    x: pp.x + cam.cx,
+                    y: pp.y + cam.cy,
+                    radius: (2 + Math.min(torches, 3)) * TILE_W,
+                });
+            }
+            // Tame pets emit a soft light so they're easier to find at night.
+            for (const pet of pets) {
+                const pp = iso(pet.rx, pet.ry);
+                lights.push({
+                    x: pp.x + cam.cx,
+                    y: pp.y + cam.cy,
+                    radius: 1.5 * TILE_W,
+                });
             }
             return lights;
         }
