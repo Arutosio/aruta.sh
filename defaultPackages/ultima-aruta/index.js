@@ -384,6 +384,25 @@ export default {
                     };
                 }
             }
+            // Class starter bundle — seeds the inventory so each class has
+            // a tiny head start that matches its playstyle.
+            const STARTER = {
+                warrior: ['bread', 'bread', 'wood'],
+                mage:    ['potion', 'scroll', 'torch'],
+                archer:  ['berry', 'feather', 'feather'],
+                rogue:   ['potion', 'gold', 'gold', 'gold'],
+            };
+            const bundle = STARTER[playerClass] || [];
+            for (const key of bundle) {
+                const def = ITEMS[key];
+                if (!def) continue;
+                inventory.items.push({
+                    id: 'it_' + Math.random().toString(36).slice(2, 9),
+                    key, emoji: def.emoji, name: def.name,
+                    x: 6 + (inventory.items.length % 7) * 36,
+                    y: 6 + Math.floor(inventory.items.length / 7) * 36,
+                });
+            }
         }
         // Persistent mutations to the procedural world (things picked up,
         // things dropped by the player). Applied to each chunk after
