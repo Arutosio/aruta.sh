@@ -1599,6 +1599,26 @@ export default {
             showDialogBubble(f.emoji, f.dialog || DIALOGS[Math.floor(Math.random() * DIALOGS.length)]);
         }
 
+        // Returns true if the (wx, wy) tile is inside the light radius of
+        // any burning campfire in the 3×3 chunk neighborhood.
+        function nearBurningCampfire(wx, wy) {
+            if (_dungeon) return false;
+            const cx0 = Math.floor(wx / CHUNK_SIZE), cy0 = Math.floor(wy / CHUNK_SIZE);
+            for (let dcy = -1; dcy <= 1; dcy++) for (let dcx = -1; dcx <= 1; dcx++) {
+                const ch = world.chunks.get((cx0 + dcx) + ',' + (cy0 + dcy));
+                if (!ch) continue;
+                for (const f of ch.features) {
+                    if (f.structKey !== 'campfire') continue;
+                    if (typeof f.fuel === 'number' && f.fuel <= 0) continue;
+                    const fwx = (cx0 + dcx) * CHUNK_SIZE + f.c;
+                    const fwy = (cy0 + dcy) * CHUNK_SIZE + f.r;
+                    const light = ITEMS.campfire?.structure?.light || 4;
+                    if (Math.max(Math.abs(fwx - wx), Math.abs(fwy - wy)) <= light) return true;
+                }
+            }
+            return false;
+        }
+
         // ── Buffs ────────────────────────────────────────────────
         // Single active buff slot. Set by consuming certain foods or touching
         // sacred objects. Drained per-frame in the combat tick.
@@ -3550,8 +3570,11 @@ export default {
                         const distToPlayer = Math.max(Math.abs(cwx - player.wx), Math.abs(cwy - player.wy));
 
                         // At night, neutral creatures turn aggressive (UO-style danger).
+                        // Creatures standing inside a burning campfire's light radius
+                        // stay passive/neutral — camps become real safe zones.
                         const isNight = _nightFactor(timeOfDay) > 0.5;
-                        const effectiveAI = (isNight && cr.ai === 'neutral') ? 'aggressive' : cr.ai;
+                        const sheltered = nearBurningCampfire(cwx, cwy);
+                        const effectiveAI = (isNight && cr.ai === 'neutral' && !sheltered) ? 'aggressive' : cr.ai;
 
                         // Aggressive AI: chase player + attack when adjacent.
                         if (effectiveAI === 'aggressive' && distToPlayer <= 6) {
