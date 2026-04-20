@@ -352,6 +352,7 @@ export default {
                     if (typeof saved.skills[k] === 'number') player.skills[k] = saved.skills[k];
                 }
             }
+            if (saved.slayDragon) player._slayDragon = true;
             if (saved.baseDmg != null) player.baseDmg = saved.baseDmg;
             if (saved.kills != null)  player.kills  = saved.kills;
             if (saved.days != null)   player.days   = saved.days;
@@ -1267,6 +1268,7 @@ export default {
                     pets: pets.map(p => ({ emoji: p.emoji, name: p.name, hp: p.hp, maxHp: p.maxHp, dmg: p.dmg, wx: p.wx, wy: p.wy, level: p.level, xp: p.xp, command: p.command })),
                     skills: player.skills,
                     activeQuest,
+                    slayDragon: player._slayDragon || false,
                 }).catch(e => console.warn('[ultima-aruta] save state failed', e));
                 root.__uaCleanup?.();
                 // Reload by re-invoking mount — simplest way.
@@ -3202,6 +3204,15 @@ export default {
             player.mana = Math.min(player.maxMana, player.mana + soul);
             // Dungeon kills give +50% XP to reward venturing underground.
             const xpMult = _dungeon ? 1.5 : 1;
+            // Dragon/wyvern slay — permanent +5 maxHp milestone (once per world).
+            if ((cr.emoji === '🐉' || cr.emoji === '🐲') && !player._slayDragon) {
+                player._slayDragon = true;
+                player.maxHp += 5;
+                player.hp = player.maxHp;
+                addFloater(chCx * CHUNK_SIZE + cr.c, chCy * CHUNK_SIZE + cr.r, '🏆 Dragonslayer +5 HP', '#ffd060');
+                showDialogBubble('🐉', "You've slain a dragon! Your resolve hardens. +5 max HP forever.");
+                _sfx(300, 0.3, 'sawtooth', 0.06); setTimeout(() => _sfx(900, 0.3, 'sine', 0.05), 150);
+            }
             // Quest progress (kill-type): match by emoji regardless of dungeon/overworld.
             if (activeQuest && activeQuest.kind === 'kill' && activeQuest.target === cr.emoji && activeQuest.current < activeQuest.needed) {
                 activeQuest.current++;
@@ -3794,6 +3805,7 @@ export default {
                     pets: pets.map(p => ({ emoji: p.emoji, name: p.name, hp: p.hp, maxHp: p.maxHp, dmg: p.dmg, wx: p.wx, wy: p.wy, level: p.level, xp: p.xp, command: p.command })),
                     skills: player.skills,
                     activeQuest,
+                    slayDragon: player._slayDragon || false,
                 }).catch(e => console.warn('[ultima-aruta] save state failed', e));
                 worldRow.lastPlayed = Date.now();
                 worldRow.playerClass = playerClass;
