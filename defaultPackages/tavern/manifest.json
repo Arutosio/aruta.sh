@@ -2,7 +2,7 @@
   "id": "tavern",
   "name": "Tavern",
   "icon": "🍺",
-  "version": "2.1.0",
+  "version": "2.2.0",
   "minSdk": 2,
   "roles": ["app", "widget"],
   "unmountOnClose": true,

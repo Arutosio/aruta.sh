@@ -15,6 +15,9 @@ const TAVERN_STRATEGIES = ['torrent'];
 const TAVERN_STRATEGY_DEFAULT = 'torrent';
 const TAVERN_PASSWORD_KEY = 'password';       // legacy: last-used password
 const TAVERN_ROOM_PWDS_KEY = 'roomPasswords'; // { [roomName]: passwordString }
+const TAVERN_ROOM_LOGS_KEY = 'roomLogs';      // { [roomName]: htmlString } — persisted chat history
+const TAVERN_ENTERED_KEY   = '_entered';      // true once user has completed setup at least once
+const TAVERN_ROOM_LOG_MAX  = 200000;          // per-room html cap (matches in-memory cap)
 const TAVERN_KEYPAIR_KEY   = '_keyPair';      // { pub: jwk, priv: jwk }
 const TAVERN_BLOCKLIST_KEY = '_blockedKeys';  // array of public key thumbprints
 const TAVERN_RATE_LIMIT_MS = 200;             // drop msgs from same peer faster than this
@@ -118,6 +121,29 @@ async function tavernSaveRoomPwds(ctx, map) {
         if (typeof v === 'string' && v !== '') clean[String(k).slice(0, 64)] = v;
     }
     await ctx.storage.set(TAVERN_ROOM_PWDS_KEY, clean);
+    return clean;
+}
+
+async function tavernLoadRoomLogs(ctx) {
+    const stored = await ctx.storage.get(TAVERN_ROOM_LOGS_KEY);
+    if (stored && typeof stored === 'object' && !Array.isArray(stored)) {
+        const out = {};
+        for (const [k, v] of Object.entries(stored)) {
+            if (typeof v === 'string') out[String(k).slice(0, 64)] = v.slice(-TAVERN_ROOM_LOG_MAX);
+        }
+        return out;
+    }
+    return {};
+}
+
+async function tavernSaveRoomLogs(ctx, map) {
+    const clean = {};
+    for (const [k, v] of Object.entries(map || {})) {
+        if (typeof v === 'string' && v) {
+            clean[String(k).slice(0, 64)] = v.slice(-TAVERN_ROOM_LOG_MAX);
+        }
+    }
+    await ctx.storage.set(TAVERN_ROOM_LOGS_KEY, clean);
     return clean;
 }
 

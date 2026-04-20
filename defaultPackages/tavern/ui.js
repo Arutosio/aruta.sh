@@ -131,6 +131,14 @@ export default {
         $strategySetup.value = identity.strategy;
         $passwordSetup.value = identity.password || '';
 
+        // Restore persisted chat history so closing and reopening the app
+        // keeps prior messages visible even while every room is offline.
+        const persistedLogs = await tavernLoadRoomLogs(ctx);
+        for (const [name, html] of Object.entries(persistedLogs)) {
+            roomLogs.set(name, html);
+        }
+        const hasEntered = await ctx.storage.get(TAVERN_ENTERED_KEY);
+
         function view() { return chats.get(viewingRoom); }
 
         function buildMsgHtml(msg) {
@@ -167,6 +175,25 @@ export default {
                 if (next.length > 200000) next = next.slice(next.length - 200000);
                 roomLogs.set(roomName, next);
             }
+            scheduleLogsSave();
+        }
+
+        // Debounced writer that flushes the per-room HTML snapshots to IDB.
+        // Saving on every append would thrash the disk; the 2s window is
+        // long enough to coalesce rapid-fire messages but short enough to
+        // survive most tab crashes.
+        let saveLogsTimer = null;
+        async function flushLogsSave() {
+            try {
+                if (viewingRoom) roomLogs.set(viewingRoom, $log.innerHTML);
+                const obj = {};
+                for (const [k, v] of roomLogs) obj[k] = v;
+                await tavernSaveRoomLogs(ctx, obj);
+            } catch (_) {}
+        }
+        function scheduleLogsSave() {
+            clearTimeout(saveLogsTimer);
+            saveLogsTimer = setTimeout(flushLogsSave, 2000);
         }
         function appendSystem(text, kind, roomName) {
             if (!showSystemMsgs) return;
@@ -389,6 +416,7 @@ export default {
                 return;
             }
             started = true;
+            await ctx.storage.set(TAVERN_ENTERED_KEY, true);
             setConnectingStatus();
             $setup.style.display = 'none';
             $main.style.display = '';
@@ -396,6 +424,8 @@ export default {
             if (!rooms.includes(firstRoom)) rooms.push(firstRoom);
             rooms = await tavernSaveRooms(ctx, rooms);
             viewingRoom = firstRoom;
+            $log.innerHTML = roomLogs.get(firstRoom) || '';
+            $log.scrollTop = $log.scrollHeight;
             renderRooms();
             refreshStatus();
             appendSystem('You entered "' + firstRoom + '" as ' + identity.nick, 'info', firstRoom);
@@ -580,10 +610,32 @@ export default {
             else openPrefsPopover();
         });
 
+        // Auto-enter main view on reopen: if the user has previously completed
+        // setup (entered flag), skip the nick/password form and show the room
+        // list with every room offline. Closing the app tears every connection
+        // down (manifest.unmountOnClose + unmount below), so reopening leaves
+        // the list intact but fully disconnected — the user clicks the status
+        // dot on any row to reconnect. Prior chat history is restored from IDB.
+        if (hasEntered && rooms.length > 0) {
+            started = true;
+            $setup.style.display = 'none';
+            $main.style.display = '';
+            $nickLive.value = identity.nick;
+            viewingRoom = rooms.includes(identity.roomName) ? identity.roomName : rooms[0];
+            $log.innerHTML = roomLogs.get(viewingRoom) || '';
+            $log.scrollTop = $log.scrollHeight;
+            renderRooms();
+            refreshStatus();
+        }
+
         return {
             async unmount() {
                 clearTimeout(nickTimer);
+                clearTimeout(saveLogsTimer);
                 clearStatusTimers();
+                // Always persist chat history, even if the user never clicked
+                // "Enter" — they may have been browsing restored logs offline.
+                await flushLogsSave();
                 if (!started) return;
                 // Tear down every live connection. If the widget heartbeat
                 // is fresh we suppress the leave broadcast — user is still
