@@ -955,7 +955,9 @@ export default {
                     <b>Night</b><br>
                     Vision shrinks. Neutral creatures turn aggressive.<br>
                     Craft 🔥 campfires (2×🪵) and press F to light a safe<br>
-                    radius of warm light for 90 s.<br><br>
+                    radius of warm light for 90 s. Standing next to one is<br>
+                    <b>resting</b> 💤: 4× HP regen, 3× mana regen, 1.5× stamina<br>
+                    regen, and hunger pauses — camp out safely.<br><br>
                     <b>Hunger</b><br>
                     🍗 decays over time. At 0 you stop regenerating and<br>
                     starvation drains HP. Eat food (berries, apples, bread,<br>
@@ -1562,6 +1564,17 @@ export default {
                     ctx.ellipse(sx + tw / 2, sy + (TILE_H * ps) / 2, 14, 8, 0, 0, Math.PI * 2);
                     ctx.fill();
                 }
+                // Resting halo: slow-pulsing warm ring above the player when
+                // standing next to a burning campfire. Pairs with the 💤 glyph
+                // painted after the sprite below.
+                if (s.isPlayer && _resting) {
+                    const rpulse = 0.4 + 0.4 * Math.sin(_renderTime * 0.003);
+                    const tw = TILE_W * ps;
+                    ctx.fillStyle = `rgba(255,170,80,${(rpulse * 0.25).toFixed(2)})`;
+                    ctx.beginPath();
+                    ctx.ellipse(sx + tw / 2, sy + (TILE_H * ps) / 2 + 2, tw * 0.65, tw * 0.3, 0, 0, Math.PI * 2);
+                    ctx.fill();
+                }
                 // Player damage flash: red glow under sprite.
                 // Player position indicator — bright green pulsing ellipse.
                 if (s.isPlayer) {
@@ -1585,6 +1598,13 @@ export default {
                     ctx.fill();
                 }
                 drawEmoji(ctx, sx, sy, s.emoji, scaledSize);
+                // Resting 💤 glyph above the player while near a campfire.
+                if (s.isPlayer && _resting) {
+                    const bob = Math.sin(_renderTime * 0.004) * 1.5;
+                    ctx.font = "14px 'Apple Color Emoji', 'Segoe UI Emoji', sans-serif";
+                    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+                    ctx.fillText('💤', sx + TILE_W / 2 + 10, sy - 4 + bob);
+                }
                 // Aggro indicator — pulsing red triangle above hostile creatures.
                 if (s.aggro) {
                     const pulse = 0.5 + 0.5 * Math.sin(_renderTime * 0.008);
@@ -1986,6 +2006,10 @@ export default {
             if (anyChanged) saveWorldDeltas();
         }
 
+        // Whether the player is currently adjacent to a burning campfire
+        // (set by tickCombat; read by render() for the 💤 resting indicator).
+        let _resting = false;
+
         // Cooking: while player stands next to a burning campfire, raw meat
         // in the backpack auto-roasts into cooked meat, one unit every 3 s.
         // Also drains a chunk of campfire fuel per roast so fires don't last
@@ -2207,16 +2231,28 @@ export default {
                 player.hp = Math.max(1, player.hp - player.poisonDps * dt / 1000);
                 if (player.poison <= 0) { player.poison = 0; player.poisonDps = 0; addFloater(player.wx, player.wy, 'Cured!', '#60ff60'); }
             }
+            // Resting next to a burning campfire is a proper safe-zone: HP and
+            // mana regenerate far faster, and the hunger decay this frame is
+            // refunded so players can camp out the night without starving.
+            const resting = !!isAdjacentToBurningStructure('campfire');
+            const hpRate   = resting ? 1.2 : 0.3;  // HP/s
+            const manaRate = resting ? 1.5 : 0.5;  // MP/s
             // HP regen (slow — blocked while poisoned or starving).
             if (player.hp < player.maxHp && player.poison <= 0 && player.hunger > 0) {
-                player.hp = Math.min(player.maxHp, player.hp + 0.3 * dt / 1000);
+                player.hp = Math.min(player.maxHp, player.hp + hpRate * dt / 1000);
             }
             // Mana regen.
-            if (player.mana < player.maxMana) player.mana = Math.min(player.maxMana, player.mana + 0.5 * dt / 1000);
+            if (player.mana < player.maxMana) player.mana = Math.min(player.maxMana, player.mana + manaRate * dt / 1000);
+            if (resting && player.maxHunger) {
+                // player.update already subtracted (dt / 12000) from hunger; give it back.
+                player.hunger = Math.min(player.maxHunger, player.hunger + dt / 12000);
+            }
             // Stamina regen — faster when standing still (6/s), slower while moving (2/s).
             const moving = player.moveT > 0;
-            const staminaRate = moving ? 2 : 6;
+            const staminaBase = moving ? 2 : 6;
+            const staminaRate = resting ? staminaBase * 1.5 : staminaBase;
             if (player.stamina < player.maxStamina) player.stamina = Math.min(player.maxStamina, player.stamina + staminaRate * dt / 1000);
+            _resting = resting;
         }
 
         // ── Ambient biome sounds ─────────────────────────
