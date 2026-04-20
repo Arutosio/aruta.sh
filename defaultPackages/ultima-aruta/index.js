@@ -682,7 +682,8 @@ export default {
                         player.hp = player.maxHp; player.mana = player.maxMana; player.stamina = player.maxStamina;
                         addFloater(player.wx, player.wy, 'Fully restored!', '#60ff60');
                         _sfx(440, 0.12); setTimeout(() => _sfx(660, 0.14), 100);
-                        showDialogBubble('⛲', 'The sacred fountain restores your body and spirit.');
+                        applyBlessing();
+                        showDialogBubble('⛲', 'The sacred fountain restores your body and spirit. You feel blessed.');
                         return;
                     }
                     if (f.merchant) { showShop(); return; }
@@ -1584,15 +1585,27 @@ export default {
         }
 
         // ── Buffs ────────────────────────────────────────────────
-        // Single active buff slot. Set by consuming certain foods. Drained
-        // per-frame in the combat tick; multiplies outgoing damage.
-        let activeBuff = null; // { type, dmgMult, remaining }
+        // Single active buff slot. Set by consuming certain foods or touching
+        // sacred objects. Drained per-frame in the combat tick.
+        //   dmgMult    — multiplies outgoing damage
+        //   dmgReduce  — flat damage reduction on incoming hits (>= 0)
+        let activeBuff = null; // { type, dmgMult, dmgReduce, remaining, icon, label }
         function applyFoodBuff(itemKey) {
             // Roast meat grants +20% damage for 30 s.
             if (itemKey === 'meat') {
-                activeBuff = { type: 'wellfed', dmgMult: 1.2, remaining: 30000 };
+                activeBuff = {
+                    type: 'wellfed', dmgMult: 1.2, remaining: 30000,
+                    icon: '🍖', label: '+20% dmg',
+                };
                 addFloater(player.wx, player.wy, '🍖 Well Fed +20% dmg', '#ffb070');
             }
+        }
+        function applyBlessing() {
+            activeBuff = {
+                type: 'blessed', dmgReduce: 3, remaining: 60000,
+                icon: '🙏', label: '-3 incoming dmg',
+            };
+            addFloater(player.wx, player.wy, '🙏 Blessed', '#e0d060');
         }
 
         // ── Weather ──────────────────────────────────────────────
@@ -2197,9 +2210,11 @@ export default {
             if (activeBuff) {
                 ctx.font = "12px 'Inter', sans-serif";
                 ctx.textAlign = 'right'; ctx.textBaseline = 'top';
-                ctx.fillStyle = '#ffb070';
+                ctx.fillStyle = activeBuff.type === 'blessed' ? '#e0d060' : '#ffb070';
                 const secs = Math.max(0, Math.ceil(activeBuff.remaining / 1000));
-                ctx.fillText(`🍖 +${Math.round((activeBuff.dmgMult - 1) * 100)}% dmg  ${secs}s`, W - 6, 26);
+                const icon = activeBuff.icon || '⭐';
+                const label = activeBuff.label || activeBuff.type;
+                ctx.fillText(`${icon} ${label}  ${secs}s`, W - 6, 26);
             }
             // ── Rain particles + HUD indicator ──────────────
             const rainI = rainIntensity();
@@ -2360,10 +2375,12 @@ export default {
             return def;
         }
 
-        /** Apply armor reduction to incoming damage (min 1). */
+        /** Apply armor reduction to incoming damage (min 1). Blessed buff
+         *  adds a flat extra reduction layer on top of armor. */
         function reduceDamage(rawDmg) {
             const def = getArmorDef();
-            return Math.max(1, rawDmg - def);
+            const extra = activeBuff?.dmgReduce || 0;
+            return Math.max(1, rawDmg - def - extra);
         }
 
         function attackCreature(cr) {
