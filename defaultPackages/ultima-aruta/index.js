@@ -513,6 +513,7 @@ export default {
                 <div class="ua-backpack" id="ua-backpack" style="display:none;">
                     <div class="ua-backpack-head">
                         <span class="ua-backpack-title">🎒 Backpack</span>
+                        <span id="ua-backpack-sort" title="Sort & group" style="cursor:pointer;padding:0 8px;opacity:0.8;">⇅</span>
                         <span class="ua-backpack-close" data-close="pack" title="Close (I)">×</span>
                     </div>
                     <div class="ua-backpack-body" id="ua-backpack-body"></div>
@@ -1174,6 +1175,16 @@ export default {
         }
         root.querySelectorAll('[data-close]').forEach(btn => btn.addEventListener('click', () => togglePanel(btn.dataset.close)));
         root.querySelectorAll('.ua-hub-btn').forEach(btn => btn.addEventListener('click', () => togglePanel(btn.dataset.hub)));
+        root.querySelector('#ua-backpack-sort')?.addEventListener('click', () => {
+            // Group inventory items by key, then lay them out in a 7-wide grid.
+            inventory.items.sort((a, b) => a.key.localeCompare(b.key) || (a.id < b.id ? -1 : 1));
+            inventory.items.forEach((it, i) => {
+                it.x = 6 + (i % 7) * 36;
+                it.y = 6 + Math.floor(i / 7) * 36;
+            });
+            saveInventory();
+            renderBackpack();
+        });
 
         function renderPaperdoll() {
             $dollBody.innerHTML = SLOTS.map(s => {
