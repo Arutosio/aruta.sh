@@ -2912,8 +2912,11 @@ export default {
                 }
                 pet.rx = pet.wx; pet.ry = pet.wy;
 
-                // Find nearest aggressive creature within 5 tiles of the player.
-                let target = null, targetDist = Infinity;
+                // Find the best aggressive creature within 5 tiles of the
+                // player. Score = distance + (1 - hpFraction) * -4, so a
+                // wounded enemy 3 tiles away beats a full-HP enemy 1 tile
+                // away. Pets finish what the player started.
+                let target = null, bestScore = Infinity;
                 const cx0 = Math.floor(player.wx / CHUNK_SIZE), cy0 = Math.floor(player.wy / CHUNK_SIZE);
                 for (let dcy = -1; dcy <= 1; dcy++) for (let dcx = -1; dcx <= 1; dcx++) {
                     const ch = world.chunks.get((cx0 + dcx) + ',' + (cy0 + dcy));
@@ -2928,9 +2931,11 @@ export default {
                         const distPlayer = Math.max(Math.abs(cwx - player.wx), Math.abs(cwy - player.wy));
                         if (distPlayer > 5) continue;
                         const distPet = Math.max(Math.abs(cwx - pet.wx), Math.abs(cwy - pet.wy));
-                        if (distPet < targetDist) {
+                        const frac = cr.maxHp ? cr.hp / cr.maxHp : 1;
+                        const score = distPet - (1 - frac) * 4;
+                        if (score < bestScore) {
                             target = { cr, wx: cwx, wy: cwy, dist: distPet };
-                            targetDist = distPet;
+                            bestScore = score;
                         }
                     }
                 }
