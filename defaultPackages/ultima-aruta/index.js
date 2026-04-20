@@ -2441,17 +2441,32 @@ export default {
                     miniCtx.strokeRect(qx - 1.5, qy - 1.5, 4, 4);
                 }
             }
-            // Treasure map targets (pulse red ★ on the minimap for any map
-            // row carrying valid meta coords).
+            // Treasure map targets (pulse ★ on the minimap or clamp to the
+            // edge with an arrow hint when the target is outside the 140-
+            // tile view).
             const pulse = 0.5 + 0.5 * Math.sin(_renderTime * 0.005);
             for (const it of inventory.items) {
                 if (it.key !== 'treasure_map' || !it.meta) continue;
-                const mx = it.meta.tx - mpx + 70, my = it.meta.ty - mpy + 70;
-                if (mx < 0 || mx >= 140 || my < 0 || my >= 140) continue;
-                miniCtx.fillStyle = `rgba(255,200,60,${(0.6 + pulse * 0.4).toFixed(2)})`;
-                miniCtx.fillRect(mx - 1, my - 1, 3, 3);
-                miniCtx.strokeStyle = 'rgba(0,0,0,0.8)';
-                miniCtx.strokeRect(mx - 1.5, my - 1.5, 4, 4);
+                const rx = it.meta.tx - mpx, ry = it.meta.ty - mpy;
+                const mx = rx + 70, my = ry + 70;
+                if (mx >= 0 && mx < 140 && my >= 0 && my < 140) {
+                    miniCtx.fillStyle = `rgba(255,200,60,${(0.6 + pulse * 0.4).toFixed(2)})`;
+                    miniCtx.fillRect(mx - 1, my - 1, 3, 3);
+                    miniCtx.strokeStyle = 'rgba(0,0,0,0.8)';
+                    miniCtx.strokeRect(mx - 1.5, my - 1.5, 4, 4);
+                } else {
+                    // Off-map: clamp to the nearest edge as a directional hint.
+                    const ang = Math.atan2(ry, rx);
+                    const ex = 70 + Math.cos(ang) * 66;
+                    const ey = 70 + Math.sin(ang) * 66;
+                    miniCtx.fillStyle = `rgba(255,200,60,${(0.5 + pulse * 0.4).toFixed(2)})`;
+                    miniCtx.beginPath();
+                    miniCtx.arc(ex, ey, 2.5, 0, Math.PI * 2);
+                    miniCtx.fill();
+                    miniCtx.strokeStyle = 'rgba(0,0,0,0.9)';
+                    miniCtx.lineWidth = 1;
+                    miniCtx.stroke();
+                }
             }
             // Player dot.
             miniCtx.fillStyle = '#ffc857';
