@@ -237,6 +237,9 @@ const MERCHANT_STOCK = [
     { key: 'torch',     price: 6 },
     { key: 'antidote',  price: 12 },
     { key: 'iron',      price: 20 },
+    { key: 'campfire',  price: 8 },
+    { key: 'sapling',   price: 4 },
+    { key: 'wall',      price: 5 },
 ];
 
 const RECIPES = [
