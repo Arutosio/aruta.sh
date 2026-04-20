@@ -970,6 +970,10 @@ export default {
                     saveInventory();
                     addFloater(player.wx, player.wy, '🔨 ' + def.name, '#80c0ff');
                     _sfx(520, 0.08, 'triangle', 0.05); setTimeout(() => _sfx(780, 0.1, 'triangle', 0.04), 80);
+                    // Skill XP from the crafted recipe inputs.
+                    const inputs = r.inputs || [];
+                    if (inputs.includes('wood')) addSkillXp('woodcutting', 3);
+                    if (inputs.includes('stone') || inputs.includes('iron')) addSkillXp('mining', 3);
                     renderCraft();
                     if ($pack.style.display !== 'none') renderBackpack();
                 });
