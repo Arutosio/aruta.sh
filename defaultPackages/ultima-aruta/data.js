@@ -172,6 +172,10 @@ const ITEMS = {
     antidote: { emoji: '⚗️', name: 'Antidote',     use: { cure: true } },
     canoe:    { emoji: '🛶', name: 'Canoe',         boat: true },
     sailboat: { emoji: '⛵', name: 'Sailboat',      boat: true },
+    // Structures — placeable world features (not pickupable once deployed).
+    // `structure.fuel` (ms) drives auto-despawn; `structure.light` (tiles)
+    // carves a warm light hole in the night fog around its tile.
+    campfire: { emoji: '🔥', name: 'Campfire',      structure: { fuel: 90000, light: 4 } },
 };
 
 const ITEM_DROPS = {
@@ -233,6 +237,7 @@ const RECIPES = [
     { name: 'Meat',          inputs: ['wood', 'berry'],                 output: 'meat' },
     { name: 'Canoe',         inputs: ['wood', 'wood', 'wood', 'herb'],  output: 'canoe' },
     { name: 'Sailboat',      inputs: ['wood', 'wood', 'wood', 'wood', 'feather'], output: 'sailboat' },
+    { name: 'Campfire',      inputs: ['wood', 'wood'],                  output: 'campfire' },
 ];
 
 const SLOTS = [
@@ -293,6 +298,7 @@ const SPRITE_SIZES = {
     '🔮': 17, '🔦': 14, '🧭': 12,
     '⛲': 26, '🪦': 17, '⛺': 24, '🕯️': 12, '🗿': 23, '🕸️': 14, '⚗️': 12,
     '🛶': 21, '⛵': 24,
+    '🔥': 22,
 };
 /* ╔══════════════════════════════════════════════════════════╗
  * ║  ULTIMA ARUTA — engine.js                                  ║

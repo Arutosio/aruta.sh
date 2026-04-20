@@ -485,8 +485,10 @@ function _visionRadius(t) {
 }
 
 /** Vision radius fog — ALWAYS active. Daytime shows a wide clear area
- *  with grey beyond; night shrinks the radius and tints with dark blue. */
-function drawFogOfWar(ctx, W, H, playerScreenX, playerScreenY, timeOfDay) {
+ *  with grey beyond; night shrinks the radius and tints with dark blue.
+ *  `lights` is an optional array of { x, y, radius } (screen-space) that
+ *  carve extra bright spots into the darkness — campfires, torches, etc. */
+function drawFogOfWar(ctx, W, H, playerScreenX, playerScreenY, timeOfDay, lights) {
     const nf = _nightFactor(timeOfDay);
     const vr = _visionRadius(timeOfDay);
     const radiusPx = vr * TILE_W * 0.7;
@@ -516,6 +518,41 @@ function drawFogOfWar(ctx, W, H, playerScreenX, playerScreenY, timeOfDay) {
         const flatAlpha = nf * 0.25;
         ctx.fillStyle = `rgba(${r},${g},${b},${flatAlpha.toFixed(3)})`;
         ctx.fillRect(0, 0, W, H);
+    }
+
+    // ── Dynamic light sources (carve darkness + warm glow overlay) ──
+    if (lights && lights.length && nf > 0.05) {
+        // 1) Erase fog inside each light radius (destination-out with a
+        //    radial falloff keeps edges soft).
+        ctx.save();
+        ctx.globalCompositeOperation = 'destination-out';
+        for (const L of lights) {
+            const flick = 0.85 + Math.random() * 0.15; // subtle flicker
+            const rad = L.radius * flick;
+            const g2 = ctx.createRadialGradient(L.x, L.y, 0, L.x, L.y, rad);
+            g2.addColorStop(0, `rgba(0,0,0,${(0.95 * nf).toFixed(3)})`);
+            g2.addColorStop(0.6, `rgba(0,0,0,${(0.5 * nf).toFixed(3)})`);
+            g2.addColorStop(1, 'rgba(0,0,0,0)');
+            ctx.fillStyle = g2;
+            ctx.fillRect(L.x - rad, L.y - rad, rad * 2, rad * 2);
+        }
+        ctx.restore();
+
+        // 2) Additive warm glow so the lit area reads as firelight, not
+        //    a plain hole in the fog.
+        ctx.save();
+        ctx.globalCompositeOperation = 'lighter';
+        for (const L of lights) {
+            const flick = 0.9 + Math.random() * 0.1;
+            const rad = L.radius * flick;
+            const g3 = ctx.createRadialGradient(L.x, L.y, 0, L.x, L.y, rad);
+            g3.addColorStop(0, `rgba(255,150,60,${(0.35 * nf).toFixed(3)})`);
+            g3.addColorStop(0.5, `rgba(255,110,40,${(0.15 * nf).toFixed(3)})`);
+            g3.addColorStop(1, 'rgba(255,100,30,0)');
+            ctx.fillStyle = g3;
+            ctx.fillRect(L.x - rad, L.y - rad, rad * 2, rad * 2);
+        }
+        ctx.restore();
     }
 }
 

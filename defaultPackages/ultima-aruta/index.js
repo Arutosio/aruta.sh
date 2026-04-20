@@ -390,7 +390,18 @@ export default {
             const add = worldDeltas.added[key];
             if (add) {
                 for (const a of add) {
-                    if (!ch.features.find(f => f.c === a.c && f.r === a.r)) ch.features.push({ c: a.c, r: a.r, emoji: ITEMS[a.key].emoji, item: true, itemKey: a.key });
+                    if (ch.features.find(f => f.c === a.c && f.r === a.r)) continue;
+                    const def = ITEMS[a.key];
+                    if (!def) continue;
+                    if (a.kind === 'structure') {
+                        ch.features.push({
+                            c: a.c, r: a.r, emoji: def.emoji,
+                            structure: true, structKey: a.key,
+                            fuel: typeof a.fuel === 'number' ? a.fuel : (def.structure?.fuel ?? null),
+                        });
+                    } else {
+                        ch.features.push({ c: a.c, r: a.r, emoji: def.emoji, item: true, itemKey: a.key });
+                    }
                 }
             }
         };
@@ -421,6 +432,9 @@ export default {
             return f.itemKey;
         }
         function placeWorldItem(wx, wy, itemKey) {
+            // Structure-flagged items (campfires, etc.) delegate to the
+            // dedicated placer so they deploy as non-pickupable fixtures.
+            if (ITEMS[itemKey]?.structure) return !!placeStructure(wx, wy, itemKey);
             const cx = Math.floor(wx / CHUNK_SIZE), cy = Math.floor(wy / CHUNK_SIZE);
             const lc = ((wx % CHUNK_SIZE) + CHUNK_SIZE) % CHUNK_SIZE;
             const lr = ((wy % CHUNK_SIZE) + CHUNK_SIZE) % CHUNK_SIZE;
@@ -429,6 +443,43 @@ export default {
             ch.features.push({ c: lc, r: lr, emoji: ITEMS[itemKey].emoji, item: true, itemKey });
             const key = cx + ',' + cy;
             (worldDeltas.added[key] = worldDeltas.added[key] || []).push({ c: lc, r: lr, key: itemKey });
+            saveWorldDeltas();
+            return true;
+        }
+        // Place a non-pickupable structure (campfire, etc.) on the world.
+        // Returns the feature on success, null if the tile is blocked.
+        function placeStructure(wx, wy, structKey) {
+            const def = ITEMS[structKey];
+            if (!def || !def.structure) return null;
+            const cx = Math.floor(wx / CHUNK_SIZE), cy = Math.floor(wy / CHUNK_SIZE);
+            const lc = ((wx % CHUNK_SIZE) + CHUNK_SIZE) % CHUNK_SIZE;
+            const lr = ((wy % CHUNK_SIZE) + CHUNK_SIZE) % CHUNK_SIZE;
+            const ch = world.getChunk(cx, cy);
+            if (ch.features.find(f => f.c === lc && f.r === lr)) return null;
+            const fuel = def.structure.fuel ?? null;
+            const f = { c: lc, r: lr, emoji: def.emoji, structure: true, structKey, fuel };
+            ch.features.push(f);
+            const key = cx + ',' + cy;
+            (worldDeltas.added[key] = worldDeltas.added[key] || []).push({
+                c: lc, r: lr, key: structKey, kind: 'structure', fuel,
+            });
+            saveWorldDeltas();
+            return f;
+        }
+        function removeStructureAt(wx, wy) {
+            const cx = Math.floor(wx / CHUNK_SIZE), cy = Math.floor(wy / CHUNK_SIZE);
+            const lc = ((wx % CHUNK_SIZE) + CHUNK_SIZE) % CHUNK_SIZE;
+            const lr = ((wy % CHUNK_SIZE) + CHUNK_SIZE) % CHUNK_SIZE;
+            const ch = world.getChunk(cx, cy);
+            const idx = ch.features.findIndex(f => f.c === lc && f.r === lr && f.structure);
+            if (idx < 0) return false;
+            ch.features.splice(idx, 1);
+            const key = cx + ',' + cy;
+            const adds = worldDeltas.added[key];
+            if (adds) {
+                const di = adds.findIndex(a => a.c === lc && a.r === lr && a.kind === 'structure');
+                if (di >= 0) adds.splice(di, 1);
+            }
             saveWorldDeltas();
             return true;
         }
@@ -549,6 +600,12 @@ export default {
             if (e.type === 'keydown' && k === 'q') {
                 e.preventDefault();
                 quickPotion();
+                return;
+            }
+            if (e.type === 'keydown' && k === 'f') {
+                e.preventDefault();
+                tryPlaceCampfire();
+                return;
             }
         }
 
@@ -865,7 +922,8 @@ export default {
                     Right-click + hold — walk toward cursor<br>
                     Left-click creature — attack (melee / bow)<br>
                     Space / E — interact (NPC, merchant, dungeon)<br>
-                    Double-click item in bag — consume food/potion<br><br>
+                    Double-click item in bag — consume food/potion<br>
+                    Q — quick potion · F — light a campfire 🔥<br><br>
                     <b>Panels</b><br>
                     I / B — Backpack · P — Paperdoll · C — Craft<br>
                     K — Spellbook · H — This guide<br><br>
@@ -879,7 +937,8 @@ export default {
                     Spells cost mana 💧 and have cooldowns.<br><br>
                     <b>Night</b><br>
                     Vision shrinks. Neutral creatures turn aggressive.<br>
-                    Stock potions and stay near villages!<br><br>
+                    Craft 🔥 campfires (2×🪵) and press F to light a safe<br>
+                    radius of warm light for 90 s.<br><br>
                     <b>Dungeons</b><br>
                     Step on 🕳️/🏚️ and press Space to enter.<br>
                     Stronger enemies + treasure chests 🧰 inside.<br>
@@ -1369,10 +1428,12 @@ export default {
             //    offset lands exactly on the player sprite — no further
             //    half-tile correction is needed.
             const pScreen = iso(player.rx, player.ry);
+            const lights = collectLightSources(cam);
             drawFogOfWar(ctx, W, H,
                 pScreen.x + cam.cx,
                 pScreen.y + cam.cy,
-                timeOfDay);
+                timeOfDay,
+                lights);
 
             // PASS 2 — features + player, depth-sorted by wx+wy then wx.
             // Sprite sizes come from data.js (SPRITE_SIZES).
@@ -1768,6 +1829,88 @@ export default {
             addFloater(player.wx, player.wy, '+30 HP +20 MP', '#60ff60');
             _sfx(660, 0.08, 'sine', 0.05);
             if ($pack.style.display !== 'none') renderBackpack();
+        }
+
+        // F — light a campfire on the player's current tile. Consumes one
+        // campfire item (craft: 2x wood). Burns for ~90s, emitting warm
+        // light that carves the night fog around it.
+        function tryPlaceCampfire() {
+            if (_dungeon) { addFloater(player.wx, player.wy, 'Not in dungeons', '#ffaa00'); return; }
+            const idx = inventory.items.findIndex(i => i.key === 'campfire');
+            if (idx < 0) { addFloater(player.wx, player.wy, 'No campfire', '#ffaa00'); return; }
+            // Reject water/deep so the flame isn't floating on waves.
+            const b = biomeAtDg(player.wx, player.wy);
+            if (b === 'water' || b === 'deep') { addFloater(player.wx, player.wy, 'Too wet', '#80c0ff'); return; }
+            // Reject if a feature already occupies this tile (tree, rock, NPC, etc.).
+            const existing = world.featureAt(player.wx, player.wy);
+            if (existing) { addFloater(player.wx, player.wy, 'Tile occupied', '#ffaa00'); return; }
+            const placed = placeStructure(player.wx, player.wy, 'campfire');
+            if (!placed) { addFloater(player.wx, player.wy, 'Cannot place', '#ffaa00'); return; }
+            inventory.items.splice(idx, 1);
+            saveInventory();
+            if ($pack.style.display !== 'none') renderBackpack();
+            addFloater(player.wx, player.wy, '🔥 Campfire', '#ff8040');
+            _sfx(240, 0.12, 'sawtooth', 0.04);
+        }
+
+        // Tick structure fuel on visible chunks; auto-remove when depleted.
+        function tickStructures(dt) {
+            if (_dungeon) return;
+            const cx0 = Math.floor(player.wx / CHUNK_SIZE), cy0 = Math.floor(player.wy / CHUNK_SIZE);
+            let anyRemoved = false;
+            for (let dcy = -1; dcy <= 1; dcy++) {
+                for (let dcx = -1; dcx <= 1; dcx++) {
+                    const ch = world.chunks.get((cx0 + dcx) + ',' + (cy0 + dcy));
+                    if (!ch) continue;
+                    for (let i = ch.features.length - 1; i >= 0; i--) {
+                        const f = ch.features[i];
+                        if (!f.structure || typeof f.fuel !== 'number') continue;
+                        f.fuel -= dt;
+                        if (f.fuel <= 0) {
+                            const wx = (cx0 + dcx) * CHUNK_SIZE + f.c;
+                            const wy = (cy0 + dcy) * CHUNK_SIZE + f.r;
+                            ch.features.splice(i, 1);
+                            const key = (cx0 + dcx) + ',' + (cy0 + dcy);
+                            const adds = worldDeltas.added[key];
+                            if (adds) {
+                                const di = adds.findIndex(a => a.c === f.c && a.r === f.r && a.kind === 'structure');
+                                if (di >= 0) adds.splice(di, 1);
+                            }
+                            addFloater(wx, wy, '💨 burned out', '#888');
+                            anyRemoved = true;
+                        }
+                    }
+                }
+            }
+            if (anyRemoved) saveWorldDeltas();
+        }
+
+        // Collect visible structure light sources for the fog-of-war pass.
+        function collectLightSources(cam) {
+            if (_dungeon) return [];
+            const lights = [];
+            const cx0 = Math.floor(player.wx / CHUNK_SIZE), cy0 = Math.floor(player.wy / CHUNK_SIZE);
+            for (let dcy = -1; dcy <= 1; dcy++) {
+                for (let dcx = -1; dcx <= 1; dcx++) {
+                    const ch = world.chunks.get((cx0 + dcx) + ',' + (cy0 + dcy));
+                    if (!ch) continue;
+                    for (const f of ch.features) {
+                        if (!f.structure) continue;
+                        const def = ITEMS[f.structKey];
+                        const lightTiles = def?.structure?.light;
+                        if (!lightTiles) continue;
+                        const wx = (cx0 + dcx) * CHUNK_SIZE + f.c;
+                        const wy = (cy0 + dcy) * CHUNK_SIZE + f.r;
+                        const p = iso(wx, wy);
+                        lights.push({
+                            x: p.x + cam.cx,
+                            y: p.y + cam.cy,
+                            radius: lightTiles * TILE_W,
+                        });
+                    }
+                }
+            }
+            return lights;
         }
 
         function killCreature(cr, chCx, chCy) {
@@ -2239,6 +2382,7 @@ export default {
             tickCombat(dt);
             tickFloaters(dt);
             tickCreatureRespawn(dt);
+            tickStructures(dt);
             if (_playerFlash > 0) _playerFlash = Math.max(0, _playerFlash - dt);
             tickAmbientSound();
             render();
