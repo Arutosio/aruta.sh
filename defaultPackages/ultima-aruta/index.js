@@ -2388,6 +2388,18 @@ export default {
                     miniCtx.fillRect(mx, my, 1, 1);
                 }
             }
+            // Active quest giver — cyan dot so the player knows where to
+            // return for turn-in.
+            if (activeQuest && typeof activeQuest.giverWx === 'number') {
+                const qx = activeQuest.giverWx - mpx + 70;
+                const qy = activeQuest.giverWy - mpy + 70;
+                if (qx >= 0 && qx < 140 && qy >= 0 && qy < 140) {
+                    miniCtx.fillStyle = '#60d0ff';
+                    miniCtx.fillRect(qx - 1, qy - 1, 3, 3);
+                    miniCtx.strokeStyle = 'rgba(0,0,0,0.8)';
+                    miniCtx.strokeRect(qx - 1.5, qy - 1.5, 4, 4);
+                }
+            }
             // Treasure map targets (pulse red ★ on the minimap for any map
             // row carrying valid meta coords).
             const pulse = 0.5 + 0.5 * Math.sin(_renderTime * 0.005);
