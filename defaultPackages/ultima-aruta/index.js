@@ -2774,6 +2774,8 @@ export default {
             player.stamina = player.maxStamina;
             player.hunger = Math.min(player.maxHunger, player.hunger + 30);
             player.poison = 0; player.poisonDps = 0;
+            // Pets that slept beside the fire also refill to full HP.
+            for (const pet of pets) pet.hp = pet.maxHp;
             // Sleeping burns a chunk of the campfire's fuel on top of the
             // proportional skip so the anchor may go out at dawn.
             anchor.f.fuel = Math.max(0, (anchor.f.fuel || 0) - 30000);
