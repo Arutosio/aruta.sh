@@ -977,6 +977,13 @@ export default {
                     Hunt passive creatures (🐑 🐇 🦌 🐗 🐄 🐓 🦆) for 🥩 Raw Meat.<br>
                     Stand next to a burning 🔥 campfire; raw meat roasts into<br>
                     🍖 Roast Meat every ~3 s (a big hunger refill).<br><br>
+                    <b>Treasure Maps</b><br>
+                    Rare 🗺️ drops from bosses (🐉 🐲 👿 👹 🧟). Each map<br>
+                    points to a buried hoard 20–60 tiles away. Double-click<br>
+                    the map in your backpack: if you're far from the spot,<br>
+                    the map shows the compass direction and distance. Stand<br>
+                    within 2 tiles and double-click again to dig up the<br>
+                    treasure — a burst of gold, gems, iron, and gear.<br><br>
                     <b>Taming</b><br>
                     Stand next to a passive creature (🐑 🐇 🦌 🐄 🐴 🐓...),<br>
                     hold 🥩 or 🍖 and press T. 50% chance (+25% if wounded).<br>
@@ -1212,12 +1219,18 @@ export default {
                     });
                 } else if (droppedOnPlayer && picked()) {
                     // Auto-pickup into backpack at a free-looking spot near the top-left.
-                    inventory.items.push({
-                        id: 'it_' + Math.random().toString(36).slice(2, 9),
-                        key, emoji: def.emoji, name: def.name,
-                        x: 6 + (inventory.items.length % 7) * 36,
-                        y: 6 + Math.floor(inventory.items.length / 7) * 36,
-                    });
+                    // Treasure maps get freshly-rolled target coords at pickup time so
+                    // every map sends you somewhere new.
+                    if (key === 'treasure_map') {
+                        inventory.items.push(newTreasureMapRow());
+                    } else {
+                        inventory.items.push({
+                            id: 'it_' + Math.random().toString(36).slice(2, 9),
+                            key, emoji: def.emoji, name: def.name,
+                            x: 6 + (inventory.items.length % 7) * 36,
+                            y: 6 + Math.floor(inventory.items.length / 7) * 36,
+                        });
+                    }
                     saveInventory();
                     if ($pack.style.display !== 'none') renderBackpack();
                 }
@@ -1291,6 +1304,93 @@ export default {
             armor: 120, robe: 60, gloves: 50, boots: 60, sandals: 40,
             cape: 40, spellbook: 100, crystal: 80,
         };
+        // Consume a treasure map. If the player is within 2 tiles of its
+        // target, spawn a burst of loot items into the backpack; otherwise
+        // paint a compass hint so the player can navigate toward the spot.
+        function useTreasureMap(it) {
+            if (_dungeon) { addFloater(player.wx, player.wy, 'Go outside to dig', '#ffaa00'); return; }
+            const meta = it.meta;
+            if (!meta || typeof meta.tx !== 'number' || typeof meta.ty !== 'number') {
+                // Legacy/corrupt map — reroll target around current position.
+                const rerolled = newTreasureMapRow();
+                it.meta = rerolled.meta;
+                addFloater(player.wx, player.wy, '🗺️ Rerolled!', '#c0a060');
+                saveInventory();
+                return;
+            }
+            const dx = meta.tx - player.wx;
+            const dy = meta.ty - player.wy;
+            const dist = Math.max(Math.abs(dx), Math.abs(dy));
+            if (dist > 2) {
+                const dir = _compassDir(dx, dy);
+                addFloater(player.wx, player.wy, `🗺️ ${dist} tiles ${dir}`, '#e0c080');
+                return;
+            }
+            // Dig! Spawn loot into inventory (up to backpack space, sanity cap 8).
+            const drops = rollTreasureLoot().slice(0, 8);
+            for (const key of drops) {
+                const def = ITEMS[key];
+                if (!def) continue;
+                inventory.items.push({
+                    id: 'it_' + Math.random().toString(36).slice(2, 9),
+                    key, emoji: def.emoji, name: def.name,
+                    x: 6 + (inventory.items.length % 7) * 36,
+                    y: 6 + Math.floor(inventory.items.length / 7) * 36,
+                });
+            }
+            inventory.items = inventory.items.filter(i => i.id !== it.id);
+            saveInventory();
+            if ($pack.style.display !== 'none') renderBackpack();
+            addFloater(player.wx, player.wy, '💎 Treasure!', '#ffe060');
+            _sfx(820, 0.25, 'sine', 0.06);
+            showDialogBubble('🧰', `Dug up a buried hoard: ${drops.map(k => ITEMS[k]?.emoji || '?').join(' ')}`);
+        }
+
+        // Discrete compass direction from a delta vector.
+        function _compassDir(dx, dy) {
+            const ax = Math.abs(dx), ay = Math.abs(dy);
+            if (ax > ay * 2) return dx > 0 ? 'E' : 'W';
+            if (ay > ax * 2) return dy > 0 ? 'S' : 'N';
+            if (dx > 0 && dy > 0) return 'SE';
+            if (dx > 0 && dy < 0) return 'NE';
+            if (dx < 0 && dy > 0) return 'SW';
+            return 'NW';
+        }
+
+        // Build a treasure-map item row with randomized target coords, 20–60
+        // tiles away from the player along a random compass direction.
+        function newTreasureMapRow() {
+            const def = ITEMS.treasure_map;
+            const angle = Math.random() * Math.PI * 2;
+            const dist  = 20 + Math.floor(Math.random() * 40);
+            const tx = Math.round(player.wx + Math.cos(angle) * dist);
+            const ty = Math.round(player.wy + Math.sin(angle) * dist);
+            return {
+                id: 'it_' + Math.random().toString(36).slice(2, 9),
+                key: 'treasure_map', emoji: def.emoji, name: def.name,
+                meta: { tx, ty },
+                x: 6 + (inventory.items.length % 7) * 36,
+                y: 6 + Math.floor(inventory.items.length / 7) * 36,
+            };
+        }
+
+        // Pick a small batch of loot keys for a solved treasure map. Weighted
+        // toward gold + gems, occasionally drops a full piece of armor.
+        function rollTreasureLoot() {
+            const pool = [
+                ['gold', 0.9], ['gold', 0.9], ['gold', 0.9],
+                ['gem', 0.6], ['gem', 0.4],
+                ['potion', 0.5], ['scroll', 0.3],
+                ['iron', 0.5], ['iron', 0.3],
+                ['ring', 0.25], ['necklace', 0.2], ['crown', 0.1],
+                ['spellbook', 0.15], ['armor', 0.2], ['sword', 0.15],
+            ];
+            const results = [];
+            for (const [key, rate] of pool) if (Math.random() < rate) results.push(key);
+            if (!results.length) results.push('gold', 'gem');
+            return results;
+        }
+
         function _ensureDur(itemRow) {
             if (!itemRow) return;
             const max = MAX_DURABILITY[itemRow.key];
@@ -1394,6 +1494,7 @@ export default {
             const it = inventory.items.find(i => i.id === id);
             if (!it) return;
             const def = ITEMS[it.key];
+            if (def && def.map) { useTreasureMap(it); return; }
             if (!def || !def.use) { addFloater(player.wx, player.wy, 'Cannot use', '#aaa'); return; }
             // Apply effects.
             if (def.use.hp)      player.hp      = Math.min(player.maxHp,      player.hp      + def.use.hp);
