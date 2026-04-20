@@ -2156,6 +2156,18 @@ export default {
                     ctx.ellipse(sx + tw / 2, sy + (TILE_H * ps) / 2, tw * 0.35, tw * 0.18, 0, 0, Math.PI * 2);
                     ctx.stroke();
                 }
+                // Boss-class creatures (maxHp ≥ 80) pulse a purple aura so
+                // they're instantly recognizable as dangerous even at a
+                // glance — supports the milestone slayer system.
+                if (s.isCreature && s.maxHp >= 80) {
+                    const bp = 0.4 + 0.5 * Math.sin(_renderTime * 0.004);
+                    const tw = TILE_W * ps;
+                    ctx.strokeStyle = `rgba(180,80,255,${bp.toFixed(2)})`;
+                    ctx.lineWidth = 2;
+                    ctx.beginPath();
+                    ctx.ellipse(sx + tw / 2, sy + (TILE_H * ps) / 2 + 3, tw * 0.55, tw * 0.22, 0, 0, Math.PI * 2);
+                    ctx.stroke();
+                }
                 // Creature hit flash: red glow.
                 if (s.hitFlash > 0) {
                     const fa = Math.min(0.5, s.hitFlash / 250);
