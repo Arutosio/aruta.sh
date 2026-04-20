@@ -352,6 +352,7 @@ export default {
                     if (typeof saved.skills[k] === 'number') player.skills[k] = saved.skills[k];
                 }
             }
+            if (typeof saved.crafted === 'number') player.crafted = saved.crafted;
             if (saved.slayDragon) player._slayDragon = true;
             if (saved.slayDemon) player._slayDemon = true;
             if (saved.slayBrute) player._slayBrute = true;
@@ -1003,6 +1004,7 @@ export default {
                     const inputs = r.inputs || [];
                     if (inputs.includes('wood')) addSkillXp('woodcutting', 3);
                     if (inputs.includes('stone') || inputs.includes('iron')) addSkillXp('mining', 3);
+                    player.crafted = (player.crafted || 0) + 1;
                     renderCraft();
                     if ($pack.style.display !== 'none') renderBackpack();
                 });
@@ -1265,7 +1267,7 @@ export default {
                 <div style="margin-top:6px">Position: ${player.wx}, ${player.wy}</div>
                 <div>Biome: ${bm}</div>
                 <div>Seed: <span style="color:#ffc857">${worldRow.seed}</span></div>
-                <div>Kills: 💀 <b>${player.kills}</b> · Days survived: <b>${player.days + 1}</b></div>
+                <div>Kills: 💀 <b>${player.kills}</b> · Crafted: 🔨 <b>${player.crafted || 0}</b> · Days: <b>${player.days + 1}</b></div>
                 <div style="margin-top:8px"><b>Skills</b></div>
                 ${(() => {
                     const icons = { woodcutting: '🪓', mining: '⛏️', cooking: '🍳', fishing: '🎣', taming: '💖', combat: '⚔️' };
@@ -1306,6 +1308,7 @@ export default {
                     pets: pets.map(p => ({ emoji: p.emoji, name: p.name, hp: p.hp, maxHp: p.maxHp, dmg: p.dmg, wx: p.wx, wy: p.wy, level: p.level, xp: p.xp, command: p.command })),
                     skills: player.skills,
                     activeQuest,
+                    crafted: player.crafted || 0,
                     slayDragon: player._slayDragon || false,
                     slayDemon: player._slayDemon || false,
                     slayBrute: player._slayBrute || false,
@@ -3971,6 +3974,7 @@ export default {
                     pets: pets.map(p => ({ emoji: p.emoji, name: p.name, hp: p.hp, maxHp: p.maxHp, dmg: p.dmg, wx: p.wx, wy: p.wy, level: p.level, xp: p.xp, command: p.command })),
                     skills: player.skills,
                     activeQuest,
+                    crafted: player.crafted || 0,
                     slayDragon: player._slayDragon || false,
                     slayDemon: player._slayDemon || false,
                     slayBrute: player._slayBrute || false,

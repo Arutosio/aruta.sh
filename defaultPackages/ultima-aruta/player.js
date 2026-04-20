@@ -32,6 +32,8 @@ class Player {
             taming:      0,
             combat:      0,
         };
+        // Running counters for milestones + Stats panel flavor.
+        this.crafted = 0;
     }
 
     /**
