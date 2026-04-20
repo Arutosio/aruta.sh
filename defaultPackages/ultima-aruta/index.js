@@ -3176,6 +3176,10 @@ export default {
             cr.dead = true;
             sfxKill();
             player.kills++;
+            // Soul harvest: every kill returns a small amount of mana.
+            // Aggressive kills return more than passive — reflects risk.
+            const soul = cr.ai === 'aggressive' ? 3 : 1;
+            player.mana = Math.min(player.maxMana, player.mana + soul);
             // Quest progress (kill-type): match by emoji regardless of dungeon/overworld.
             if (activeQuest && activeQuest.kind === 'kill' && activeQuest.target === cr.emoji && activeQuest.current < activeQuest.needed) {
                 activeQuest.current++;
