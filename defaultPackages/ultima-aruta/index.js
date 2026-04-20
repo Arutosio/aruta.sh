@@ -2331,12 +2331,23 @@ export default {
                 const ch = world.chunks.get((mcx+dcx)+','+(mcy+dcy));
                 if (!ch) continue;
                 for (const f of ch.features) {
-                    if (!f.village && !f.npc && !f.merchant && !f.dungeon) continue;
+                    const isLandmark = f.village || f.npc || f.merchant || f.dungeon;
+                    const isStructure = f.structure;
+                    if (!isLandmark && !isStructure) continue;
                     const fwx = (mcx+dcx) * CHUNK_SIZE + f.c;
                     const fwy = (mcy+dcy) * CHUNK_SIZE + f.r;
                     const mx = fwx - mpx + 70, my = fwy - mpy + 70;
                     if (mx < 0 || mx >= 140 || my < 0 || my >= 140) continue;
-                    miniCtx.fillStyle = f.dungeon ? '#ff4040' : f.merchant ? '#60ff60' : f.npc ? '#ffffff' : '#ffc857';
+                    if (isStructure) {
+                        // Player-built landmarks: campfire orange, walls grey,
+                        // crops/saplings green, grown trees dark-green.
+                        if (f.structKey === 'campfire') miniCtx.fillStyle = '#ff9040';
+                        else if (f.structKey === 'wall') miniCtx.fillStyle = '#888';
+                        else if (f.structKey === 'grown_tree') miniCtx.fillStyle = '#2d6a2a';
+                        else miniCtx.fillStyle = '#60d060';
+                    } else {
+                        miniCtx.fillStyle = f.dungeon ? '#ff4040' : f.merchant ? '#60ff60' : f.npc ? '#ffffff' : '#ffc857';
+                    }
                     miniCtx.fillRect(mx, my, 2, 2);
                 }
                 for (const cr of ch.creatures) {
