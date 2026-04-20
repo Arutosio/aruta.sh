@@ -347,6 +347,11 @@ export default {
             if (saved.maxStamina != null) player.maxStamina = saved.maxStamina;
             if (saved.hunger != null)     player.hunger     = saved.hunger;
             if (saved.maxHunger != null)  player.maxHunger  = saved.maxHunger;
+            if (saved.skills && typeof saved.skills === 'object') {
+                for (const k of Object.keys(player.skills)) {
+                    if (typeof saved.skills[k] === 'number') player.skills[k] = saved.skills[k];
+                }
+            }
             if (saved.baseDmg != null) player.baseDmg = saved.baseDmg;
             if (saved.kills != null)  player.kills  = saved.kills;
             if (saved.days != null)   player.days   = saved.days;
@@ -977,6 +982,12 @@ export default {
                     Hunt passive creatures (🐑 🐇 🦌 🐗 🐄 🐓 🦆) for 🥩 Raw Meat.<br>
                     Stand next to a burning 🔥 campfire; raw meat roasts into<br>
                     🍖 Roast Meat every ~3 s (a big hunger refill).<br><br>
+                    <b>Skills</b><br>
+                    Every chop, mine, cook, fish, tame, and swing feeds a<br>
+                    per-skill XP counter. Open the Stats panel (gear icon)<br>
+                    to watch each skill's level climb toward mastery (100).<br>
+                    Higher levels currently just signal mastery — bonuses<br>
+                    can be wired in later iterations.<br><br>
                     <b>Treasure Maps</b><br>
                     Rare 🗺️ drops from bosses (🐉 🐲 👿 👹 🧟). Each map<br>
                     points to a buried hoard 20–60 tiles away. Double-click<br>
@@ -1069,7 +1080,21 @@ export default {
                 <div>Biome: ${bm}</div>
                 <div>Seed: <span style="color:#ffc857">${worldRow.seed}</span></div>
                 <div>Kills: 💀 <b>${player.kills}</b> · Days survived: <b>${player.days + 1}</b></div>
-                <div>Inventory: ${inventory.items.length} items</div>
+                <div style="margin-top:8px"><b>Skills</b></div>
+                ${(() => {
+                    const icons = { woodcutting: '🪓', mining: '⛏️', cooking: '🍳', fishing: '🎣', taming: '💖', combat: '⚔️' };
+                    return Object.entries(player.skills || {}).map(([k, xp]) => {
+                        const lvl = skillLevel(xp);
+                        const next = Math.pow((lvl + 1) / 0.63, 2);
+                        return `<div style="display:flex;gap:6px;align-items:center;">
+                            <span style="width:18px">${icons[k] || '•'}</span>
+                            <span style="width:84px;text-transform:capitalize">${k}</span>
+                            <span style="width:30px;text-align:right"><b>${lvl}</b></span>
+                            <span style="flex:1;font-size:10px;color:#aac">${Math.floor(xp)} / ${Math.floor(next)} xp</span>
+                        </div>`;
+                    }).join('');
+                })()}
+                <div style="margin-top:6px">Inventory: ${inventory.items.length} items</div>
                 <div style="margin-top:10px"><button class="ua-btn ua-btn-danger" id="ua-back-to-menu">↩ Back to world menu</button></div>
             `;
             $statsBody.querySelector('#ua-back-to-menu').addEventListener('click', () => {
@@ -1080,6 +1105,7 @@ export default {
                     level: player.level, xp: player.xp, xpNext: player.xpNext,
                     maxHp: player.maxHp, maxMana: player.maxMana, maxStamina: player.maxStamina, maxHunger: player.maxHunger, baseDmg: player.baseDmg, kills: player.kills, days: player.days,
                     pets: pets.map(p => ({ emoji: p.emoji, hp: p.hp, maxHp: p.maxHp, dmg: p.dmg, wx: p.wx, wy: p.wy })),
+                    skills: player.skills,
                 }).catch(e => console.warn('[ultima-aruta] save state failed', e));
                 root.__uaCleanup?.();
                 // Reload by re-invoking mount — simplest way.
@@ -1304,6 +1330,25 @@ export default {
             armor: 120, robe: 60, gloves: 50, boots: 60, sandals: 40,
             cape: 40, spellbook: 100, crystal: 80,
         };
+        // ── Skill XP ─────────────────────────────────────────────
+        // Skill level grows with total XP on a soft sqrt curve so early
+        // levels come quickly but mastery is a long grind — classic UO pacing.
+        // skillLevel(xp) -> 0..100, with 100 around 25k XP.
+        function skillLevel(xp) {
+            if (!xp) return 0;
+            return Math.min(100, Math.floor(Math.sqrt(xp) * 0.63));
+        }
+        function addSkillXp(name, amount) {
+            if (!player.skills || !(name in player.skills)) return;
+            const before = skillLevel(player.skills[name]);
+            player.skills[name] += amount;
+            const after = skillLevel(player.skills[name]);
+            if (after > before) {
+                addFloater(player.wx, player.wy, `⬆ ${name} ${after}`, '#a0d0ff');
+                _sfx(820, 0.08, 'sine', 0.04);
+            }
+        }
+
         // Consume a treasure map. If the player is within 2 tiles of its
         // target, spawn a burst of loot items into the backpack; otherwise
         // paint a compass hint so the player can navigate toward the spot.
@@ -2052,6 +2097,7 @@ export default {
             addFloater(cwx, cwy, isCrit ? 'CRIT -' + dmg + '!' : '-' + dmg, isCrit ? '#ffff00' : '#ff4040');
             sfxHit();
             _wearWeapon();
+            addSkillXp('combat', isCrit ? 3 : 1);
             if (isCrit) _sfx(600, 0.08, 'triangle', 0.05);
             if (cr.ai === 'neutral') cr.ai = 'aggressive';
             if (cr.hp <= 0) killCreature(cr, chCx, chCy);
@@ -2200,6 +2246,7 @@ export default {
             });
             addFloater(found.wx, found.wy, '💖 Tamed!', '#ff60c0');
             _sfx(700, 0.2, 'sine', 0.06);
+            addSkillXp('taming', 15);
             savePets();
         }
 
@@ -2425,6 +2472,7 @@ export default {
             if ($pack.style.display !== 'none') renderBackpack();
             addFloater(hit.wx, hit.wy, '🍖 Roasted!', '#ffb070');
             _sfx(720, 0.08, 'triangle', 0.04);
+            addSkillXp('cooking', 3);
             // Extra fuel drain for the roast.
             hit.f.fuel = Math.max(0, (hit.f.fuel || 0) - 2500);
         }
@@ -2764,6 +2812,7 @@ export default {
                         });
                         addFloater(wx, wy, '🐟 +' + def.name, '#80c0ff');
                         saveInventory();
+                        addSkillXp('fishing', 2);
                     } else {
                         addFloater(wx, wy, 'Nothing bites...', '#aaa');
                     }
@@ -2820,6 +2869,11 @@ export default {
                                     break;
                                 }
                             }
+                            // Skill XP for this swing — route by tool emoji.
+                            const isTreeEmoji = f.emoji === '🌲' || f.emoji === '🌳' || f.emoji === '🌴';
+                            const isRockEmoji = f.emoji === '🪨' || f.emoji === '⛰️' || f.emoji === '🧱';
+                            if (isTreeEmoji) addSkillXp('woodcutting', 2);
+                            else if (isRockEmoji) addSkillXp('mining', 3);
                             // Bonus independent roll: chopping trees occasionally
                             // drops a sapling the player can replant elsewhere.
                             const isTree = f.emoji === '🌲' || f.emoji === '🌳' || f.emoji === '🌴';
@@ -3001,6 +3055,7 @@ export default {
                     level: player.level, xp: player.xp, xpNext: player.xpNext,
                     maxHp: player.maxHp, maxMana: player.maxMana, maxStamina: player.maxStamina, maxHunger: player.maxHunger, baseDmg: player.baseDmg, kills: player.kills, days: player.days,
                     pets: pets.map(p => ({ emoji: p.emoji, hp: p.hp, maxHp: p.maxHp, dmg: p.dmg, wx: p.wx, wy: p.wy })),
+                    skills: player.skills,
                 }).catch(e => console.warn('[ultima-aruta] save state failed', e));
                 worldRow.lastPlayed = Date.now();
                 worldRow.playerClass = playerClass;

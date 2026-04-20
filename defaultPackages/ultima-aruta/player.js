@@ -21,6 +21,17 @@ class Player {
         this.days = 0;
         this.poison = 0;
         this.poisonDps = 0;
+        // UO-style classless skill XP. Each action bumps the relevant counter
+        // via addSkillXp (defined in index.js). Level is computed on the fly
+        // from XP so we don't track two parallel numbers per skill.
+        this.skills = {
+            woodcutting: 0,
+            mining:      0,
+            cooking:     0,
+            fishing:     0,
+            taming:      0,
+            combat:      0,
+        };
     }
 
     /**
