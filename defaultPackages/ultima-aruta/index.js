@@ -712,6 +712,23 @@ export default {
                             </div>`;
                         }).join('') || '<div style="opacity:0.5;padding:6px;">Nothing to sell.</div>'}
                     </div>
+                    <div class="ua-shop-section"><b>Repair</b></div>
+                    <div class="ua-shop-list">
+                        ${(() => {
+                            const rows = Object.entries(equipment)
+                                .filter(([, it]) => it && typeof it.dur === 'number' && it.dur < it.durMax)
+                                .map(([slot, it]) => {
+                                    const missing = it.durMax - it.dur;
+                                    const cost = Math.max(1, Math.ceil(missing / 2));
+                                    return `<div class="ua-shop-row">
+                                        <span>${it.emoji} ${it.name} (${Math.ceil(it.dur)}/${it.durMax})</span>
+                                        <span class="ua-shop-price">${cost}🪙</span>
+                                        <button class="ua-btn ua-shop-repair" data-slot="${slot}" data-cost="${cost}" ${gold < cost ? 'disabled' : ''}>Repair</button>
+                                    </div>`;
+                                });
+                            return rows.length ? rows.join('') : '<div style="opacity:0.5;padding:6px;">All gear at full durability.</div>';
+                        })()}
+                    </div>
                 `;
                 shopEl.querySelector('#ua-shop-close').addEventListener('click', () => shopEl.remove());
                 shopEl.querySelectorAll('.ua-shop-buy').forEach(btn => {
@@ -738,6 +755,26 @@ export default {
                         _sfx(880, 0.06, 'sine', 0.04);
                         renderShop();
                         if ($pack.style.display !== 'none') renderBackpack();
+                    });
+                });
+                shopEl.querySelectorAll('.ua-shop-repair').forEach(btn => {
+                    btn.addEventListener('click', () => {
+                        const slot = btn.dataset.slot;
+                        const cost = Number(btn.dataset.cost);
+                        const it = equipment[slot];
+                        if (!it || goldCount() < cost) return;
+                        let removed = 0;
+                        inventory.items = inventory.items.filter(i => {
+                            if (i.key === 'gold' && removed < cost) { removed++; return false; }
+                            return true;
+                        });
+                        it.dur = it.durMax;
+                        saveInventory(); saveEquipment();
+                        addFloater(player.wx, player.wy, '🔧 ' + it.name + ' restored', '#60ff60');
+                        _sfx(520, 0.1, 'sine', 0.05);
+                        renderShop();
+                        if ($pack.style.display !== 'none') renderBackpack();
+                        if ($doll.style.display !== 'none') renderPaperdoll();
                     });
                 });
                 shopEl.querySelectorAll('.ua-shop-sell').forEach(btn => {
@@ -967,7 +1004,9 @@ export default {
                     Click a creature to attack. Damage = base + weapon bonus.<br>
                     Weapons and armor now have durability — each swing and<br>
                     each hit taken wears them down. At 0 they break. Watch<br>
-                    the green/orange/red bars on the paperdoll.<br>
+                    the green/orange/red bars on the paperdoll. Visit a<br>
+                    merchant to repair gear (cost = missing_dur/2 gold).<br>
+                    Combat mastery skips some wear rolls automatically.<br>
                     Bow 🏹 has range 3; melee range 1.5.<br>
                     Stamina ⚡ drains on move (2) and attack (8).<br>
                     Below 5 stamina you can't attack. Regen 6/s standing, 2/s walking.<br><br>
@@ -1603,10 +1642,12 @@ export default {
         }
 
         // Wear down the equipped weapon by one tick. Breaks at 0, moving the
-        // item out of the slot with a warning floater.
+        // item out of the slot with a warning floater. Mastery mitigates wear:
+        // at combat 100 the wear roll is skipped 50% of the time.
         function _wearWeapon() {
             const w = equipment.weapon;
             if (!w || typeof w.dur !== 'number') return;
+            if (player?.skills && Math.random() < skillLevel(player.skills.combat) / 200) return;
             w.dur -= 1;
             if (w.dur <= 0) {
                 equipment.weapon = null;
