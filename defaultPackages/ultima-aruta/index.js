@@ -2090,6 +2090,8 @@ export default {
                     hp: pet.hp, maxHp: pet.maxHp,
                     hitFlash: pet._hitFlash || 0,
                     isPet: true,
+                    petLevel: pet.level || 1,
+                    petCommand: pet.command,
                 });
             }
             sprites.push({ wx: player.rx, wy: player.ry, emoji: player.emoji, size: 24, isPlayer: true, flash: _playerFlash });
@@ -2188,6 +2190,15 @@ export default {
                     drawSy = sy + bounce;
                 }
                 drawEmoji(ctx, sx, drawSy, s.emoji, scaledSize);
+                // Pet level badge + stay-mode icon above the sprite.
+                if (s.isPet) {
+                    ctx.font = "bold 9px 'Inter', sans-serif";
+                    ctx.textAlign = 'center'; ctx.textBaseline = 'bottom';
+                    ctx.fillStyle = 'rgba(0,0,0,0.7)';
+                    ctx.fillRect(sx + TILE_W / 2 - 10, sy - 10, 20, 10);
+                    ctx.fillStyle = '#ff80c0';
+                    ctx.fillText((s.petCommand === 'stay' ? '🛑 ' : '') + 'L' + s.petLevel, sx + TILE_W / 2, sy - 2);
+                }
                 // Resting 💤 glyph above the player while near a campfire.
                 if (s.isPlayer && _resting) {
                     const bob = Math.sin(_renderTime * 0.004) * 1.5;
