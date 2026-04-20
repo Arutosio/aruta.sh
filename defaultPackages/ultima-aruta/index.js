@@ -1094,7 +1094,9 @@ export default {
                     Stand next to a passive creature (🐑 🐇 🦌 🐄 🐴 🐓...),<br>
                     hold 🥩 or 🍖 and press T. 50% chance (+25% if wounded).<br>
                     Tamed pets follow you and attack aggressive enemies<br>
-                    within 5 tiles. Max 3 pets at once.<br><br>
+                    within 5 tiles. Max 3 pets at once. Pets gain XP from<br>
+                    their kills and level up — each level adds +10 max HP<br>
+                    and +1 damage (level × 20 XP required).<br><br>
                     <b>Building</b><br>
                     Craft 🧱 Stone Walls (3×🪨) and drag them from the<br>
                     backpack onto an adjacent empty tile (≤ 2 away) to<br>
@@ -1217,7 +1219,7 @@ export default {
                     hp: player.hp, mana: player.mana, stamina: player.stamina, hunger: player.hunger,
                     level: player.level, xp: player.xp, xpNext: player.xpNext,
                     maxHp: player.maxHp, maxMana: player.maxMana, maxStamina: player.maxStamina, maxHunger: player.maxHunger, baseDmg: player.baseDmg, kills: player.kills, days: player.days,
-                    pets: pets.map(p => ({ emoji: p.emoji, hp: p.hp, maxHp: p.maxHp, dmg: p.dmg, wx: p.wx, wy: p.wy })),
+                    pets: pets.map(p => ({ emoji: p.emoji, hp: p.hp, maxHp: p.maxHp, dmg: p.dmg, wx: p.wx, wy: p.wy, level: p.level, xp: p.xp })),
                     skills: player.skills,
                     activeQuest,
                 }).catch(e => console.warn('[ultima-aruta] save state failed', e));
@@ -2429,6 +2431,7 @@ export default {
             ...p, rx: p.rx ?? p.wx, ry: p.ry ?? p.wy,
             moveT: 0, moveFrom: { wx: p.wx, wy: p.wy },
             attackCooldown: 0, timer: 0, _hitFlash: 0,
+            level: p.level || 1, xp: p.xp || 0,
         })) : [];
 
         // T — tame an adjacent passive creature. Consumes one raw or roast
@@ -2487,6 +2490,7 @@ export default {
                 rx: found.wx, ry: found.wy,
                 moveT: 0, moveFrom: { wx: found.wx, wy: found.wy },
                 attackCooldown: 0, timer: 0, _hitFlash: 0,
+                level: 1, xp: 0,
             });
             addFloater(found.wx, found.wy, '💖 Tamed!', '#ff60c0');
             _sfx(700, 0.2, 'sine', 0.06);
@@ -2589,6 +2593,17 @@ export default {
                         const xpGain = Math.ceil(tdef.xp * 0.5);
                         player.xp += xpGain;
                         addFloater(target.wx, target.wy, '+' + xpGain + ' XP', '#ffc857');
+                        // Pet XP — level up every 20 XP, growing HP and dmg.
+                        pet.xp = (pet.xp || 0) + tdef.xp;
+                        while (pet.xp >= 20 * (pet.level || 1)) {
+                            pet.xp -= 20 * (pet.level || 1);
+                            pet.level = (pet.level || 1) + 1;
+                            pet.maxHp += 10;
+                            pet.hp = pet.maxHp;
+                            pet.dmg += 1;
+                            addFloater(pet.wx, pet.wy, `⬆ ${pet.emoji} lvl ${pet.level}`, '#ff80c0');
+                            _sfx(880, 0.12, 'sine', 0.05);
+                        }
                         target.cr.dead = true;
                     }
                     continue;
@@ -3386,7 +3401,7 @@ export default {
                     hp: player.hp, mana: player.mana, stamina: player.stamina, hunger: player.hunger,
                     level: player.level, xp: player.xp, xpNext: player.xpNext,
                     maxHp: player.maxHp, maxMana: player.maxMana, maxStamina: player.maxStamina, maxHunger: player.maxHunger, baseDmg: player.baseDmg, kills: player.kills, days: player.days,
-                    pets: pets.map(p => ({ emoji: p.emoji, hp: p.hp, maxHp: p.maxHp, dmg: p.dmg, wx: p.wx, wy: p.wy })),
+                    pets: pets.map(p => ({ emoji: p.emoji, hp: p.hp, maxHp: p.maxHp, dmg: p.dmg, wx: p.wx, wy: p.wy, level: p.level, xp: p.xp })),
                     skills: player.skills,
                     activeQuest,
                 }).catch(e => console.warn('[ultima-aruta] save state failed', e));
