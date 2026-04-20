@@ -2330,25 +2330,38 @@ export default {
                 const label = activeBuff.label || activeBuff.type;
                 ctx.fillText(`${icon} ${label}  ${secs}s`, W - 6, 26);
             }
-            // ── Rain particles + HUD indicator ──────────────
+            // ── Rain / snow particles + HUD indicator ────────
             const rainI = rainIntensity();
             if (rainI > 0) {
                 const intensity = Math.floor(rainI * 40);
-                ctx.strokeStyle = 'rgba(150,180,220,0.25)';
-                ctx.lineWidth = 1;
-                for (let i = 0; i < intensity; i++) {
-                    const rx = Math.random() * W;
-                    const ry = Math.random() * H;
-                    ctx.beginPath();
-                    ctx.moveTo(rx, ry);
-                    ctx.lineTo(rx + 2, ry + 6);
-                    ctx.stroke();
+                const biomeHere = biomeAtDg(player.wx, player.wy);
+                const snowing = biomeHere === 'snow' || biomeHere === 'tundra';
+                if (snowing) {
+                    ctx.fillStyle = 'rgba(240,240,255,0.7)';
+                    for (let i = 0; i < intensity; i++) {
+                        const rx = Math.random() * W;
+                        const ry = Math.random() * H;
+                        ctx.beginPath();
+                        ctx.arc(rx, ry, 1.4, 0, Math.PI * 2);
+                        ctx.fill();
+                    }
+                } else {
+                    ctx.strokeStyle = 'rgba(150,180,220,0.25)';
+                    ctx.lineWidth = 1;
+                    for (let i = 0; i < intensity; i++) {
+                        const rx = Math.random() * W;
+                        const ry = Math.random() * H;
+                        ctx.beginPath();
+                        ctx.moveTo(rx, ry);
+                        ctx.lineTo(rx + 2, ry + 6);
+                        ctx.stroke();
+                    }
                 }
                 // Weather badge in the top-right corner.
                 ctx.font = "13px 'Apple Color Emoji', 'Segoe UI Emoji', sans-serif";
                 ctx.textAlign = 'right'; ctx.textBaseline = 'top';
                 ctx.globalAlpha = 0.6 + rainI * 0.3;
-                ctx.fillText(rainI > 0.6 ? '⛈️' : '☔', W - 6, 6);
+                ctx.fillText(snowing ? '❄️' : (rainI > 0.6 ? '⛈️' : '☔'), W - 6, 6);
                 ctx.globalAlpha = 1;
             }
 
