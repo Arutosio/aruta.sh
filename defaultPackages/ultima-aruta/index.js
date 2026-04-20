@@ -2301,6 +2301,16 @@ export default {
             ctx.fillText('SP',  barX + barW + 4, barY - (barH + barGap) * 2 + barH / 2);
             ctx.fillText('🍗',  barX + barW + 4, barY - (barH + barGap) * 3 + barH / 2);
 
+            // ── Low-HP vignette (red pulse around the edges) ─
+            const hpFrac = player.hp / Math.max(1, player.maxHp);
+            if (hpFrac < 0.25) {
+                const pulse = 0.5 + 0.5 * Math.sin(_renderTime * 0.006);
+                const vignette = ctx.createRadialGradient(W / 2, H / 2, Math.min(W, H) * 0.2, W / 2, H / 2, Math.max(W, H) * 0.6);
+                vignette.addColorStop(0, 'rgba(255,40,40,0)');
+                vignette.addColorStop(1, `rgba(255,40,40,${(0.35 * pulse * (1 - hpFrac * 4)).toFixed(2)})`);
+                ctx.fillStyle = vignette;
+                ctx.fillRect(0, 0, W, H);
+            }
             // ── Active buff indicator ─────────────────────────
             if (activeBuff) {
                 ctx.font = "12px 'Inter', sans-serif";
