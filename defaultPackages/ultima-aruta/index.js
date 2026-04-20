@@ -1113,7 +1113,7 @@ export default {
                     · Woodcutting — chance of a bonus drop per chop<br>
                     · Mining — cheaper swings + bonus drop chance<br>
                     · Cooking — faster roast cycles (3s → 1s at 100)<br>
-                    · Fishing — higher catch rate (40% → 75%)<br>
+                    · Fishing — higher catch rate (40% → 75%, +20% with 🎣 rod)<br>
                     · Taming — higher tame success (+up to 40%)<br>
                     · Combat — +1 damage per 20 levels<br><br>
                     <b>Treasure Maps</b><br>
@@ -1486,7 +1486,7 @@ export default {
         // armor wears down when the player takes a hit. Missing key → no
         // durability (item is indestructible, e.g. jewelry).
         const MAX_DURABILITY = {
-            sword: 80, axe: 100, bow: 70, dagger: 60, wand: 50,
+            sword: 80, axe: 100, bow: 70, dagger: 60, wand: 50, rod: 120,
             shield: 90, helm: 60, crown: 120, hat: 50,
             armor: 120, robe: 60, gloves: 50, boots: 60, sandals: 40,
             cape: 40, spellbook: 100, crystal: 80,
@@ -3358,8 +3358,10 @@ export default {
                     if (player.stamina < 3) { addFloater(player.wx, player.wy, 'Exhausted!', '#ffaa00'); return; }
                     player.stamina -= 3;
                     _sfx(250, 0.06, 'sine', 0.03);
-                    // Base catch rate 40%, +up to 35% from fishing skill (0.75 at lvl 100).
-                    const fishRate = 0.4 + skillLevel(player.skills.fishing) / 286;
+                    // Base catch rate 40%, +up to 35% from fishing skill (0.75 at lvl 100),
+                    // plus +20% if the player wields a 🎣 Fishing Rod.
+                    const rodBonus = equipment.weapon?.key === 'rod' ? 0.2 : 0;
+                    const fishRate = 0.4 + skillLevel(player.skills.fishing) / 286 + rodBonus;
                     if (Math.random() < fishRate) {
                         const fishPool = ['gold', 'herb', 'gem'];
                         const fishKey = clickBiome === 'deep' ? (Math.random() < 0.3 ? 'gem' : 'gold') : fishPool[Math.floor(Math.random() * fishPool.length)];
