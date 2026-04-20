@@ -656,6 +656,11 @@ export default {
                 togglePetCommand();
                 return;
             }
+            if (e.type === 'keydown' && k === 'v') {
+                e.preventDefault();
+                whistlePets();
+                return;
+            }
         }
 
         // ── Interaction: SPACE/E talks to an adjacent NPC or enters a
@@ -1057,7 +1062,8 @@ export default {
                     Y — feed meat to wounded pets (raw +10, roast +25)<br>
                     U — Recall (30 mana, next to 🔥) → nearest distant camp<br>
                     Z — Sleep at 🔥 (night only) → full heal + dawn jump<br>
-                    X — Toggle pets between Follow and Stay (stay still guards)<br><br>
+                    X — Toggle pets between Follow and Stay (stay still guards)<br>
+                    V — Whistle: teleport all pets to your tile<br><br>
                     <b>Panels</b><br>
                     I / B — Backpack · P — Paperdoll · C — Craft<br>
                     K — Spellbook · H — This guide<br><br>
@@ -2456,6 +2462,22 @@ export default {
             level: p.level || 1, xp: p.xp || 0,
             command: p.command || 'follow',
         })) : [];
+
+        // V — whistle all pets back to the player's tile regardless of
+        // distance or command mode. Useful when a pet gets stuck on a wall
+        // or left behind across a chunk boundary.
+        function whistlePets() {
+            if (!pets.length) { addFloater(player.wx, player.wy, 'No pets', '#aaa'); return; }
+            for (const pet of pets) {
+                pet.wx = player.wx + (Math.floor(Math.random() * 3) - 1);
+                pet.wy = player.wy + (Math.floor(Math.random() * 3) - 1);
+                pet.rx = pet.wx; pet.ry = pet.wy;
+                pet.moveT = 0; pet.moveFrom = { wx: pet.wx, wy: pet.wy };
+            }
+            addFloater(player.wx, player.wy, '📯 Pets returned', '#ff80c0');
+            _sfx(540, 0.12, 'triangle', 0.05);
+            savePets();
+        }
 
         // X — toggle all pets between follow (default) and stay. Stay pets
         // stop chasing and returning, but still defend if an enemy walks
