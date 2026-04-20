@@ -968,6 +968,12 @@ export default {
                     Chopping trees occasionally drops a 🌱 Sapling (18%).<br>
                     Press G on grass / forest / swamp / savanna / tundra to<br>
                     plant it. After ~2 min it grows into a harvestable 🌳 tree.<br><br>
+                    <b>Mining</b><br>
+                    Mountain biomes now spawn ⛰️ peaks and 🪨 boulders. Click<br>
+                    within 2 tiles to mine. Peaks are rich in 🔩 Iron Ingots<br>
+                    but cost 6 stamina per swing; boulders are cheaper but<br>
+                    yield mostly stone. Iron unlocks sword / helm / armor<br>
+                    upgrades in the Craft panel.<br><br>
                     <b>Dungeons</b><br>
                     Step on 🕳️/🏚️ and press Space to enter.<br>
                     Stronger enemies + treasure chests 🧰 inside.<br>
@@ -2368,7 +2374,11 @@ export default {
                             '🌲': [{ key: 'wood', rate: 0.5 }, { key: 'herb', rate: 0.3 }, { key: 'apple', rate: 0.1 }],
                             '🌳': [{ key: 'wood', rate: 0.5 }, { key: 'herb', rate: 0.3 }, { key: 'apple', rate: 0.2 }],
                             '🌴': [{ key: 'wood', rate: 0.3 }, { key: 'apple', rate: 0.5 }],
-                            '🪨': [{ key: 'stone', rate: 0.6 }, { key: 'gem', rate: 0.1 }],
+                            // Boulders: mostly stone, rare iron, occasional gem.
+                            '🪨': [{ key: 'stone', rate: 0.55 }, { key: 'iron', rate: 0.12 }, { key: 'gem', rate: 0.08 }],
+                            // Mountain peaks: iron-rich vein. Tougher to harvest in the fiction
+                            // but same click UX — reward reflects difficulty.
+                            '⛰️': [{ key: 'iron', rate: 0.35 }, { key: 'stone', rate: 0.5 }, { key: 'gem', rate: 0.06 }],
                             '🍄': [{ key: 'mushroom', rate: 0.9 }],
                             '🌿': [{ key: 'herb', rate: 0.8 }],
                             '🌾': [{ key: 'berry', rate: 0.7 }],
@@ -2376,9 +2386,13 @@ export default {
                         };
                         const table = GATHER[f.emoji];
                         if (table) {
-                            if (player.stamina < 3) { addFloater(player.wx, player.wy, 'Exhausted!', '#ffaa00'); return; }
-                            player.stamina -= 3;
-                            _sfx(300, 0.06, 'triangle', 0.04);
+                            // Mining ⛰️ peaks is costly — higher stamina floor than other gathers.
+                            const isMining = f.emoji === '⛰️';
+                            const costStam = isMining ? 6 : 3;
+                            const minStam  = isMining ? 6 : 3;
+                            if (player.stamina < minStam) { addFloater(player.wx, player.wy, 'Exhausted!', '#ffaa00'); return; }
+                            player.stamina -= costStam;
+                            _sfx(isMining ? 180 : 300, 0.08, isMining ? 'sawtooth' : 'triangle', 0.05);
                             for (const drop of table) {
                                 if (Math.random() < drop.rate) {
                                     const def = ITEMS[drop.key];

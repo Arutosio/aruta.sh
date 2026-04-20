@@ -63,6 +63,8 @@ const FEATURES = {
     forest:  [{ emoji: '🌲', rate: 0.35 }, { emoji: '🌳', rate: 0.12 }, { emoji: '🍄', rate: 0.01 }, { emoji: '🪨', rate: 0.01 }],
     tundra:  [{ emoji: '🪨', rate: 0.03 }, { emoji: '🌿', rate: 0.01 }, { emoji: '🗿', rate: 0.004 }],
     snow:    [{ emoji: '🌲', rate: 0.06 }, { emoji: '⛄', rate: 0.005 }],
+    // Mountain peaks and boulders — mineable for stone/iron/gem.
+    mountain:[{ emoji: '⛰️', rate: 0.18 }, { emoji: '🪨', rate: 0.08 }],
 };
 
 const CREATURE_DEFS = {
@@ -167,6 +169,7 @@ const ITEMS = {
     wine:     { emoji: '🍷', name: 'Wine',          use: { hp: 5, mana: 15, stamina: 10, hunger: 6 } },
     feather:  { emoji: '🪶', name: 'Feather' },
     wood:     { emoji: '🪵', name: 'Wood' },
+    iron:     { emoji: '🔩', name: 'Iron Ingot' },
     crystal:  { emoji: '🔮', name: 'Crystal Ball',  slot: 'book' },
     torch:    { emoji: '🔦', name: 'Torch' },
     compass:  { emoji: '🧭', name: 'Compass' },
@@ -220,6 +223,7 @@ const MERCHANT_STOCK = [
     { key: 'wine',      price: 10 },
     { key: 'torch',     price: 6 },
     { key: 'antidote',  price: 12 },
+    { key: 'iron',      price: 20 },
 ];
 
 const RECIPES = [
@@ -244,6 +248,10 @@ const RECIPES = [
     { name: 'Canoe',         inputs: ['wood', 'wood', 'wood', 'herb'],  output: 'canoe' },
     { name: 'Sailboat',      inputs: ['wood', 'wood', 'wood', 'wood', 'feather'], output: 'sailboat' },
     { name: 'Campfire',      inputs: ['wood', 'wood'],                  output: 'campfire' },
+    // Iron upgrades — stronger than stone equivalents, require mined iron.
+    { name: 'Iron Sword',    inputs: ['iron', 'iron', 'wood'],          output: 'sword' },
+    { name: 'Iron Armor',    inputs: ['iron', 'iron', 'iron', 'wood'],  output: 'armor' },
+    { name: 'Iron Helm',     inputs: ['iron', 'iron'],                  output: 'helm' },
 ];
 
 const SLOTS = [
@@ -302,7 +310,7 @@ const SPRITE_SIZES = {
     '🦅': 17, '🦈': 20, '🐊': 18, '🦂': 14, '🐄': 20, '🐴': 21, '🦄': 23,
     '🧛': 21, '🧌': 23, '👿': 27, '🐓': 12, '🦆': 14, '💂': 21,
     '🪄': 15, '🍖': 12, '🥩': 12, '🍞': 12, '🍷': 12, '🪶': 11, '🪵': 14,
-    '🔮': 17, '🔦': 14, '🧭': 12,
+    '🔮': 17, '🔦': 14, '🧭': 12, '🔩': 11,
     '⛲': 26, '🪦': 17, '⛺': 24, '🕯️': 12, '🗿': 23, '🕸️': 14, '⚗️': 12,
     '🛶': 21, '⛵': 24,
     '🔥': 22,
