@@ -990,6 +990,7 @@ export default {
             { name: 'Lightning',  icon: '⚡', mana: 25, cooldown: 2000, target: 'enemy', dmg: 25 },
             { name: 'Cure',       icon: '💚', mana: 10, cooldown: 1000, target: 'self',  effect: (p) => { p.hp = Math.min(p.maxHp, p.hp + 8); p.stamina = Math.min(p.maxStamina, p.stamina + 20); addFloater(p.wx, p.wy, 'Cured!', '#60ff60'); } },
             { name: 'Mana Shield',icon: '🛡️', mana: 30, cooldown: 5000, target: 'self',  effect: (p) => { p.hp = Math.min(p.maxHp, p.hp + 5); p.maxHp += 5; addFloater(p.wx, p.wy, '+5 max HP', '#80c0ff'); } },
+            { name: 'Light',      icon: '💡', mana: 8,  cooldown: 3000, target: 'self',  effect: (p) => { _spellLightUntil = _renderTime + 45000; addFloater(p.wx, p.wy, '💡 Light', '#ffe080'); } },
         ];
         let spellCooldowns = SPELLS.map(() => 0);
 
@@ -3130,6 +3131,10 @@ export default {
             if (anyChanged) saveWorldDeltas();
         }
 
+        // Timestamp (ms on _renderTime axis) while the Light spell is
+        // active. Read by collectLightSources as a personal halo.
+        let _spellLightUntil = -Infinity;
+
         // Whether the player is currently adjacent to a burning campfire
         // (set by tickCombat; read by render() for the 💤 resting indicator).
         let _resting = false;
@@ -3240,13 +3245,14 @@ export default {
                 }
             }
             // Hand-held torch + lantern: any Torch in inventory grants a
-            // small personal halo; a Lantern extends it much further. Effects
-            // stack — a lantern + 3 torches lights the biggest radius.
+            // small personal halo; a Lantern extends it much further. The
+            // Light spell contributes up to 6 extra tiles while active.
             const torches = inventory.items.filter(i => i.key === 'torch').length;
             const lanterns = inventory.items.filter(i => i.key === 'lantern').length;
-            if (torches > 0 || lanterns > 0) {
+            const spellActive = _renderTime < _spellLightUntil;
+            if (torches > 0 || lanterns > 0 || spellActive) {
                 const pp = iso(player.rx, player.ry);
-                const radius = (1 + Math.min(torches, 3) + Math.min(lanterns, 2) * 3) * TILE_W;
+                const radius = (1 + Math.min(torches, 3) + Math.min(lanterns, 2) * 3 + (spellActive ? 6 : 0)) * TILE_W;
                 lights.push({
                     x: pp.x + cam.cx,
                     y: pp.y + cam.cy,
