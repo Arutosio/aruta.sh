@@ -604,6 +604,9 @@ function initProfileSettings() {
     });
 
     refreshStatus();
+    // Expose so the global i18n:changed listener can re-render status/button
+    // labels when the user switches language. Registered at file bottom.
+    window.__arutaProfileRefresh = refreshStatus;
 }
 
 
@@ -614,16 +617,18 @@ function initProfileSettings() {
  * ──────────────────────────────── */
 function refreshAppearanceUI() {
     if (!window.appearance) return;
+    const t = (window.t && window.t()) || {};
+    const dflt = t.settings_status_default || 'Default';
     const state = window.appearance.get();
     const bgStatus = document.getElementById('settings-bg-status');
     const portraitStatus = document.getElementById('settings-portrait-status');
     const nameInput = document.getElementById('settings-name-input');
     if (bgStatus) bgStatus.textContent = state.background
         ? (state.background.filename || (state.background.kind === 'video' ? 'Video' : 'Image'))
-        : 'Default';
+        : dflt;
     if (portraitStatus) portraitStatus.textContent = state.portrait
         ? (state.portrait.filename || 'Image')
-        : 'Default';
+        : dflt;
     if (nameInput) nameInput.value = state.name || '';
 }
 
@@ -708,3 +713,14 @@ function initAppearanceCustom() {
 
     refreshAppearanceUI();
 }
+
+// Re-render every dynamically-written label in the Settings panel when the
+// active language changes. Pure data-i18n elements are handled by
+// core.js:applyTranslations; this covers text written imperatively by JS
+// (profile status, background/portrait status, permissions + widgets lists).
+document.addEventListener('i18n:changed', () => {
+    try { refreshAppearanceUI(); } catch (_) {}
+    try { window.__arutaProfileRefresh?.(); } catch (_) {}
+    try { window.permissions?.renderSettings?.(); } catch (_) {}
+    try { window.widgets?.renderSettings?.(); } catch (_) {}
+});

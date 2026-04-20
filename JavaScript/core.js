@@ -88,6 +88,10 @@ function switchLanguage(lang) {
         const labelSpan = tab.querySelector('.tab-label');
         if (labelSpan) labelSpan.textContent = newLabel;
     });
+    // Notify modules that write text dynamically (profile status, appearance
+    // placeholders, permissions/widgets lists) so they can re-render against
+    // the new language. Pure data-i18n elements are already handled above.
+    document.dispatchEvent(new CustomEvent('i18n:changed', { detail: { lang } }));
 }
 
 /**

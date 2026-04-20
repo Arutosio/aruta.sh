@@ -209,7 +209,15 @@ const i18n = {
         font_nordic: 'Nordico (solo Cinzel)',
         settings_reset_btn: 'Ripristina',
         settings_wipe_settings_btn: 'Azzera',
-        settings_wipe_all_btn: 'Cancella tutto'
+        settings_wipe_all_btn: 'Cancella tutto',
+        settings_profile_zip_only: 'Usa Esporta/Importa .zip (sync cartella solo su Chromium).',
+        settings_profile_change: 'Cambia cartella…',
+        settings_profile_linked: 'Collegato:',
+        settings_profile_disconnected: 'Disconnesso — riconnetti per riprendere il sync.',
+        toast_appearance_too_big: 'File troppo grande — max ',
+        toast_appearance_bad_type: 'Tipo di file non supportato',
+        toast_appearance_image_only: 'Il ritratto deve essere un\'immagine',
+        toast_appearance_failed: 'Impossibile applicare il file'
     },
     en: {
         char_class: 'Streamer · Programmer · Adventurer',
@@ -413,7 +421,15 @@ const i18n = {
         font_nordic: 'Nordic (Cinzel only)',
         settings_reset_btn: 'Reset',
         settings_wipe_settings_btn: 'Wipe',
-        settings_wipe_all_btn: 'Wipe All'
+        settings_wipe_all_btn: 'Wipe All',
+        settings_profile_zip_only: 'Use Export/Import .zip (folder sync requires Chromium).',
+        settings_profile_change: 'Change folder…',
+        settings_profile_linked: 'Linked:',
+        settings_profile_disconnected: 'Disconnected — reconnect to resume sync.',
+        toast_appearance_too_big: 'File too large — max ',
+        toast_appearance_bad_type: 'Unsupported file type',
+        toast_appearance_image_only: 'Portrait must be an image',
+        toast_appearance_failed: 'Could not apply file'
     },
     es: {
         char_class: 'Streamer · Programador · Aventurero',
@@ -617,7 +633,15 @@ const i18n = {
         font_nordic: 'Nórdico (solo Cinzel)',
         settings_reset_btn: 'Restablecer',
         settings_wipe_settings_btn: 'Borrar',
-        settings_wipe_all_btn: 'Borrar todo'
+        settings_wipe_all_btn: 'Borrar todo',
+        settings_profile_zip_only: 'Usa Exportar/Importar .zip (sync de carpeta solo en Chromium).',
+        settings_profile_change: 'Cambiar carpeta…',
+        settings_profile_linked: 'Vinculado:',
+        settings_profile_disconnected: 'Desconectado — reconecta para reanudar la sincronización.',
+        toast_appearance_too_big: 'Archivo demasiado grande — máx ',
+        toast_appearance_bad_type: 'Tipo de archivo no admitido',
+        toast_appearance_image_only: 'El retrato debe ser una imagen',
+        toast_appearance_failed: 'No se pudo aplicar el archivo'
     },
     ja: {
         char_class: 'ストリーマー · プログラマー · 冒険者',
@@ -821,7 +845,15 @@ const i18n = {
         font_nordic: 'ノルディック (Cinzelのみ)',
         settings_reset_btn: 'リセット',
         settings_wipe_settings_btn: '消去',
-        settings_wipe_all_btn: 'すべて消去'
+        settings_wipe_all_btn: 'すべて消去',
+        settings_profile_zip_only: 'エクスポート/インポート .zip を使用（フォルダ同期は Chromium のみ）。',
+        settings_profile_change: 'フォルダを変更…',
+        settings_profile_linked: 'リンク済み:',
+        settings_profile_disconnected: '切断 — 再接続して同期を再開。',
+        toast_appearance_too_big: 'ファイルが大きすぎます — 最大 ',
+        toast_appearance_bad_type: 'サポートされないファイル形式',
+        toast_appearance_image_only: 'ポートレートは画像である必要があります',
+        toast_appearance_failed: 'ファイルを適用できませんでした'
     },
     fn: {
         char_class: 'ᛊᛏᚱᛖᚨᛗᛖᚱ · ᛈᚱᛟᚷᚱᚨᛗᛗᛖᚱ · ᚨᛞᚹᛖᚾᛏᚢᚱᛖᚱ',
@@ -1025,7 +1057,15 @@ const i18n = {
         font_nordic: 'ᚾᛟᚱᛞᛁᚲ',
         settings_reset_btn: 'ᚱᛖᛊᛖᛏ',
         settings_wipe_settings_btn: 'ᚹᛁᛈᛖ',
-        settings_wipe_all_btn: 'ᚹᛁᛈᛖ ᚨᛚᛚ'
+        settings_wipe_all_btn: 'ᚹᛁᛈᛖ ᚨᛚᛚ',
+        settings_profile_zip_only: 'ᚢᛊᛖ .ᛉᛁᛈ',
+        settings_profile_change: 'ᚲᚺᚨᚾᚷᛖ ᚠᛟᛚᛞᛖᚱ',
+        settings_profile_linked: 'ᛚᛁᚾᚴᛖᛞ:',
+        settings_profile_disconnected: 'ᛞᛁᛊᚲᛟᚾᚾᛖᚲᛏᛖᛞ',
+        toast_appearance_too_big: 'ᛏᛟᛟ ᛒᛁᚷ — ᛗᚨᚲᛊ ',
+        toast_appearance_bad_type: 'ᛒᚨᛞ ᛏᛃᛈᛖ',
+        toast_appearance_image_only: 'ᛁᛗᚷ ᛟᚾᛚᛃ',
+        toast_appearance_failed: 'ᚠᚨᛁᛚᛖᛞ'
     }
 };
 
