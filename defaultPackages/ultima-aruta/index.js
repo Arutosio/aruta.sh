@@ -646,6 +646,11 @@ export default {
                 tryRecall();
                 return;
             }
+            if (e.type === 'keydown' && k === 'z') {
+                e.preventDefault();
+                trySleep();
+                return;
+            }
         }
 
         // ── Interaction: SPACE/E talks to an adjacent NPC or enters a
@@ -1045,7 +1050,8 @@ export default {
                     Q — quick potion · F — light a campfire 🔥 · G — plant sapling 🌱<br>
                     T — tame an adjacent passive creature (needs meat)<br>
                     Y — feed meat to wounded pets (raw +10, roast +25)<br>
-                    U — Recall (30 mana, next to 🔥) → nearest distant camp<br><br>
+                    U — Recall (30 mana, next to 🔥) → nearest distant camp<br>
+                    Z — Sleep at 🔥 (night only) → full heal + dawn jump<br><br>
                     <b>Panels</b><br>
                     I / B — Backpack · P — Paperdoll · C — Craft<br>
                     K — Spellbook · H — This guide<br><br>
@@ -2540,6 +2546,32 @@ export default {
             player.moveT = 0;
             addFloater(dest.wx, dest.wy, '✨ Recalled!', '#c080ff');
             _sfx(900, 0.4, 'sine', 0.06);
+        }
+
+        // Z — sleep at the campfire to fast-forward to dawn. Full heal,
+        // partial hunger refill, drains the fire's fuel. Classic UO camping.
+        function trySleep() {
+            if (_dungeon) { addFloater(player.wx, player.wy, 'Not in dungeons', '#ffaa00'); return; }
+            const anchor = isAdjacentToBurningStructure('campfire');
+            if (!anchor) { addFloater(player.wx, player.wy, 'Need a 🔥 campfire', '#ffaa00'); return; }
+            // Only useful at night — during the day it's just a fuel waste.
+            if (_nightFactor(timeOfDay) < 0.15) {
+                addFloater(player.wx, player.wy, 'Only sleep at night', '#c0c0ff');
+                return;
+            }
+            // Jump forward to dawn (0.25). Advances player.days if we wrap.
+            if (timeOfDay > 0.25) player.days++;
+            timeOfDay = 0.25;
+            player.hp = player.maxHp;
+            player.mana = player.maxMana;
+            player.stamina = player.maxStamina;
+            player.hunger = Math.min(player.maxHunger, player.hunger + 30);
+            player.poison = 0; player.poisonDps = 0;
+            // Sleeping burns a chunk of the campfire's fuel.
+            anchor.f.fuel = Math.max(0, (anchor.f.fuel || 0) - 30000);
+            addFloater(player.wx, player.wy, '💤 Rested till dawn', '#c0a0ff');
+            _sfx(220, 0.4, 'sine', 0.04);
+            showDialogBubble('🌅', 'You wake refreshed as the sun climbs.');
         }
 
         // Y — feed every wounded pet nearby. Each piece of meat in the
