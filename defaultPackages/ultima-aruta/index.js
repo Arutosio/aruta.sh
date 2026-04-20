@@ -2107,13 +2107,17 @@ export default {
             // Tamed pets — same sprite pipeline as creatures, with an
             // isPet flag so render can distinguish the friendly halo.
             for (const pet of pets) {
+                const baseSize = SPRITE_SIZES[pet.emoji] || 22;
+                // Pets grow a bit with level — max +8 px at level 10.
+                const lvl = pet.level || 1;
+                const bonus = Math.min(8, (lvl - 1) * 0.8);
                 sprites.push({
                     wx: pet.rx, wy: pet.ry, emoji: pet.emoji,
-                    size: SPRITE_SIZES[pet.emoji] || 22,
+                    size: Math.round(baseSize + bonus),
                     hp: pet.hp, maxHp: pet.maxHp,
                     hitFlash: pet._hitFlash || 0,
                     isPet: true,
-                    petLevel: pet.level || 1,
+                    petLevel: lvl,
                     petCommand: pet.command,
                     petName: pet.name,
                 });
