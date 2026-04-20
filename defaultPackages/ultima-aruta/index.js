@@ -661,7 +661,7 @@ export default {
                         return;
                     }
                     if (f.merchant) { showShop(); return; }
-                    if (f.npc) { showDialogBubble(f.emoji, f.dialog || DIALOGS[0]); return; }
+                    if (f.npc) { talkToNpc(f, player.wx + dx, player.wy + dy); return; }
                     if (f.dungeon && dx === 0 && dy === 0) {
                         enterDungeon(f.dungeonId);
                         return;
@@ -1015,6 +1015,11 @@ export default {
                     Chopping trees occasionally drops a 🌱 Sapling (18%).<br>
                     Press G on grass / forest / swamp / savanna / tundra to<br>
                     plant it. After ~2 min it grows into a harvestable 🌳 tree.<br><br>
+                    <b>Quests</b><br>
+                    Talk to villagers (Space / E adjacent to an NPC) —<br>
+                    60% they'll hand you a gather or kill quest. One<br>
+                    active at a time; return to the same NPC to turn<br>
+                    it in for gold. Progress shows in the Stats panel.<br><br>
                     <b>Weather</b><br>
                     Biomes with high moisture trigger ☔/⛈️ rain. Under<br>
                     rain: saplings grow up to 2.5× faster, but campfires<br>
@@ -1103,6 +1108,10 @@ export default {
                     }).join('');
                 })()}
                 <div style="margin-top:6px">Inventory: ${inventory.items.length} items</div>
+                ${activeQuest ? `<div style="margin-top:6px;padding:6px;background:rgba(200,170,80,0.12);border-left:3px solid #ffc857;border-radius:2px;">
+                    <b>📜 Active Quest</b><br>
+                    <span style="font-size:11px">${_questProgressText(activeQuest)} → ${activeQuest.reward.gold}🪙</span>
+                </div>` : ''}
                 <div style="margin-top:10px"><button class="ua-btn ua-btn-danger" id="ua-back-to-menu">↩ Back to world menu</button></div>
             `;
             $statsBody.querySelector('#ua-back-to-menu').addEventListener('click', () => {
@@ -1114,6 +1123,7 @@ export default {
                     maxHp: player.maxHp, maxMana: player.maxMana, maxStamina: player.maxStamina, maxHunger: player.maxHunger, baseDmg: player.baseDmg, kills: player.kills, days: player.days,
                     pets: pets.map(p => ({ emoji: p.emoji, hp: p.hp, maxHp: p.maxHp, dmg: p.dmg, wx: p.wx, wy: p.wy })),
                     skills: player.skills,
+                    activeQuest,
                 }).catch(e => console.warn('[ultima-aruta] save state failed', e));
                 root.__uaCleanup?.();
                 // Reload by re-invoking mount — simplest way.
@@ -1338,6 +1348,114 @@ export default {
             armor: 120, robe: 60, gloves: 50, boots: 60, sandals: 40,
             cape: 40, spellbook: 100, crystal: 80,
         };
+        // ── NPC Quests ───────────────────────────────────────────
+        // Single active quest at a time. Villagers hand them out; completing
+        // one refills the pool so there's always something to grind toward.
+        let activeQuest = (saved && saved.activeQuest) || null;
+
+        function _questGatherPick() {
+            const pool = [
+                { key: 'herb', n: 4 },
+                { key: 'berry', n: 4 },
+                { key: 'mushroom', n: 3 },
+                { key: 'wood', n: 5 },
+                { key: 'stone', n: 5 },
+                { key: 'iron', n: 2 },
+                { key: 'feather', n: 3 },
+                { key: 'raw_meat', n: 3 },
+            ];
+            return pool[Math.floor(Math.random() * pool.length)];
+        }
+        function _questKillPick() {
+            const pool = [
+                { emoji: '🐺', n: 2 }, { emoji: '🐍', n: 3 },
+                { emoji: '🦂', n: 3 }, { emoji: '🕷️', n: 2 },
+                { emoji: '🐗', n: 2 }, { emoji: '🦇', n: 3 },
+            ];
+            return pool[Math.floor(Math.random() * pool.length)];
+        }
+        function _generateQuest(giverWx, giverWy) {
+            const gather = Math.random() < 0.6;
+            if (gather) {
+                const p = _questGatherPick();
+                return {
+                    kind: 'gather', item: p.key, needed: p.n, current: 0,
+                    giverWx, giverWy,
+                    reward: { gold: 15 + p.n * 8 },
+                };
+            } else {
+                const p = _questKillPick();
+                return {
+                    kind: 'kill', target: p.emoji, needed: p.n, current: 0,
+                    giverWx, giverWy,
+                    reward: { gold: 25 + p.n * 12 },
+                };
+            }
+        }
+        function _giveGold(n) {
+            for (let i = 0; i < n; i++) {
+                const def = ITEMS.gold;
+                inventory.items.push({
+                    id: 'it_' + Math.random().toString(36).slice(2, 9),
+                    key: 'gold', emoji: def.emoji, name: def.name,
+                    x: 6 + (inventory.items.length % 7) * 36,
+                    y: 6 + Math.floor(inventory.items.length / 7) * 36,
+                });
+            }
+            saveInventory();
+        }
+        function _questProgressText(q) {
+            if (q.kind === 'gather') {
+                const have = inventory.items.filter(i => i.key === q.item).length;
+                const def = ITEMS[q.item];
+                return `Bring me ${q.needed} ${def?.emoji || ''} ${def?.name || q.item}. (${Math.min(have, q.needed)}/${q.needed})`;
+            }
+            return `Slay ${q.needed}× ${q.target}. (${q.current}/${q.needed})`;
+        }
+        function talkToNpc(f, nwx, nwy) {
+            if (activeQuest) {
+                // Same giver — check for completion.
+                if (activeQuest.giverWx === nwx && activeQuest.giverWy === nwy) {
+                    let done = false;
+                    if (activeQuest.kind === 'gather') {
+                        const have = inventory.items.filter(i => i.key === activeQuest.item);
+                        if (have.length >= activeQuest.needed) {
+                            // Remove required items.
+                            let removed = 0;
+                            inventory.items = inventory.items.filter(i => {
+                                if (i.key === activeQuest.item && removed < activeQuest.needed) { removed++; return false; }
+                                return true;
+                            });
+                            saveInventory();
+                            done = true;
+                        }
+                    } else if (activeQuest.kind === 'kill') {
+                        if (activeQuest.current >= activeQuest.needed) done = true;
+                    }
+                    if (done) {
+                        _giveGold(activeQuest.reward.gold);
+                        addFloater(player.wx, player.wy, '+' + activeQuest.reward.gold + '🪙', '#ffd060');
+                        showDialogBubble(f.emoji, `Well done! Here's ${activeQuest.reward.gold} gold for your trouble.`);
+                        addSkillXp('combat', 2);
+                        activeQuest = null;
+                        return;
+                    }
+                    showDialogBubble(f.emoji, `Not yet — ${_questProgressText(activeQuest)}`);
+                    return;
+                }
+                // Different NPC — remind.
+                showDialogBubble(f.emoji, `Another asked you already. ${_questProgressText(activeQuest)}`);
+                return;
+            }
+            // No active quest — offer one with 60% chance, else idle chatter.
+            if (Math.random() < 0.6) {
+                activeQuest = _generateQuest(nwx, nwy);
+                showDialogBubble(f.emoji, `Hail, traveller! ${_questProgressText(activeQuest)} Reward: ${activeQuest.reward.gold} gold.`);
+                return;
+            }
+            showDialogBubble(f.emoji, f.dialog || DIALOGS[Math.floor(Math.random() * DIALOGS.length)]);
+        }
+
         // ── Weather ──────────────────────────────────────────────
         // Sample the moisture noise field at the player's tile. Rain starts
         // at moist > 0.55 and scales up from there; intensity 0..1 drives
@@ -2542,6 +2660,12 @@ export default {
             cr.dead = true;
             sfxKill();
             player.kills++;
+            // Quest progress (kill-type): match by emoji regardless of dungeon/overworld.
+            if (activeQuest && activeQuest.kind === 'kill' && activeQuest.target === cr.emoji && activeQuest.current < activeQuest.needed) {
+                activeQuest.current++;
+                addFloater(chCx * CHUNK_SIZE + cr.c, chCy * CHUNK_SIZE + cr.r,
+                    `📜 ${activeQuest.current}/${activeQuest.needed}`, '#e0c080');
+            }
             const def = CREATURE_DEFS[cr.emoji] || { xp: 1, loot: [] };
             player.xp += def.xp;
             addFloater(chCx * CHUNK_SIZE + cr.c, chCy * CHUNK_SIZE + cr.r, '+' + def.xp + ' XP', '#ffc857');
@@ -3114,6 +3238,7 @@ export default {
                     maxHp: player.maxHp, maxMana: player.maxMana, maxStamina: player.maxStamina, maxHunger: player.maxHunger, baseDmg: player.baseDmg, kills: player.kills, days: player.days,
                     pets: pets.map(p => ({ emoji: p.emoji, hp: p.hp, maxHp: p.maxHp, dmg: p.dmg, wx: p.wx, wy: p.wy })),
                     skills: player.skills,
+                    activeQuest,
                 }).catch(e => console.warn('[ultima-aruta] save state failed', e));
                 worldRow.lastPlayed = Date.now();
                 worldRow.playerClass = playerClass;
