@@ -396,11 +396,15 @@ export default {
                     const def = ITEMS[a.key];
                     if (!def) continue;
                     if (a.kind === 'structure') {
-                        ch.features.push({
+                        const feat = {
                             c: a.c, r: a.r, emoji: def.emoji,
                             structure: true, structKey: a.key,
-                            fuel: typeof a.fuel === 'number' ? a.fuel : (def.structure?.fuel ?? null),
-                        });
+                        };
+                        if (typeof a.fuel === 'number') feat.fuel = a.fuel;
+                        else if (def.structure?.fuel != null) feat.fuel = def.structure.fuel;
+                        if (typeof a.growth === 'number') feat.growth = a.growth;
+                        else if (def.structure?.growth != null) feat.growth = def.structure.growth;
+                        ch.features.push(feat);
                     } else {
                         ch.features.push({ c: a.c, r: a.r, emoji: def.emoji, item: true, itemKey: a.key });
                     }
@@ -458,13 +462,19 @@ export default {
             const lr = ((wy % CHUNK_SIZE) + CHUNK_SIZE) % CHUNK_SIZE;
             const ch = world.getChunk(cx, cy);
             if (ch.features.find(f => f.c === lc && f.r === lr)) return null;
-            const fuel = def.structure.fuel ?? null;
-            const f = { c: lc, r: lr, emoji: def.emoji, structure: true, structKey, fuel };
+            const f = { c: lc, r: lr, emoji: def.emoji, structure: true, structKey };
+            const delta = { c: lc, r: lr, key: structKey, kind: 'structure' };
+            if (def.structure.fuel != null) {
+                f.fuel = def.structure.fuel;
+                delta.fuel = def.structure.fuel;
+            }
+            if (def.structure.growth != null) {
+                f.growth = def.structure.growth;
+                delta.growth = def.structure.growth;
+            }
             ch.features.push(f);
             const key = cx + ',' + cy;
-            (worldDeltas.added[key] = worldDeltas.added[key] || []).push({
-                c: lc, r: lr, key: structKey, kind: 'structure', fuel,
-            });
+            (worldDeltas.added[key] = worldDeltas.added[key] || []).push(delta);
             saveWorldDeltas();
             return f;
         }
@@ -607,6 +617,11 @@ export default {
             if (e.type === 'keydown' && k === 'f') {
                 e.preventDefault();
                 tryPlaceCampfire();
+                return;
+            }
+            if (e.type === 'keydown' && k === 'g') {
+                e.preventDefault();
+                tryPlantSapling();
                 return;
             }
         }
@@ -925,7 +940,7 @@ export default {
                     Left-click creature — attack (melee / bow)<br>
                     Space / E — interact (NPC, merchant, dungeon)<br>
                     Double-click item in bag — consume food/potion<br>
-                    Q — quick potion · F — light a campfire 🔥<br><br>
+                    Q — quick potion · F — light a campfire 🔥 · G — plant sapling 🌱<br><br>
                     <b>Panels</b><br>
                     I / B — Backpack · P — Paperdoll · C — Craft<br>
                     K — Spellbook · H — This guide<br><br>
@@ -949,6 +964,10 @@ export default {
                     Hunt passive creatures (🐑 🐇 🦌 🐗 🐄 🐓 🦆) for 🥩 Raw Meat.<br>
                     Stand next to a burning 🔥 campfire; raw meat roasts into<br>
                     🍖 Roast Meat every ~3 s (a big hunger refill).<br><br>
+                    <b>Forestry</b><br>
+                    Chopping trees occasionally drops a 🌱 Sapling (18%).<br>
+                    Press G on grass / forest / swamp / savanna / tundra to<br>
+                    plant it. After ~2 min it grows into a harvestable 🌳 tree.<br><br>
                     <b>Dungeons</b><br>
                     Step on 🕳️/🏚️ and press Space to enter.<br>
                     Stronger enemies + treasure chests 🧰 inside.<br>
@@ -1876,36 +1895,89 @@ export default {
             _sfx(240, 0.12, 'sawtooth', 0.04);
         }
 
-        // Tick structure fuel on visible chunks; auto-remove when depleted.
+        // Press G to plant a sapling on the player's current tile. Requires
+        // passable dirt-like biome (grass/forest/savanna/swamp/tundra); water,
+        // stone, and snow reject the plant.
+        function tryPlantSapling() {
+            if (_dungeon) { addFloater(player.wx, player.wy, 'Not in dungeons', '#ffaa00'); return; }
+            const idx = inventory.items.findIndex(i => i.key === 'sapling');
+            if (idx < 0) { addFloater(player.wx, player.wy, 'No sapling', '#ffaa00'); return; }
+            const b = biomeAtDg(player.wx, player.wy);
+            const fertile = b === 'grass' || b === 'forest' || b === 'savanna' || b === 'swamp' || b === 'tundra';
+            if (!fertile) { addFloater(player.wx, player.wy, 'Soil too poor', '#c08060'); return; }
+            if (world.featureAt(player.wx, player.wy)) { addFloater(player.wx, player.wy, 'Tile occupied', '#ffaa00'); return; }
+            const placed = placeStructure(player.wx, player.wy, 'sapling');
+            if (!placed) { addFloater(player.wx, player.wy, 'Cannot plant', '#ffaa00'); return; }
+            inventory.items.splice(idx, 1);
+            saveInventory();
+            if ($pack.style.display !== 'none') renderBackpack();
+            addFloater(player.wx, player.wy, '🌱 Planted', '#60d060');
+            _sfx(500, 0.08, 'sine', 0.03);
+        }
+
+        // Tick structure timers on visible chunks: fuel-based structures
+        // auto-despawn when depleted; growth-based structures morph into
+        // their `grownKey` definition once ripe (saplings → trees).
         function tickStructures(dt) {
             if (_dungeon) return;
             const cx0 = Math.floor(player.wx / CHUNK_SIZE), cy0 = Math.floor(player.wy / CHUNK_SIZE);
-            let anyRemoved = false;
+            let anyChanged = false;
             for (let dcy = -1; dcy <= 1; dcy++) {
                 for (let dcx = -1; dcx <= 1; dcx++) {
                     const ch = world.chunks.get((cx0 + dcx) + ',' + (cy0 + dcy));
                     if (!ch) continue;
+                    const key = (cx0 + dcx) + ',' + (cy0 + dcy);
+                    const adds = worldDeltas.added[key];
                     for (let i = ch.features.length - 1; i >= 0; i--) {
                         const f = ch.features[i];
-                        if (!f.structure || typeof f.fuel !== 'number') continue;
-                        f.fuel -= dt;
-                        if (f.fuel <= 0) {
-                            const wx = (cx0 + dcx) * CHUNK_SIZE + f.c;
-                            const wy = (cy0 + dcy) * CHUNK_SIZE + f.r;
-                            ch.features.splice(i, 1);
-                            const key = (cx0 + dcx) + ',' + (cy0 + dcy);
-                            const adds = worldDeltas.added[key];
-                            if (adds) {
-                                const di = adds.findIndex(a => a.c === f.c && a.r === f.r && a.kind === 'structure');
-                                if (di >= 0) adds.splice(di, 1);
+                        if (!f.structure) continue;
+                        // Fuel decay → auto-despawn (campfires).
+                        if (typeof f.fuel === 'number') {
+                            f.fuel -= dt;
+                            if (f.fuel <= 0) {
+                                const wx = (cx0 + dcx) * CHUNK_SIZE + f.c;
+                                const wy = (cy0 + dcy) * CHUNK_SIZE + f.r;
+                                ch.features.splice(i, 1);
+                                if (adds) {
+                                    const di = adds.findIndex(a => a.c === f.c && a.r === f.r && a.kind === 'structure');
+                                    if (di >= 0) adds.splice(di, 1);
+                                }
+                                addFloater(wx, wy, '💨 burned out', '#888');
+                                anyChanged = true;
                             }
-                            addFloater(wx, wy, '💨 burned out', '#888');
-                            anyRemoved = true;
+                            continue;
+                        }
+                        // Growth evolution → morph into grownKey.
+                        if (typeof f.growth === 'number') {
+                            f.growth -= dt;
+                            if (f.growth <= 0) {
+                                const currentDef = ITEMS[f.structKey];
+                                const grownKey = currentDef?.structure?.grownKey;
+                                if (grownKey && ITEMS[grownKey]) {
+                                    const grownDef = ITEMS[grownKey];
+                                    const wx = (cx0 + dcx) * CHUNK_SIZE + f.c;
+                                    const wy = (cy0 + dcy) * CHUNK_SIZE + f.r;
+                                    f.emoji = grownDef.emoji;
+                                    f.structKey = grownKey;
+                                    delete f.growth;
+                                    // Update delta entry in place.
+                                    if (adds) {
+                                        const di = adds.findIndex(a => a.c === f.c && a.r === f.r && a.kind === 'structure');
+                                        if (di >= 0) {
+                                            adds[di].key = grownKey;
+                                            delete adds[di].growth;
+                                            delete adds[di].fuel;
+                                        }
+                                    }
+                                    addFloater(wx, wy, '🌳 Grown!', '#40c040');
+                                    anyChanged = true;
+                                }
+                            }
                         }
                     }
                 }
             }
-            if (anyRemoved) saveWorldDeltas();
+            if (anyChanged) saveWorldDeltas();
         }
 
         // Cooking: while player stands next to a burning campfire, raw meat
@@ -2321,14 +2393,35 @@ export default {
                                     break;
                                 }
                             }
+                            // Bonus independent roll: chopping trees occasionally
+                            // drops a sapling the player can replant elsewhere.
+                            const isTree = f.emoji === '🌲' || f.emoji === '🌳' || f.emoji === '🌴';
+                            if (isTree && Math.random() < 0.18) {
+                                const def = ITEMS.sapling;
+                                inventory.items.push({
+                                    id: 'it_' + Math.random().toString(36).slice(2, 9),
+                                    key: 'sapling', emoji: def.emoji, name: def.name,
+                                    x: 6 + (inventory.items.length % 7) * 36,
+                                    y: 6 + Math.floor(inventory.items.length / 7) * 36,
+                                });
+                                addFloater(wx, wy, '+🌱 Sapling', '#60d060');
+                                saveInventory();
+                            }
                             if (Math.random() < 0.3) {
-                                // Tree/rock depleted — remove feature (regrows on chunk regen).
-                                const cx0 = Math.floor(wx / CHUNK_SIZE), cy0 = Math.floor(wy / CHUNK_SIZE);
-                                const ch = world.getChunk(cx0, cy0);
-                                const lx = ((wx % CHUNK_SIZE) + CHUNK_SIZE) % CHUNK_SIZE;
-                                const ly = ((wy % CHUNK_SIZE) + CHUNK_SIZE) % CHUNK_SIZE;
-                                const fi = ch.features.findIndex(ff => ff.c === lx && ff.r === ly);
-                                if (fi >= 0) ch.features.splice(fi, 1);
+                                // Tree/rock depleted. Structures (grown saplings) need
+                                // their world-delta entry cleaned up so they don't
+                                // respawn on reload; biome-generated features just
+                                // splice out — the chunk's own regen rules cover them.
+                                if (f.structure) {
+                                    removeStructureAt(wx, wy);
+                                } else {
+                                    const cx0 = Math.floor(wx / CHUNK_SIZE), cy0 = Math.floor(wy / CHUNK_SIZE);
+                                    const ch = world.getChunk(cx0, cy0);
+                                    const lx = ((wx % CHUNK_SIZE) + CHUNK_SIZE) % CHUNK_SIZE;
+                                    const ly = ((wy % CHUNK_SIZE) + CHUNK_SIZE) % CHUNK_SIZE;
+                                    const fi = ch.features.findIndex(ff => ff.c === lx && ff.r === ly);
+                                    if (fi >= 0) ch.features.splice(fi, 1);
+                                }
                             }
                         }
                     }

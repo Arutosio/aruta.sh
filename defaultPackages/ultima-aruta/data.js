@@ -176,7 +176,12 @@ const ITEMS = {
     // Structures — placeable world features (not pickupable once deployed).
     // `structure.fuel` (ms) drives auto-despawn; `structure.light` (tiles)
     // carves a warm light hole in the night fog around its tile.
-    campfire: { emoji: '🔥', name: 'Campfire',      structure: { fuel: 90000, light: 4 } },
+    // `structure.growth` (ms) evolves the structure into `structure.grownKey`
+    // once elapsed — used for plantable saplings → mature trees.
+    campfire:    { emoji: '🔥', name: 'Campfire',      structure: { fuel: 90000, light: 4 } },
+    sapling:     { emoji: '🌱', name: 'Sapling',       structure: { growth: 120000, grownKey: 'grown_tree' } },
+    // Internal-only grown tree structure (player never holds one in inventory).
+    grown_tree:  { emoji: '🌳', name: 'Tree',          structure: { mature: true } },
 };
 
 const ITEM_DROPS = {
@@ -278,6 +283,7 @@ const DIALOGS = [
 // inside one tile; pickups sit ~half-tile.
 const SPRITE_SIZES = {
     '🌲': 35, '🌳': 35, '🌴': 32,
+    '🌱': 14,
     '🪨': 11, '🌿': 11, '🌾': 12, '🍄': 11, '⛄': 18,
     '⛪': 33, '🏛️': 33, '🏰': 35, '🏠': 29, '🏡': 29, '🛖': 27,
     '🐑': 17, '🐇': 14, '🦊': 17, '🦌': 20, '🐗': 18, '🦉': 14, '🦝': 17,
