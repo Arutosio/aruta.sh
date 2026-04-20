@@ -1650,7 +1650,15 @@ export default {
                 addFloater(player.wx, player.wy, '🍖 Well Fed +20% dmg', '#ffb070');
             }
         }
+        // Timestamp (ms since mount) of the last fountain blessing so the
+        // shrine can't be spammed for permanent invulnerability.
+        let _lastBlessing = -Infinity;
         function applyBlessing() {
+            if (_renderTime - _lastBlessing < 120000) {
+                addFloater(player.wx, player.wy, '🙏 Blessing still pending', '#aaa');
+                return;
+            }
+            _lastBlessing = _renderTime;
             activeBuff = {
                 type: 'blessed', dmgReduce: 3, remaining: 60000,
                 icon: '🙏', label: '-3 incoming dmg',
