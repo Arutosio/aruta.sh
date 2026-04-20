@@ -509,7 +509,7 @@ export default {
                 <canvas class="ua-canvas" id="ua-canvas"></canvas>
                 <canvas class="ua-minimap" id="ua-minimap" width="140" height="140"></canvas>
                 <div class="ua-hud" id="ua-hud"></div>
-                <div class="ua-help">WASD · <b>Right-hold</b> walk · <b>Click</b> attack · <b>Q</b> potion · <b>B</b> board/unboard · <b>Space</b> interact · <b>H</b> guide</div>
+                <div class="ua-help">WASD · <b>Right-hold</b> walk · <b>Click</b> attack · <b>F</b> 🔥 <b>G</b> 🌱 <b>T</b> tame <b>Y</b> feed <b>X</b> stay <b>V</b> whistle <b>U</b> recall <b>Z</b> sleep · <b>Q</b> potion · <b>Space</b> talk · <b>H</b> guide</div>
                 <div class="ua-backpack" id="ua-backpack" style="display:none;">
                     <div class="ua-backpack-head">
                         <span class="ua-backpack-title">🎒 Backpack</span>
