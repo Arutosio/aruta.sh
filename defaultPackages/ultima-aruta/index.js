@@ -2929,7 +2929,10 @@ export default {
                 if (pet._hitFlash > 0) pet._hitFlash = Math.max(0, pet._hitFlash - dt);
                 if (pet.attackCooldown > 0) pet.attackCooldown -= dt;
                 if (pet.hp < pet.maxHp && petFireScan(pet.wx, pet.wy)) {
-                    pet.hp = Math.min(pet.maxHp, pet.hp + 2 * dt / 1000);
+                    // Taming mastery makes pets regen faster at the fire:
+                    // base 2 HP/s, +up to 3 HP/s at taming lvl 100.
+                    const regen = 2 + skillLevel(player.skills.taming) / 33;
+                    pet.hp = Math.min(pet.maxHp, pet.hp + regen * dt / 1000);
                 }
                 if (pet.hp <= 0) {
                     addFloater(pet.wx, pet.wy, '💔 ' + pet.emoji + ' lost', '#ff6060');
