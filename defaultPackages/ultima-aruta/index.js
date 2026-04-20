@@ -2679,10 +2679,30 @@ export default {
         const PET_MOVE_MS = 380;
         function tickPets(dt) {
             if (_dungeon || !pets.length) return;
+            // Pets standing on a tile adjacent to a burning campfire regen HP
+            // at 2/s, matching the player's resting buff thematically.
+            const petFireScan = (px, py) => {
+                const cx0 = Math.floor(px / CHUNK_SIZE), cy0 = Math.floor(py / CHUNK_SIZE);
+                for (let dcy = -1; dcy <= 1; dcy++) for (let dcx = -1; dcx <= 1; dcx++) {
+                    const ch = world.chunks.get((cx0 + dcx) + ',' + (cy0 + dcy));
+                    if (!ch) continue;
+                    for (const f of ch.features) {
+                        if (f.structKey !== 'campfire') continue;
+                        if (typeof f.fuel === 'number' && f.fuel <= 0) continue;
+                        const wx = (cx0 + dcx) * CHUNK_SIZE + f.c;
+                        const wy = (cy0 + dcy) * CHUNK_SIZE + f.r;
+                        if (Math.max(Math.abs(wx - px), Math.abs(wy - py)) <= 1) return true;
+                    }
+                }
+                return false;
+            };
             for (let pi = pets.length - 1; pi >= 0; pi--) {
                 const pet = pets[pi];
                 if (pet._hitFlash > 0) pet._hitFlash = Math.max(0, pet._hitFlash - dt);
                 if (pet.attackCooldown > 0) pet.attackCooldown -= dt;
+                if (pet.hp < pet.maxHp && petFireScan(pet.wx, pet.wy)) {
+                    pet.hp = Math.min(pet.maxHp, pet.hp + 2 * dt / 1000);
+                }
                 if (pet.hp <= 0) {
                     addFloater(pet.wx, pet.wy, '💔 ' + pet.emoji + ' lost', '#ff6060');
                     pets.splice(pi, 1);
