@@ -2259,8 +2259,9 @@ export default {
                     ctx.moveTo(ax, ay - 6); ctx.lineTo(ax - 4, ay); ctx.lineTo(ax + 4, ay);
                     ctx.closePath(); ctx.fill();
                 }
-                // HP bar above damaged creatures (and pets when wounded).
-                if ((s.isCreature || s.isPet) && s.hp < s.maxHp) {
+                // HP bar above damaged creatures/pets, and always above
+                // aggressive creatures so you can size up threats cleanly.
+                if ((s.isCreature || s.isPet) && (s.hp < s.maxHp || (s.isCreature && s.aggro))) {
                     const bw = Math.round(24 * ps), bh = 3;
                     const tw = TILE_W * ps;
                     const bx = sx + tw / 2 - bw / 2;
