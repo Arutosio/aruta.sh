@@ -2582,8 +2582,14 @@ export default {
         }
 
         /** Apply armor reduction to incoming damage (min 1). Blessed buff
-         *  adds a flat extra reduction layer on top of armor. */
+         *  adds a flat extra reduction layer on top of armor. Wielding a
+         *  🗡️ Dagger gives a 12% chance to fully dodge an incoming hit. */
         function reduceDamage(rawDmg) {
+            // Dodge first — applies before reduction so it's fully negated.
+            if (equipment.weapon?.key === 'dagger' && Math.random() < 0.12) {
+                addFloater(player.wx, player.wy, 'Dodge!', '#80ffff');
+                return 0;
+            }
             const def = getArmorDef();
             const extra = activeBuff?.dmgReduce || 0;
             return Math.max(1, rawDmg - def - extra);
@@ -3432,9 +3438,10 @@ export default {
                 const distToPlayer = Math.max(Math.abs(cwx - player.wx), Math.abs(cwy - player.wy));
                 if (cr.ai === 'aggressive' && distToPlayer <= 6) {
                     if (distToPlayer <= 1 && cr.attackCooldown <= 0) {
-                        player.hp = Math.max(0, player.hp - reduceDamage(cr.dmg));
+                        const dmgTaken = reduceDamage(cr.dmg);
+                        player.hp = Math.max(0, player.hp - dmgTaken);
                         cr.attackCooldown = 1200;
-                        addFloater(player.wx, player.wy, '-' + reduceDamage(cr.dmg), '#ff6060');
+                        if (dmgTaken > 0) addFloater(player.wx, player.wy, '-' + dmgTaken, '#ff6060');
                         sfxHurt();
                         _wearArmor();
                         _playerFlash = 300;
@@ -3858,10 +3865,12 @@ export default {
                         // Aggressive AI: chase player + attack when adjacent.
                         if (effectiveAI === 'aggressive' && distToPlayer <= 6) {
                             if (distToPlayer <= 1 && cr.attackCooldown <= 0) {
-                                player.hp = Math.max(0, player.hp - reduceDamage(cr.dmg));
+                                const dmgTaken = reduceDamage(cr.dmg);
+                                player.hp = Math.max(0, player.hp - dmgTaken);
                                 cr.attackCooldown = 1200;
-                                addFloater(player.wx, player.wy, '-' + reduceDamage(cr.dmg), '#ff6060');
+                                if (dmgTaken > 0) addFloater(player.wx, player.wy, '-' + dmgTaken, '#ff6060');
                                 sfxHurt();
+                                _wearArmor();
                                 _playerFlash = 300;
                                 // Venomous overworld creatures.
                                 const venomous = ['🐍', '🦂'];
