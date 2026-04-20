@@ -3641,9 +3641,10 @@ export default {
                     player.stamina -= 3;
                     _sfx(250, 0.06, 'sine', 0.03);
                     // Base catch rate 40%, +up to 35% from fishing skill (0.75 at lvl 100),
-                    // plus +20% if the player wields a 🎣 Fishing Rod.
+                    // +20% with 🎣 Fishing Rod, +up to 15% during rain (fish rise).
                     const rodBonus = equipment.weapon?.key === 'rod' ? 0.2 : 0;
-                    const fishRate = 0.4 + skillLevel(player.skills.fishing) / 286 + rodBonus;
+                    const rainBonus = rainIntensity() * 0.15;
+                    const fishRate = 0.4 + skillLevel(player.skills.fishing) / 286 + rodBonus + rainBonus;
                     if (Math.random() < fishRate) {
                         const fishPool = ['gold', 'herb', 'gem'];
                         const fishKey = clickBiome === 'deep' ? (Math.random() < 0.3 ? 'gem' : 'gold') : fishPool[Math.floor(Math.random() * fishPool.length)];
