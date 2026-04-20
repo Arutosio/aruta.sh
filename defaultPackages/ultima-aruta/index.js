@@ -624,6 +624,11 @@ export default {
                 tryPlantSapling();
                 return;
             }
+            if (e.type === 'keydown' && k === 't') {
+                e.preventDefault();
+                tryTameAdjacent();
+                return;
+            }
         }
 
         // ── Interaction: SPACE/E talks to an adjacent NPC or enters a
@@ -940,7 +945,8 @@ export default {
                     Left-click creature — attack (melee / bow)<br>
                     Space / E — interact (NPC, merchant, dungeon)<br>
                     Double-click item in bag — consume food/potion<br>
-                    Q — quick potion · F — light a campfire 🔥 · G — plant sapling 🌱<br><br>
+                    Q — quick potion · F — light a campfire 🔥 · G — plant sapling 🌱<br>
+                    T — tame an adjacent passive creature (needs meat)<br><br>
                     <b>Panels</b><br>
                     I / B — Backpack · P — Paperdoll · C — Craft<br>
                     K — Spellbook · H — This guide<br><br>
@@ -966,6 +972,11 @@ export default {
                     Hunt passive creatures (🐑 🐇 🦌 🐗 🐄 🐓 🦆) for 🥩 Raw Meat.<br>
                     Stand next to a burning 🔥 campfire; raw meat roasts into<br>
                     🍖 Roast Meat every ~3 s (a big hunger refill).<br><br>
+                    <b>Taming</b><br>
+                    Stand next to a passive creature (🐑 🐇 🦌 🐄 🐴 🐓...),<br>
+                    hold 🥩 or 🍖 and press T. 50% chance (+25% if wounded).<br>
+                    Tamed pets follow you and attack aggressive enemies<br>
+                    within 5 tiles. Max 3 pets at once.<br><br>
                     <b>Forestry</b><br>
                     Chopping trees occasionally drops a 🌱 Sapling (18%).<br>
                     Press G on grass / forest / swamp / savanna / tundra to<br>
@@ -1039,6 +1050,7 @@ export default {
                     hp: player.hp, mana: player.mana, stamina: player.stamina, hunger: player.hunger,
                     level: player.level, xp: player.xp, xpNext: player.xpNext,
                     maxHp: player.maxHp, maxMana: player.maxMana, maxStamina: player.maxStamina, maxHunger: player.maxHunger, baseDmg: player.baseDmg, kills: player.kills, days: player.days,
+                    pets: pets.map(p => ({ emoji: p.emoji, hp: p.hp, maxHp: p.maxHp, dmg: p.dmg, wx: p.wx, wy: p.wy })),
                 }).catch(e => console.warn('[ultima-aruta] save state failed', e));
                 root.__uaCleanup?.();
                 // Reload by re-invoking mount — simplest way.
@@ -1519,6 +1531,17 @@ export default {
                     }
                 }
             }
+            // Tamed pets — same sprite pipeline as creatures, with an
+            // isPet flag so render can distinguish the friendly halo.
+            for (const pet of pets) {
+                sprites.push({
+                    wx: pet.rx, wy: pet.ry, emoji: pet.emoji,
+                    size: SPRITE_SIZES[pet.emoji] || 22,
+                    hp: pet.hp, maxHp: pet.maxHp,
+                    hitFlash: pet._hitFlash || 0,
+                    isPet: true,
+                });
+            }
             sprites.push({ wx: player.rx, wy: player.ry, emoji: player.emoji, size: 24, isPlayer: true, flash: _playerFlash });
             sprites.sort((a, b) => (a.wx + a.wy) - (b.wx + b.wy) || a.wx - b.wx);
             for (const s of sprites) {
@@ -1545,6 +1568,16 @@ export default {
                         ctx.arc(sx + tw / 2, sy + (TILE_H * ps) / 2, 4, 0, Math.PI * 2);
                         ctx.fill();
                     }
+                }
+                // Pet halo: soft pink ring under tamed creatures so the
+                // player can tell them apart from wild ones at a glance.
+                if (s.isPet) {
+                    const tw = TILE_W * ps;
+                    ctx.strokeStyle = 'rgba(255,140,200,0.7)';
+                    ctx.lineWidth = 1.5;
+                    ctx.beginPath();
+                    ctx.ellipse(sx + tw / 2, sy + (TILE_H * ps) / 2 + 3, tw * 0.4, tw * 0.18, 0, 0, Math.PI * 2);
+                    ctx.stroke();
                 }
                 // Target highlight ring.
                 if (s.isTarget) {
@@ -1615,8 +1648,8 @@ export default {
                     ctx.moveTo(ax, ay - 6); ctx.lineTo(ax - 4, ay); ctx.lineTo(ax + 4, ay);
                     ctx.closePath(); ctx.fill();
                 }
-                // HP bar above damaged creatures.
-                if (s.isCreature && s.hp < s.maxHp) {
+                // HP bar above damaged creatures (and pets when wounded).
+                if ((s.isCreature || s.isPet) && s.hp < s.maxHp) {
                     const bw = Math.round(24 * ps), bh = 3;
                     const tw = TILE_W * ps;
                     const bx = sx + tw / 2 - bw / 2;
@@ -1919,6 +1952,165 @@ export default {
             if ($pack.style.display !== 'none') renderBackpack();
             addFloater(player.wx, player.wy, '🔥 Campfire', '#ff8040');
             _sfx(240, 0.12, 'sawtooth', 0.04);
+        }
+
+        // ── Pets (UO-style taming) ────────────────────────────────
+        // Each pet: { emoji, hp, maxHp, dmg, wx, wy, rx, ry, moveT, moveFrom,
+        //             attackCooldown, timer, _hitFlash, targetId?, lastMeal }
+        // Pets follow the player and attack nearby aggressive creatures.
+        let pets = Array.isArray(saved?.pets) ? saved.pets.map(p => ({
+            ...p, rx: p.rx ?? p.wx, ry: p.ry ?? p.wy,
+            moveT: 0, moveFrom: { wx: p.wx, wy: p.wy },
+            attackCooldown: 0, timer: 0, _hitFlash: 0,
+        })) : [];
+
+        // T — tame an adjacent passive creature. Consumes one raw or roast
+        // meat as bait. Success chance is 50% + 25% when the creature is
+        // already wounded (HP ≤ 50%).
+        function tryTameAdjacent() {
+            if (_dungeon) { addFloater(player.wx, player.wy, 'Not in dungeons', '#ffaa00'); return; }
+            if (pets.length >= 3) { addFloater(player.wx, player.wy, 'Too many pets (3 max)', '#ffaa00'); return; }
+            const cx0 = Math.floor(player.wx / CHUNK_SIZE), cy0 = Math.floor(player.wy / CHUNK_SIZE);
+            let found = null;
+            outer: for (let dcy = -1; dcy <= 1; dcy++) for (let dcx = -1; dcx <= 1; dcx++) {
+                const ch = world.chunks.get((cx0 + dcx) + ',' + (cy0 + dcy));
+                if (!ch) continue;
+                for (let i = 0; i < ch.creatures.length; i++) {
+                    const cr = ch.creatures[i];
+                    if (cr.dead) continue;
+                    const cwx = (cx0 + dcx) * CHUNK_SIZE + cr.c;
+                    const cwy = (cy0 + dcy) * CHUNK_SIZE + cr.r;
+                    if (Math.max(Math.abs(cwx - player.wx), Math.abs(cwy - player.wy)) > 1) continue;
+                    const def = CREATURE_DEFS[cr.emoji] || {};
+                    // Only passive, walking creatures can be tamed — no dragons, no fish.
+                    if (def.ai !== 'passive') continue;
+                    if (FLYING_CREATURES.includes(cr.emoji) || AQUATIC_CREATURES.includes(cr.emoji)) continue;
+                    found = { cr, ch, idx: i, wx: cwx, wy: cwy };
+                    break outer;
+                }
+            }
+            if (!found) { addFloater(player.wx, player.wy, 'No tameable creature', '#ffaa00'); return; }
+            const baitIdx = inventory.items.findIndex(i => i.key === 'raw_meat' || i.key === 'meat');
+            if (baitIdx < 0) { addFloater(player.wx, player.wy, 'Need meat to tame', '#ffaa00'); return; }
+            // Consume bait.
+            inventory.items.splice(baitIdx, 1);
+            saveInventory();
+            // Roll success.
+            const wounded = found.cr.hp <= found.cr.maxHp * 0.5;
+            const chance = 0.5 + (wounded ? 0.25 : 0);
+            if (Math.random() > chance) {
+                addFloater(found.wx, found.wy, '❌ Fled!', '#ff6060');
+                _sfx(200, 0.1, 'sawtooth', 0.04);
+                // Small chance the target flees (teleport it a few tiles away).
+                const nc = Math.max(0, Math.min(CHUNK_SIZE - 1, found.cr.c + (Math.random() < 0.5 ? 2 : -2)));
+                const nr = Math.max(0, Math.min(CHUNK_SIZE - 1, found.cr.r + (Math.random() < 0.5 ? 2 : -2)));
+                found.cr.c = nc; found.cr.r = nr; found.cr.rc = nc; found.cr.rr = nr;
+                return;
+            }
+            // Success — lift creature out of the chunk into the pet roster.
+            found.ch.creatures.splice(found.idx, 1);
+            const def = CREATURE_DEFS[found.cr.emoji] || { hp: 10, dmg: 2 };
+            pets.push({
+                emoji: found.cr.emoji,
+                hp: found.cr.hp || def.hp,
+                maxHp: found.cr.maxHp || def.hp,
+                dmg: Math.max(3, Math.floor(def.hp / 6)),
+                wx: found.wx, wy: found.wy,
+                rx: found.wx, ry: found.wy,
+                moveT: 0, moveFrom: { wx: found.wx, wy: found.wy },
+                attackCooldown: 0, timer: 0, _hitFlash: 0,
+            });
+            addFloater(found.wx, found.wy, '💖 Tamed!', '#ff60c0');
+            _sfx(700, 0.2, 'sine', 0.06);
+            savePets();
+        }
+
+        function savePets() { /* pets are serialized with main state blob below */ }
+
+        // Pet AI: each pet follows the player and engages aggressive creatures
+        // within 5 tiles of the player. Uses discrete-step movement like the
+        // creature AI for consistency.
+        const PET_MOVE_MS = 380;
+        function tickPets(dt) {
+            if (_dungeon || !pets.length) return;
+            for (let pi = pets.length - 1; pi >= 0; pi--) {
+                const pet = pets[pi];
+                if (pet._hitFlash > 0) pet._hitFlash = Math.max(0, pet._hitFlash - dt);
+                if (pet.attackCooldown > 0) pet.attackCooldown -= dt;
+                if (pet.hp <= 0) {
+                    addFloater(pet.wx, pet.wy, '💔 ' + pet.emoji + ' lost', '#ff6060');
+                    pets.splice(pi, 1);
+                    continue;
+                }
+                // Movement tween.
+                if (pet.moveT > 0) {
+                    pet.moveT = Math.max(0, pet.moveT - dt);
+                    const t = 1 - (pet.moveT / PET_MOVE_MS);
+                    pet.rx = pet.moveFrom.wx + (pet.wx - pet.moveFrom.wx) * t;
+                    pet.ry = pet.moveFrom.wy + (pet.wy - pet.moveFrom.wy) * t;
+                    continue;
+                }
+                pet.rx = pet.wx; pet.ry = pet.wy;
+
+                // Find nearest aggressive creature within 5 tiles of the player.
+                let target = null, targetDist = Infinity;
+                const cx0 = Math.floor(player.wx / CHUNK_SIZE), cy0 = Math.floor(player.wy / CHUNK_SIZE);
+                for (let dcy = -1; dcy <= 1; dcy++) for (let dcx = -1; dcx <= 1; dcx++) {
+                    const ch = world.chunks.get((cx0 + dcx) + ',' + (cy0 + dcy));
+                    if (!ch) continue;
+                    for (const cr of ch.creatures) {
+                        if (cr.dead) continue;
+                        const isNight = _nightFactor(timeOfDay) > 0.5;
+                        const eff = (isNight && cr.ai === 'neutral') ? 'aggressive' : cr.ai;
+                        if (eff !== 'aggressive') continue;
+                        const cwx = (cx0 + dcx) * CHUNK_SIZE + cr.c;
+                        const cwy = (cy0 + dcy) * CHUNK_SIZE + cr.r;
+                        const distPlayer = Math.max(Math.abs(cwx - player.wx), Math.abs(cwy - player.wy));
+                        if (distPlayer > 5) continue;
+                        const distPet = Math.max(Math.abs(cwx - pet.wx), Math.abs(cwy - pet.wy));
+                        if (distPet < targetDist) {
+                            target = { cr, wx: cwx, wy: cwy, dist: distPet };
+                            targetDist = distPet;
+                        }
+                    }
+                }
+
+                pet.timer += dt;
+                if (pet.timer < 350) continue;
+                pet.timer = 0;
+
+                // Attack if adjacent to target.
+                if (target && target.dist <= 1 && pet.attackCooldown <= 0) {
+                    target.cr.hp = Math.max(0, target.cr.hp - pet.dmg);
+                    target.cr._hitFlash = 250;
+                    pet.attackCooldown = 1000;
+                    addFloater(target.wx, target.wy, '-' + pet.dmg, '#ff80c0');
+                    _sfx(480, 0.05, 'square', 0.03);
+                    if (target.cr.hp <= 0) {
+                        // Bonus XP for the player (pet-assisted kill = 50%).
+                        const tdef = CREATURE_DEFS[target.cr.emoji] || { xp: 1 };
+                        const xpGain = Math.ceil(tdef.xp * 0.5);
+                        player.xp += xpGain;
+                        addFloater(target.wx, target.wy, '+' + xpGain + ' XP', '#ffc857');
+                        target.cr.dead = true;
+                    }
+                    continue;
+                }
+
+                // Otherwise walk toward target (if any) or toward player.
+                const goal = target ? { wx: target.wx, wy: target.wy } : { wx: player.wx, wy: player.wy };
+                const distGoal = Math.max(Math.abs(goal.wx - pet.wx), Math.abs(goal.wy - pet.wy));
+                // Stop at range 1 from player to avoid stepping on them.
+                if (!target && distGoal <= 1) continue;
+                const sdx = Math.sign(goal.wx - pet.wx);
+                const sdy = Math.sign(goal.wy - pet.wy);
+                const nwx = pet.wx + sdx, nwy = pet.wy + sdy;
+                if (world.canTraverse(nwx, nwy)) {
+                    pet.moveFrom = { wx: pet.wx, wy: pet.wy };
+                    pet.wx = nwx; pet.wy = nwy;
+                    pet.moveT = PET_MOVE_MS;
+                }
+            }
         }
 
         // Press G to plant a sapling on the player's current tile. Requires
@@ -2602,6 +2794,7 @@ export default {
             tickCreatureRespawn(dt);
             tickStructures(dt);
             tickCooking(dt);
+            tickPets(dt);
             if (_playerFlash > 0) _playerFlash = Math.max(0, _playerFlash - dt);
             tickAmbientSound();
             render();
@@ -2622,6 +2815,7 @@ export default {
                     hp: player.hp, mana: player.mana, stamina: player.stamina, hunger: player.hunger,
                     level: player.level, xp: player.xp, xpNext: player.xpNext,
                     maxHp: player.maxHp, maxMana: player.maxMana, maxStamina: player.maxStamina, maxHunger: player.maxHunger, baseDmg: player.baseDmg, kills: player.kills, days: player.days,
+                    pets: pets.map(p => ({ emoji: p.emoji, hp: p.hp, maxHp: p.maxHp, dmg: p.dmg, wx: p.wx, wy: p.wy })),
                 }).catch(e => console.warn('[ultima-aruta] save state failed', e));
                 worldRow.lastPlayed = Date.now();
                 worldRow.playerClass = playerClass;
