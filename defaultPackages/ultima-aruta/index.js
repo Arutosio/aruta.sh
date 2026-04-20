@@ -2706,18 +2706,50 @@ export default {
                 return;
             }
             // Jump forward to dawn (0.25). Advances player.days if we wrap.
-            if (timeOfDay > 0.25) player.days++;
+            const priorT = timeOfDay;
+            if (priorT > 0.25) player.days++;
             timeOfDay = 0.25;
+            // Compute how many ms we fast-forwarded so growth/fuel timers on
+            // structures can advance proportionally.
+            const skipRatio = (priorT > 0.25 ? (1 - priorT + 0.25) : (0.25 - priorT));
+            const skipMs = skipRatio * DAY_MS;
+            for (const [key, adds] of Object.entries(worldDeltas.added || {})) {
+                if (!Array.isArray(adds)) continue;
+                const [cx, cy] = key.split(',').map(Number);
+                const ch = world.chunks.get(cx + ',' + cy);
+                for (let i = adds.length - 1; i >= 0; i--) {
+                    const a = adds[i];
+                    if (a.kind !== 'structure') continue;
+                    // Advance growth.
+                    if (typeof a.growth === 'number') {
+                        a.growth -= skipMs;
+                        if (ch) {
+                            const feat = ch.features.find(f => f.c === a.c && f.r === a.r && f.structure);
+                            if (feat && typeof feat.growth === 'number') feat.growth -= skipMs;
+                        }
+                    }
+                    // Drain fuel proportionally (fires burn through the night).
+                    if (typeof a.fuel === 'number') {
+                        a.fuel -= skipMs * 0.5;
+                        if (ch) {
+                            const feat = ch.features.find(f => f.c === a.c && f.r === a.r && f.structure);
+                            if (feat && typeof feat.fuel === 'number') feat.fuel -= skipMs * 0.5;
+                        }
+                    }
+                }
+            }
+            saveWorldDeltas();
             player.hp = player.maxHp;
             player.mana = player.maxMana;
             player.stamina = player.maxStamina;
             player.hunger = Math.min(player.maxHunger, player.hunger + 30);
             player.poison = 0; player.poisonDps = 0;
-            // Sleeping burns a chunk of the campfire's fuel.
+            // Sleeping burns a chunk of the campfire's fuel on top of the
+            // proportional skip so the anchor may go out at dawn.
             anchor.f.fuel = Math.max(0, (anchor.f.fuel || 0) - 30000);
             addFloater(player.wx, player.wy, '💤 Rested till dawn', '#c0a0ff');
             _sfx(220, 0.4, 'sine', 0.04);
-            showDialogBubble('🌅', 'You wake refreshed as the sun climbs.');
+            showDialogBubble('🌅', 'You wake refreshed as the sun climbs. Crops have grown while you slept.');
         }
 
         // Y — feed every wounded pet nearby. Each piece of meat in the
