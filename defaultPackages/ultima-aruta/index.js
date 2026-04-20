@@ -345,6 +345,8 @@ export default {
             if (saved.maxMana != null) player.maxMana = saved.maxMana;
             if (saved.stamina != null)    player.stamina    = saved.stamina;
             if (saved.maxStamina != null) player.maxStamina = saved.maxStamina;
+            if (saved.hunger != null)     player.hunger     = saved.hunger;
+            if (saved.maxHunger != null)  player.maxHunger  = saved.maxHunger;
             if (saved.baseDmg != null) player.baseDmg = saved.baseDmg;
             if (saved.kills != null)  player.kills  = saved.kills;
             if (saved.days != null)   player.days   = saved.days;
@@ -939,6 +941,14 @@ export default {
                     Vision shrinks. Neutral creatures turn aggressive.<br>
                     Craft 🔥 campfires (2×🪵) and press F to light a safe<br>
                     radius of warm light for 90 s.<br><br>
+                    <b>Hunger</b><br>
+                    🍗 decays over time. At 0 you stop regenerating and<br>
+                    starvation drains HP. Eat food (berries, apples, bread,<br>
+                    meat...) to refill.<br><br>
+                    <b>Cooking</b><br>
+                    Hunt passive creatures (🐑 🐇 🦌 🐗 🐄 🐓 🦆) for 🥩 Raw Meat.<br>
+                    Stand next to a burning 🔥 campfire; raw meat roasts into<br>
+                    🍖 Roast Meat every ~3 s (a big hunger refill).<br><br>
                     <b>Dungeons</b><br>
                     Step on 🕳️/🏚️ and press Space to enter.<br>
                     Stronger enemies + treasure chests 🧰 inside.<br>
@@ -999,9 +1009,9 @@ export default {
                 // Persist state then re-mount the shell.
                 sdk.storage.set(STATE_KEY, {
                     seed, px: player.wx, py: player.wy, timeOfDay, playerClass,
-                    hp: player.hp, mana: player.mana, stamina: player.stamina,
+                    hp: player.hp, mana: player.mana, stamina: player.stamina, hunger: player.hunger,
                     level: player.level, xp: player.xp, xpNext: player.xpNext,
-                    maxHp: player.maxHp, maxMana: player.maxMana, maxStamina: player.maxStamina, baseDmg: player.baseDmg, kills: player.kills, days: player.days,
+                    maxHp: player.maxHp, maxMana: player.maxMana, maxStamina: player.maxStamina, maxHunger: player.maxHunger, baseDmg: player.baseDmg, kills: player.kills, days: player.days,
                 }).catch(e => console.warn('[ultima-aruta] save state failed', e));
                 root.__uaCleanup?.();
                 // Reload by re-invoking mount — simplest way.
@@ -1274,6 +1284,7 @@ export default {
             if (def.use.hp)      player.hp      = Math.min(player.maxHp,      player.hp      + def.use.hp);
             if (def.use.mana)    player.mana    = Math.min(player.maxMana,    player.mana    + def.use.mana);
             if (def.use.stamina) player.stamina = Math.min(player.maxStamina, player.stamina + def.use.stamina);
+            if (def.use.hunger)  player.hunger  = Math.min(player.maxHunger,  player.hunger  + def.use.hunger);
             if (def.use.cure) { player.poison = 0; player.poisonDps = 0; }
             // Remove from inventory.
             inventory.items = inventory.items.filter(i => i.id !== id);
@@ -1283,6 +1294,7 @@ export default {
             if (def.use.hp)      parts.push('+' + def.use.hp + ' HP');
             if (def.use.mana)    parts.push('+' + def.use.mana + ' MP');
             if (def.use.stamina) parts.push('+' + def.use.stamina + ' SP');
+            if (def.use.hunger)  parts.push('+' + def.use.hunger + ' 🍗');
             addFloater(player.wx, player.wy, parts.join(' '), '#60ff60');
             _sfx(660, 0.08, 'sine', 0.05);
         });
@@ -1584,6 +1596,14 @@ export default {
             drawBar(barY,              player.hp / player.maxHp,           '#e04040');
             drawBar(barY - barH - barGap, player.mana / player.maxMana,     '#4080e0');
             drawBar(barY - (barH + barGap) * 2, player.stamina / player.maxStamina, '#e0c040');
+            // Hunger: dark orange → dull red as it empties so low values read
+            // as urgent. Blinks when starving (hunger == 0).
+            const hungerPct = player.hunger / player.maxHunger;
+            const hungerCrit = player.hunger <= 0;
+            const hungerLow  = hungerPct < 0.25;
+            const blink = hungerCrit && Math.floor(_renderTime / 300) % 2 === 0;
+            const hungerColor = blink ? '#ff4444' : hungerLow ? '#d07030' : '#c06030';
+            drawBar(barY - (barH + barGap) * 3, Math.max(0.02, hungerPct), hungerColor);
             // Labels.
             ctx.font = "9px 'Inter', sans-serif";
             ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
@@ -1591,6 +1611,7 @@ export default {
             ctx.fillText('HP',  barX + barW + 4, barY + barH / 2);
             ctx.fillText('MP',  barX + barW + 4, barY - barH - barGap + barH / 2);
             ctx.fillText('SP',  barX + barW + 4, barY - (barH + barGap) * 2 + barH / 2);
+            ctx.fillText('🍗',  barX + barW + 4, barY - (barH + barGap) * 3 + barH / 2);
 
             // ── Rain particles (when moisture is high) ──────
             if (!_dungeon) {
@@ -1813,6 +1834,8 @@ export default {
             if (_dungeon) exitDungeon();
             const spawn = findNearestVillage();
             player.hp = player.maxHp; player.mana = player.maxMana; player.stamina = player.maxStamina;
+            // Respawn with half hunger — you're alive but famished.
+            player.hunger = Math.max(player.hunger, player.maxHunger * 0.5);
             player.wx = spawn.wx; player.wy = spawn.wy;
             player.rx = spawn.wx; player.ry = spawn.wy;
             _playerFlash = 600;
@@ -1883,6 +1906,55 @@ export default {
                 }
             }
             if (anyRemoved) saveWorldDeltas();
+        }
+
+        // Cooking: while player stands next to a burning campfire, raw meat
+        // in the backpack auto-roasts into cooked meat, one unit every 3 s.
+        // Also drains a chunk of campfire fuel per roast so fires don't last
+        // forever when used as outdoor ovens.
+        let _cookTimer = 0;
+        function isAdjacentToBurningStructure(structKey) {
+            if (_dungeon) return null;
+            const cx0 = Math.floor(player.wx / CHUNK_SIZE), cy0 = Math.floor(player.wy / CHUNK_SIZE);
+            for (let dcy = -1; dcy <= 1; dcy++) {
+                for (let dcx = -1; dcx <= 1; dcx++) {
+                    const ch = world.chunks.get((cx0 + dcx) + ',' + (cy0 + dcy));
+                    if (!ch) continue;
+                    for (const f of ch.features) {
+                        if (!f.structure || f.structKey !== structKey) continue;
+                        if (typeof f.fuel === 'number' && f.fuel <= 0) continue;
+                        const wx = (cx0 + dcx) * CHUNK_SIZE + f.c;
+                        const wy = (cy0 + dcy) * CHUNK_SIZE + f.r;
+                        if (Math.max(Math.abs(wx - player.wx), Math.abs(wy - player.wy)) <= 1) {
+                            return { f, wx, wy };
+                        }
+                    }
+                }
+            }
+            return null;
+        }
+        function tickCooking(dt) {
+            const rawIdx = inventory.items.findIndex(i => i.key === 'raw_meat');
+            if (rawIdx < 0) { _cookTimer = 0; return; }
+            const hit = isAdjacentToBurningStructure('campfire');
+            if (!hit) { _cookTimer = 0; return; }
+            _cookTimer += dt;
+            if (_cookTimer < 3000) return;
+            _cookTimer = 0;
+            // Replace one raw_meat with cooked meat.
+            const raw = inventory.items[rawIdx];
+            const cookedDef = ITEMS.meat;
+            inventory.items[rawIdx] = {
+                ...raw,
+                id: 'it_' + Math.random().toString(36).slice(2, 9),
+                key: 'meat', emoji: cookedDef.emoji, name: cookedDef.name,
+            };
+            saveInventory();
+            if ($pack.style.display !== 'none') renderBackpack();
+            addFloater(hit.wx, hit.wy, '🍖 Roasted!', '#ffb070');
+            _sfx(720, 0.08, 'triangle', 0.04);
+            // Extra fuel drain for the roast.
+            hit.f.fuel = Math.max(0, (hit.f.fuel || 0) - 2500);
         }
 
         // Collect visible structure light sources for the fog-of-war pass.
@@ -2057,8 +2129,10 @@ export default {
                 player.hp = Math.max(1, player.hp - player.poisonDps * dt / 1000);
                 if (player.poison <= 0) { player.poison = 0; player.poisonDps = 0; addFloater(player.wx, player.wy, 'Cured!', '#60ff60'); }
             }
-            // HP regen (slow — blocked while poisoned).
-            if (player.hp < player.maxHp && player.poison <= 0) player.hp = Math.min(player.maxHp, player.hp + 0.3 * dt / 1000);
+            // HP regen (slow — blocked while poisoned or starving).
+            if (player.hp < player.maxHp && player.poison <= 0 && player.hunger > 0) {
+                player.hp = Math.min(player.maxHp, player.hp + 0.3 * dt / 1000);
+            }
             // Mana regen.
             if (player.mana < player.maxMana) player.mana = Math.min(player.maxMana, player.mana + 0.5 * dt / 1000);
             // Stamina regen — faster when standing still (6/s), slower while moving (2/s).
@@ -2133,6 +2207,7 @@ export default {
                         if (def.use.hp) parts.push('+' + def.use.hp + ' HP');
                         if (def.use.mana) parts.push('+' + def.use.mana + ' MP');
                         if (def.use.stamina) parts.push('+' + def.use.stamina + ' SP');
+                        if (def.use.hunger) parts.push('+' + def.use.hunger + ' 🍗');
                         if (parts.length) text += ' (' + parts.join(', ') + ')';
                     }
                 } else {
@@ -2383,6 +2458,7 @@ export default {
             tickFloaters(dt);
             tickCreatureRespawn(dt);
             tickStructures(dt);
+            tickCooking(dt);
             if (_playerFlash > 0) _playerFlash = Math.max(0, _playerFlash - dt);
             tickAmbientSound();
             render();
@@ -2400,9 +2476,9 @@ export default {
                 saveTimer = 0;
                 sdk.storage.set(STATE_KEY, {
                     seed, px: player.wx, py: player.wy, timeOfDay, playerClass,
-                    hp: player.hp, mana: player.mana, stamina: player.stamina,
+                    hp: player.hp, mana: player.mana, stamina: player.stamina, hunger: player.hunger,
                     level: player.level, xp: player.xp, xpNext: player.xpNext,
-                    maxHp: player.maxHp, maxMana: player.maxMana, maxStamina: player.maxStamina, baseDmg: player.baseDmg, kills: player.kills, days: player.days,
+                    maxHp: player.maxHp, maxMana: player.maxMana, maxStamina: player.maxStamina, maxHunger: player.maxHunger, baseDmg: player.baseDmg, kills: player.kills, days: player.days,
                 }).catch(e => console.warn('[ultima-aruta] save state failed', e));
                 worldRow.lastPlayed = Date.now();
                 worldRow.playerClass = playerClass;

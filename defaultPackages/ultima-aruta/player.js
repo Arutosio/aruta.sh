@@ -11,6 +11,9 @@ class Player {
         this.hp = 100; this.maxHp = 100;
         this.mana = 50; this.maxMana = 50;
         this.stamina = 100; this.maxStamina = 100;
+        // Hunger decays passively; food items (use.hunger) refill it.
+        // Reaching 0 stops natural HP regen and tickles damage over time.
+        this.hunger = 100; this.maxHunger = 100;
         this.level = 1; this.xp = 0; this.xpNext = 20;
         this.attackCooldown = 0;
         this.baseDmg = 5;
@@ -64,6 +67,15 @@ class Player {
             this.ry = this.moveFrom.wy + (this.wy - this.moveFrom.wy) * t;
         } else {
             this.rx = this.wx; this.ry = this.wy;
+        }
+
+        // Hunger decay: ~1 point per 12 s (100 → 0 in ~20 min).
+        if (typeof this.hunger === 'number' && this.maxHunger) {
+            this.hunger = Math.max(0, this.hunger - dt / 12000);
+            // Starvation drains HP slowly while hunger is empty.
+            if (this.hunger <= 0) {
+                this.hp = Math.max(0, this.hp - dt / 2000); // 0.5 HP/s
+            }
         }
     }
 }
