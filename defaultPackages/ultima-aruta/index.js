@@ -2672,7 +2672,10 @@ export default {
             const spawn = findNearestVillage();
             player.hp = player.maxHp; player.mana = player.maxMana; player.stamina = player.maxStamina;
             // Respawn with half hunger — you're alive but famished.
-            player.hunger = Math.max(player.hunger, player.maxHunger * 0.5);
+            // Cap fullness at half (Math.min): dying never restores food, and a
+            // well-fed corpse wakes up famished. Math.max here was backwards — it
+            // *raised* a starving player to half-full, rewarding death.
+            player.hunger = Math.min(player.hunger, player.maxHunger * 0.5);
             player.wx = spawn.wx; player.wy = spawn.wy;
             player.rx = spawn.wx; player.ry = spawn.wy;
             _playerFlash = 600;
