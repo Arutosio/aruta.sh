@@ -268,6 +268,15 @@ function initSettings() {
             localStorage.removeItem('aruta_taskbar_autohide');
             localStorage.removeItem('aruta_low_power');
             localStorage.removeItem('aruta_lang');
+            // Performance toggles back to defaults (apply only if overridden)
+            for (const [id, config] of Object.entries(PERF_TOGGLES)) {
+                const had = localStorage.getItem('aruta_' + id) != null;
+                localStorage.removeItem('aruta_' + id);
+                const defOn = config.def !== false;
+                const tgl = document.getElementById(id);
+                if (tgl) tgl.classList.toggle('active', defOn);
+                if (had) applyPerfToggle(config, defOn);
+            }
             // Disable any live widgets before wiping their state so their
             // iframes tear down cleanly; then clear the persisted positions.
             if (window.widgets?.list) {
@@ -356,26 +365,20 @@ function initSettings() {
         });
     }
 
-    // Performance toggles — enable/disable visual effects
-    const perfToggles = {
-        'settings-particles': { selector: '#rune-bg', prop: 'display' },
-        'settings-fog': { selector: '.fog-layer', prop: 'display', all: true },
-        'settings-parallax': { key: '_parallaxEnabled' },
-        'settings-cursor': { selector: '#magic-cursor', prop: 'display', cursorClass: true },
-        'settings-clickspells': { key: '_clickSpellsEnabled' },
-        'settings-circles': { key: '_circleRotationEnabled' },
-    };
-
-    for (const [id, config] of Object.entries(perfToggles)) {
+    // Performance toggles — sync UI state and bind clicks. The toggle map +
+    // apply logic live at module scope (PERF_TOGGLES / applyPerfToggle) so
+    // restorePerfToggles() can re-apply saved choices at boot, long before
+    // this lazy init runs on the first Settings open.
+    for (const [id, config] of Object.entries(PERF_TOGGLES)) {
         const toggle = document.getElementById(id);
         if (!toggle) continue;
 
-        // Restore from localStorage
+        // Restore from localStorage (def: false toggles are opt-in)
         const saved = localStorage.getItem('aruta_' + id);
-        if (saved === 'false') {
-            toggle.classList.remove('active');
-            applyPerfToggle(config, false);
-        }
+        const defOn = config.def !== false;
+        const enabled = saved == null ? defOn : saved === 'true';
+        toggle.classList.toggle('active', enabled);
+        if (enabled !== defOn) applyPerfToggle(config, enabled);
 
         toggle.addEventListener('click', () => {
             toggle.classList.toggle('active');
@@ -384,30 +387,62 @@ function initSettings() {
             applyPerfToggle(config, enabled);
         });
     }
+}
 
-    /**
-     * Apply a performance toggle — show/hide elements or set window flags
-     * @param {Object} config — toggle configuration
-     * @param {boolean} enabled — whether the feature is enabled
-     */
-    function applyPerfToggle(config, enabled) {
-        if (config.selector) {
-            const els = config.all
-                ? document.querySelectorAll(config.selector)
-                : [document.querySelector(config.selector)];
-            els.forEach(el => {
-                if (!el) return;
-                if (config.prop === 'display') el.style.display = enabled ? '' : 'none';
-                else if (config.prop === 'animation') el.style.animation = enabled ? '' : 'none';
-            });
-        }
-        if (config.key) window[config.key] = enabled;
-        if (config.cursorClass) {
-            if (enabled) document.documentElement.classList.add('magic-cursor-active');
-            else document.documentElement.classList.remove('magic-cursor-active');
-        }
+/* ────────────────────────────────
+ * § PERFORMANCE TOGGLES
+ * Visual-effect switches (Settings → Performance). Persisted as
+ * 'aruta_<id>' in localStorage; def: false marks opt-in (off by default).
+ * ──────────────────────────────── */
+const PERF_TOGGLES = {
+    'settings-particles': { selector: '#rune-bg', prop: 'display' },
+    'settings-fog': { selector: '.fog-layer', prop: 'display', all: true },
+    'settings-parallax': { key: '_parallaxEnabled' },
+    'settings-cursor': { selector: '#magic-cursor', prop: 'display', cursorClass: true },
+    'settings-clickspells': { key: '_clickSpellsEnabled' },
+    'settings-circles': { key: '_circleRotationEnabled' },
+    'settings-glowpulse': { bodyClass: 'glow-pulse', def: false },
+};
+
+/**
+ * Apply a performance toggle — show/hide elements, set window flags or
+ * toggle a body class.
+ * @param {Object} config — toggle configuration
+ * @param {boolean} enabled — whether the feature is enabled
+ */
+function applyPerfToggle(config, enabled) {
+    if (config.selector) {
+        const els = config.all
+            ? document.querySelectorAll(config.selector)
+            : [document.querySelector(config.selector)];
+        els.forEach(el => {
+            if (!el) return;
+            if (config.prop === 'display') el.style.display = enabled ? '' : 'none';
+            else if (config.prop === 'animation') el.style.animation = enabled ? '' : 'none';
+        });
+    }
+    if (config.key) window[config.key] = enabled;
+    if (config.bodyClass) document.body.classList.toggle(config.bodyClass, enabled);
+    if (config.cursorClass) {
+        if (enabled) document.documentElement.classList.add('magic-cursor-active');
+        else document.documentElement.classList.remove('magic-cursor-active');
     }
 }
+
+/**
+ * Re-apply persisted performance toggles at page load. initSettings() is
+ * lazy (runs on the first Settings open), so without this a reload would
+ * silently revert every saved effect choice until Settings is opened.
+ */
+function restorePerfToggles() {
+    for (const [id, config] of Object.entries(PERF_TOGGLES)) {
+        const saved = localStorage.getItem('aruta_' + id);
+        const defOn = config.def !== false;
+        const enabled = saved == null ? defOn : saved === 'true';
+        if (enabled !== defOn) applyPerfToggle(config, enabled);
+    }
+}
+window.restorePerfToggles = restorePerfToggles;
 
 
 /* ────────────────────────────────

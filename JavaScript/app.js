@@ -205,6 +205,10 @@ function bootApp() {
     initParallax();
     initClickSpells();
 
+    // Re-apply saved Performance toggles — Settings init is lazy (first open),
+    // so without this a reload would revert them until Settings is opened.
+    window.restorePerfToggles?.();
+
     /**
      * Smooth fade transition from overlay to desktop.
      * Prepares the app behind the overlay, then fades out.

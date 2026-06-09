@@ -270,6 +270,57 @@
 }
 .portrait-img-wrap:hover .portrait-img { transform: scale(1.06); }
 
+/* § BREATHING GLOW (opt-in, Settings → Performance)
+ * Restores the animated pulses replaced by static glows in the perf pass —
+ * they repaint portrait + rings every frame, so they're off by default and
+ * skipped in low-power mode. body.glow-pulse is set by os-settings.js.
+ * ──────────────────────────────── */
+body.glow-pulse:not(.low-power) .mc-svg {
+    animation: mcGlowPulse 5s ease-in-out infinite;
+}
+@keyframes mcGlowPulse {
+    0%, 100% { filter: drop-shadow(0 0 3px var(--magic-orb)) drop-shadow(0 0 8px var(--magic-orb)); opacity: 0.75; }
+    50%      { filter: drop-shadow(0 0 6px var(--magic-orb)) drop-shadow(0 0 16px var(--magic-orb)); opacity: 0.95; }
+}
+body.glow-pulse:not(.low-power) .portrait-img-wrap {
+    animation: portraitPulse 4s ease-in-out infinite alternate;
+}
+@keyframes portraitPulse {
+    from {
+        box-shadow: 0 0 0 4px rgba(192,200,224,0.15),
+                    0 0 18px rgba(192,200,224,0.40),
+                    0 0 40px rgba(167,139,250,0.28),
+                    0 0 70px rgba(167,139,250,0.12),
+                    inset 0 0 24px var(--ink-50);
+    }
+    to {
+        box-shadow: 0 0 0 6px rgba(192,200,224,0.28),
+                    0 0 32px rgba(192,200,224,0.70),
+                    0 0 65px rgba(167,139,250,0.50),
+                    0 0 110px rgba(167,139,250,0.22),
+                    inset 0 0 24px var(--ink-50);
+    }
+}
+[data-theme="light"] body.glow-pulse:not(.low-power) .portrait-img-wrap {
+    animation-name: portraitPulseLight;
+}
+@keyframes portraitPulseLight {
+    from {
+        box-shadow: 0 0 0 4px rgba(122,78,6,0.18),
+                    0 0 18px rgba(122,78,6,0.42),
+                    0 0 40px rgba(139,28,34,0.28),
+                    0 0 70px rgba(139,28,34,0.12),
+                    inset 0 0 18px rgba(40,20,5,0.3);
+    }
+    to {
+        box-shadow: 0 0 0 6px rgba(122,78,6,0.32),
+                    0 0 32px rgba(122,78,6,0.68),
+                    0 0 65px rgba(139,28,34,0.48),
+                    0 0 110px rgba(139,28,34,0.20),
+                    inset 0 0 18px rgba(40,20,5,0.3);
+    }
+}
+
 /* § TITLE & BIO
  * ──────────────────────────────── */
 .char-name {
