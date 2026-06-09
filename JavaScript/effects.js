@@ -86,9 +86,12 @@ function initRuneParticles() {
 
     const particles = Array.from({ length: 40 }, spawn);
 
-    /** Main animation loop — runs every rAF, pauses when tab hidden */
+    /** Main animation loop — runs every rAF, pauses when tab hidden or the
+     *  hero is covered by a window (canvas sits behind it — drawing is wasted) */
     function tick() {
-        if (!_tabVisible) { requestAnimationFrame(tick); return; }
+        if (!_tabVisible || document.body.classList.contains('hero-hidden')) {
+            requestAnimationFrame(tick); return;
+        }
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         frame++;
 
@@ -104,7 +107,7 @@ function initRuneParticles() {
             if (age > 480) continue;
             const life = 1 - age / 480;
             ctx.globalAlpha = life * 0.30;
-            ctx.shadowBlur  = life * 8;
+            ctx.shadowBlur  = window._lowPower ? 0 : life * 8;
             ctx.beginPath();
             ctx.arc(pt.x, pt.y, life * 2.5 + 0.5, 0, Math.PI * 2);
             ctx.fill();
@@ -113,7 +116,10 @@ function initRuneParticles() {
 
         const mc = getMCCenter();
 
-        for (let i = 0; i < particles.length; i++) {
+        // Low-power: process fewer runes (caps the O(n²) constellation pass too).
+        const N = window._lowPower ? 16 : particles.length;
+
+        for (let i = 0; i < N; i++) {
             const p = particles[i];
             p.x += p.vx;
             p.y += p.vy;
@@ -200,8 +206,8 @@ function initRuneParticles() {
         // ── Constellation lines between nearby particles ──
         ctx.save();
         const LINK_DIST = 120;
-        for (let i = 0; i < particles.length; i++) {
-            for (let j = i + 1; j < particles.length; j++) {
+        for (let i = 0; i < N; i++) {
+            for (let j = i + 1; j < N; j++) {
                 const a = particles[i], b = particles[j];
                 const dx = a.x - b.x, dy = a.y - b.y;
                 const d = Math.sqrt(dx * dx + dy * dy);
@@ -294,8 +300,8 @@ function initParallax() {
     });
 
     function parallaxTick() {
-        if (window._parallaxEnabled === false) { requestAnimationFrame(parallaxTick); return; }
-        if (!_tabVisible) { requestAnimationFrame(parallaxTick); return; }
+        if (window._parallaxEnabled === false || window._lowPower) { requestAnimationFrame(parallaxTick); return; }
+        if (!_tabVisible || document.body.classList.contains('hero-hidden')) { requestAnimationFrame(parallaxTick); return; }
         cx += (mx - cx) * 0.04;
         cy += (my - cy) * 0.04;
 

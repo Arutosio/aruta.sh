@@ -2,7 +2,7 @@
    SECTION TRANSITION MAGIC
 ══════════════════════════════ */
 .page-section {
-    padding: 4px 0;
+    padding: 24px;
     animation: sectionFadeIn 0.4s var(--ease-standard) forwards;
 }
 .page-section.sec-exit {
@@ -16,8 +16,6 @@
     from { opacity: 1; transform: scale(1); filter: blur(0); }
     to   { opacity: 0; transform: scale(0.97); filter: blur(6px); }
 }
-
-.page-section { padding: 24px; }
 
 /* ══════════════════════════════
    DIVIDERS
@@ -112,6 +110,7 @@
     border: 1px solid var(--seal-border); border-radius: var(--radius-lg);
     overflow: hidden;
     aspect-ratio: 16 / 9;
+    min-height: 480px;
     box-shadow: 0 4px 24px var(--ink-30), inset 0 1px 0 var(--gold-04);
 }
 .live-player iframe {

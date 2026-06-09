@@ -243,6 +243,19 @@ a:focus-visible,
     }
 }
 
+/* § LOW POWER MODE
+ * Auto-applied on weak/battery devices (or forced via Settings → Performance).
+ * Drops the heaviest GPU work: full-screen fog blur is removed, and the glass
+ * backdrop-blur radii are cut (they feed every .glass-panel / window / taskbar
+ * via backdrop-filter). Particle density + parallax are trimmed in JS.
+ * ──────────────────────────────── */
+body.low-power {
+    --blur-subtle: 3px;
+    --blur-glass:  7px;
+    --blur-deep:   8px;
+}
+body.low-power .ambient-fog { display: none; }
+
 /* § RESET & BASE
  * ──────────────────────────────── */
 *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }

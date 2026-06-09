@@ -16,7 +16,37 @@
     border: 1.5px solid var(--card-border);
     border-radius: var(--radius-xl);
     box-shadow: 0 4px 24px var(--ink-30), inset 0 1px 0 rgba(255, 255, 255, 0.04), inset 0 -1px 0 var(--gold-06);
-    transition: background var(--dur-base), border-color var(--dur-base);
+    transition: background var(--dur-base), border-color var(--dur-base),
+                transform var(--dur-quick) var(--ease-standard), opacity var(--dur-quick);
+}
+
+/* § TASKBAR AUTO-HIDE (macOS-dock style — opt-in via Settings)
+ * The bar slides off the top and overlays content on reveal; windows reclaim
+ * the freed space via taskbarReserve() in os-windows.js. A thin reveal strip
+ * gives touch devices a tap target (inert for mouse — reveal is hover-driven).
+ * ──────────────────────────────── */
+body.taskbar-autohide .taskbar {
+    transform: translateY(-130%);
+    opacity: 0;
+    pointer-events: none;
+}
+body.taskbar-autohide.taskbar-peek .taskbar {
+    transform: none;
+    opacity: 1;
+    pointer-events: auto;
+}
+#taskbar-reveal-zone {
+    position: fixed;
+    top: 0; left: 0; right: 0;
+    height: 14px;
+    z-index: 90;            /* below taskbar (100), above windows (10) */
+    pointer-events: none;   /* desktop: never steal clicks — hover reveals */
+    display: none;
+}
+body.taskbar-autohide #taskbar-reveal-zone { display: block; }
+@media (pointer: coarse) {
+    #taskbar-reveal-zone { height: 20px; }
+    body.taskbar-autohide #taskbar-reveal-zone { pointer-events: auto; }
 }
 .taskbar-left  { display: flex; align-items: stretch; gap: 0; flex-shrink: 0; }
 .taskbar-tray  { display: flex; align-items: stretch; gap: 0; flex-shrink: 0; }
@@ -45,9 +75,6 @@
     background: var(--gold-15);
     border-color: var(--gold);
     box-shadow: 0 0 12px var(--gold-15);
-}
-.start-icon {
-    font-size: 1.2rem;
 }
 .taskbar-sep {
     width: 1px; margin: 10px 4px;

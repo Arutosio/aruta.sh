@@ -157,14 +157,47 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 });
 
-// Wait for ALL resources (CSS, fonts, images) before initializing
-window.addEventListener('load', () => {
+/* ────────────────────────────────
+ * § LOW POWER MODE
+ * Trims the heaviest ambient effects (fog blur, particle density, parallax,
+ * glass blur) on weak/battery-constrained devices. Auto-detected from device
+ * hints; user can force on/off from Settings → Performance.
+ *   localStorage 'aruta_low_power': absent = auto, 'on'/'off' = explicit override.
+ * ──────────────────────────────── */
+function detectLowPower() {
+    try {
+        return window.matchMedia('(pointer: coarse)').matches
+            || (typeof navigator.deviceMemory === 'number' && navigator.deviceMemory <= 4)
+            || window.matchMedia('(prefers-reduced-motion: reduce)').matches
+            || !!(navigator.connection && navigator.connection.saveData);
+    } catch (_) { return false; }
+}
+function resolveLowPower() {
+    const stored = localStorage.getItem('aruta_low_power');
+    return stored == null ? detectLowPower() : stored === 'on';
+}
+function applyLowPower(on) {
+    window._lowPower = on;
+    document.body.classList.toggle('low-power', on);
+}
+window.detectLowPower = detectLowPower;
+window.resolveLowPower = resolveLowPower;
+window.applyLowPower = applyLowPower;
+
+// Boot as soon as the DOM is parsed — no longer block on fonts/images.
+// Head stylesheets are render-blocking so CSSOM is ready here; the hero
+// portrait is a tiny webp that loads independently. Waiting on window.load
+// (all images/fonts) needlessly delayed first interaction on mobile.
+function bootApp() {
     const savedLang  = localStorage.getItem('aruta_lang');
 
     currentLang  = (savedLang && i18n[savedLang]) ? savedLang : detectLanguage();
     document.documentElement.setAttribute('lang', currentLang === 'fn' ? 'en' : currentLang);
     updateThemeIcon();
     setActiveLangBtn(currentLang);
+
+    // Resolve low-power BEFORE effects init so particle density etc. honor it.
+    applyLowPower(resolveLowPower());
 
     // Start background effects — CSS is fully loaded now
     initRuneParticles();
@@ -210,4 +243,10 @@ window.addEventListener('load', () => {
     if (themeBtn) themeBtn.addEventListener('click', toggleTheme);
     const langSelect = document.getElementById('lang-select');
     if (langSelect) langSelect.addEventListener('change', e => switchLanguage(e.target.value));
-});
+}
+
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', bootApp, { once: true });
+} else {
+    bootApp();
+}

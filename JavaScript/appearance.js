@@ -9,7 +9,7 @@
     const DB_VER  = 1;
     const LS_META = 'aruta_appearance_meta';
     const DEFAULT_NAME = 'Aruta.sh';
-    const DEFAULT_PORTRAIT = './Images/aru2_meta.png';
+    const DEFAULT_PORTRAIT = './Images/aru_portrait.webp';
     const MAX_IMAGE_BYTES = 10 * 1024 * 1024;  // 10 MB
     const MAX_VIDEO_BYTES = 50 * 1024 * 1024;  // 50 MB
 

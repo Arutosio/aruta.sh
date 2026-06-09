@@ -201,6 +201,34 @@ function initSettings() {
         });
     }
 
+    // Low power mode — auto-detected, user can force on/off (explicit override)
+    const lpToggle = document.getElementById('settings-low-power');
+    if (lpToggle) {
+        lpToggle.classList.toggle('active', !!window._lowPower);
+        lpToggle.addEventListener('click', () => {
+            lpToggle.classList.toggle('active');
+            const on = lpToggle.classList.contains('active');
+            localStorage.setItem('aruta_low_power', on ? 'on' : 'off');
+            window.applyLowPower?.(on);
+        });
+    }
+
+    // Auto-hide taskbar (macOS-dock style) — overlays + lets windows expand
+    const autohideToggle = document.getElementById('settings-taskbar-autohide');
+    if (autohideToggle) {
+        const on = localStorage.getItem('aruta_taskbar_autohide') === 'true';
+        autohideToggle.classList.toggle('active', on);
+        if (on) window.taskbarAutohide?.enable();
+        autohideToggle.addEventListener('click', () => {
+            autohideToggle.classList.toggle('active');
+            const en = autohideToggle.classList.contains('active');
+            localStorage.setItem('aruta_taskbar_autohide', en);
+            if (en) window.taskbarAutohide?.enable();
+            else window.taskbarAutohide?.disable();
+            window.relayoutManagedWindows?.();
+        });
+    }
+
     // Sound toggle
     const soundToggle = document.getElementById('settings-sound-toggle');
     if (soundToggle) {
@@ -237,6 +265,8 @@ function initSettings() {
             localStorage.removeItem('aruta_accent_custom');
             localStorage.removeItem('aruta_showdate');
             localStorage.removeItem('aruta_24h');
+            localStorage.removeItem('aruta_taskbar_autohide');
+            localStorage.removeItem('aruta_low_power');
             localStorage.removeItem('aruta_lang');
             // Disable any live widgets before wiping their state so their
             // iframes tear down cleanly; then clear the persisted positions.
@@ -257,6 +287,8 @@ function initSettings() {
             if (fontSel) { fontSel.value = 'default'; applyFont('default'); }
             if (dateToggle) { dateToggle.classList.add('active'); if (dateEl) dateEl.style.display = ''; if (dateSep) dateSep.style.display = ''; }
             if (h24Toggle) { h24Toggle.classList.add('active'); window._use24h = true; }
+            if (autohideToggle) { autohideToggle.classList.remove('active'); window.taskbarAutohide?.disable(); window.relayoutManagedWindows?.(); }
+            window.applyLowPower?.(window.resolveLowPower?.()); if (lpToggle) lpToggle.classList.toggle('active', !!window._lowPower);
             document.querySelectorAll('.settings-color-btn').forEach(b => b.classList.remove('active'));
             const goldBtn = document.querySelector('.settings-color-btn[data-accent="gold"]');
             if (goldBtn) goldBtn.classList.add('active');

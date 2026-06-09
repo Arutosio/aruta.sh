@@ -196,6 +196,8 @@ function initMagicCircleInteraction() {
     function tickRings() {
         if (!_tabVisible) { ringsRaf = requestAnimationFrame(tickRings); return; }
         if (window._circleRotationEnabled === false) { ringsRaf = requestAnimationFrame(tickRings); return; }
+        // Hero covered by a window — skip the rotate/repaint work (rings are hidden).
+        if (document.body.classList.contains('hero-hidden')) { ringsRaf = requestAnimationFrame(tickRings); return; }
         // Ramp up speed over first 2 seconds
         const elapsed = performance.now() - ringsStartTime;
         const rampUp = Math.min(1, elapsed / 2000);

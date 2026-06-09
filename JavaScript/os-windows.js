@@ -207,6 +207,8 @@ function openWindow(id) {
     if (customMeta && customMeta.custom && window.sandbox) {
         window.sandbox.mount(id);
     }
+
+    syncHeroActivity();
 }
 openWindow._bioTyped = false;
 openWindow._settingsInit = false;
@@ -224,6 +226,7 @@ function closeWindow(id) {
         win.style.display = 'none';
         win.style.animation = '';
         win.style.transform = '';
+        syncHeroActivity();
     }, 250);
 
     removeWindowTab(id);
@@ -240,6 +243,7 @@ function minimizeWindow(id) {
     setTimeout(() => {
         win.style.display = 'none';
         win.style.animation = '';
+        syncHeroActivity();
     }, 250);
     win.classList.remove('win-focused');
     updateActiveTab('');
@@ -255,6 +259,18 @@ function focusWindow(win) {
     win.style.zIndex = topZ;
     win.classList.add('win-focused');
     updateActiveTab(win.dataset.window);
+}
+
+/**
+ * Pixels reserved at the top of the viewport for the taskbar when laying
+ * out windows. Returns 0 when the taskbar is in auto-hide mode (it then
+ * overlays content instead of occupying space), else the fixed bar height
+ * (12px margin + 44px + 12px = 68). Single source of truth for maximize,
+ * snap, drag-clamp and resize so they all expand into the freed space.
+ * @returns {number}
+ */
+function taskbarReserve() {
+    return document.body.classList.contains('taskbar-autohide') ? 0 : 68;
 }
 
 /**
@@ -285,12 +301,12 @@ function toggleMaximize(win) {
             height: win.style.height,
             transform: win.style.transform,
         };
-        // Maximize — fill screen below taskbar
+        // Maximize — fill screen below taskbar (top:0 when taskbar auto-hides)
         win.classList.add('win-maximized');
         win.style.position = 'fixed';
         win.style.transform = 'none';
         win.style.left = '0';
-        win.style.top = '68px';
+        win.style.top = taskbarReserve() + 'px';
         win.style.right = '0';
         win.style.bottom = '0';
         win.style.width = 'auto';
@@ -307,7 +323,6 @@ function toggleMaximize(win) {
  * overlay hints at where it will land; drop applies. Starting
  * a drag on a snapped window un-snaps first.
  * ──────────────────────────────── */
-const TASKBAR_H = 68;
 
 function _snapPreviewEl() {
     let el = document.getElementById('win-snap-preview');
@@ -322,6 +337,7 @@ function _snapPreviewEl() {
 function updateSnapPreview(zone) {
     const el = _snapPreviewEl();
     if (!zone) { el.style.display = 'none'; return; }
+    const TASKBAR_H = taskbarReserve();
     const h = window.innerHeight - TASKBAR_H;
     if (zone === 'max') {
         el.style.left = '0'; el.style.top = TASKBAR_H + 'px';
@@ -342,6 +358,7 @@ function hideSnapPreview() {
 
 /** Apply a snap state to a window. Saves current rect for restore. */
 function applySnap(win, zone) {
+    const TASKBAR_H = taskbarReserve();
     // Save a restore rect if we don't already have one (back-to-back snaps
     // shouldn't overwrite the floating rect).
     if (!win._snapState) {
@@ -378,6 +395,7 @@ function applySnap(win, zone) {
 
 /** Restore a snapped window to its floating rect, centered under cursor. */
 function restoreFromSnap(win, cursorX, cursorY) {
+    const TASKBAR_H = taskbarReserve();
     const r = win._restoreRect;
     win.classList.remove('win-snapped', 'win-snapped-left', 'win-snapped-right', 'win-snapped-max');
     win._snapState = null;
@@ -397,12 +415,39 @@ function restoreFromSnap(win, cursorX, cursorY) {
     win.style.height = h + 'px';
 }
 
-/** Re-layout any snapped windows when the viewport changes size. */
-window.addEventListener('resize', () => {
+/**
+ * Re-layout maximized + snapped windows against the current taskbar reserve.
+ * Maximized windows re-anchor their top edge; snapped windows re-run their
+ * snap. Called on viewport resize and whenever the taskbar auto-hide setting
+ * is toggled at runtime (so already-open windows follow the freed/reclaimed
+ * top space instead of keeping a stale 68px offset).
+ */
+function relayoutManagedWindows() {
+    document.querySelectorAll('.os-window.win-maximized').forEach(win => {
+        win.style.top = taskbarReserve() + 'px';
+    });
     document.querySelectorAll('.os-window.win-snapped').forEach(win => {
         if (win._snapState) applySnap(win, win._snapState);
     });
-});
+}
+window.relayoutManagedWindows = relayoutManagedWindows;
+
+/**
+ * Toggle `body.hero-hidden` based on whether any window is open. When a window
+ * covers the desktop hero, the expensive home animations (rune canvas, ring
+ * rAF, fog/orb/portrait CSS) pause — they're not visible, so running them just
+ * burns GPU/battery. effects.js and desktop.js check this flag in their loops;
+ * CSS pauses the rest via `animation-play-state`.
+ */
+function syncHeroActivity() {
+    const anyOpen = [...document.querySelectorAll('.os-window')]
+        .some(w => w.style.display && w.style.display !== 'none');
+    document.body.classList.toggle('hero-hidden', anyOpen);
+}
+window.syncHeroActivity = syncHeroActivity;
+
+/** Re-layout managed windows when the viewport changes size. */
+window.addEventListener('resize', relayoutManagedWindows);
 
 /**
  * Initialize drag behavior on a window's titlebar
@@ -457,7 +502,7 @@ function initDrag(win, handle) {
         // Clamp within viewport — keep titlebar always reachable
         const winW = win.offsetWidth;
         const winH = win.offsetHeight;
-        const taskbarH = 68;
+        const taskbarH = taskbarReserve();
         const minVisible = 40;
 
         let newX = origX + dx;
@@ -551,7 +596,7 @@ function initResize(win) {
         win.style.right = '';
         win.style.bottom = '';
 
-        const TASKBAR_H = 68;
+        const TASKBAR_H = taskbarReserve();
         const MAX_W = window.innerWidth;
         const MAX_H = window.innerHeight - TASKBAR_H;
 
