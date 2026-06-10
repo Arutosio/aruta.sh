@@ -360,6 +360,18 @@ export default {
             if (saved.kills != null)  player.kills  = saved.kills;
             if (saved.days != null)   player.days   = saved.days;
         }
+        // ── Ancient Runes (endgame) ──────────────────────
+        // One rune shard per boss family. Killing a boss of a family attunes
+        // its shard (guaranteed, once); all four together forge the Seal of
+        // Aruta — a one-shot permanent boon + victory screen. Free play after.
+        const RUNE_SHARDS = [
+            { id: 'dragon', rune: 'ᚠ', name: 'Fehu',     keys: ['🐉', '🐲'] },
+            { id: 'brute',  rune: 'ᚢ', name: 'Uruz',     keys: ['👹', '🧌'] },
+            { id: 'undead', rune: 'ᚦ', name: 'Thurisaz', keys: ['🧟'] },
+            { id: 'demon',  rune: 'ᚨ', name: 'Ansuz',    keys: ['👿'] },
+        ];
+        const runeShards = (saved && saved.runeShards && typeof saved.runeShards === 'object') ? saved.runeShards : {};
+        let sealForged = !!(saved && saved.sealForged);
         // Day starts at noon on first load. Time advances with real-time dt.
         let timeOfDay = (typeof saved?.timeOfDay === 'number') ? saved.timeOfDay : 0.5;
 
@@ -1148,6 +1160,15 @@ export default {
                     · Fishing — higher catch rate (40% → 75%, +20% with 🎣 rod)<br>
                     · Taming — higher tame success (+up to 40%)<br>
                     · Combat — +1 damage per 20 levels<br><br>
+                    <b>The Ancient Runes ⚝</b><br>
+                    Four rune shards bind the realm — each held by a boss<br>
+                    family: ᚠ dragons (🐉 🐲), ᚢ brutes (👹 🧌), ᚦ the<br>
+                    undead (🧟), ᚨ demons (👿). Slaying a boss of a family<br>
+                    attunes its shard (guaranteed, once). Bosses lurk in the<br>
+                    deepest dungeon rooms and on high mountains. Gather all<br>
+                    four to forge the <b>Seal of Aruta</b> — a permanent boon<br>
+                    (+20 HP/MP/SP, +2 DMG) and the realm's gratitude. Track<br>
+                    progress in the Stats panel.<br><br>
                     <b>Treasure Maps</b><br>
                     Rare 🗺️ drops from bosses (🐉 🐲 👿 👹 🧟). Each map<br>
                     points to a buried hoard 20–60 tiles away. Double-click<br>
@@ -1292,6 +1313,14 @@ export default {
                     return `<div style="margin-top:6px"><b>Titles</b></div>
                         <div style="font-size:11px;opacity:0.9;">${earned.join(' · ')}</div>`;
                 })()}
+                ${(() => {
+                    const have = RUNE_SHARDS.filter(s => runeShards[s.id]).length;
+                    const glyphs = RUNE_SHARDS.map(s =>
+                        `<span title="${s.name}" style="color:#c0a0ff;opacity:${runeShards[s.id] ? 1 : 0.22};">${s.rune}</span>`
+                    ).join(' ');
+                    return `<div style="margin-top:6px"><b>Ancient Runes</b> ${sealForged ? '· ⚝ Seal of Aruta forged' : `(${have}/4)`}</div>
+                        <div style="font-size:16px;letter-spacing:8px;">${glyphs}</div>`;
+                })()}
                 ${activeQuest ? `<div style="margin-top:6px;padding:6px;background:rgba(200,170,80,0.12);border-left:3px solid #ffc857;border-radius:2px;">
                     <b>📜 Active Quest</b><br>
                     <span style="font-size:11px">${_questProgressText(activeQuest)} → ${activeQuest.reward.gold}🪙</span>
@@ -1312,6 +1341,7 @@ export default {
                     slayDragon: player._slayDragon || false,
                     slayDemon: player._slayDemon || false,
                     slayBrute: player._slayBrute || false,
+                    runeShards, sealForged,
                 }).catch(e => console.warn('[ultima-aruta] save state failed', e));
                 root.__uaCleanup?.();
                 // Reload by re-invoking mount — simplest way.
@@ -2681,6 +2711,50 @@ export default {
             _playerFlash = 600;
         }
 
+        // Rune shard attunement — shared by player and pet kill paths so a
+        // pet landing the killing blow on a boss still grants the shard.
+        function attuneRuneShard(emoji, wx, wy) {
+            if (sealForged) return;
+            const shard = RUNE_SHARDS.find(s => s.keys.includes(emoji) && !runeShards[s.id]);
+            if (!shard) return;
+            runeShards[shard.id] = true;
+            const have = RUNE_SHARDS.filter(s => runeShards[s.id]).length;
+            addFloater(wx, wy, `${shard.rune} Rune shard!`, '#c0a0ff');
+            showDialogBubble(shard.rune, `The ${shard.name} rune attunes to your soul. (${have}/4 shards)`);
+            _sfx(740, 0.25, 'triangle', 0.06); setTimeout(() => _sfx(1100, 0.3, 'sine', 0.05), 160);
+            if (have === RUNE_SHARDS.length) forgeSeal();
+        }
+
+        // All four rune shards collected — forge the Seal of Aruta. One-shot:
+        // permanent boon, victory overlay, then the world stays playable.
+        function forgeSeal() {
+            if (sealForged) return;
+            sealForged = true;
+            player.maxHp += 20; player.maxMana += 20; player.maxStamina += 20; player.baseDmg += 2;
+            player.hp = player.maxHp; player.mana = player.maxMana; player.stamina = player.maxStamina;
+            sfxLevelUp();
+            _levelUpFlash = _renderTime + 1200;
+            const cd = classDef || CLASSES.warrior;
+            const ov = document.createElement('div');
+            ov.className = 'ua-victory';
+            ov.innerHTML = `
+                <div class="ua-victory-card">
+                    <div class="ua-victory-runes">ᚠ ᚢ ᚦ ᚨ</div>
+                    <h2>⚝ The Seal of Aruta is forged!</h2>
+                    <p>All four ancient runes answer to you.<br>The realm of <b class="ua-victory-realm"></b> knows peace — for now.</p>
+                    <p class="ua-victory-stats">${cd.icon} Level <b>${player.level}</b> · 💀 <b>${player.kills}</b> kills · 🔨 <b>${player.crafted || 0}</b> crafted · Day <b>${player.days + 1}</b></p>
+                    <p class="ua-victory-boon">Boon of the Seal: +20 HP · +20 MP · +20 SP · +2 DMG — forever.</p>
+                    <button class="ua-btn ua-btn-primary" id="ua-victory-close">Continue exploring</button>
+                </div>`;
+            ov.querySelector('.ua-victory-realm').textContent = worldRow.name;
+            root.querySelector('.ua-shell').appendChild(ov);
+            ov.querySelector('#ua-victory-close').addEventListener('click', () => ov.remove());
+            _sfx(523, 0.3, 'sine', 0.06);
+            setTimeout(() => _sfx(659, 0.3, 'sine', 0.06), 220);
+            setTimeout(() => _sfx(784, 0.45, 'sine', 0.07), 440);
+            setTimeout(() => _sfx(1046, 0.6, 'sine', 0.06), 660);
+        }
+
         function quickPotion() {
             const idx = inventory.items.findIndex(i => i.key === 'potion');
             if (idx < 0) { addFloater(player.wx, player.wy, 'No potions!', '#ff6060'); return; }
@@ -3081,6 +3155,7 @@ export default {
                             _sfx(880, 0.12, 'sine', 0.05);
                         }
                         target.cr.dead = true;
+                        attuneRuneShard(target.cr.emoji, target.wx, target.wy);
                     }
                     continue;
                 }
@@ -3376,6 +3451,9 @@ export default {
                 _sfx(300, 0.3, 'sawtooth', 0.06); setTimeout(() => _sfx(900, 0.3, 'sine', 0.05), 150);
                 break;
             }
+            // Ancient Rune shards — first kill of each boss family attunes
+            // its shard. All four forge the Seal of Aruta (endgame).
+            attuneRuneShard(emoji, chCx * CHUNK_SIZE + cr.c, chCy * CHUNK_SIZE + cr.r);
             // Quest progress (kill-type): match by emoji regardless of dungeon/overworld.
             if (activeQuest && activeQuest.kind === 'kill' && activeQuest.target === cr.emoji && activeQuest.current < activeQuest.needed) {
                 activeQuest.current++;
@@ -3996,6 +4074,7 @@ export default {
                     slayDragon: player._slayDragon || false,
                     slayDemon: player._slayDemon || false,
                     slayBrute: player._slayBrute || false,
+                    runeShards, sealForged,
                 }).catch(e => console.warn('[ultima-aruta] save state failed', e));
                 worldRow.lastPlayed = Date.now();
                 worldRow.playerClass = playerClass;

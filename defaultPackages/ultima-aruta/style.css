@@ -414,3 +414,33 @@ html, body, #root {
     font-size: 18px; color: #ffc857;
     letter-spacing: 0.1em;
 }
+
+/* ── Victory overlay (Seal of Aruta) ── */
+.ua-victory {
+    position: absolute; inset: 0;
+    display: flex; align-items: center; justify-content: center;
+    background: rgba(8, 6, 18, 0.78);
+    z-index: 600;
+    animation: uaVictoryIn 600ms ease-out;
+}
+.ua-victory-card {
+    max-width: 420px;
+    padding: 26px 32px;
+    text-align: center;
+    background: rgba(22, 17, 38, 0.97);
+    border: 1px solid rgba(255, 200, 87, 0.6);
+    border-radius: 8px;
+    box-shadow: 0 0 40px rgba(192, 160, 255, 0.25), 0 10px 40px rgba(0, 0, 0, 0.6);
+    color: #e8e6d9;
+}
+.ua-victory-card h2 { margin: 10px 0 12px; color: #ffc857; font-size: 1.25rem; }
+.ua-victory-card p  { margin: 8px 0; font-size: 0.85rem; line-height: 1.5; }
+.ua-victory-runes {
+    font-size: 2rem; letter-spacing: 16px; padding-left: 16px;
+    color: #c0a0ff;
+    text-shadow: 0 0 12px rgba(192, 160, 255, 0.8);
+}
+.ua-victory-stats { color: rgba(232, 230, 217, 0.8); }
+.ua-victory-boon  { color: #9be8a0; font-size: 0.8rem; }
+.ua-victory-card .ua-btn { margin-top: 12px; }
+@keyframes uaVictoryIn { from { opacity: 0; } to { opacity: 1; } }
