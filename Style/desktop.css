@@ -37,7 +37,7 @@
 .magic-bg::before {
     width: 70vmax; height: 70vmax;
     top: -28vmax; left: -22vmax;
-    background: radial-gradient(circle, rgba(167,139,250,0.14) 0%, transparent 65%);
+    background: radial-gradient(circle, color-mix(in srgb, var(--purple) 14%, transparent) 0%, transparent 65%);
     animation: orbA 18s ease-in-out infinite alternate;
     translate: var(--px) var(--py);
 }
@@ -87,7 +87,7 @@
 .fog-layer {
     position: absolute; width: 250%; height: 60%;
     bottom: -15%; left: -30%;
-    background: radial-gradient(ellipse 80% 50% at center, rgba(167,139,250,0.10) 0%, rgba(167,139,250,0.04) 40%, transparent 70%);
+    background: radial-gradient(ellipse 80% 50% at center, color-mix(in srgb, var(--purple) 10%, transparent) 0%, color-mix(in srgb, var(--purple) 4%, transparent) 40%, transparent 70%);
     animation: fogDrift 28s ease-in-out infinite alternate;
     filter: blur(30px);
     will-change: transform;
@@ -102,7 +102,7 @@
 .fog-layer:nth-child(3) {
     width: 200%; height: 45%;
     top: 30%; bottom: auto; left: -20%;
-    background: radial-gradient(ellipse 60% 40% at center, rgba(167,139,250,0.06) 0%, rgba(100,80,200,0.02) 35%, transparent 65%);
+    background: radial-gradient(ellipse 60% 40% at center, color-mix(in srgb, var(--purple) 6%, transparent) 0%, rgba(100,80,200,0.02) 35%, transparent 65%);
     animation: fogDrift3 22s ease-in-out infinite alternate;
     filter: blur(35px);
 }
@@ -251,8 +251,8 @@
        from .magic-circle-frame::before (compositor-only opacity pulse). */
     box-shadow: 0 0 0 5px rgba(192,200,224,0.20),
                 0 0 24px rgba(192,200,224,0.52),
-                0 0 52px rgba(167,139,250,0.36),
-                0 0 88px rgba(167,139,250,0.16),
+                0 0 52px color-mix(in srgb, var(--purple) 36%, transparent),
+                0 0 88px color-mix(in srgb, var(--purple) 16%, transparent),
                 inset 0 0 24px var(--ink-50);
     transition: border-color var(--dur-base);
 }
@@ -289,15 +289,15 @@ body.glow-pulse:not(.low-power) .portrait-img-wrap {
     from {
         box-shadow: 0 0 0 4px rgba(192,200,224,0.15),
                     0 0 18px rgba(192,200,224,0.40),
-                    0 0 40px rgba(167,139,250,0.28),
-                    0 0 70px rgba(167,139,250,0.12),
+                    0 0 40px color-mix(in srgb, var(--purple) 28%, transparent),
+                    0 0 70px color-mix(in srgb, var(--purple) 12%, transparent),
                     inset 0 0 24px var(--ink-50);
     }
     to {
         box-shadow: 0 0 0 6px rgba(192,200,224,0.28),
                     0 0 32px rgba(192,200,224,0.70),
-                    0 0 65px rgba(167,139,250,0.50),
-                    0 0 110px rgba(167,139,250,0.22),
+                    0 0 65px color-mix(in srgb, var(--purple) 50%, transparent),
+                    0 0 110px color-mix(in srgb, var(--purple) 22%, transparent),
                     inset 0 0 24px var(--ink-50);
     }
 }
@@ -340,7 +340,7 @@ body.glow-pulse:not(.low-power) .portrait-img-wrap {
 }
 .fly-letter-landed {
     color: var(--gold-light) !important;
-    text-shadow: 0 0 20px rgba(192,200,224,0.6), 0 0 40px rgba(167,139,250,0.2);
+    text-shadow: 0 0 20px rgba(192,200,224,0.6), 0 0 40px color-mix(in srgb, var(--purple) 20%, transparent);
 }
 [data-theme="light"] .fly-letter {
     text-shadow: 0 0 14px rgba(90,50,10,0.6), 0 0 30px rgba(90,50,10,0.3);

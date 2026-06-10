@@ -205,9 +205,11 @@ function bootApp() {
     initParallax();
     initClickSpells();
 
-    // Re-apply saved Performance toggles — Settings init is lazy (first open),
-    // so without this a reload would revert them until Settings is opened.
+    // Re-apply saved Performance toggles and Appearance tweaks — Settings
+    // init is lazy (first open), so without this a reload would revert
+    // them until Settings is opened.
     window.restorePerfToggles?.();
+    window.restoreThemeTweaks?.();
 
     /**
      * Smooth fade transition from overlay to desktop.

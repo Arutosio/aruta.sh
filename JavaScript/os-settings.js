@@ -101,27 +101,8 @@ function initSettings() {
     }
 
     // Accent color buttons
-    const ACCENTS = {
-        gold:    { gold: '#ffc857', goldLight: '#ffe4a0' },
-        purple:  { gold: '#a78bfa', goldLight: '#c4b5fd' },
-        cyan:    { gold: '#22d3ee', goldLight: '#67e8f9' },
-        rose:    { gold: '#fb7185', goldLight: '#fda4af' },
-        emerald: { gold: '#34d399', goldLight: '#6ee7b7' },
-    };
-    // Derive a lighter variant by mixing with white (40%) — used for custom colors.
-    function lightenHex(hex, amount = 0.4) {
-        const h = hex.replace('#', '');
-        const r = parseInt(h.substr(0, 2), 16);
-        const g = parseInt(h.substr(2, 2), 16);
-        const b = parseInt(h.substr(4, 2), 16);
-        const mix = (c) => Math.round(c + (255 - c) * amount);
-        const toHex = (c) => c.toString(16).padStart(2, '0');
-        return '#' + toHex(mix(r)) + toHex(mix(g)) + toHex(mix(b));
-    }
-    function applyAccent(gold, goldLight) {
-        document.documentElement.style.setProperty('--gold', gold);
-        document.documentElement.style.setProperty('--gold-light', goldLight);
-    }
+    // ACCENTS / lightenHex / applyAccent live at module scope (§ THEME
+    // TWEAKS below) so restoreThemeTweaks() can re-apply them at boot.
     const customPicker = document.getElementById('settings-accent-custom');
     const customBtn = document.querySelector('.settings-color-btn[data-accent="custom"]');
 
@@ -169,6 +150,129 @@ function initSettings() {
     } else if (savedAccent) {
         const btn = document.querySelector(`.settings-color-btn[data-accent="${savedAccent}"]`);
         if (btn) btn.click();
+    }
+
+    // ── Magic (secondary) color — mirrors the accent picker ──
+    const magicPicker = document.getElementById('settings-magic-custom');
+    const magicBtns = document.querySelectorAll('#settings-magic .settings-color-btn');
+    const magicCustomBtn = document.querySelector('#settings-magic .settings-color-btn[data-magic="custom"]');
+    function syncMagicUI(name, hex) {
+        magicBtns.forEach(b => b.classList.toggle('active', b.dataset.magic === name));
+        if (name === 'custom' && magicCustomBtn && hex) magicCustomBtn.style.setProperty('--custom-color', hex);
+    }
+    magicBtns.forEach(btn => {
+        if (btn.dataset.magic === 'custom') return;
+        btn.addEventListener('click', () => {
+            applyMagic(MAGIC_PRESETS[btn.dataset.magic]);
+            localStorage.setItem('aruta_magic', btn.dataset.magic);
+            syncMagicUI(btn.dataset.magic);
+        });
+    });
+    if (magicPicker) {
+        const onMagicPick = () => {
+            applyMagic(magicPicker.value);
+            localStorage.setItem('aruta_magic', 'custom');
+            localStorage.setItem('aruta_magic_custom', magicPicker.value);
+            syncMagicUI('custom', magicPicker.value);
+        };
+        magicPicker.addEventListener('input', onMagicPick);
+        magicPicker.addEventListener('change', onMagicPick);
+    }
+    {   // Restore UI state only — the colors were applied at boot.
+        const m = localStorage.getItem('aruta_magic');
+        if (m === 'custom') {
+            const hex = localStorage.getItem('aruta_magic_custom') || MAGIC_PRESETS.purple;
+            if (magicPicker) magicPicker.value = hex;
+            syncMagicUI('custom', hex);
+        } else if (m && MAGIC_PRESETS[m]) syncMagicUI(m);
+    }
+
+    // ── Border color (auto = follows accent) + intensity ──
+    const borderPicker = document.getElementById('settings-border-custom');
+    const borderAutoBtn = document.getElementById('settings-border-auto');
+    const borderCustomBtn = document.querySelector('.settings-color-btn[data-border="custom"]');
+    if (borderPicker) {
+        const onBorderPick = () => {
+            applyBorderTint(borderPicker.value);
+            localStorage.setItem('aruta_border_custom', borderPicker.value);
+            if (borderCustomBtn) {
+                borderCustomBtn.classList.add('active');
+                borderCustomBtn.style.setProperty('--custom-color', borderPicker.value);
+            }
+        };
+        borderPicker.addEventListener('input', onBorderPick);
+        borderPicker.addEventListener('change', onBorderPick);
+    }
+    if (borderAutoBtn) {
+        borderAutoBtn.addEventListener('click', () => {
+            applyBorderTint(null);
+            localStorage.removeItem('aruta_border_custom');
+            borderCustomBtn?.classList.remove('active');
+        });
+    }
+    {
+        const hex = localStorage.getItem('aruta_border_custom');
+        if (hex && borderPicker) {
+            borderPicker.value = hex;
+            if (borderCustomBtn) {
+                borderCustomBtn.classList.add('active');
+                borderCustomBtn.style.setProperty('--custom-color', hex);
+            }
+        }
+    }
+
+    // ── Range rows (border intensity / glass blur / corner roundness) ──
+    // Shared wiring: restore from storage, live-apply + persist on input.
+    function wireRange(id, labelId, key, def, suffix, apply) {
+        const range = document.getElementById(id);
+        if (!range) return;
+        const label = document.getElementById(labelId);
+        const saved = parseInt(localStorage.getItem(key) ?? String(def), 10);
+        range.value = saved;
+        if (label) label.textContent = saved + suffix;
+        range.addEventListener('input', () => {
+            const v = parseInt(range.value, 10);
+            apply(v);
+            localStorage.setItem(key, v);
+            if (label) label.textContent = v + suffix;
+        });
+    }
+    wireRange('settings-border-alpha', 'border-alpha-label', 'aruta_border_alpha', 100, '%', applyBorderAlpha);
+    wireRange('settings-blur', 'blur-label', 'aruta_blur', 18, 'px', applyBlur);
+    wireRange('settings-radius', 'radius-label', 'aruta_radius', 100, '%', applyRadius);
+
+    // ── Background tint ──
+    const bgtintPicker = document.getElementById('settings-bgtint-custom');
+    const bgtintClear = document.getElementById('settings-bgtint-clear');
+    const bgtintBtn = document.querySelector('.settings-color-btn[data-bgtint="custom"]');
+    if (bgtintPicker) {
+        const onBgTintPick = () => {
+            applyBgTint(bgtintPicker.value);
+            localStorage.setItem('aruta_bgtint', bgtintPicker.value);
+            if (bgtintBtn) {
+                bgtintBtn.classList.add('active');
+                bgtintBtn.style.setProperty('--custom-color', bgtintPicker.value);
+            }
+        };
+        bgtintPicker.addEventListener('input', onBgTintPick);
+        bgtintPicker.addEventListener('change', onBgTintPick);
+    }
+    if (bgtintClear) {
+        bgtintClear.addEventListener('click', () => {
+            applyBgTint(null);
+            localStorage.removeItem('aruta_bgtint');
+            bgtintBtn?.classList.remove('active');
+        });
+    }
+    {
+        const hex = localStorage.getItem('aruta_bgtint');
+        if (hex && bgtintPicker) {
+            bgtintPicker.value = hex;
+            if (bgtintBtn) {
+                bgtintBtn.classList.add('active');
+                bgtintBtn.style.setProperty('--custom-color', hex);
+            }
+        }
     }
 
     // Show/hide date
@@ -268,6 +372,20 @@ function initSettings() {
             localStorage.removeItem('aruta_taskbar_autohide');
             localStorage.removeItem('aruta_low_power');
             localStorage.removeItem('aruta_lang');
+            // Theme tweaks (magic / borders / blur / roundness / bg tint)
+            localStorage.removeItem('aruta_magic');
+            localStorage.removeItem('aruta_magic_custom');
+            localStorage.removeItem('aruta_border_custom');
+            localStorage.removeItem('aruta_border_alpha');
+            localStorage.removeItem('aruta_blur');
+            localStorage.removeItem('aruta_radius');
+            localStorage.removeItem('aruta_bgtint');
+            applyMagic(null);
+            applyBorderTint(null);
+            applyBorderAlpha(100);
+            applyBlur(18);
+            applyRadius(100);
+            applyBgTint(null);
             // Performance toggles back to defaults (apply only if overridden)
             for (const [id, config] of Object.entries(PERF_TOGGLES)) {
                 const had = localStorage.getItem('aruta_' + id) != null;
@@ -287,8 +405,7 @@ function initSettings() {
             localStorage.removeItem('aruta_widgets');
             // Reset to defaults
             document.documentElement.style.fontSize = '100%';
-            document.documentElement.style.setProperty('--gold', '#ffc857');
-            document.documentElement.style.setProperty('--gold-light', '#ffe4a0');
+            applyAccent('#ffc857', '#ffe4a0');
             if (currentTheme !== 'dark') toggleTheme();
             // Reset toggles UI
             if (themeToggle) themeToggle.classList.remove('active');
@@ -301,6 +418,18 @@ function initSettings() {
             document.querySelectorAll('.settings-color-btn').forEach(b => b.classList.remove('active'));
             const goldBtn = document.querySelector('.settings-color-btn[data-accent="gold"]');
             if (goldBtn) goldBtn.classList.add('active');
+            const purpleBtn = document.querySelector('#settings-magic .settings-color-btn[data-magic="purple"]');
+            if (purpleBtn) purpleBtn.classList.add('active');
+            // Range rows back to their default positions
+            const resetRange = (id, labelId, v, suffix) => {
+                const range = document.getElementById(id);
+                if (range) range.value = v;
+                const label = document.getElementById(labelId);
+                if (label) label.textContent = v + suffix;
+            };
+            resetRange('settings-border-alpha', 'border-alpha-label', 100, '%');
+            resetRange('settings-blur', 'blur-label', 18, 'px');
+            resetRange('settings-radius', 'radius-label', 100, '%');
             // Reset appearance customizations (background, portrait, name)
             window.appearance?.reset();
             refreshAppearanceUI();
@@ -443,6 +572,124 @@ function restorePerfToggles() {
     }
 }
 window.restorePerfToggles = restorePerfToggles;
+
+/* ────────────────────────────────
+ * § THEME TWEAKS (Appearance)
+ * Accent, magic color, borders, glass blur, roundness, background tint.
+ * Apply functions live at module scope so restoreThemeTweaks() can run at
+ * boot (initSettings is lazy — first Settings open); initSettings only
+ * wires the controls and syncs their UI state.
+ * Inline custom properties override BOTH themes by design (same behavior
+ * the accent picker always had).
+ * ──────────────────────────────── */
+const ACCENTS = {
+    gold:    { gold: '#ffc857', goldLight: '#ffe4a0' },
+    purple:  { gold: '#a78bfa', goldLight: '#c4b5fd' },
+    cyan:    { gold: '#22d3ee', goldLight: '#67e8f9' },
+    rose:    { gold: '#fb7185', goldLight: '#fda4af' },
+    emerald: { gold: '#34d399', goldLight: '#6ee7b7' },
+};
+const MAGIC_PRESETS = {
+    purple: '#a78bfa', ice: '#67e8f9', ember: '#fb923c',
+    blood: '#fb7185', fae: '#34d399',
+};
+
+// Derive a lighter variant by mixing with white (40%) — used for custom colors.
+function lightenHex(hex, amount = 0.4) {
+    const h = hex.replace('#', '');
+    const r = parseInt(h.substr(0, 2), 16);
+    const g = parseInt(h.substr(2, 2), 16);
+    const b = parseInt(h.substr(4, 2), 16);
+    const mix = (c) => Math.round(c + (255 - c) * amount);
+    const toHex = (c) => c.toString(16).padStart(2, '0');
+    return '#' + toHex(mix(r)) + toHex(mix(g)) + toHex(mix(b));
+}
+
+function applyAccent(gold, goldLight) {
+    document.documentElement.style.setProperty('--gold', gold);
+    document.documentElement.style.setProperty('--gold-light', goldLight);
+    // Rune canvas proximity glow + cursor trail follow the accent
+    // (#ffc857 is the built-in default ramp — pass null to restore it).
+    window.setRuneTint?.('accent', gold === '#ffc857' ? null : gold);
+}
+
+// Magic (secondary) color: magic circle, rings, fog/orb tints, terminal
+// accents — everything reading --purple/--mc-color/--bg-ring-col.
+// Passing null or the default purple removes the overrides so the
+// per-theme CSS values take over again.
+function applyMagic(hex) {
+    const s = document.documentElement.style;
+    if (hex && hex !== MAGIC_PRESETS.purple) {
+        s.setProperty('--purple', hex);
+        s.setProperty('--mc-color', hex);
+        s.setProperty('--bg-ring-col', hex);
+        window.setRuneTint?.('magic', hex);
+    } else {
+        s.removeProperty('--purple');
+        s.removeProperty('--mc-color');
+        s.removeProperty('--bg-ring-col');
+        window.setRuneTint?.('magic', null);
+    }
+}
+
+// Borders: null = auto (–-border-tint falls back to the accent).
+function applyBorderTint(hex) {
+    const s = document.documentElement.style;
+    if (hex) s.setProperty('--border-tint', hex);
+    else s.removeProperty('--border-tint');
+}
+function applyBorderAlpha(pct) {
+    const s = document.documentElement.style;
+    if (pct && pct !== 100) s.setProperty('--border-alpha', pct / 100);
+    else s.removeProperty('--border-alpha');
+}
+function applyBlur(px) {
+    const s = document.documentElement.style;
+    if (px != null && px !== 18) s.setProperty('--blur-glass', px + 'px');
+    else s.removeProperty('--blur-glass');
+}
+function applyRadius(pct) {
+    const s = document.documentElement.style;
+    if (pct != null && pct !== 100) s.setProperty('--radius-scale', pct / 100);
+    else s.removeProperty('--radius-scale');
+}
+// Background tint: gradient composed against --bg-base/--bg-core so it
+// stays theme-aware when dark/light switches.
+function applyBgTint(hex) {
+    const s = document.documentElement.style;
+    if (hex) {
+        s.setProperty('--bg', `color-mix(in srgb, ${hex} 22%, var(--bg-base))`);
+        s.setProperty('--bg-grad',
+            `radial-gradient(ellipse at 50% 40%, color-mix(in srgb, ${hex} 40%, var(--bg-core)) 0%, color-mix(in srgb, ${hex} 22%, var(--bg-base)) 65%)`);
+    } else {
+        s.removeProperty('--bg');
+        s.removeProperty('--bg-grad');
+    }
+}
+
+/**
+ * Re-apply every persisted Appearance tweak at page load — including the
+ * accent, whose restore used to live only in the lazy initSettings(), so
+ * a reload reverted it until the Settings window was opened.
+ */
+function restoreThemeTweaks() {
+    const accent = localStorage.getItem('aruta_accent');
+    if (accent === 'custom') {
+        const hex = localStorage.getItem('aruta_accent_custom') || '#ffc857';
+        applyAccent(hex, lightenHex(hex, 0.4));
+    } else if (accent && ACCENTS[accent]) {
+        applyAccent(ACCENTS[accent].gold, ACCENTS[accent].goldLight);
+    }
+    const magic = localStorage.getItem('aruta_magic');
+    if (magic === 'custom') applyMagic(localStorage.getItem('aruta_magic_custom') || MAGIC_PRESETS.purple);
+    else if (magic && MAGIC_PRESETS[magic]) applyMagic(MAGIC_PRESETS[magic]);
+    applyBorderTint(localStorage.getItem('aruta_border_custom') || null);
+    applyBorderAlpha(parseInt(localStorage.getItem('aruta_border_alpha') ?? '100', 10));
+    applyBlur(parseInt(localStorage.getItem('aruta_blur') ?? '18', 10));
+    applyRadius(parseInt(localStorage.getItem('aruta_radius') ?? '100', 10));
+    applyBgTint(localStorage.getItem('aruta_bgtint') || null);
+}
+window.restoreThemeTweaks = restoreThemeTweaks;
 
 
 /* ────────────────────────────────

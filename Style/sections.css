@@ -309,8 +309,8 @@
 .proj-topic {
     font-size: 0.70rem; font-weight: var(--fw-bold); letter-spacing: 0.04em;
     padding: 2px 10px; border-radius: var(--radius-xl);
-    color: var(--purple); background: rgba(167,139,250,0.10);
-    border: 1px solid rgba(167,139,250,0.20);
+    color: var(--purple); background: color-mix(in srgb, var(--purple) 10%, transparent);
+    border: 1px solid color-mix(in srgb, var(--purple) 20%, transparent);
     transition: background-color var(--dur-quick), border-color var(--dur-quick), color var(--dur-quick), transform var(--dur-quick), box-shadow var(--dur-quick), opacity var(--dur-quick);
 }
 [data-theme="light"] .proj-topic {

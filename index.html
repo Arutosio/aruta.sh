@@ -503,6 +503,52 @@
                                     </label>
                                 </div>
                             </div>
+                            <div class="settings-row">
+                                <div class="settings-label"><span class="settings-icon">🔮</span><div><strong data-i18n="settings_magic">Magic Color</strong><br><small data-i18n="settings_magic_desc">Runes, magic circle, rings and fog tint</small></div></div>
+                                <div class="settings-colors" id="settings-magic">
+                                    <button class="settings-color-btn active" data-magic="purple" style="background:#a78bfa;" title="Purple" data-i18n-title="accent_purple"></button>
+                                    <button class="settings-color-btn" data-magic="ice" style="background:#67e8f9;" title="Ice" data-i18n-title="magic_ice"></button>
+                                    <button class="settings-color-btn" data-magic="ember" style="background:#fb923c;" title="Ember" data-i18n-title="magic_ember"></button>
+                                    <button class="settings-color-btn" data-magic="blood" style="background:#fb7185;" title="Blood" data-i18n-title="magic_blood"></button>
+                                    <button class="settings-color-btn" data-magic="fae" style="background:#34d399;" title="Fae" data-i18n-title="magic_fae"></button>
+                                    <label class="settings-color-btn settings-color-custom" data-magic="custom" title="Custom" data-i18n-title="accent_custom">
+                                        <span class="custom-swatch">🎨</span>
+                                        <input type="color" id="settings-magic-custom" value="#a78bfa">
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="settings-row">
+                                <div class="settings-label"><span class="settings-icon">🖼️</span><div><strong data-i18n="settings_border">Border Color</strong><br><small data-i18n="settings_border_desc">Window and panel borders (auto = follows accent)</small></div></div>
+                                <div class="settings-actions">
+                                    <button class="settings-reset-btn" id="settings-border-auto" data-i18n="settings_border_auto">Auto</button>
+                                    <label class="settings-color-btn settings-color-custom" data-border="custom" title="Custom" data-i18n-title="accent_custom">
+                                        <span class="custom-swatch">🎨</span>
+                                        <input type="color" id="settings-border-custom" value="#ffc857">
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="settings-row">
+                                <div class="settings-label"><span class="settings-icon">▦</span><div><strong data-i18n="settings_border_alpha">Border Intensity</strong><br><small data-i18n="settings_border_alpha_desc">How visible borders are</small></div></div>
+                                <div class="settings-range-wrap"><input type="range" id="settings-border-alpha" class="settings-range" min="40" max="160" value="100" step="10"><span class="settings-range-value" id="border-alpha-label">100%</span></div>
+                            </div>
+                            <div class="settings-row">
+                                <div class="settings-label"><span class="settings-icon">🌫</span><div><strong data-i18n="settings_blur">Glass Blur</strong><br><small data-i18n="settings_blur_desc">Backdrop blur of glass panels</small></div></div>
+                                <div class="settings-range-wrap"><input type="range" id="settings-blur" class="settings-range" min="0" max="24" value="18" step="2"><span class="settings-range-value" id="blur-label">18px</span></div>
+                            </div>
+                            <div class="settings-row">
+                                <div class="settings-label"><span class="settings-icon">⬜</span><div><strong data-i18n="settings_radius">Corner Roundness</strong><br><small data-i18n="settings_radius_desc">Windows, cards and buttons corner radius</small></div></div>
+                                <div class="settings-range-wrap"><input type="range" id="settings-radius" class="settings-range" min="0" max="200" value="100" step="10"><span class="settings-range-value" id="radius-label">100%</span></div>
+                            </div>
+                            <div class="settings-row">
+                                <div class="settings-label"><span class="settings-icon">🌌</span><div><strong data-i18n="settings_bgtint">Background Tint</strong><br><small data-i18n="settings_bgtint_desc">Recolor the desktop gradient</small></div></div>
+                                <div class="settings-actions">
+                                    <button class="settings-reset-btn" id="settings-bgtint-clear" data-i18n="settings_name_clear">Reset</button>
+                                    <label class="settings-color-btn settings-color-custom" data-bgtint="custom" title="Custom" data-i18n-title="accent_custom">
+                                        <span class="custom-swatch">🎨</span>
+                                        <input type="color" id="settings-bgtint-custom" value="#1a1035">
+                                    </label>
+                                </div>
+                            </div>
                         </div>
                         <!-- Performance -->
                         <div class="settings-page" data-page="performance">

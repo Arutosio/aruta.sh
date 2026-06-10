@@ -21,6 +21,42 @@ function initRuneParticles() {
         dark:  { br: 110, bg: 142, bb: 251, hr: 255, hg: 200, hb: 87, trail: '#ffc857',  tShadow: 'rgba(255,200,87,0.55)' },
         light: { br:  90, bg:  50, bb:  10, hr: 139, hg: 105, hb:  20, trail: '#8b6914',  tShadow: 'rgba(139,105,20,0.55)' }
     };
+    const THEMES_DEFAULT = { dark: { ...THEMES.dark }, light: { ...THEMES.light } };
+
+    /**
+     * Re-tint the rune color ramps from Settings → Appearance.
+     *   setRuneTint('magic',  hex|null) — base drift color (null = default)
+     *   setRuneTint('accent', hex|null) — proximity-glow + cursor trail color
+     * Light variants are darkened (×0.5 / ×0.55) so glyphs stay legible on
+     * the parchment background.
+     */
+    window.setRuneTint = function (kind, hex) {
+        const rgb = hex ? [
+            parseInt(hex.slice(1, 3), 16),
+            parseInt(hex.slice(3, 5), 16),
+            parseInt(hex.slice(5, 7), 16),
+        ] : null;
+        if (kind === 'magic') {
+            const d = rgb || [THEMES_DEFAULT.dark.br, THEMES_DEFAULT.dark.bg, THEMES_DEFAULT.dark.bb];
+            const l = rgb ? rgb.map(c => Math.round(c * 0.5))
+                          : [THEMES_DEFAULT.light.br, THEMES_DEFAULT.light.bg, THEMES_DEFAULT.light.bb];
+            [THEMES.dark.br,  THEMES.dark.bg,  THEMES.dark.bb]  = d;
+            [THEMES.light.br, THEMES.light.bg, THEMES.light.bb] = l;
+        } else if (kind === 'accent') {
+            if (rgb) {
+                [THEMES.dark.hr, THEMES.dark.hg, THEMES.dark.hb] = rgb;
+                THEMES.dark.trail   = hex;
+                THEMES.dark.tShadow = `rgba(${rgb[0]},${rgb[1]},${rgb[2]},0.55)`;
+                const l = rgb.map(c => Math.round(c * 0.55));
+                [THEMES.light.hr, THEMES.light.hg, THEMES.light.hb] = l;
+                THEMES.light.trail   = `rgb(${l[0]},${l[1]},${l[2]})`;
+                THEMES.light.tShadow = `rgba(${l[0]},${l[1]},${l[2]},0.55)`;
+            } else {
+                Object.assign(THEMES.dark,  { hr: THEMES_DEFAULT.dark.hr,  hg: THEMES_DEFAULT.dark.hg,  hb: THEMES_DEFAULT.dark.hb,  trail: THEMES_DEFAULT.dark.trail,  tShadow: THEMES_DEFAULT.dark.tShadow });
+                Object.assign(THEMES.light, { hr: THEMES_DEFAULT.light.hr, hg: THEMES_DEFAULT.light.hg, hb: THEMES_DEFAULT.light.hb, trail: THEMES_DEFAULT.light.trail, tShadow: THEMES_DEFAULT.light.tShadow });
+            }
+        }
+    };
     const MOUSE_R = 170;
     const MC_R    = 190;
     let mouse = { x: -999, y: -999 };
