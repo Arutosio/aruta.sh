@@ -408,10 +408,16 @@ export default {
             crypto.getRandomValues(buf);
             return [...buf].map(n => LINK_WORDS[n % LINK_WORDS.length]).join('-');
         }
-        const LINK_TRACKERS = [
-            // Same working set as tavern — Trystero's defaults include dead hosts.
-            'wss://tracker.openwebtorrent.com',
-            'wss://tracker.webtorrent.dev',
+        /* Trystero's option is `relayUrls` — `trackerUrls` is silently ignored
+         * and the bundle falls back to its built-in defaults, most of which
+         * are dead. Public WebTorrent trackers rot fast; list every candidate
+         * (explicit relayUrls are ALL used, dead ones just retry in the
+         * background) and let the relay-status log show which are alive. */
+        const LINK_RELAYS = [
+            'wss://tracker.btorrent.xyz',         // alive 2026-06
+            'wss://tracker.novage.com.ua',        // alive 2026-06
+            'wss://tracker.openwebtorrent.com',   // dead 2026-06, kept for revival
+            'wss://tracker.webtorrent.dev',       // dead 2026-06, kept for revival
             'wss://tracker.files.fm:7073/announce',
             'wss://tracker.ghostchu-services.top',
         ];
@@ -441,6 +447,17 @@ export default {
             if (!b64) { alert('ROM data missing from storage.'); return; }
             if (typeof mGBA !== 'function' || !globalThis.__trystero?.torrent) {
                 alert('Link core missing — reinstall the GBA app (Package Store → Defaults).');
+                return;
+            }
+            /* Trystero derives the room key with crypto.subtle, which only
+             * exists in secure contexts (HTTPS or localhost). On plain
+             * http://<lan-ip> it is undefined and peer discovery dies
+             * silently — fail loudly instead. */
+            if (!window.isSecureContext || !crypto?.subtle) {
+                console.error('[gba-link] insecure context — crypto.subtle unavailable, ' +
+                              'multiplayer needs HTTPS (or localhost). Current origin: ' + location.origin);
+                alert('Link mode needs HTTPS (or localhost).\n' +
+                      'Cross-device multiplayer cannot work over plain http:// on a LAN IP.');
                 return;
             }
 
@@ -608,6 +625,8 @@ export default {
                 try { s.stats = { ...__linkStats }; } catch {}
                 try { s.netLog = L.netLog.slice(-16); } catch {}
                 try { s.game = L.game; } catch {}
+                try { s.selfId = globalThis.__trystero.torrent.selfId; } catch {}
+                try { s.relays = relayStates(); } catch {}
                 return s;
             }
             llog('core ready', {
@@ -636,9 +655,28 @@ export default {
              * games' own frame-based link timeouts never fire spuriously.
              */
             const room = globalThis.__trystero.torrent.joinRoom(
-                { appId: 'aruta-gba-link', trackerUrls: LINK_TRACKERS },
+                { appId: 'aruta-gba-link', relayUrls: LINK_RELAYS },
                 'gba-' + code
             );
+            llog('selfId', globalThis.__trystero.torrent.selfId || '(n/a)');
+            /* Rendezvous health: report each relay's socket state once they've
+             * had a moment to connect. Zero OPEN relays = peers can never find
+             * each other, regardless of WebRTC — say so loudly. */
+            function relayStates() {
+                try {
+                    const socks = globalThis.__trystero.torrent.getRelaySockets?.() || {};
+                    const st = ['CONNECTING', 'OPEN', 'CLOSING', 'CLOSED'];
+                    return Object.fromEntries(Object.entries(socks)
+                        .map(([u, s]) => [u, st[s.readyState] || s.readyState]));
+                } catch { return {}; }
+            }
+            setTimeout(() => {
+                const rs = relayStates();
+                const open = Object.values(rs).filter(s => s === 'OPEN').length;
+                llog('relay status (' + open + ' open)', rs);
+                if (!open) lwarn('NO tracker relay is connected — peer discovery is dead. ' +
+                                 'Check network/firewall; all public trackers may be down.', rs);
+            }, 6000);
             const [sendSio, getSio] = room.makeAction('sio');
             const [sendCtl, getCtl] = room.makeAction('ctl');
             const players = new Map();   // host: peerId → slave id (1..3)
@@ -690,6 +728,7 @@ export default {
             }
             if (isHost) {
                 room.onPeerJoin((id) => {
+                    llog('peer join', id);
                     const used = new Set(players.values());
                     let sid = 1;
                     while (used.has(sid)) sid++;
@@ -702,6 +741,7 @@ export default {
                     setLinkState(players.size + 1);
                 });
                 room.onPeerLeave((id) => {
+                    llog('peer leave', id);
                     if (!players.has(id)) return;
                     players.delete(id);
                     // A cable yanked mid-session kills the link for everyone.
@@ -709,7 +749,8 @@ export default {
                     sendCtl({ t: 'bye' });
                 });
             } else {
-                room.onPeerLeave((id) => { if (id === hostId) linkLost(); });
+                room.onPeerJoin((id) => llog('peer join', id));
+                room.onPeerLeave((id) => { llog('peer leave', id); if (id === hostId) linkLost(); });
             }
             getCtl((msg, id) => {
                 if (!msg) return;

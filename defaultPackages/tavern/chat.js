@@ -427,13 +427,17 @@ class TavernChat {
         // no password. Empty string = open room.
         const config = { appId: TAVERN_APP_ID };
         if (this.password) config.password = this.password;
-        // Override Trystero's default tracker list — some shipped defaults
-        // (btorrent.xyz) have been offline for months, leaving peer
-        // discovery silently dead. Current working public trackers:
+        // Override Trystero's default tracker list. NOTE: the option is
+        // `relayUrls` — `trackerUrls` is silently ignored (that bug shipped
+        // for a while and left this override inert). Public trackers rot
+        // fast; list every candidate — explicit relayUrls are ALL used and
+        // dead ones just retry in the background.
         if (strategy === 'torrent') {
-            config.trackerUrls = [
-                'wss://tracker.openwebtorrent.com',
-                'wss://tracker.webtorrent.dev',
+            config.relayUrls = [
+                'wss://tracker.btorrent.xyz',         // alive 2026-06
+                'wss://tracker.novage.com.ua',        // alive 2026-06
+                'wss://tracker.openwebtorrent.com',   // dead 2026-06, kept for revival
+                'wss://tracker.webtorrent.dev',       // dead 2026-06, kept for revival
                 'wss://tracker.files.fm:7073/announce',
                 'wss://tracker.ghostchu-services.top',
             ];
