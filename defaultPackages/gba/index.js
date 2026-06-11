@@ -580,6 +580,13 @@ export default {
                 connected = false;
                 pendingVal = null;
                 pendingReplies = null;
+                heldX = null;
+                lastCq = -1;
+                // Unblock a master frozen mid-transfer: complete it like a
+                // yanked cable would (all peer slots read 0xFFFF).
+                if (isHost) setTimeout(() => {
+                    try { if (api.sioTransferPending()) api.sioCompleteMulti4(0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF); } catch {}
+                }, 0);
                 api.sioSetLink(isHost ? 0 : Math.max(myId, 1), 1);
                 paused = true;
                 flushLinkSram();
@@ -631,7 +638,9 @@ export default {
              * correctness doesn't. */
             let lastXAt = 0;          // slave: when the last master transfer arrived
             let masterFrame = 0;      // slave: master's frame counter from 'x'/'f' msgs
-            const __linkStats = { sioStarts: 0, xRecv: 0, rRecv: 0, completes: 0, lastSent: -1, lastRecv: -1 };
+            const __linkStats = { sioStarts: 0, xRecv: 0, rRecv: 0, completes: 0, lastSent: -1, lastRecv: -1, xHeld: 0, xForced: 0 };
+            const netLog = [];        // arrival ring: {t, q, at, sv?} for ordering forensics
+            function netLogPush(e) { netLog.push(e); if (netLog.length > 256) netLog.shift(); }
             // Drain at SUB-frame granularity (~20k cycles ≈ 0.07 frames per
             // slice): replies/completions happen this turn, but a 9-transfer
             // master burst advances the slave's clock by well under a frame.
@@ -647,27 +656,57 @@ export default {
                 api.runCycles(4096);
                 frameCount = api.frameCount();
             }
+            /* Sequencing barrier (slave): the master emits 'c' N and 'x' N+1
+             * back-to-back inside one burst. Our reply for N+1 is only valid
+             * AFTER completion N's ISR ran DoSend — so never answer an 'x'
+             * whose predecessor 'c' hasn't been processed yet. The held 'x'
+             * is answered from the matching 'c' handler; a watchdog answers
+             * anyway after 1s so a seq desync can't deadlock the link. */
+            let lastCq = -1;          // slave: last completion seq processed
+            let heldX = null;         // slave: 'x' parked until its 'c' arrives
+            let heldXAt = 0;
+            function answerX(msg) {
+                __linkStats.xRecv++;
+                __linkStats.lastRecv = msg.v;
+                lastXAt = performance.now();
+                if (typeof msg.f === 'number' && msg.f > masterFrame) masterFrame = msg.f;
+                drainQueue();
+                const sv = api.sioGetSendValue();
+                netLogPush({ t: 'r', q: msg.q, at: performance.now() | 0, sv });
+                sendSio({ t: 'r', q: msg.q, sv }, hostId);
+            }
             getSio((msg, id) => {
                 if (!msg || !connected) return;
                 if (!isHost && id === hostId && msg.t === 'x') {
-                    // Master clocked a transfer. Finish queued completions
-                    // first so our reply is the value the game loaded after
-                    // the PREVIOUS transfer's ISR — then answer.
-                    __linkStats.xRecv++;
-                    __linkStats.lastRecv = msg.v;
-                    lastXAt = performance.now();
-                    if (typeof msg.f === 'number' && msg.f > masterFrame) masterFrame = msg.f;
-                    drainQueue();
-                    sendSio({ t: 'r', q: msg.q, sv: api.sioGetSendValue() }, hostId);
+                    netLogPush({ t: 'x', q: msg.q, at: performance.now() | 0 });
+                    if (lastCq >= 0 && msg.q !== ((lastCq + 1) & 0xFFFF)) {
+                        __linkStats.xHeld++;
+                        heldX = msg;
+                        heldXAt = performance.now();
+                        return;
+                    }
+                    heldX = null;
+                    answerX(msg);
                 } else if (!isHost && id === hostId && msg.t === 'c') {
                     // Full value vector for a finished transfer — queue it in
                     // the core; an mTiming event delivers one per serviced
                     // serial IRQ (two-phase, Timer3 cadence).
                     __linkStats.completes++;
                     const v = msg.vals || [];
+                    const dbgN = (n) => { try { return Module.ccall(n, 'number', [], []); } catch { return -1; } };
+                    const c0 = dbgN('sioGetCompleteCount'), i0 = dbgN('sioGetIrqCount');
                     api.sioPushCompletion(
                         v[0] ?? 0xFFFF, v[1] ?? 0xFFFF, v[2] ?? 0xFFFF, v[3] ?? 0xFFFF);
                     drainQueue();
+                    netLogPush({ t: 'c', q: msg.q, at: performance.now() | 0, sv: api.sioGetSendValue(),
+                                 dc: dbgN('sioGetCompleteCount') - c0, di: dbgN('sioGetIrqCount') - i0,
+                                 if7: window.__gbaLink.read16(0x4000202) & 0x80, qn: api.sioQueueCount() });
+                    lastCq = msg.q & 0xFFFF;
+                    if (heldX && heldX.q === ((lastCq + 1) & 0xFFFF)) {
+                        const m = heldX;
+                        heldX = null;
+                        answerX(m);
+                    }
                 } else if (isHost && msg.t === 'r' && players.has(id) &&
                            msg.q === pendingSeq && pendingVal !== null) {
                     __linkStats.rRecv++;
@@ -697,7 +736,15 @@ export default {
                 Module.onSioStart = (v) => {
                     __linkStats.sioStarts++;
                     __linkStats.lastSent = v;
-                    if (!connected) return;   // game started a transfer with no peer
+                    if (!connected) {
+                        // No peer: complete like real hardware (peer slots
+                        // 0xFFFF) so the core never stays latched Busy. Defer —
+                        // we're inside the wasm call stack right now.
+                        setTimeout(() => {
+                            try { if (pendingVal === null && api.sioTransferPending()) api.sioCompleteMulti4(v & 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF); } catch {}
+                        }, 0);
+                        return;
+                    }
                     pendingSeq = (pendingSeq + 1) & 0xFFFF;
                     pendingVal = v;
                     pendingReplies = new Map();
@@ -710,6 +757,14 @@ export default {
             window.__gbaLink = {
                 stats: __linkStats, isHost,
                 get pending() { return pendingVal; },
+                get loopState() {
+                    return { midFrame, paused, connected, acc, frameCount,
+                             pendingSeq, pendingVal, masterFrame, lastCq,
+                             heldX: heldX ? heldX.q : null,
+                             transferPending: api.sioTransferPending(),
+                             queueCount: api.sioQueueCount() };
+                },
+                get netLog() { return netLog.slice(-96); },
                 get sio() {
                     return {
                         siocnt: dbg('sioGetSiocnt').toString(2).padStart(16, '0'),
@@ -837,7 +892,19 @@ export default {
                 //    master's frame counter. Incoming transfers still complete
                 //    from the network callback while stalled.
                 if (isHost) {
+                    // Self-heal: a transfer cancelled out-of-band (link drop
+                    // mid-flight) can leave midFrame latched with nothing
+                    // pending in the core — that froze emulation for good.
+                    if (midFrame && pendingVal === null && !api.sioTransferPending()) midFrame = false;
                     if (pendingVal !== null || midFrame) { acc = 0; return; }
+                } else if (heldX && now - heldXAt > 1000) {
+                    // Barrier watchdog: predecessor 'c' never came (seq desync)
+                    // — answer anyway rather than deadlock the master.
+                    __linkStats.xForced++;
+                    const m = heldX;
+                    heldX = null;
+                    lastCq = (m.q - 1) & 0xFFFF;
+                    answerX(m);
                 } else if (connected && now - lastXAt < 2000 && frameCount > masterFrame + 3 &&
                            !api.sioQueueCount()) {
                     // Frame-capped to the master — but never stall while

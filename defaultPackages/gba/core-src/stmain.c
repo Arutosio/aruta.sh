@@ -423,10 +423,12 @@ EMSCRIPTEN_KEEPALIVE void runLoop(void) {
  * transfer queue at sub-frame granularity, so a burst of master transfers
  * doesn't make the slave's game clock race ahead of the master's. */
 static struct mTimingEvent sioBreakEvent;
+static bool sioBreakHit = false;
 static void _sioBreak(struct mTiming* timing, void* context, uint32_t cyclesLate) {
 	UNUSED(timing);
 	UNUSED(context);
 	UNUSED(cyclesLate);
+	sioBreakHit = true;
 	if (core) {
 		((struct GBA*) core->board)->earlyExit = true;
 	}
@@ -445,7 +447,21 @@ EMSCRIPTEN_KEEPALIVE void runCycles(int n) {
 		mTimingDeschedule(&gba->timing, &sioBreakEvent);
 	}
 	mTimingSchedule(&gba->timing, &sioBreakEvent, n > 0 ? n : 1);
-	core->runLoop(core);
+	/* core->runLoop returns at EVERY timing-event batch (ARMRunLoop steps to
+	 * the next event, processes it, returns) — a single call runs ~one HBlank
+	 * of emulated time, not n cycles. Loop until the break event fires, or
+	 * the queue drains and the ISR work this slice exists for never happens:
+	 * the slave then replies with the PREVIOUS transfer's halfword and the
+	 * games' link protocol shifts by one slot (checksum errors, lost
+	 * commands, LAG_SLAVE). */
+	sioBreakHit = false;
+	int guard = 100000;
+	while (!sioBreakHit && guard--) {
+		core->runLoop(core);
+	}
+	if (mTimingIsScheduled(&gba->timing, &sioBreakEvent)) {
+		mTimingDeschedule(&gba->timing, &sioBreakEvent);
+	}
 }
 
 EMSCRIPTEN_KEEPALIVE int frameCount(void) {
