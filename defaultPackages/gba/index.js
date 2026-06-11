@@ -317,31 +317,101 @@ export default {
         };
         let linkCleanup = null;   // set while link mode is active
 
+        /* Short human-friendly room codes: 3 words from a fixed list. */
+        const LINK_WORDS = [
+            'luna', 'fuoco', 'rana', 'stella', 'drago', 'lupo', 'gufo', 'mago',
+            'rosa', 'neve', 'onda', 'vento', 'sole', 'orso', 'volpe', 'fata',
+            'rune', 'gemma', 'torre', 'bosco', 'lago', 'rovo', 'falco', 'tuono',
+            'perla', 'corvo', 'spada', 'scudo', 'elfo', 'troll', 'nano', 'arco',
+        ];
+        function linkMakeCode() {
+            const buf = new Uint32Array(3);
+            crypto.getRandomValues(buf);
+            return [...buf].map(n => LINK_WORDS[n % LINK_WORDS.length]).join('-');
+        }
+        const LINK_TRACKERS = [
+            // Same working set as tavern — Trystero's defaults include dead hosts.
+            'wss://tracker.openwebtorrent.com',
+            'wss://tracker.webtorrent.dev',
+            'wss://tracker.files.fm:7073/announce',
+            'wss://tracker.ghostchu-services.top',
+        ];
+
         async function startLink(rom) {
             const b64 = await ctx.storage.get('rom_' + rom.id);
             if (!b64) { alert('ROM data missing from storage.'); return; }
-            if (typeof mGBA !== 'function') {
+            if (typeof mGBA !== 'function' || !globalThis.__trystero?.torrent) {
                 alert('Link core missing — reinstall the GBA app (Package Store → Defaults).');
                 return;
             }
+
+            /* ── lobby: create a room (host/master) or join one (guest/slave) ── */
+            root.innerHTML = `
+                <div class="gba-player">
+                    <div class="gba-toolbar">
+                        <button class="gba-btn" id="gba-back">← Library</button>
+                        <span class="gba-playing">🔗 ${escapeHTML(rom.name)}</span>
+                    </div>
+                    <div class="gba-lobby">
+                        <div class="gba-lobby-box">
+                            <div class="gba-lobby-title">Link cable — P2P</div>
+                            <div class="gba-lobby-hint">Both players need their own copy of the game.<br>One creates the room, the other joins with the code.</div>
+                            <button class="gba-btn gba-lobby-btn" id="gba-create">🛖 Create room</button>
+                            <div class="gba-lobby-or">— or —</div>
+                            <div class="gba-lobby-join">
+                                <input id="gba-code" type="text" placeholder="luna-fuoco-rana" spellcheck="false" autocomplete="off">
+                                <button class="gba-btn gba-lobby-btn" id="gba-join">Join</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            root.querySelector('#gba-back').addEventListener('click', () => location.reload());
+            root.querySelector('#gba-create').addEventListener('click', () => {
+                bootLinkCore(rom, b64, 'host', linkMakeCode());
+            });
+            const joinIt = () => {
+                const code = root.querySelector('#gba-code').value.trim().toLowerCase();
+                if (!code) return;
+                bootLinkCore(rom, b64, 'guest', code);
+            };
+            root.querySelector('#gba-join').addEventListener('click', joinIt);
+            root.querySelector('#gba-code').addEventListener('keydown', (e) => { if (e.key === 'Enter') joinIt(); });
+        }
+
+        async function bootLinkCore(rom, b64, role, code) {
             playing = rom;
             rom.lastPlayed = Date.now();
             await ctx.storage.set('roms', roms);
             const savB64 = await ctx.storage.get('sav_' + rom.id);
+            const isHost = role === 'host';
 
             root.innerHTML = `
                 <div class="gba-player">
                     <div class="gba-toolbar">
                         <button class="gba-btn" id="gba-back">← Library</button>
                         <span class="gba-playing">🔗 ${escapeHTML(rom.name)}</span>
-                        <span class="gba-link-status" id="gba-link-status">solo</span>
+                        <span class="gba-link-code" id="gba-link-code" title="Room code — click to copy">${escapeHTML(code)}</span>
+                        <span class="gba-link-status" id="gba-link-status">waiting…</span>
                     </div>
                     <div class="gba-screen gba-link-screen">
                         <canvas id="gba-canvas" width="240" height="160"></canvas>
+                        <div class="gba-link-overlay" id="gba-link-overlay">
+                            <div>⌛ Waiting for the other player…<br><span class="gba-link-overlay-code">${escapeHTML(code)}</span></div>
+                        </div>
                     </div>
-                    <div class="gba-foot">Z=B · X=A · A=L · S=R · Enter=Start · Shift=Select</div>
+                    <div class="gba-foot">Z=B · X=A · A=L · S=R · Enter=Start · Shift=Select · ${isHost ? 'P1 (host)' : 'P2 (guest)'}</div>
                 </div>
             `;
+            const statusEl = root.querySelector('#gba-link-status');
+            const overlayEl = root.querySelector('#gba-link-overlay');
+            root.querySelector('#gba-link-code').addEventListener('click', () => {
+                ctx.clipboard.write(code).catch(() => {});
+            });
+            function setStatus(text, on) {
+                statusEl.textContent = text;
+                statusEl.classList.toggle('on', !!on);
+            }
             const canvas = root.querySelector('#gba-canvas');
             const ctx2d = canvas.getContext('2d');
             const imageData = ctx2d.createImageData(240, 160);
@@ -374,12 +444,89 @@ export default {
                 Module.FS.writeFile('/rom.gba', b64ToBytes(b64));
                 if (savB64) Module.FS.writeFile('/data/saves/rom.sav', b64ToBytes(savB64));
                 if (!api.loadGame('/rom.gba')) throw new Error('core rejected ROM');
-                api.sioSetLink(0, 0); // master, no peer yet (P2P lobby lands in M2)
+                api.sioSetLink(isHost ? 0 : 1, 0); // connected flips when the peer arrives
             } catch (err) {
                 console.warn('[gba] link core boot failed', err);
                 root.querySelector('.gba-screen').innerHTML =
                     `<div class="gba-offline">⚠ Link core failed to start.<br>${escapeHTML(String(err))}</div>`;
                 return;
+            }
+
+            /* ── Trystero room: serial bridge + presence ──
+             * Protocol (host = GBA master, guest = GBA slave):
+             *  host  onSioStart(v) ──sio──▶ {t:'x', q, v}
+             *  guest on 'x': sv = own SIOMLT_SEND; complete(v, sv); reply {t:'r', q, sv}
+             *  host  on 'r' (matching q): complete(v, sv)
+             * The GBA games themselves poll the busy bit / wait for the SIO
+             * IRQ, so emulation keeps running while a transfer is in flight —
+             * that's what makes menu-driven protocols (Pokémon trades) work
+             * over real network latency.
+             */
+            const room = globalThis.__trystero.torrent.joinRoom(
+                { appId: 'aruta-gba-link', trackerUrls: LINK_TRACKERS },
+                'gba-' + code
+            );
+            const [sendSio, getSio] = room.makeAction('sio');
+            const [sendCtl, getCtl] = room.makeAction('ctl');
+            let peerId = null;
+            let connected = false;
+            let paused = false;
+            let frameCount = 0;
+            let peerFrames = 0;
+            let peerFramesAt = 0;
+            let pendingVal = null;     // host: value in flight
+            let pendingSeq = 0;
+            let pendingSince = 0;
+
+            function peerConnected(id) {
+                if (peerId) return;        // room is full — ignore extras
+                peerId = id;
+                connected = true;
+                paused = false;
+                api.sioSetLink(isHost ? 0 : 1, 1);
+                overlayEl.classList.add('hide');
+                setStatus(isHost ? 'connected · P1' : 'connected · P2', true);
+            }
+            function peerLost() {
+                if (!connected) return;
+                connected = false;
+                peerId = null;
+                pendingVal = null;
+                api.sioSetLink(isHost ? 0 : 1, 0);
+                paused = true;
+                flushLinkSram();
+                setStatus('disconnected', false);
+                overlayEl.querySelector('div').innerHTML =
+                    '🔌 Peer disconnected.<br>Save is safe — go back and relink.';
+                overlayEl.classList.remove('hide');
+            }
+            room.onPeerJoin((id) => peerConnected(id));
+            room.onPeerLeave((id) => { if (id === peerId) peerLost(); });
+            getCtl((msg, id) => {
+                if (id !== peerId || !msg) return;
+                if (msg.t === 'f') { peerFrames = msg.n | 0; peerFramesAt = performance.now(); }
+                else if (msg.t === 'bye') peerLost();
+            });
+            getSio((msg, id) => {
+                if (id !== peerId || !msg || !connected) return;
+                if (msg.t === 'x' && !isHost) {
+                    // Master clocked a transfer — answer with our send value.
+                    const sv = api.sioGetSendValue();
+                    api.sioCompleteMulti(msg.v, sv);
+                    sendSio({ t: 'r', q: msg.q, sv }, peerId);
+                } else if (msg.t === 'r' && isHost && msg.q === pendingSeq && pendingVal !== null) {
+                    api.sioCompleteMulti(pendingVal, msg.sv);
+                    pendingVal = null;
+                }
+            });
+            if (isHost) {
+                Module.onSioStart = (v) => {
+                    if (!connected) return;   // game started a transfer with no peer
+                    pendingSeq = (pendingSeq + 1) & 0xFFFF;
+                    pendingVal = v;
+                    pendingSince = performance.now();
+                    sendSio({ t: 'x', q: pendingSeq, v }, peerId);
+                };
             }
 
             /* ── audio: scheduled AudioBufferSources @ core rate 32768 Hz ── */
@@ -453,9 +600,25 @@ export default {
                 acc += now - last;
                 last = now;
                 if (acc > 100) acc = 100; // tab was hidden — don't fast-forward
+                if (paused) { acc = 0; return; }
+                // Transfer watchdog: a reply should arrive within seconds even
+                // on a bad link — anything longer means the peer is gone.
+                if (pendingVal !== null && now - pendingSince > 10000) peerLost();
+                // Soft frame sync: don't let this side run away from the peer
+                // (keeps both players inside link menus together). Only when
+                // the peer's counter is fresh, so a stall can't deadlock us.
+                if (connected && peerFramesAt && now - peerFramesAt < 2000 &&
+                    frameCount - peerFrames > 120) {
+                    acc = 0;
+                    return;
+                }
                 let ran = false;
                 while (acc >= FRAME_MS) {
                     api.runFrame();
+                    frameCount++;
+                    if (connected && frameCount % 30 === 0) {
+                        try { sendCtl({ t: 'f', n: frameCount }, peerId); } catch {}
+                    }
                     acc -= FRAME_MS;
                     ran = true;
                 }
@@ -492,6 +655,8 @@ export default {
                 document.removeEventListener('pointerdown', onClickResume);
                 document.removeEventListener('visibilitychange', onVis);
                 await flushLinkSram();
+                try { if (peerId) sendCtl({ t: 'bye' }, peerId); } catch {}
+                try { await room.leave(); } catch {}
                 try { if (audioCtx) await audioCtx.close(); } catch {}
                 try { api.quitGame(); } catch {}
             };

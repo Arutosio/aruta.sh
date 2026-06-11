@@ -128,3 +128,40 @@ body { color: var(--gba-text); }
     object-fit: contain;
     image-rendering: pixelated;
 }
+
+/* ── Link lobby ── */
+.gba-lobby {
+    flex: 1; display: flex; align-items: center; justify-content: center;
+}
+.gba-lobby-box {
+    display: flex; flex-direction: column; gap: 12px; align-items: center;
+    padding: 24px 28px;
+    background: var(--gba-card);
+    border: 1px solid var(--gba-border); border-radius: 14px;
+    max-width: 340px; text-align: center;
+}
+.gba-lobby-title { font-weight: 800; font-size: 1.05rem; }
+.gba-lobby-hint { font-size: 0.8rem; color: var(--gba-dim); line-height: 1.5; }
+.gba-lobby-or { font-size: 0.75rem; color: var(--gba-dim); }
+.gba-lobby-btn { padding: 8px 16px; font-weight: 700; }
+.gba-lobby-join { display: flex; gap: 8px; }
+.gba-lobby-join input {
+    flex: 1; min-width: 0;
+    background: transparent; color: inherit;
+    border: 1px solid var(--gba-border); border-radius: 8px;
+    padding: 6px 10px; font-family: inherit; font-size: 0.85rem;
+}
+.gba-link-code {
+    font-size: 0.75rem; font-weight: 700; cursor: pointer;
+    padding: 2px 8px; border-radius: 999px;
+    border: 1px dashed var(--gba-border);
+    color: var(--gba-gold); white-space: nowrap;
+}
+.gba-link-overlay {
+    position: absolute; inset: 0; z-index: 5;
+    display: flex; align-items: center; justify-content: center;
+    background: rgba(0, 0, 0, 0.75);
+    color: #eee; text-align: center; font-size: 0.95rem; line-height: 2;
+}
+.gba-link-overlay.hide { display: none; }
+.gba-link-overlay-code { font-weight: 800; color: var(--gba-gold); font-size: 1.2rem; letter-spacing: 1px; }
