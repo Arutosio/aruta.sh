@@ -638,21 +638,25 @@ export default {
              * correctness doesn't. */
             let lastXAt = 0;          // slave: when the last master transfer arrived
             let masterFrame = 0;      // slave: master's frame counter from 'x'/'f' msgs
-            const __linkStats = { sioStarts: 0, xRecv: 0, rRecv: 0, completes: 0, lastSent: -1, lastRecv: -1, xHeld: 0, xForced: 0 };
+            const __linkStats = { sioStarts: 0, xRecv: 0, rRecv: 0, completes: 0, lastSent: -1, lastRecv: -1, xHeld: 0, xForced: 0, ifStuck: 0 };
             const netLog = [];        // arrival ring: {t, q, at, sv?} for ordering forensics
             function netLogPush(e) { netLog.push(e); if (netLog.length > 256) netLog.shift(); }
             // Drain at SUB-frame granularity (~20k cycles ≈ 0.07 frames per
             // slice): replies/completions happen this turn, but a 9-transfer
             // master burst advances the slave's clock by well under a frame.
             function drainQueue() {
-                let guard = 40;
+                let guard = 80;
                 while (api.sioQueueCount() && guard--) api.runCycles(20000);
                 // The last completion's serial IRQ may still be pending or its
                 // handler mid-flight: run until IF(serial) clears, plus one
                 // grace slice so DoSend has written the game's NEXT value —
                 // otherwise our reply carries the previous (stale) halfword.
-                guard = 12;
+                // Budget must survive the Trade Room's long DMA bursts, which
+                // block the CPU for tens of thousands of cycles before the
+                // ISR can even start.
+                guard = 64;
                 while ((window.__gbaLink.read16(0x4000202) & 0x80) && guard--) api.runCycles(4096);
+                if (window.__gbaLink.read16(0x4000202) & 0x80) __linkStats.ifStuck++;
                 api.runCycles(4096);
                 frameCount = api.frameCount();
             }
