@@ -55,7 +55,7 @@ docker run --rm -v "$PWD":/src -w /src emscripten/emsdk:4.0.4 sh -c '
   git config --global --add safe.directory /src
   mkdir -p build-wasm && cd build-wasm
   emcmake cmake .. -DCMAKE_BUILD_TYPE=Release \
-    -DM_CORE_GBA=ON -DM_CORE_GB=OFF \
+    -DM_CORE_GBA=ON -DM_CORE_GB=ON \
     -DUSE_FFMPEG=OFF -DUSE_ZLIB=OFF -DUSE_PNG=OFF -DUSE_MINIZIP=OFF -DUSE_LIBZIP=OFF \
     -DUSE_SQLITE3=OFF -DUSE_ELF=OFF -DUSE_LZMA=OFF -DUSE_EPOXY=OFF -DUSE_DISCORD_RPC=OFF \
     -DENABLE_DEBUGGERS=OFF -DENABLE_SCRIPTING=OFF \

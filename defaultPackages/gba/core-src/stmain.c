@@ -27,10 +27,24 @@
 #include <mgba/internal/gba/io.h>
 #include <mgba/internal/gba/sio.h>
 #include <mgba/internal/gba/savedata.h>
+/* Game Boy / Game Boy Color link support (2-player byte serial). */
+#include <mgba/internal/gb/gb.h>
+#include <mgba/internal/gb/io.h>
+#include <mgba/internal/gb/sio.h>
+#include <mgba/gb/interface.h>
 #include <mgba-util/audio-buffer.h>
 #include <mgba-util/vfs.h>
 
 #include <emscripten.h>
+
+/* Which serial bridge the loaded ROM uses. */
+#define LINK_PLATFORM_GBA 0
+#define LINK_PLATFORM_GB  1
+static int linkPlatform = LINK_PLATFORM_GBA;
+
+EMSCRIPTEN_KEEPALIVE int getLinkPlatform(void) {
+	return linkPlatform;
+}
 
 static void _nullLog(struct mLogger* logger, int category, enum mLogLevel level, const char* format, va_list args) {
 	UNUSED(logger);
@@ -141,7 +155,7 @@ EMSCRIPTEN_KEEPALIVE void sioSetLink(int id, int count) {
 
 /* Current SIOMLT_SEND — what this GBA would put on the wire. */
 EMSCRIPTEN_KEEPALIVE int sioGetSendValue(void) {
-	if (!core) {
+	if (!core || linkPlatform != LINK_PLATFORM_GBA) {
 		return 0xFFFF;
 	}
 	struct GBA* gba = (struct GBA*) core->board;
@@ -284,7 +298,7 @@ EMSCRIPTEN_KEEPALIVE int sioQueueCount(void) {
 
 /* Debug snapshot of the serial state — JS packs these into an object. */
 EMSCRIPTEN_KEEPALIVE int sioGetSiocnt(void) {
-	if (!core) {
+	if (!core || linkPlatform != LINK_PLATFORM_GBA) {
 		return -1;
 	}
 	struct GBA* gba = (struct GBA*) core->board;
@@ -292,7 +306,7 @@ EMSCRIPTEN_KEEPALIVE int sioGetSiocnt(void) {
 }
 
 EMSCRIPTEN_KEEPALIVE int sioGetRcnt(void) {
-	if (!core) {
+	if (!core || linkPlatform != LINK_PLATFORM_GBA) {
 		return -1;
 	}
 	struct GBA* gba = (struct GBA*) core->board;
@@ -300,7 +314,7 @@ EMSCRIPTEN_KEEPALIVE int sioGetRcnt(void) {
 }
 
 EMSCRIPTEN_KEEPALIVE int sioGetMode(void) {
-	if (!core) {
+	if (!core || linkPlatform != LINK_PLATFORM_GBA) {
 		return -1;
 	}
 	struct GBA* gba = (struct GBA*) core->board;
@@ -328,6 +342,94 @@ EMSCRIPTEN_KEEPALIVE int readBus8(int address) {
 
 EMSCRIPTEN_KEEPALIVE int sioGetCompleteCount(void) {
 	return sioCompleteCount;
+}
+
+/* ─────────────────────── GB/GBC serial bridge (2 players) ───────────────────────
+ * Game Boy link is an 8-bit byte exchange: one side drives the clock (SC
+ * internal-clock bit set), the other is passive (external clock). Stock
+ * mGBA's GB SIO only self-drives the active side and shifts in 0xFF (no
+ * peer). We install a GBSIODriver that, on the active side, captures the
+ * outgoing byte and freezes emulated time until JS brings the peer's byte;
+ * on the passive side JS drives completion when the clocking peer's byte
+ * arrives over the network. Either side may be the clocker (the game picks
+ * during the link handshake), so the JS layer is symmetric, not host-drives. */
+
+struct GBSIONetDriver {
+	struct GBSIODriver d;
+	bool pending;     /* a byte transfer is waiting on the network */
+	bool active;      /* this side drove the clock (fired onGbSioStart) */
+	uint8_t outByte;  /* the byte this side put on the wire */
+};
+static struct GBSIONetDriver gbNet;
+
+static bool gbNetInit(struct GBSIODriver* driver) { UNUSED(driver); return true; }
+static void gbNetDeinit(struct GBSIODriver* driver) { UNUSED(driver); }
+
+static void gbNetWriteSB(struct GBSIODriver* driver, uint8_t value) {
+	/* The CPU write already stored `value` into io[GB_REG_SB]. */
+	UNUSED(driver);
+	UNUSED(value);
+}
+
+static uint8_t gbNetWriteSC(struct GBSIODriver* driver, uint8_t value) {
+	struct GBSIO* sio = driver->p;
+	struct GB* gb = sio->p;
+	if (value & 0x80) { /* transfer enable */
+		uint8_t out = gb->memory.io[GB_REG_SB];
+		gbNet.outByte = out;
+		gbNet.pending = true;
+		if (value & 0x01) {
+			/* Internal clock: this side clocks the transfer. Stop stock
+			 * mGBA from completing it with 0xFF, freeze time, hand the
+			 * byte to JS. */
+			gbNet.active = true;
+			mTimingDeschedule(&gb->timing, &sio->event);
+			sio->remainingBits = 0;
+			gb->earlyExit = true;
+			EM_ASM({
+				if (Module.onGbSioStart) Module.onGbSioStart($0);
+			}, out);
+		} else {
+			/* External clock: passive. Wait for the clocking peer's byte
+			 * (JS calls gbSioCompleteByte). */
+			gbNet.active = false;
+		}
+	}
+	return value;
+}
+
+/* Current outgoing byte (what this GB would put on the wire). */
+EMSCRIPTEN_KEEPALIVE int gbSioGetSendByte(void) {
+	if (!core) {
+		return 0xFF;
+	}
+	struct GB* gb = (struct GB*) core->board;
+	return gb->memory.io[GB_REG_SB];
+}
+
+EMSCRIPTEN_KEEPALIVE int gbSioPending(void) {
+	return gbNet.pending;
+}
+
+/* Complete a byte transfer with the peer's byte: load it into SB, clear the
+ * SC enable bit, raise the serial IRQ. Drives BOTH the active side (on the
+ * peer's reply) and the passive side (on the clocker's byte). */
+EMSCRIPTEN_KEEPALIVE void gbSioCompleteByte(int incoming) {
+	if (!core) {
+		return;
+	}
+	struct GB* gb = (struct GB*) core->board;
+	struct GBSIO* sio = &gb->sio;
+	mTimingDeschedule(&gb->timing, &sio->event);
+	sio->remainingBits = 0;
+	gb->memory.io[GB_REG_SB] = incoming & 0xFF;
+	gb->memory.io[GB_REG_SC] &= ~0x80; /* clear transfer-enable */
+	gb->memory.io[GB_REG_IF] |= (1 << GB_IRQ_SIO);
+	GBUpdateIRQs(gb);
+	gbNet.pending = false;
+	++sioCompleteCount;
+	sioLog[sioLogPos % SIO_LOG_LEN] = ((gbNet.outByte & 0xFF) << 16) | (incoming & 0xFF);
+	++sioLogPos;
 }
 
 /* ───────────────────────────── core lifecycle ───────────────────────────── */
@@ -375,9 +477,16 @@ EMSCRIPTEN_KEEPALIVE bool loadGame(const char* path) {
 	mDirectorySetMapOptions(&core->dirs, &core->opts);
 	mCoreAutoloadSave(core);
 
-	struct VFile* bios = VFileOpen("/gba_bios.bin", O_RDONLY);
-	if (bios) {
-		core->loadBIOS(core, bios, 0);
+	linkPlatform = (core->platform(core) == mPLATFORM_GB)
+		? LINK_PLATFORM_GB : LINK_PLATFORM_GBA;
+
+	/* The GBA BIOS only applies to GBA; loading it into a GB core would be
+	 * wrong (GB has its own boot ROM, handled internally / skipped). */
+	if (linkPlatform == LINK_PLATFORM_GBA) {
+		struct VFile* bios = VFileOpen("/gba_bios.bin", O_RDONLY);
+		if (bios) {
+			core->loadBIOS(core, bios, 0);
+		}
 	}
 
 	core->baseVideoSize(core, &videoW, &videoH);
@@ -385,20 +494,31 @@ EMSCRIPTEN_KEEPALIVE bool loadGame(const char* path) {
 	core->setVideoBuffer(core, videoBuffer, videoW);
 	core->setAudioBufferSize(core, 2048);
 
-	netDriver.d.init = netInit;
-	netDriver.d.deinit = netDeinit;
-	netDriver.d.load = netLoad;
-	netDriver.d.unload = netUnload;
-	netDriver.d.writeRegister = netWriteRegister;
-	netDriver.transferPending = false;
-	sioQHead = 0;
-	sioQCount = 0;
-	sioSlaveEvent.name = "GBA SIO net slave";
-	sioSlaveEvent.callback = _sioSlaveDrain;
-	sioSlaveEvent.context = NULL;
-	sioSlaveEvent.priority = 0x80;
-	struct GBA* gba = (struct GBA*) core->board;
-	GBASIOSetDriver(&gba->sio, &netDriver.d, GBA_SIO_MULTI);
+	if (linkPlatform == LINK_PLATFORM_GB) {
+		gbNet.d.init = gbNetInit;
+		gbNet.d.deinit = gbNetDeinit;
+		gbNet.d.writeSB = gbNetWriteSB;
+		gbNet.d.writeSC = gbNetWriteSC;
+		gbNet.pending = false;
+		gbNet.active = false;
+		struct GB* gb = (struct GB*) core->board;
+		GBSIOSetDriver(&gb->sio, &gbNet.d);
+	} else {
+		netDriver.d.init = netInit;
+		netDriver.d.deinit = netDeinit;
+		netDriver.d.load = netLoad;
+		netDriver.d.unload = netUnload;
+		netDriver.d.writeRegister = netWriteRegister;
+		netDriver.transferPending = false;
+		sioQHead = 0;
+		sioQCount = 0;
+		sioSlaveEvent.name = "GBA SIO net slave";
+		sioSlaveEvent.callback = _sioSlaveDrain;
+		sioSlaveEvent.context = NULL;
+		sioSlaveEvent.priority = 0x80;
+		struct GBA* gba = (struct GBA*) core->board;
+		GBASIOSetDriver(&gba->sio, &netDriver.d, GBA_SIO_MULTI);
+	}
 
 	core->reset(core);
 	return true;

@@ -415,6 +415,26 @@ export default {
             'wss://tracker.files.fm:7073/announce',
             'wss://tracker.ghostchu-services.top',
         ];
+        /* Per-game gLink struct symbols for the (diagnostic-only) __gbaLink.game
+         * inspector. The serial bridge itself is 100% hardware-level and works
+         * on every Gen-3 game regardless of this table — these addresses just
+         * let devtools decode Pokémon's link state. Game code = ROM header @
+         * 0x080000AC (4 ASCII). Only Emerald (BPEE) is address-verified; other
+         * codes degrade gracefully (no wrong reads). */
+        const GEN3_LINK_SYMS = {
+            BPEE: { name: 'Emerald', gLink: 0x03003170, gLinkStatus: 0x030030E0,
+                    shouldAdvance: 0x03003144, wirelessType: 0x030030FC },
+        };
+        const GBA_GAME_NAMES = {
+            BPEE: 'Pokémon Emerald', BPRE: 'Pokémon FireRed', BPGE: 'Pokémon LeafGreen',
+            AXVE: 'Pokémon Ruby', AXPE: 'Pokémon Sapphire',
+        };
+        // GBA serial modes (mgba enum). Only MULTI (2) is bridged; Pokémon link
+        // uses it. NORMAL/UART/JOYBUS are logged as unsupported, not emulated.
+        const GBA_SIO_MODE_NAMES = {
+            0: 'NORMAL_8', 1: 'NORMAL_32', 2: 'MULTI', 3: 'UART', 8: 'GPIO', 12: 'JOYBUS',
+        };
+        const GBA_SIO_MODE_MULTI = 2;
 
         async function startLink(rom) {
             const b64 = await ctx.storage.get('rom_' + rom.id);
@@ -494,10 +514,14 @@ export default {
             }
             const canvas = root.querySelector('#gba-canvas');
             const ctx2d = canvas.getContext('2d');
-            const imageData = ctx2d.createImageData(240, 160);
+            // Video size depends on platform (GBA 240×160, GB/GBC 160×144); set
+            // after the core boots and loadGame reports the real dimensions.
+            let vidW = 240, vidH = 160, imageData = ctx2d.createImageData(240, 160);
 
             /* ── boot core ── */
             let Module, api;
+            let romGameCode = '';     // GBA header game code (BPEE/BPRE/…) for diagnostics
+            let linkPlatform = 0;     // 0 = GBA MULTI, 1 = GB/GBC (set after loadGame in Part B)
             try {
                 Module = await mGBA({
                     locateFile: () => ctx.asset('core/mgba.wasm'),
@@ -520,21 +544,85 @@ export default {
                     sioPushCompletion:  Module.cwrap('sioPushCompletion', null, ['number', 'number', 'number', 'number']),
                     sioQueueCount:      Module.cwrap('sioQueueCount', 'number', []),
                     flushSave:          Module.cwrap('flushSave', null, []),
+                    getLinkPlatform:    Module.cwrap('getLinkPlatform', 'number', []),
+                    gbSioGetSendByte:   Module.cwrap('gbSioGetSendByte', 'number', []),
+                    gbSioCompleteByte:  Module.cwrap('gbSioCompleteByte', null, ['number']),
+                    gbSioPending:       Module.cwrap('gbSioPending', 'number', []),
+                    getVideoWidth:      Module.cwrap('getVideoWidth', 'number', []),
+                    getVideoHeight:     Module.cwrap('getVideoHeight', 'number', []),
                 };
                 const bios = await (await fetch(ctx.asset('bios.bin'))).arrayBuffer();
                 Module.FS.writeFile('/gba_bios.bin', new Uint8Array(bios));
                 Module.FS.mkdir('/data');
                 Module.FS.mkdir('/data/saves');
                 Module.FS.mkdir('/data/states');
-                Module.FS.writeFile('/rom.gba', b64ToBytes(b64));
+                // Write under the real extension so mCoreFind picks the GBA or
+                // GB/GBC core; both run through the same wrapper.
+                const romExt = (rom.ext === 'gb' || rom.ext === 'gbc') ? rom.ext : 'gba';
+                const romPath = '/rom.' + romExt;
+                Module.FS.writeFile(romPath, b64ToBytes(b64));
                 if (savB64) Module.FS.writeFile('/data/saves/rom.sav', b64ToBytes(savB64));
-                if (!api.loadGame('/rom.gba')) throw new Error('core rejected ROM');
+                if (!api.loadGame(romPath)) throw new Error('core rejected ROM');
+                linkPlatform = api.getLinkPlatform();   // 0 = GBA MULTI, 1 = GB/GBC
+                try {
+                    vidW = api.getVideoWidth() || 240;
+                    vidH = api.getVideoHeight() || 160;
+                    canvas.width = vidW;
+                    canvas.height = vidH;
+                    imageData = ctx2d.createImageData(vidW, vidH);
+                } catch { /* keep 240×160 default */ }
                 api.sioSetLink(isHost ? 0 : 1, 0); // connected flips when the peer arrives
+                // Cartridge identity for diagnostics. GBA: game code @ 0x080000AC.
+                // GB/GBC: title @ 0x0134 in ROM (not bus-mapped the same way) —
+                // skip the code, the platform label is enough.
+                if (linkPlatform === 0) {
+                    try {
+                        const r8h = (a) => Module.ccall('readBus8', 'number', ['number'], [a]);
+                        for (let i = 0; i < 4; i++) {
+                            const c = r8h(0x080000AC + i) & 0xFF;
+                            romGameCode += (c >= 0x20 && c < 0x7F) ? String.fromCharCode(c) : '';
+                        }
+                    } catch { /* core without readBus8 */ }
+                }
             } catch (err) {
-                console.warn('[gba] link core boot failed', err);
+                console.warn('[gba-link] core boot failed', err);
                 root.querySelector('.gba-screen').innerHTML =
                     `<div class="gba-offline">⚠ Link core failed to start.<br>${escapeHTML(String(err))}</div>`;
                 return;
+            }
+
+            /* ── diagnostics: structured console logging so a failed connection
+             *    explains itself (which game, which serial mode, where it broke).
+             *    Toggle with window.__gbaLink.verbose = false. ── */
+            const linkDiag = { verbose: true, unsupportedWarned: false };
+            const llog = (...a) => { if (linkDiag.verbose) console.log('[gba-link]', ...a); };
+            const lwarn = (...a) => console.warn('[gba-link]', ...a);
+            // Full state snapshot for failure dumps and __gbaLink.diagnose().
+            function linkSnapshot() {
+                const L = window.__gbaLink || {};
+                const s = {};
+                try { s.cart = L.cart; } catch {}
+                try { s.connected = connected; s.role = isHost ? 'host' : 'guest'; s.playerCount = playerCount; } catch {}
+                try { s.sio = L.sio; } catch {}
+                try { s.loop = L.loopState; } catch {}
+                try { s.stats = { ...__linkStats }; } catch {}
+                try { s.netLog = L.netLog.slice(-16); } catch {}
+                try { s.game = L.game; } catch {}
+                return s;
+            }
+            llog('core ready', {
+                game: GBA_GAME_NAMES[romGameCode] || 'unknown',
+                gameCode: romGameCode || '(none)',
+                platform: linkPlatform === 1 ? 'GB/GBC' : 'GBA',
+                role: isHost ? 'host (master)' : 'guest (slave)',
+                room: code,
+                gLinkMapped: !!GEN3_LINK_SYMS[romGameCode],
+            });
+            if (!GBA_GAME_NAMES[romGameCode] && linkPlatform === 0) {
+                lwarn('ROM game code "' + romGameCode + '" is not a known Pokémon Gen-3 title. ' +
+                      'The serial bridge only emulates GBA MULTI-mode (Pokémon-style) and GB link. ' +
+                      'Other games / serial modes (NORMAL, UART, wireless) will not connect — ' +
+                      'see __gbaLink.diagnose() once the game tries to link.');
             }
 
             /* ── Trystero room: serial bridge + presence (2-4 players) ──
@@ -564,22 +652,28 @@ export default {
             let pendingSeq = 0;
             let pendingSince = 0;
             let pendingReplies = null;   // host: Map slaveId → sv for in-flight q
+            let connectAt = 0;           // performance.now() when the link came up
 
             function setLinkState(count) {
                 playerCount = count;
+                const was = connected;
                 connected = count >= 2 && (isHost || myId > 0);
                 api.sioSetLink(isHost ? 0 : Math.max(myId, 1), connected ? count : 1);
                 if (connected) {
+                    if (!was) { connectAt = performance.now(); linkDiag.unsupportedWarned = false;
+                                llog('link up · P' + ((isHost ? 0 : myId) + 1) + '/' + count); }
                     paused = false;
                     overlayEl.classList.add('hide');
                     setStatus(LT().connected + ' · P' + ((isHost ? 0 : myId) + 1) + '/' + count, true);
                 }
             }
-            function linkLost() {
+            function linkLost(reason) {
                 if (!connected) return;
+                lwarn('link lost' + (reason ? ': ' + reason : ''), linkSnapshot());
                 connected = false;
                 pendingVal = null;
                 pendingReplies = null;
+                pendingGb = null;
                 heldX = null;
                 lastCq = -1;
                 // Unblock a master frozen mid-transfer: complete it like a
@@ -599,7 +693,9 @@ export default {
                     const used = new Set(players.values());
                     let sid = 1;
                     while (used.has(sid)) sid++;
-                    if (sid > 3) return;   // room full (4 players max)
+                    // GB link is strictly 2 players; GBA MULTI allows up to 4.
+                    const maxSid = linkPlatform === 1 ? 1 : 3;
+                    if (sid > maxSid) { llog('room full, rejecting extra peer'); return; }
                     players.set(id, sid);
                     sendCtl({ t: 'roster', id: sid, count: players.size + 1 }, id);
                     sendCtl({ t: 'count', n: players.size + 1 });
@@ -638,9 +734,22 @@ export default {
              * correctness doesn't. */
             let lastXAt = 0;          // slave: when the last master transfer arrived
             let masterFrame = 0;      // slave: master's frame counter from 'x'/'f' msgs
-            const __linkStats = { sioStarts: 0, xRecv: 0, rRecv: 0, completes: 0, lastSent: -1, lastRecv: -1, xHeld: 0, xForced: 0, ifStuck: 0 };
+            const __linkStats = { sioStarts: 0, xRecv: 0, rRecv: 0, completes: 0, lastSent: -1, lastRecv: -1, xHeld: 0, xForced: 0, ifStuck: 0, gbTx: 0, gbRx: 0 };
             const netLog = [];        // arrival ring: {t, q, at, sv?} for ordering forensics
             function netLogPush(e) { netLog.push(e); if (netLog.length > 256) netLog.shift(); }
+            /* ── GB/GBC byte serial (2 players, symmetric) ──
+             * Either side may clock a transfer (the game decides). The clocker's
+             * onGbSioStart fires → it freezes (pendingGb) and ships the byte; the
+             * passive peer completes and replies its byte; the clocker completes.
+             * Same freeze-time lockstep as GBA, but one byte at a time. */
+            let pendingGb = null;       // byte in flight while THIS side clocks
+            let pendingGbSince = 0;
+            function gbDrain() {
+                // Give the serial ISR CPU time to consume the byte before the
+                // next transfer (GB transfer = 512 cycles; a few slices is ample).
+                for (let i = 0; i < 8; i++) api.runCycles(2048);
+                frameCount = api.frameCount();
+            }
             // Drain at SUB-frame granularity (~20k cycles ≈ 0.07 frames per
             // slice): replies/completions happen this turn, but a 9-transfer
             // master burst advances the slave's clock by well under a frame.
@@ -679,8 +788,33 @@ export default {
                 netLogPush({ t: 'r', q: msg.q, at: performance.now() | 0, sv });
                 sendSio({ t: 'r', q: msg.q, sv }, hostId);
             }
+            // GB peer id: host talks to its single guest, guest talks to host.
+            const gbPeer = () => isHost ? [...players.keys()][0] : hostId;
             getSio((msg, id) => {
                 if (!msg || !connected) return;
+                if (linkPlatform === 1) {
+                    if (msg.t === 'gx') {
+                        // The peer clocked a transfer: we're the passive side.
+                        // Reply our outgoing byte, then complete with theirs.
+                        __linkStats.gbRx++;
+                        __linkStats.lastRecv = msg.byte;
+                        const ourByte = api.gbSioGetSendByte();
+                        netLogPush({ t: 'gy', at: performance.now() | 0, sv: ourByte });
+                        sendSio({ t: 'gy', byte: ourByte }, id);
+                        api.gbSioCompleteByte(msg.byte & 0xFF);
+                        gbDrain();
+                    } else if (msg.t === 'gy' && pendingGb !== null) {
+                        // Peer's reply to a transfer we clocked.
+                        __linkStats.lastRecv = msg.byte;
+                        api.gbSioCompleteByte(msg.byte & 0xFF);
+                        pendingGb = null;
+                        gbDrain();
+                        if (midFrame) {
+                            if (advanceFrame()) { midFrame = false; draw(); pumpAudio(); }
+                        }
+                    }
+                    return;
+                }
                 if (!isHost && id === hostId && msg.t === 'x') {
                     netLogPush({ t: 'x', q: msg.q, at: performance.now() | 0 });
                     if (lastCq >= 0 && msg.q !== ((lastCq + 1) & 0xFFFF)) {
@@ -756,17 +890,46 @@ export default {
                     sendSio({ t: 'x', q: pendingSeq, v, f: frameCount });
                 };
             }
+            // GB: either side may clock a transfer. The clocker freezes here and
+            // ships its byte; the passive peer replies (handled in getSio above).
+            if (linkPlatform === 1) {
+                Module.onGbSioStart = (byte) => {
+                    __linkStats.gbTx++;
+                    __linkStats.lastSent = byte;
+                    if (!connected) return; // no peer; passive stock path returns 0xFF
+                    pendingGb = byte & 0xFF;
+                    pendingGbSince = performance.now();
+                    netLogPush({ t: 'gx', at: performance.now() | 0, sv: byte });
+                    sendSio({ t: 'gx', byte: byte & 0xFF }, gbPeer());
+                };
+            }
             // Debug handle for link diagnostics (read from devtools; harmless in prod).
             const dbg = (name) => { try { return Module.ccall(name, 'number', [], []); } catch { return -2; } };
             window.__gbaLink = {
                 stats: __linkStats, isHost,
+                get verbose() { return linkDiag.verbose; },
+                set verbose(v) { linkDiag.verbose = !!v; },
+                // One-shot full dump: paste __gbaLink.diagnose() in devtools to
+                // see why a link isn't working (cart, serial mode, regs, stats).
+                diagnose() {
+                    const snap = linkSnapshot();
+                    console.log('%c[gba-link] diagnostics', 'font-weight:bold', snap);
+                    if (snap.cart && snap.cart.platform === 'gba' && snap.sio &&
+                        snap.sio.mode >= 0 && snap.sio.mode !== GBA_SIO_MODE_MULTI) {
+                        console.warn('[gba-link] SIO mode is ' + (GBA_SIO_MODE_NAMES[snap.sio.mode] || snap.sio.mode) +
+                            ', not MULTI. This game is not using Pokémon-style multiplayer serial — ' +
+                            'the bridge only handles GBA MULTI mode and GB link.');
+                    }
+                    return snap;
+                },
                 get pending() { return pendingVal; },
                 get loopState() {
-                    return { midFrame, paused, connected, acc, frameCount,
-                             pendingSeq, pendingVal, masterFrame, lastCq,
+                    return { platform: linkPlatform === 1 ? 'gb' : 'gba',
+                             midFrame, paused, connected, acc, frameCount,
+                             pendingSeq, pendingVal, pendingGb, masterFrame, lastCq,
                              heldX: heldX ? heldX.q : null,
-                             transferPending: api.sioTransferPending(),
-                             queueCount: api.sioQueueCount() };
+                             transferPending: linkPlatform === 1 ? api.gbSioPending() : api.sioTransferPending(),
+                             queueCount: linkPlatform === 1 ? 0 : api.sioQueueCount() };
                 },
                 get netLog() { return netLog.slice(-96); },
                 get sio() {
@@ -791,19 +954,35 @@ export default {
                     }
                     return out;
                 },
-                /* Emerald-specific link globals (pret symbols, US/EU BPEE). */
+                get cart() {
+                    return { platform: linkPlatform === 1 ? 'gb' : 'gba', gameCode: romGameCode,
+                             name: GBA_GAME_NAMES[romGameCode] || 'unknown' };
+                },
+                /* Pokémon link globals — decoded only for games whose gLink
+                 * addresses are mapped (GEN3_LINK_SYMS). The serial bridge does
+                 * NOT use these; they're a devtools convenience. Unknown game →
+                 * a note instead of garbage from wrong addresses. */
                 get game() {
+                    if (linkPlatform === 1) {
+                        return { note: 'GB/GBC — gLink struct differs (Gen1/2); use .sio/.stats for hardware diagnostics' };
+                    }
+                    const sym = GEN3_LINK_SYMS[romGameCode];
+                    if (!sym) {
+                        return { gameCode: romGameCode || '?', note: 'gLink symbols not mapped for this game; serial works regardless — use .sio/.stats/.netLog' };
+                    }
                     const r16 = (a) => Module.ccall('readBus16', 'number', ['number'], [a]);
                     const r8  = (a) => Module.ccall('readBus8', 'number', ['number'], [a]);
+                    const g = sym.gLink;
                     return {
-                        isMaster: r8(0x03003170),
-                        state: r8(0x03003171),
-                        localId: r8(0x03003172),
-                        playerCount: r8(0x03003173),
-                        hs: [0x3174, 0x3176, 0x3178, 0x317A].map(o => r16(0x03000000 + o).toString(16)),
-                        handshakeAsMaster: r8(0x0300317E),
-                        shouldAdvance: r8(0x03003144),
-                        wirelessType: r8(0x030030FC),
+                        game: sym.name,
+                        isMaster: r8(g),
+                        state: r8(g + 1),
+                        localId: r8(g + 2),
+                        playerCount: r8(g + 3),
+                        hs: [4, 6, 8, 10].map(o => r16(g + o).toString(16)),
+                        handshakeAsMaster: r8(g + 14),
+                        shouldAdvance: r8(sym.shouldAdvance),
+                        wirelessType: r8(sym.wirelessType),
                         ie: r16(0x04000200).toString(2).padStart(16, '0'),
                         ime: r16(0x04000208),
                     };
@@ -872,7 +1051,7 @@ export default {
             function draw() {
                 const ptr = api.getVideoBufferPtr();
                 if (!ptr) return;
-                const src = new Uint8Array(Module.HEAPU8.buffer, ptr, 240 * 160 * 4);
+                const src = new Uint8Array(Module.HEAPU8.buffer, ptr, vidW * vidH * 4);
                 const d = imageData.data;
                 d.set(src);
                 for (let i = 3; i < d.length; i += 4) d[i] = 255;
@@ -887,7 +1066,33 @@ export default {
                 if (paused) { acc = 0; return; }
                 // Transfer watchdog: a reply should arrive within seconds even
                 // on a bad link — anything longer means the peer is gone.
-                if (pendingVal !== null && now - pendingSince > 10000) linkLost();
+                if (pendingVal !== null && now - pendingSince > 10000) linkLost('transfer reply timeout (peer gone or stalled >10s)');
+                if (pendingGb !== null && now - pendingGbSince > 10000) linkLost('GB byte reply timeout (peer gone or stalled >10s)');
+                // GB lockstep: freeze while a byte we clocked is in flight.
+                if (linkPlatform === 1 && pendingGb !== null) { acc = 0; return; }
+                // Stall hint: connected but no serial transfer ever started after
+                // a while → game isn't using MULTI mode (wrong serial mode / not
+                // at the Cable Club). Log once so the cause is visible.
+                if (connected && !linkDiag.unsupportedWarned && now - connectAt > 8000) {
+                    const started = linkPlatform === 1
+                        ? (__linkStats.gbTx + __linkStats.gbRx)
+                        : (isHost ? __linkStats.sioStarts : __linkStats.xRecv);
+                    if (started === 0) {
+                        linkDiag.unsupportedWarned = true;
+                        if (linkPlatform === 1) {
+                            lwarn('connected ' + ((now - connectAt) / 1000 | 0) + 's but zero GB byte transfers. ' +
+                                  'Likely: not at the in-game link menu / Cable Club yet, or this game does not ' +
+                                  'use the standard GB serial link. __gbaLink.diagnose() for full state.');
+                        } else {
+                            const mode = (() => { try { return window.__gbaLink.sio.mode; } catch { return -1; } })();
+                            const modeName = GBA_SIO_MODE_NAMES[mode] || ('?(' + mode + ')');
+                            lwarn('connected ' + ((now - connectAt) / 1000 | 0) + 's but zero serial transfers. ' +
+                                  'SIO mode=' + modeName + ' (MULTI expected for Pokémon). Likely causes: ' +
+                                  'game not at the Cable Club / link menu yet, or this game uses an ' +
+                                  'unsupported serial mode (NORMAL/UART/wireless). __gbaLink.diagnose() for full state.');
+                        }
+                    }
+                }
                 // Lockstep stalls — emulated time freezes instead of letting
                 // the games' own link timeouts expire:
                 //  - master: don't run frames while a transfer is in flight;
@@ -950,14 +1155,16 @@ export default {
             /* Per-frame trace of the game's link globals — captures the exact
              * frame where an error bit appears (devtools-only diagnostics). */
             const linkTrace = [];
+            const traceSym = GEN3_LINK_SYMS[romGameCode]; // null unless gLink mapped
             function traceTick() {
+                if (!traceSym) return; // per-game gLink unknown — trace would be garbage
                 try {
                     const L = window.__gbaLink;
                     if (!L) return;
-                    const s32 = (L.read16(0x030030E0) | (L.read16(0x030030E2) << 16)) >>> 0;
+                    const s32 = (L.read16(traceSym.gLinkStatus) | (L.read16(traceSym.gLinkStatus + 2) << 16)) >>> 0;
                     const e = {
                         f: frameCount,
-                        st: L.read8(0x03003171),
+                        st: L.read8(traceSym.gLink + 1),
                         s: '0x' + s32.toString(16),
                         snd: __linkStats.lastSent,
                         rcv: __linkStats.lastRecv,
