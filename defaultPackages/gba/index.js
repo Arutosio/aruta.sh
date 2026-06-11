@@ -515,9 +515,9 @@ export default {
                     getVideoBufferPtr:  Module.cwrap('getVideoBufferPtr', 'number', []),
                     sioSetLink:         Module.cwrap('sioSetLink', null, ['number', 'number']),
                     sioGetSendValue:    Module.cwrap('sioGetSendValue', 'number', []),
-                    sioCompleteMulti:   Module.cwrap('sioCompleteMulti', null, ['number', 'number']),
+                    sioCompleteMulti4:  Module.cwrap('sioCompleteMulti4', null, ['number', 'number', 'number', 'number']),
                     sioTransferPending: Module.cwrap('sioTransferPending', 'number', []),
-                    sioPushMaster:      Module.cwrap('sioPushMaster', null, ['number', 'number']),
+                    sioPushCompletion:  Module.cwrap('sioPushCompletion', null, ['number', 'number', 'number', 'number']),
                     sioQueueCount:      Module.cwrap('sioQueueCount', 'number', []),
                     flushSave:          Module.cwrap('flushSave', null, []),
                 };
@@ -537,15 +537,15 @@ export default {
                 return;
             }
 
-            /* ── Trystero room: serial bridge + presence ──
-             * Protocol (host = GBA master, guest = GBA slave):
-             *  host  onSioStart(v) ──sio──▶ {t:'x', q, v}
-             *  guest on 'x': sv = own SIOMLT_SEND; complete(v, sv); reply {t:'r', q, sv}
-             *  host  on 'r' (matching q): complete(v, sv)
-             * The GBA games themselves poll the busy bit / wait for the SIO
-             * IRQ, so emulation keeps running while a transfer is in flight —
-             * that's what makes menu-driven protocols (Pokémon trades) work
-             * over real network latency.
+            /* ── Trystero room: serial bridge + presence (2-4 players) ──
+             * Protocol (host = GBA master id 0, guests = slaves id 1..3):
+             *  host  onSioStart(v) ──▶ broadcast {t:'x', q, v, f}
+             *  guest on 'x': drain queued completions, reply {t:'r', q, sv}
+             *  host  collects every guest's reply → vals[4] → completes
+             *        locally and broadcasts {t:'c', q, vals}
+             *  guest on 'c': queue the full vector in the core (per-IRQ paced)
+             * Emulated time freezes while a transfer is in flight, so the
+             * games' own frame-based link timeouts never fire spuriously.
              */
             const room = globalThis.__trystero.torrent.joinRoom(
                 { appId: 'aruta-gba-link', trackerUrls: LINK_TRACKERS },
@@ -553,43 +553,75 @@ export default {
             );
             const [sendSio, getSio] = room.makeAction('sio');
             const [sendCtl, getCtl] = room.makeAction('ctl');
-            let peerId = null;
+            const players = new Map();   // host: peerId → slave id (1..3)
+            let hostId = null;           // guest: the host's peerId
+            let myId = isHost ? 0 : -1;  // guest learns its slot from the roster
+            let playerCount = 1;
             let connected = false;
             let paused = false;
             let frameCount = 0;
-            let peerFrames = 0;
-            let peerFramesAt = 0;
-            let pendingVal = null;     // host: value in flight
+            let pendingVal = null;       // host: value in flight
             let pendingSeq = 0;
             let pendingSince = 0;
+            let pendingReplies = null;   // host: Map slaveId → sv for in-flight q
 
-            function peerConnected(id) {
-                if (peerId) return;        // room is full — ignore extras
-                peerId = id;
-                connected = true;
-                paused = false;
-                api.sioSetLink(isHost ? 0 : 1, 1);
-                overlayEl.classList.add('hide');
-                setStatus(LT().connected + (isHost ? ' · P1' : ' · P2'), true);
+            function setLinkState(count) {
+                playerCount = count;
+                connected = count >= 2 && (isHost || myId > 0);
+                api.sioSetLink(isHost ? 0 : Math.max(myId, 1), connected ? count : 1);
+                if (connected) {
+                    paused = false;
+                    overlayEl.classList.add('hide');
+                    setStatus(LT().connected + ' · P' + ((isHost ? 0 : myId) + 1) + '/' + count, true);
+                }
             }
-            function peerLost() {
+            function linkLost() {
                 if (!connected) return;
                 connected = false;
-                peerId = null;
                 pendingVal = null;
-                api.sioSetLink(isHost ? 0 : 1, 0);
+                pendingReplies = null;
+                api.sioSetLink(isHost ? 0 : Math.max(myId, 1), 1);
                 paused = true;
                 flushLinkSram();
                 setStatus(LT().disconnected, false);
                 overlayEl.querySelector('div').innerHTML = LT().lost;
                 overlayEl.classList.remove('hide');
             }
-            room.onPeerJoin((id) => peerConnected(id));
-            room.onPeerLeave((id) => { if (id === peerId) peerLost(); });
+            if (isHost) {
+                room.onPeerJoin((id) => {
+                    const used = new Set(players.values());
+                    let sid = 1;
+                    while (used.has(sid)) sid++;
+                    if (sid > 3) return;   // room full (4 players max)
+                    players.set(id, sid);
+                    sendCtl({ t: 'roster', id: sid, count: players.size + 1 }, id);
+                    sendCtl({ t: 'count', n: players.size + 1 });
+                    setLinkState(players.size + 1);
+                });
+                room.onPeerLeave((id) => {
+                    if (!players.has(id)) return;
+                    players.delete(id);
+                    // A cable yanked mid-session kills the link for everyone.
+                    linkLost();
+                    sendCtl({ t: 'bye' });
+                });
+            } else {
+                room.onPeerLeave((id) => { if (id === hostId) linkLost(); });
+            }
             getCtl((msg, id) => {
-                if (id !== peerId || !msg) return;
-                if (msg.t === 'f') { peerFrames = msg.n | 0; peerFramesAt = performance.now(); }
-                else if (msg.t === 'bye') peerLost();
+                if (!msg) return;
+                if (!isHost && msg.t === 'roster') {
+                    hostId = id;
+                    myId = msg.id;
+                    setLinkState(msg.count);
+                } else if (!isHost && id === hostId && msg.t === 'count') {
+                    setLinkState(msg.n);
+                } else if (!isHost && id === hostId && msg.t === 'f') {
+                    masterFrame = Math.max(masterFrame, msg.n | 0);
+                } else if (msg.t === 'bye' && (isHost ? players.has(id) : id === hostId)) {
+                    if (isHost) players.delete(id);
+                    linkLost();
+                }
             });
             /* Serial lockstep (the VBA-Link trick): emulated time STOPS while
              * waiting for the peer, so the games' own link timeouts (the
@@ -600,55 +632,67 @@ export default {
             let lastXAt = 0;          // slave: when the last master transfer arrived
             let masterFrame = 0;      // slave: master's frame counter from 'x'/'f' msgs
             const __linkStats = { sioStarts: 0, xRecv: 0, rRecv: 0, completes: 0, lastSent: -1, lastRecv: -1 };
+            // Drain at SUB-frame granularity (~20k cycles ≈ 0.07 frames per
+            // slice): replies/completions happen this turn, but a 9-transfer
+            // master burst advances the slave's clock by well under a frame.
+            function drainQueue() {
+                let guard = 40;
+                while (api.sioQueueCount() && guard--) api.runCycles(20000);
+                // The last completion's serial IRQ may still be pending or its
+                // handler mid-flight: run until IF(serial) clears, plus one
+                // grace slice so DoSend has written the game's NEXT value —
+                // otherwise our reply carries the previous (stale) halfword.
+                guard = 12;
+                while ((window.__gbaLink.read16(0x4000202) & 0x80) && guard--) api.runCycles(4096);
+                api.runCycles(4096);
+                frameCount = api.frameCount();
+            }
             getSio((msg, id) => {
-                if (id !== peerId || !msg || !connected) return;
-                if (msg.t === 'x' && !isHost) {
-                    // Master clocked a transfer. Don't complete it here: the
-                    // master bursts up to 9 per frame and they arrive in one
-                    // network turn — completing them back-to-back collapses
-                    // their serial IRQs. Queue in the core instead; an
-                    // mTiming event drains one per ISR with emulated CPU
-                    // time in between, and onSioReply ships our value back.
+                if (!msg || !connected) return;
+                if (!isHost && id === hostId && msg.t === 'x') {
+                    // Master clocked a transfer. Finish queued completions
+                    // first so our reply is the value the game loaded after
+                    // the PREVIOUS transfer's ISR — then answer.
                     __linkStats.xRecv++;
                     __linkStats.lastRecv = msg.v;
                     lastXAt = performance.now();
                     if (typeof msg.f === 'number' && msg.f > masterFrame) masterFrame = msg.f;
-                    api.sioPushMaster(msg.q, msg.v);
-                    // Drain at SUB-frame granularity (~20k cycles ≈ 0.07
-                    // frames per slice): the reply goes out this turn, but a
-                    // 9-transfer master burst advances the slave's clock by
-                    // well under a frame — full-frame slices here made the
-                    // slave race ahead of the master and trip the games' own
-                    // frame-based link timeouts.
-                    let guard = 40;
-                    while (api.sioQueueCount() && guard--) api.runCycles(20000);
-                    frameCount = api.frameCount();
-                } else if (msg.t === 'r' && isHost && msg.q === pendingSeq && pendingVal !== null) {
+                    drainQueue();
+                    sendSio({ t: 'r', q: msg.q, sv: api.sioGetSendValue() }, hostId);
+                } else if (!isHost && id === hostId && msg.t === 'c') {
+                    // Full value vector for a finished transfer — queue it in
+                    // the core; an mTiming event delivers one per serviced
+                    // serial IRQ (two-phase, Timer3 cadence).
+                    __linkStats.completes++;
+                    const v = msg.vals || [];
+                    api.sioPushCompletion(
+                        v[0] ?? 0xFFFF, v[1] ?? 0xFFFF, v[2] ?? 0xFFFF, v[3] ?? 0xFFFF);
+                    drainQueue();
+                } else if (isHost && msg.t === 'r' && players.has(id) &&
+                           msg.q === pendingSeq && pendingVal !== null) {
                     __linkStats.rRecv++;
                     __linkStats.lastRecv = msg.sv;
-                    api.sioCompleteMulti(pendingVal, msg.sv);
-                    __linkStats.completes++;
-                    pendingVal = null;
-                    // Resume the frame suspended on this transfer right away —
-                    // Emerald bursts up to 9 transfers inside one frame, so
-                    // waiting for the next rAF tick would crawl.
-                    if (midFrame) {
-                        if (advanceFrame()) {
-                            midFrame = false;
-                            draw();
-                            pumpAudio();
-                        } // else: blocked again on the frame's next transfer
+                    pendingReplies.set(players.get(id), msg.sv & 0xFFFF);
+                    if (pendingReplies.size === players.size) {
+                        const vals = [pendingVal & 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF];
+                        for (const [sid, sv] of pendingReplies) vals[sid] = sv;
+                        api.sioCompleteMulti4(vals[0], vals[1], vals[2], vals[3]);
+                        __linkStats.completes++;
+                        pendingVal = null;
+                        pendingReplies = null;
+                        sendSio({ t: 'c', q: pendingSeq, vals });
+                        // Resume the frame suspended on this transfer right
+                        // away — waiting for the next rAF tick would crawl.
+                        if (midFrame) {
+                            if (advanceFrame()) {
+                                midFrame = false;
+                                draw();
+                                pumpAudio();
+                            } // else: blocked again on the frame's next transfer
+                        }
                     }
                 }
             });
-            if (!isHost) {
-                // Fired by the core's drain event after each queued transfer
-                // completes on the slave — sv is OUR value for that transfer.
-                Module.onSioReply = (q, sv) => {
-                    __linkStats.completes++;
-                    if (connected && peerId) sendSio({ t: 'r', q, sv }, peerId);
-                };
-            }
             if (isHost) {
                 Module.onSioStart = (v) => {
                     __linkStats.sioStarts++;
@@ -656,8 +700,9 @@ export default {
                     if (!connected) return;   // game started a transfer with no peer
                     pendingSeq = (pendingSeq + 1) & 0xFFFF;
                     pendingVal = v;
+                    pendingReplies = new Map();
                     pendingSince = performance.now();
-                    sendSio({ t: 'x', q: pendingSeq, v, f: frameCount }, peerId);
+                    sendSio({ t: 'x', q: pendingSeq, v, f: frameCount });
                 };
             }
             // Debug handle for link diagnostics (read from devtools; harmless in prod).
@@ -783,7 +828,7 @@ export default {
                 if (paused) { acc = 0; return; }
                 // Transfer watchdog: a reply should arrive within seconds even
                 // on a bad link — anything longer means the peer is gone.
-                if (pendingVal !== null && now - pendingSince > 10000) peerLost();
+                if (pendingVal !== null && now - pendingSince > 10000) linkLost();
                 // Lockstep stalls — emulated time freezes instead of letting
                 // the games' own link timeouts expire:
                 //  - master: don't run frames while a transfer is in flight;
@@ -825,8 +870,8 @@ export default {
                     if (!--guard) { console.warn('[gba] runLoop guard tripped'); break; }
                 }
                 frameCount = api.frameCount();
-                if (connected && frameCount % 30 === 0) {
-                    try { sendCtl({ t: 'f', n: frameCount }, peerId); } catch {}
+                if (isHost && connected && frameCount % 30 === 0) {
+                    try { sendCtl({ t: 'f', n: frameCount }); } catch {}
                 }
                 traceTick();
                 return true;
@@ -892,7 +937,7 @@ export default {
                 document.removeEventListener('pointerdown', onClickResume);
                 document.removeEventListener('visibilitychange', onVis);
                 await flushLinkSram();
-                try { if (peerId) sendCtl({ t: 'bye' }, peerId); } catch {}
+                try { if (connected) sendCtl({ t: 'bye' }); } catch {}
                 try { await room.leave(); } catch {}
                 try { if (audioCtx) await audioCtx.close(); } catch {}
                 try { api.quitGame(); } catch {}

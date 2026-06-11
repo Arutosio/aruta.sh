@@ -50,9 +50,10 @@ static unsigned videoH = 160;
 
 struct GBASIONetDriver {
 	struct GBASIODriver d;
-	int id;              /* 0 = master, 1 = slave */
-	bool connected;      /* peer attached (set from JS) */
-	bool transferPending; /* master only: waiting for peer reply */
+	int id;              /* 0 = master, 1..3 = slaves */
+	int playerCount;     /* connected players including self (set from JS) */
+	bool connected;      /* ≥2 players attached */
+	bool transferPending; /* master only: waiting for peer replies */
 };
 
 static struct GBASIONetDriver netDriver;
@@ -127,10 +128,12 @@ static uint16_t netWriteRegister(struct GBASIODriver* driver, uint32_t address, 
 	return value;
 }
 
-/* Set local player id (0 = master / 1 = slave) and peer-connected flag. */
-EMSCRIPTEN_KEEPALIVE void sioSetLink(int id, int connected) {
-	netDriver.id = id ? 1 : 0;
-	netDriver.connected = !!connected;
+/* Set local player id (0 = master, 1..3 = slave slot) and the number of
+ * connected players including self. count >= 2 means "cable attached". */
+EMSCRIPTEN_KEEPALIVE void sioSetLink(int id, int count) {
+	netDriver.id = id & 3;
+	netDriver.playerCount = count;
+	netDriver.connected = count >= 2;
 	if (core && netDriver.d.p) {
 		_updateStatusBits(netDriver.d.p);
 	}
@@ -158,9 +161,10 @@ static int sioCompleteCount = 0;
 static uint32_t sioLog[SIO_LOG_LEN];
 static int sioLogPos = 0;
 
-/* Complete a MULTI transfer on this instance with both players' values.
- * Call between frames (never synchronously from inside onSioStart). */
-EMSCRIPTEN_KEEPALIVE void sioCompleteMulti(int d0, int d1) {
+/* Complete a MULTI transfer on this instance with every player's value
+ * (absent slots = 0xFFFF). Call between frames (never synchronously from
+ * inside onSioStart). */
+EMSCRIPTEN_KEEPALIVE void sioCompleteMulti4(int d0, int d1, int d2, int d3) {
 	if (!core) {
 		return;
 	}
@@ -168,8 +172,8 @@ EMSCRIPTEN_KEEPALIVE void sioCompleteMulti(int d0, int d1) {
 	struct GBASIO* sio = &gba->sio;
 	gba->memory.io[GBA_REG(SIOMULTI0)] = d0 & 0xFFFF;
 	gba->memory.io[GBA_REG(SIOMULTI1)] = d1 & 0xFFFF;
-	gba->memory.io[GBA_REG(SIOMULTI2)] = 0xFFFF;
-	gba->memory.io[GBA_REG(SIOMULTI3)] = 0xFFFF;
+	gba->memory.io[GBA_REG(SIOMULTI2)] = d2 & 0xFFFF;
+	gba->memory.io[GBA_REG(SIOMULTI3)] = d3 & 0xFFFF;
 	sio->rcnt |= 1;
 	sio->siocnt = GBASIOMultiplayerClearBusy(sio->siocnt);
 	sio->siocnt = GBASIOMultiplayerSetId(sio->siocnt, netDriver.id);
@@ -181,6 +185,10 @@ EMSCRIPTEN_KEEPALIVE void sioCompleteMulti(int d0, int d1) {
 		++sioIrqCount;
 		GBARaiseIRQ(gba, GBA_IRQ_SIO, 0);
 	}
+}
+
+EMSCRIPTEN_KEEPALIVE void sioCompleteMulti(int d0, int d1) {
+	sioCompleteMulti4(d0, d1, 0xFFFF, 0xFFFF);
 }
 
 EMSCRIPTEN_KEEPALIVE int sioLogCount(void) {
@@ -201,8 +209,7 @@ EMSCRIPTEN_KEEPALIVE int sioLogGet(int i) {
  * CPU time in between — exactly like a real cable. */
 #define SIO_QUEUE_LEN 64
 static struct {
-	uint16_t seq;
-	uint16_t value;
+	uint16_t d[4];
 } sioQueue[SIO_QUEUE_LEN];
 static int sioQHead = 0;
 static int sioQCount = 0;
@@ -237,30 +244,33 @@ static void _sioSlaveDrain(struct mTiming* timing, void* context, uint32_t cycle
 		return;
 	}
 	sioDrainArmed = false;
-	int seq = sioQueue[sioQHead].seq;
-	int value = sioQueue[sioQHead].value;
+	uint16_t* d = sioQueue[sioQHead].d;
+	int d0 = d[0];
+	int d1 = d[1];
+	int d2 = d[2];
+	int d3 = d[3];
 	sioQHead = (sioQHead + 1) % SIO_QUEUE_LEN;
 	--sioQCount;
-	int sv = gba->memory.io[GBA_REG(SIOMLT_SEND)];
-	sioCompleteMulti(value, sv);
-	EM_ASM({
-		if (Module.onSioReply) Module.onSioReply($0, $1);
-	}, seq, sv);
+	sioCompleteMulti4(d0, d1, d2, d3);
 	if (sioQCount) {
 		/* Pace at the real Timer3 cadence (197*64 cycles). */
 		mTimingSchedule(timing, &sioSlaveEvent, 12608);
 	}
 }
 
-/* Queue a master transfer on the slave; drained with emulated time between
- * completions so every transfer gets its own serial IRQ. */
-EMSCRIPTEN_KEEPALIVE void sioPushMaster(int seq, int value) {
+/* Queue a finished transfer's full value vector on a slave; drained with
+ * emulated time between completions so every transfer gets its own serial
+ * IRQ. The slave's reply for the NEXT transfer is read by JS (after this
+ * queue is empty) via sioGetSendValue(). */
+EMSCRIPTEN_KEEPALIVE void sioPushCompletion(int d0, int d1, int d2, int d3) {
 	if (!core || sioQCount >= SIO_QUEUE_LEN) {
 		return;
 	}
 	int tail = (sioQHead + sioQCount) % SIO_QUEUE_LEN;
-	sioQueue[tail].seq = seq & 0xFFFF;
-	sioQueue[tail].value = value & 0xFFFF;
+	sioQueue[tail].d[0] = d0 & 0xFFFF;
+	sioQueue[tail].d[1] = d1 & 0xFFFF;
+	sioQueue[tail].d[2] = d2 & 0xFFFF;
+	sioQueue[tail].d[3] = d3 & 0xFFFF;
 	++sioQCount;
 	struct GBA* gba = (struct GBA*) core->board;
 	if (!mTimingIsScheduled(&gba->timing, &sioSlaveEvent)) {
