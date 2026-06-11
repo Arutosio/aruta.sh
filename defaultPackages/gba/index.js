@@ -317,6 +317,85 @@ export default {
         };
         let linkCleanup = null;   // set while link mode is active
 
+        /* Link-mode strings, inline like the rest of the app, in the site's
+         * 5 languages. Lang comes from the host (same-origin iframe). */
+        const LINK_I18N = {
+            en: {
+                title: 'Link cable — P2P',
+                hint: 'Both players need their own copy of the game.<br>One creates the room, the other joins with the code.',
+                tip: 'Pokémon trades: once connected, both players walk to the Cable Club upstairs in any Pokémon Center.',
+                create: '🛖 Create room',
+                or: '— or —',
+                join: 'Join',
+                waiting: '⌛ Waiting for the other player…',
+                waitShort: 'waiting…',
+                connected: 'connected',
+                disconnected: 'disconnected',
+                lost: '🔌 Peer disconnected.<br>Save is safe — go back and relink.',
+                host: 'P1 (host)', guest: 'P2 (guest)',
+            },
+            it: {
+                title: 'Cavo Link — P2P',
+                hint: 'Ogni giocatore deve avere la propria copia del gioco.<br>Uno crea la stanza, l’altro entra col codice.',
+                tip: 'Scambi Pokémon: una volta connessi, salite entrambi al Cable Club di un Centro Pokémon.',
+                create: '🛖 Crea stanza',
+                or: '— oppure —',
+                join: 'Entra',
+                waiting: '⌛ In attesa dell’altro giocatore…',
+                waitShort: 'in attesa…',
+                connected: 'connesso',
+                disconnected: 'disconnesso',
+                lost: '🔌 Giocatore disconnesso.<br>Il salvataggio è al sicuro — torna indietro e ricollega.',
+                host: 'P1 (host)', guest: 'P2 (ospite)',
+            },
+            es: {
+                title: 'Cable Link — P2P',
+                hint: 'Cada jugador necesita su propia copia del juego.<br>Uno crea la sala, el otro se une con el código.',
+                tip: 'Intercambios Pokémon: una vez conectados, subid los dos al Club Cable de un Centro Pokémon.',
+                create: '🛖 Crear sala',
+                or: '— o —',
+                join: 'Unirse',
+                waiting: '⌛ Esperando al otro jugador…',
+                waitShort: 'esperando…',
+                connected: 'conectado',
+                disconnected: 'desconectado',
+                lost: '🔌 Jugador desconectado.<br>La partida está a salvo — vuelve atrás y reconecta.',
+                host: 'P1 (anfitrión)', guest: 'P2 (invitado)',
+            },
+            ja: {
+                title: '通信ケーブル — P2P',
+                hint: '対戦するには各プレイヤーがゲームのコピーを持っている必要があります。<br>一人がルームを作成し、もう一人がコードで参加します。',
+                tip: 'ポケモン交換：接続後、二人ともポケモンセンター2階の通信クラブへ。',
+                create: '🛖 ルーム作成',
+                or: '— または —',
+                join: '参加',
+                waiting: '⌛ 相手を待っています…',
+                waitShort: '待機中…',
+                connected: '接続済み',
+                disconnected: '切断',
+                lost: '🔌 相手が切断しました。<br>セーブは無事です — 戻って再接続してください。',
+                host: 'P1（ホスト）', guest: 'P2（ゲスト）',
+            },
+            fn: {
+                title: 'ᛚᛁᚾᚲ ᚲᚨᛒᛚᛖ — ᛈ2ᛈ',
+                hint: 'ᛒᛟᚦ ᛈᛚᚨᛁᛖᚱᛊ ᚾᛖᛖᛞ ᚦᛖᛁᚱ ᛟᚹᚾ ᚷᚨᛗᛖ.<br>ᛟᚾᛖ ᛗᚨᚲᛖᛊ ᚦᛖ ᚱᛟᛟᛗ, ᛟᚾᛖ ᛃᛟᛁᚾᛊ ᚹᛁᚦ ᚦᛖ ᚲᛟᛞᛖ.',
+                tip: 'ᛈᛟᚲᛖᛗᛟᚾ ᛏᚱᚨᛞᛖᛊ: ᛒᛟᚦ ᚷᛟ ᛏᛟ ᚦᛖ ᚲᚨᛒᛚᛖ ᚲᛚᚢᛒ.',
+                create: '🛖 ᛗᚨᚲᛖ ᚱᛟᛟᛗ',
+                or: '— ᛟᚱ —',
+                join: 'ᛃᛟᛁᚾ',
+                waiting: '⌛ ᚹᚨᛁᛏᛁᚾᚷ ᚠᛟᚱ ᚦᛖ ᛟᚦᛖᚱ ᛈᛚᚨᛁᛖᚱ…',
+                waitShort: 'ᚹᚨᛁᛏᛁᚾᚷ…',
+                connected: 'ᚲᛟᚾᚾᛖᚲᛏᛖᛞ',
+                disconnected: 'ᛞᛁᛊᚲᛟᚾᚾᛖᚲᛏᛖᛞ',
+                lost: '🔌 ᛈᛖᛖᚱ ᛞᛁᛊᚲᛟᚾᚾᛖᚲᛏᛖᛞ.<br>ᛊᚨᚡᛖ ᛁᛊ ᛊᚨᚠᛖ — ᚷᛟ ᛒᚨᚲ ᚨᚾᛞ ᚱᛖᛚᛁᚾᚲ.',
+                host: 'ᛈ1 (ᚺᛟᛊᛏ)', guest: 'ᛈ2 (ᚷᚢᛖᛊᛏ)',
+            },
+        };
+        function linkLang() {
+            try { return window.parent?.currentLang || 'en'; } catch { return 'en'; }
+        }
+        function LT() { return LINK_I18N[linkLang()] || LINK_I18N.en; }
+
         /* Short human-friendly room codes: 3 words from a fixed list. */
         const LINK_WORDS = [
             'luna', 'fuoco', 'rana', 'stella', 'drago', 'lupo', 'gufo', 'mago',
@@ -354,14 +433,15 @@ export default {
                     </div>
                     <div class="gba-lobby">
                         <div class="gba-lobby-box">
-                            <div class="gba-lobby-title">Link cable — P2P</div>
-                            <div class="gba-lobby-hint">Both players need their own copy of the game.<br>One creates the room, the other joins with the code.</div>
-                            <button class="gba-btn gba-lobby-btn" id="gba-create">🛖 Create room</button>
-                            <div class="gba-lobby-or">— or —</div>
+                            <div class="gba-lobby-title">${LT().title}</div>
+                            <div class="gba-lobby-hint">${LT().hint}</div>
+                            <button class="gba-btn gba-lobby-btn" id="gba-create">${LT().create}</button>
+                            <div class="gba-lobby-or">${LT().or}</div>
                             <div class="gba-lobby-join">
                                 <input id="gba-code" type="text" placeholder="luna-fuoco-rana" spellcheck="false" autocomplete="off">
-                                <button class="gba-btn gba-lobby-btn" id="gba-join">Join</button>
+                                <button class="gba-btn gba-lobby-btn" id="gba-join">${LT().join}</button>
                             </div>
+                            <div class="gba-lobby-hint">${LT().tip}</div>
                         </div>
                     </div>
                 </div>
@@ -392,15 +472,15 @@ export default {
                         <button class="gba-btn" id="gba-back">← Library</button>
                         <span class="gba-playing">🔗 ${escapeHTML(rom.name)}</span>
                         <span class="gba-link-code" id="gba-link-code" title="Room code — click to copy">${escapeHTML(code)}</span>
-                        <span class="gba-link-status" id="gba-link-status">waiting…</span>
+                        <span class="gba-link-status" id="gba-link-status">${LT().waitShort}</span>
                     </div>
                     <div class="gba-screen gba-link-screen">
                         <canvas id="gba-canvas" width="240" height="160"></canvas>
                         <div class="gba-link-overlay" id="gba-link-overlay">
-                            <div>⌛ Waiting for the other player…<br><span class="gba-link-overlay-code">${escapeHTML(code)}</span></div>
+                            <div>${LT().waiting}<br><span class="gba-link-overlay-code">${escapeHTML(code)}</span></div>
                         </div>
                     </div>
-                    <div class="gba-foot">Z=B · X=A · A=L · S=R · Enter=Start · Shift=Select · ${isHost ? 'P1 (host)' : 'P2 (guest)'}</div>
+                    <div class="gba-foot">Z=B · X=A · A=L · S=R · Enter=Start · Shift=Select · ${isHost ? LT().host : LT().guest}</div>
                 </div>
             `;
             const statusEl = root.querySelector('#gba-link-status');
@@ -485,7 +565,7 @@ export default {
                 paused = false;
                 api.sioSetLink(isHost ? 0 : 1, 1);
                 overlayEl.classList.add('hide');
-                setStatus(isHost ? 'connected · P1' : 'connected · P2', true);
+                setStatus(LT().connected + (isHost ? ' · P1' : ' · P2'), true);
             }
             function peerLost() {
                 if (!connected) return;
@@ -495,9 +575,8 @@ export default {
                 api.sioSetLink(isHost ? 0 : 1, 0);
                 paused = true;
                 flushLinkSram();
-                setStatus('disconnected', false);
-                overlayEl.querySelector('div').innerHTML =
-                    '🔌 Peer disconnected.<br>Save is safe — go back and relink.';
+                setStatus(LT().disconnected, false);
+                overlayEl.querySelector('div').innerHTML = LT().lost;
                 overlayEl.classList.remove('hide');
             }
             room.onPeerJoin((id) => peerConnected(id));
