@@ -87,6 +87,7 @@ export default {
                         </div>
                         <div class="gba-actions">
                             <button class="gba-btn gba-play" data-act="play" title="Play">▶</button>
+                            ${r.ext === 'gba' ? '<button class="gba-btn gba-link" data-act="link" title="Link cable (P2P)">🔗</button>' : ''}
                             <button class="gba-btn" data-act="rename" title="Rename">✏️</button>
                             <button class="gba-btn gba-danger" data-act="delete" title="Delete">🗑</button>
                         </div>
@@ -101,6 +102,7 @@ export default {
                 const rom = roms.find(r => r.id === id);
                 if (!rom) return;
                 if (btn.dataset.act === 'play') return startGame(rom);
+                if (btn.dataset.act === 'link') return startLink(rom);
                 if (btn.dataset.act === 'rename') {
                     const name = prompt('Rename ROM:', rom.name);
                     if (name && name.trim()) {
@@ -297,8 +299,213 @@ export default {
             });
         }
 
+        /* ════════════════ LINK MODE (custom mGBA core) ════════════════
+         *
+         * Uses the bundled single-thread mGBA WASM core (see CORE_BUILD.md)
+         * instead of the EmulatorJS CDN: it exposes the GBA serial port to
+         * JS so two browsers can emulate a link cable over WebRTC (M2).
+         * The `mGBA` factory comes from core/mgba.js, concatenated into this
+         * module by the sandbox mini-bundler (same pattern as tavern's
+         * trystero bundle).
+         */
+
+        const LINK_KEYMAP = {
+            // GBA key bits: A=0 B=1 Select=2 Start=3 →=4 ←=5 ↑=6 ↓=7 R=8 L=9
+            x: 0, z: 1, Shift: 2, Enter: 3,
+            ArrowRight: 4, ArrowLeft: 5, ArrowUp: 6, ArrowDown: 7,
+            s: 8, a: 9,
+        };
+        let linkCleanup = null;   // set while link mode is active
+
+        async function startLink(rom) {
+            const b64 = await ctx.storage.get('rom_' + rom.id);
+            if (!b64) { alert('ROM data missing from storage.'); return; }
+            if (typeof mGBA !== 'function') {
+                alert('Link core missing — reinstall the GBA app (Package Store → Defaults).');
+                return;
+            }
+            playing = rom;
+            rom.lastPlayed = Date.now();
+            await ctx.storage.set('roms', roms);
+            const savB64 = await ctx.storage.get('sav_' + rom.id);
+
+            root.innerHTML = `
+                <div class="gba-player">
+                    <div class="gba-toolbar">
+                        <button class="gba-btn" id="gba-back">← Library</button>
+                        <span class="gba-playing">🔗 ${escapeHTML(rom.name)}</span>
+                        <span class="gba-link-status" id="gba-link-status">solo</span>
+                    </div>
+                    <div class="gba-screen gba-link-screen">
+                        <canvas id="gba-canvas" width="240" height="160"></canvas>
+                    </div>
+                    <div class="gba-foot">Z=B · X=A · A=L · S=R · Enter=Start · Shift=Select</div>
+                </div>
+            `;
+            const canvas = root.querySelector('#gba-canvas');
+            const ctx2d = canvas.getContext('2d');
+            const imageData = ctx2d.createImageData(240, 160);
+
+            /* ── boot core ── */
+            let Module, api;
+            try {
+                Module = await mGBA({
+                    locateFile: () => ctx.asset('core/mgba.wasm'),
+                    print: () => {},
+                    printErr: () => {},
+                });
+                api = {
+                    loadGame:           Module.cwrap('loadGame', 'number', ['string']),
+                    quitGame:           Module.cwrap('quitGame', null, []),
+                    runFrame:           Module.cwrap('runFrame', null, []),
+                    setKeys:            Module.cwrap('setKeys', null, ['number']),
+                    getVideoBufferPtr:  Module.cwrap('getVideoBufferPtr', 'number', []),
+                    sioSetLink:         Module.cwrap('sioSetLink', null, ['number', 'number']),
+                    sioGetSendValue:    Module.cwrap('sioGetSendValue', 'number', []),
+                    sioCompleteMulti:   Module.cwrap('sioCompleteMulti', null, ['number', 'number']),
+                    sioTransferPending: Module.cwrap('sioTransferPending', 'number', []),
+                    flushSave:          Module.cwrap('flushSave', null, []),
+                };
+                const bios = await (await fetch(ctx.asset('bios.bin'))).arrayBuffer();
+                Module.FS.writeFile('/gba_bios.bin', new Uint8Array(bios));
+                Module.FS.mkdir('/data');
+                Module.FS.mkdir('/data/saves');
+                Module.FS.mkdir('/data/states');
+                Module.FS.writeFile('/rom.gba', b64ToBytes(b64));
+                if (savB64) Module.FS.writeFile('/data/saves/rom.sav', b64ToBytes(savB64));
+                if (!api.loadGame('/rom.gba')) throw new Error('core rejected ROM');
+                api.sioSetLink(0, 0); // master, no peer yet (P2P lobby lands in M2)
+            } catch (err) {
+                console.warn('[gba] link core boot failed', err);
+                root.querySelector('.gba-screen').innerHTML =
+                    `<div class="gba-offline">⚠ Link core failed to start.<br>${escapeHTML(String(err))}</div>`;
+                return;
+            }
+
+            /* ── audio: scheduled AudioBufferSources @ core rate 32768 Hz ── */
+            let audioCtx = null;
+            let audioPtr = 0;
+            let audioTime = 0;
+            try {
+                audioCtx = new AudioContext({ sampleRate: 32768 });
+                audioPtr = Module._malloc(4096 * 2 * 2); // 4096 stereo int16 frames
+            } catch (err) { console.warn('[gba] link audio unavailable', err); }
+            const readAudio = Module.cwrap('readAudio', 'number', ['number', 'number']);
+            function pumpAudio() {
+                if (!audioCtx || audioCtx.state !== 'running' || !audioPtr) return;
+                const frames = readAudio(audioPtr, 4096);
+                if (frames <= 0) return;
+                const heap = new Int16Array(Module.HEAPU8.buffer, audioPtr, frames * 2);
+                const buf = audioCtx.createBuffer(2, frames, 32768);
+                const L = buf.getChannelData(0);
+                const R = buf.getChannelData(1);
+                for (let i = 0; i < frames; i++) {
+                    L[i] = heap[i * 2] / 32768;
+                    R[i] = heap[i * 2 + 1] / 32768;
+                }
+                const src = audioCtx.createBufferSource();
+                src.buffer = buf;
+                src.connect(audioCtx.destination);
+                const now = audioCtx.currentTime;
+                if (audioTime < now + 0.02) audioTime = now + 0.02;
+                src.start(audioTime);
+                audioTime += frames / 32768;
+            }
+
+            /* ── input ── */
+            let keys = 0;
+            const onKeyDown = (e) => {
+                if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
+                const k = LINK_KEYMAP[e.key];
+                if (k === undefined) return;
+                keys |= 1 << k;
+                api.setKeys(keys);
+                e.preventDefault();
+            };
+            const onKeyUp = (e) => {
+                const k = LINK_KEYMAP[e.key];
+                if (k === undefined) return;
+                keys &= ~(1 << k);
+                api.setKeys(keys);
+                e.preventDefault();
+            };
+            document.addEventListener('keydown', onKeyDown);
+            document.addEventListener('keyup', onKeyUp);
+            const onClickResume = () => { if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume(); };
+            document.addEventListener('pointerdown', onClickResume);
+
+            /* ── frame loop: pace at GBA 59.7275 fps regardless of display Hz ── */
+            const FRAME_MS = 1000 / 59.7275;
+            let rafId = 0;
+            let last = performance.now();
+            let acc = 0;
+            function draw() {
+                const ptr = api.getVideoBufferPtr();
+                if (!ptr) return;
+                const src = new Uint8Array(Module.HEAPU8.buffer, ptr, 240 * 160 * 4);
+                const d = imageData.data;
+                d.set(src);
+                for (let i = 3; i < d.length; i += 4) d[i] = 255;
+                ctx2d.putImageData(imageData, 0, 0);
+            }
+            function loop(now) {
+                rafId = requestAnimationFrame(loop);
+                acc += now - last;
+                last = now;
+                if (acc > 100) acc = 100; // tab was hidden — don't fast-forward
+                let ran = false;
+                while (acc >= FRAME_MS) {
+                    api.runFrame();
+                    acc -= FRAME_MS;
+                    ran = true;
+                }
+                if (ran) { draw(); pumpAudio(); }
+            }
+            rafId = requestAnimationFrame(loop);
+
+            /* ── SRAM persistence (same storage keys as the EmulatorJS path,
+             *    same raw .sav bytes — saves are interchangeable) ── */
+            async function flushLinkSram() {
+                try {
+                    api.flushSave();
+                    const data = Module.FS.readFile('/data/saves/rom.sav');
+                    if (!data || !data.length) return;
+                    const b = bytesToB64(data);
+                    if (b === lastSramB64) return;
+                    lastSramB64 = b;
+                    await ctx.storage.set('sav_' + rom.id, b);
+                    if (!rom.hasSave) {
+                        rom.hasSave = true;
+                        await ctx.storage.set('roms', roms);
+                    }
+                } catch { /* no save file yet */ }
+            }
+            sramTimer = setInterval(flushLinkSram, SRAM_FLUSH_MS);
+            const onVis = () => { if (document.visibilityState === 'hidden') flushLinkSram(); };
+            document.addEventListener('visibilitychange', onVis);
+
+            linkCleanup = async () => {
+                cancelAnimationFrame(rafId);
+                if (sramTimer) { clearInterval(sramTimer); sramTimer = null; }
+                document.removeEventListener('keydown', onKeyDown);
+                document.removeEventListener('keyup', onKeyUp);
+                document.removeEventListener('pointerdown', onClickResume);
+                document.removeEventListener('visibilitychange', onVis);
+                await flushLinkSram();
+                try { if (audioCtx) await audioCtx.close(); } catch {}
+                try { api.quitGame(); } catch {}
+            };
+
+            root.querySelector('#gba-back').addEventListener('click', async () => {
+                await linkCleanup();
+                linkCleanup = null;
+                location.reload(); // same clean-slate pattern as the EmulatorJS player
+            });
+        }
+
         renderLibrary();
         root.__gbaCleanup = async () => {
+            if (linkCleanup) { await linkCleanup(); linkCleanup = null; return; }
             if (sramTimer) clearInterval(sramTimer);
             document.removeEventListener('dragenter', onDragEnter);
             document.removeEventListener('dragover', onDragOver);
