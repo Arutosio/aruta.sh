@@ -508,12 +508,17 @@ export default {
                     loadGame:           Module.cwrap('loadGame', 'number', ['string']),
                     quitGame:           Module.cwrap('quitGame', null, []),
                     runFrame:           Module.cwrap('runFrame', null, []),
+                    runLoop:            Module.cwrap('runLoop', null, []),
+                    runCycles:          Module.cwrap('runCycles', null, ['number']),
+                    frameCount:         Module.cwrap('frameCount', 'number', []),
                     setKeys:            Module.cwrap('setKeys', null, ['number']),
                     getVideoBufferPtr:  Module.cwrap('getVideoBufferPtr', 'number', []),
                     sioSetLink:         Module.cwrap('sioSetLink', null, ['number', 'number']),
                     sioGetSendValue:    Module.cwrap('sioGetSendValue', 'number', []),
                     sioCompleteMulti:   Module.cwrap('sioCompleteMulti', null, ['number', 'number']),
                     sioTransferPending: Module.cwrap('sioTransferPending', 'number', []),
+                    sioPushMaster:      Module.cwrap('sioPushMaster', null, ['number', 'number']),
+                    sioQueueCount:      Module.cwrap('sioQueueCount', 'number', []),
                     flushSave:          Module.cwrap('flushSave', null, []),
                 };
                 const bios = await (await fetch(ctx.asset('bios.bin'))).arrayBuffer();
@@ -586,27 +591,120 @@ export default {
                 if (msg.t === 'f') { peerFrames = msg.n | 0; peerFramesAt = performance.now(); }
                 else if (msg.t === 'bye') peerLost();
             });
+            /* Serial lockstep (the VBA-Link trick): emulated time STOPS while
+             * waiting for the peer, so the games' own link timeouts (the
+             * slave resets its handshake after 10 vblanks without a serial
+             * IRQ; the master bursts 9 transfers per frame off Timer3) can
+             * never fire spuriously. Wall-clock speed degrades with RTT;
+             * correctness doesn't. */
+            let lastXAt = 0;          // slave: when the last master transfer arrived
+            let masterFrame = 0;      // slave: master's frame counter from 'x'/'f' msgs
+            const __linkStats = { sioStarts: 0, xRecv: 0, rRecv: 0, completes: 0, lastSent: -1, lastRecv: -1 };
             getSio((msg, id) => {
                 if (id !== peerId || !msg || !connected) return;
                 if (msg.t === 'x' && !isHost) {
-                    // Master clocked a transfer — answer with our send value.
-                    const sv = api.sioGetSendValue();
-                    api.sioCompleteMulti(msg.v, sv);
-                    sendSio({ t: 'r', q: msg.q, sv }, peerId);
+                    // Master clocked a transfer. Don't complete it here: the
+                    // master bursts up to 9 per frame and they arrive in one
+                    // network turn — completing them back-to-back collapses
+                    // their serial IRQs. Queue in the core instead; an
+                    // mTiming event drains one per ISR with emulated CPU
+                    // time in between, and onSioReply ships our value back.
+                    __linkStats.xRecv++;
+                    __linkStats.lastRecv = msg.v;
+                    lastXAt = performance.now();
+                    if (typeof msg.f === 'number' && msg.f > masterFrame) masterFrame = msg.f;
+                    api.sioPushMaster(msg.q, msg.v);
+                    // Drain at SUB-frame granularity (~20k cycles ≈ 0.07
+                    // frames per slice): the reply goes out this turn, but a
+                    // 9-transfer master burst advances the slave's clock by
+                    // well under a frame — full-frame slices here made the
+                    // slave race ahead of the master and trip the games' own
+                    // frame-based link timeouts.
+                    let guard = 40;
+                    while (api.sioQueueCount() && guard--) api.runCycles(20000);
+                    frameCount = api.frameCount();
                 } else if (msg.t === 'r' && isHost && msg.q === pendingSeq && pendingVal !== null) {
+                    __linkStats.rRecv++;
+                    __linkStats.lastRecv = msg.sv;
                     api.sioCompleteMulti(pendingVal, msg.sv);
+                    __linkStats.completes++;
                     pendingVal = null;
+                    // Resume the frame suspended on this transfer right away —
+                    // Emerald bursts up to 9 transfers inside one frame, so
+                    // waiting for the next rAF tick would crawl.
+                    if (midFrame) {
+                        if (advanceFrame()) {
+                            midFrame = false;
+                            draw();
+                            pumpAudio();
+                        } // else: blocked again on the frame's next transfer
+                    }
                 }
             });
+            if (!isHost) {
+                // Fired by the core's drain event after each queued transfer
+                // completes on the slave — sv is OUR value for that transfer.
+                Module.onSioReply = (q, sv) => {
+                    __linkStats.completes++;
+                    if (connected && peerId) sendSio({ t: 'r', q, sv }, peerId);
+                };
+            }
             if (isHost) {
                 Module.onSioStart = (v) => {
+                    __linkStats.sioStarts++;
+                    __linkStats.lastSent = v;
                     if (!connected) return;   // game started a transfer with no peer
                     pendingSeq = (pendingSeq + 1) & 0xFFFF;
                     pendingVal = v;
                     pendingSince = performance.now();
-                    sendSio({ t: 'x', q: pendingSeq, v }, peerId);
+                    sendSio({ t: 'x', q: pendingSeq, v, f: frameCount }, peerId);
                 };
             }
+            // Debug handle for link diagnostics (read from devtools; harmless in prod).
+            const dbg = (name) => { try { return Module.ccall(name, 'number', [], []); } catch { return -2; } };
+            window.__gbaLink = {
+                stats: __linkStats, isHost,
+                get pending() { return pendingVal; },
+                get sio() {
+                    return {
+                        siocnt: dbg('sioGetSiocnt').toString(2).padStart(16, '0'),
+                        rcnt: dbg('sioGetRcnt').toString(2).padStart(16, '0'),
+                        mode: dbg('sioGetMode'),
+                        irqs: dbg('sioGetIrqCount'),
+                        completes: dbg('sioGetCompleteCount'),
+                        send: api.sioGetSendValue(),
+                    };
+                },
+                read16: (a) => Module.ccall('readBus16', 'number', ['number'], [a]),
+                read8: (a) => Module.ccall('readBus8', 'number', ['number'], [a]),
+                get trace() { return linkTrace; },
+                get pairLog() {
+                    const n = Module.ccall('sioLogCount', 'number', [], []);
+                    const out = [];
+                    for (let i = Math.max(0, n - 64); i < n; i++) {
+                        const v = Module.ccall('sioLogGet', 'number', ['number'], [i]) >>> 0;
+                        out.push({ i, d0: (v >>> 16).toString(16), d1: (v & 0xFFFF).toString(16) });
+                    }
+                    return out;
+                },
+                /* Emerald-specific link globals (pret symbols, US/EU BPEE). */
+                get game() {
+                    const r16 = (a) => Module.ccall('readBus16', 'number', ['number'], [a]);
+                    const r8  = (a) => Module.ccall('readBus8', 'number', ['number'], [a]);
+                    return {
+                        isMaster: r8(0x03003170),
+                        state: r8(0x03003171),
+                        localId: r8(0x03003172),
+                        playerCount: r8(0x03003173),
+                        hs: [0x3174, 0x3176, 0x3178, 0x317A].map(o => r16(0x03000000 + o).toString(16)),
+                        handshakeAsMaster: r8(0x0300317E),
+                        shouldAdvance: r8(0x03003144),
+                        wirelessType: r8(0x030030FC),
+                        ie: r16(0x04000200).toString(2).padStart(16, '0'),
+                        ime: r16(0x04000208),
+                    };
+                },
+            };
 
             /* ── audio: scheduled AudioBufferSources @ core rate 32768 Hz ── */
             let audioCtx = null;
@@ -633,7 +731,9 @@ export default {
                 src.buffer = buf;
                 src.connect(audioCtx.destination);
                 const now = audioCtx.currentTime;
-                if (audioTime < now + 0.02) audioTime = now + 0.02;
+                // Keep ~90ms of scheduled lead: short leads underrun whenever a
+                // rAF tick is late and the result is audible crackle.
+                if (audioTime < now + 0.09) audioTime = now + 0.09;
                 src.start(audioTime);
                 audioTime += frames / 32768;
             }
@@ -675,6 +775,7 @@ export default {
                 ctx2d.putImageData(imageData, 0, 0);
             }
             function loop(now) {
+                cancelAnimationFrame(rafId);
                 rafId = requestAnimationFrame(loop);
                 acc += now - last;
                 last = now;
@@ -683,27 +784,83 @@ export default {
                 // Transfer watchdog: a reply should arrive within seconds even
                 // on a bad link — anything longer means the peer is gone.
                 if (pendingVal !== null && now - pendingSince > 10000) peerLost();
-                // Soft frame sync: don't let this side run away from the peer
-                // (keeps both players inside link menus together). Only when
-                // the peer's counter is fresh, so a stall can't deadlock us.
-                if (connected && peerFramesAt && now - peerFramesAt < 2000 &&
-                    frameCount - peerFrames > 120) {
+                // Lockstep stalls — emulated time freezes instead of letting
+                // the games' own link timeouts expire:
+                //  - master: don't run frames while a transfer is in flight;
+                //  - slave: while the master is actively clocking (an 'x'
+                //    arrived recently), never run more than 3 frames past the
+                //    master's frame counter. Incoming transfers still complete
+                //    from the network callback while stalled.
+                if (isHost) {
+                    if (pendingVal !== null || midFrame) { acc = 0; return; }
+                } else if (connected && now - lastXAt < 2000 && frameCount > masterFrame + 3 &&
+                           !api.sioQueueCount()) {
+                    // Frame-capped to the master — but never stall while
+                    // queued transfers still need CPU time to drain.
                     acc = 0;
                     return;
                 }
                 let ran = false;
-                while (acc >= FRAME_MS) {
-                    api.runFrame();
-                    frameCount++;
-                    if (connected && frameCount % 30 === 0) {
-                        try { sendCtl({ t: 'f', n: frameCount }, peerId); } catch {}
+                while (acc >= FRAME_MS && !midFrame) {
+                    if (advanceFrame()) {
+                        acc -= FRAME_MS;
+                        ran = true;
+                    } else {
+                        midFrame = true; // suspended inside a frame, resume on 'r'
+                        acc = 0;
                     }
-                    acc -= FRAME_MS;
-                    ran = true;
                 }
                 if (ran) { draw(); pumpAudio(); }
             }
+            /* Emulate one frame in runLoop slices. Returns false when the
+             * master blocked on a serial transfer mid-frame — the frame is
+             * resumed (same function) when the peer's reply arrives. */
+            let midFrame = false;
+            function advanceFrame() {
+                const f0 = api.frameCount();
+                let guard = 20000;
+                while (api.frameCount() === f0) {
+                    api.runLoop();
+                    if (isHost && api.sioTransferPending()) return false;
+                    if (!--guard) { console.warn('[gba] runLoop guard tripped'); break; }
+                }
+                frameCount = api.frameCount();
+                if (connected && frameCount % 30 === 0) {
+                    try { sendCtl({ t: 'f', n: frameCount }, peerId); } catch {}
+                }
+                traceTick();
+                return true;
+            }
+            /* Per-frame trace of the game's link globals — captures the exact
+             * frame where an error bit appears (devtools-only diagnostics). */
+            const linkTrace = [];
+            function traceTick() {
+                try {
+                    const L = window.__gbaLink;
+                    if (!L) return;
+                    const s32 = (L.read16(0x030030E0) | (L.read16(0x030030E2) << 16)) >>> 0;
+                    const e = {
+                        f: frameCount,
+                        st: L.read8(0x03003171),
+                        s: '0x' + s32.toString(16),
+                        snd: __linkStats.lastSent,
+                        rcv: __linkStats.lastRecv,
+                    };
+                    const p = linkTrace[linkTrace.length - 1];
+                    if (!p || p.st !== e.st || p.s !== e.s) {
+                        linkTrace.push(e);
+                        if (linkTrace.length > 400) linkTrace.shift();
+                    }
+                } catch {}
+            }
             rafId = requestAnimationFrame(loop);
+            // Hidden tabs get their rAF throttled to ~1 Hz, which freezes the
+            // emulated clock and trips the games' link timeouts. The active
+            // AudioContext marks the tab audible, so interval timers keep
+            // ticking — use them as the frame driver while hidden.
+            const bgTimer = setInterval(() => {
+                if (document.hidden) loop(performance.now());
+            }, 50);
 
             /* ── SRAM persistence (same storage keys as the EmulatorJS path,
              *    same raw .sav bytes — saves are interchangeable) ── */
@@ -728,6 +885,7 @@ export default {
 
             linkCleanup = async () => {
                 cancelAnimationFrame(rafId);
+                clearInterval(bgTimer);
                 if (sramTimer) { clearInterval(sramTimer); sramTimer = null; }
                 document.removeEventListener('keydown', onKeyDown);
                 document.removeEventListener('keyup', onKeyUp);
