@@ -46,6 +46,18 @@ function fmtDate(ts) {
 function escapeHTML(s) {
     return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 }
+/* Blob download (same pattern as grimoire's ZIP export). Needs the host
+ * iframe sandbox to include allow-downloads or Chrome silently blocks it. */
+function downloadBytes(bytes, filename, mime = 'application/octet-stream') {
+    const url = URL.createObjectURL(new Blob([bytes], { type: mime }));
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
 
 export default {
     async mount(root, ctx) {
@@ -87,22 +99,73 @@ export default {
                         </div>
                         <div class="gba-actions">
                             <button class="gba-btn gba-play" data-act="play" title="Play">▶</button>
-                            ${r.ext === 'gba' ? '<button class="gba-btn gba-link" data-act="link" title="Link cable (P2P)">🔗</button>' : ''}
-                            <button class="gba-btn" data-act="rename" title="Rename">✏️</button>
-                            <button class="gba-btn gba-danger" data-act="delete" title="Delete">🗑</button>
+                            <button class="gba-btn" data-act="menu" title="More actions">⋮</button>
+                            <div class="gba-menu" hidden>
+                                ${r.ext === 'gba' ? '<button class="gba-menu-item" data-act="link">🔗 Link cable (P2P)</button>' : ''}
+                                <button class="gba-menu-item" data-act="rename">✏️ Rename</button>
+                                <button class="gba-menu-item" data-act="imp-sav">📥 Import save</button>
+                                <button class="gba-menu-item" data-act="exp-sav">📤 Export save</button>
+                                <button class="gba-menu-item" data-act="exp-rom">📤 Export ROM</button>
+                                <button class="gba-menu-item gba-danger" data-act="delete">🗑 Delete</button>
+                            </div>
                         </div>
                     </div>
                 `).join('');
             }
 
+            const closeMenus = () => grid.querySelectorAll('.gba-menu').forEach(m => { m.hidden = true; });
             grid.addEventListener('click', async (e) => {
                 const btn = e.target.closest('[data-act]');
+                // Any click that isn't the ⋮ trigger collapses open menus.
+                if (!btn || btn.dataset.act !== 'menu') closeMenus();
                 if (!btn) return;
                 const id = btn.closest('.gba-card').dataset.id;
                 const rom = roms.find(r => r.id === id);
                 if (!rom) return;
+                if (btn.dataset.act === 'menu') {
+                    const menu = btn.closest('.gba-actions').querySelector('.gba-menu');
+                    const wasHidden = menu.hidden;
+                    closeMenus();
+                    menu.hidden = !wasHidden;
+                    return;
+                }
                 if (btn.dataset.act === 'play') return startGame(rom);
                 if (btn.dataset.act === 'link') return startLink(rom);
+                if (btn.dataset.act === 'exp-rom') {
+                    const b64 = await ctx.storage.get('rom_' + id);
+                    if (!b64) { alert('ROM data missing from storage.'); return; }
+                    // Original upload name when known (pre-1.7.0 ROMs lack it).
+                    downloadBytes(b64ToBytes(b64), rom.fileName || (rom.name + '.' + rom.ext));
+                    return;
+                }
+                if (btn.dataset.act === 'exp-sav') {
+                    const b64 = await ctx.storage.get('sav_' + id);
+                    if (!b64) { alert('No save for this ROM yet.'); return; }
+                    const base = rom.fileName ? rom.fileName.replace(/\.[^.]+$/, '') : rom.name;
+                    downloadBytes(b64ToBytes(b64), base + '.sav');
+                    return;
+                }
+                if (btn.dataset.act === 'imp-sav') {
+                    const input = document.createElement('input');
+                    input.type = 'file';
+                    input.accept = '.sav,.srm';
+                    input.addEventListener('change', async () => {
+                        const f = input.files[0];
+                        if (!f) return;
+                        if (!f.size || f.size > 512 * 1024) {
+                            alert(`${f.name} does not look like a save file (max 512 KB).`);
+                            return;
+                        }
+                        if (rom.hasSave && !confirm(`Replace the existing save of "${rom.name}"?`)) return;
+                        const bytes = new Uint8Array(await f.arrayBuffer());
+                        await ctx.storage.set('sav_' + id, bytesToB64(bytes));
+                        rom.hasSave = true;
+                        await ctx.storage.set('roms', roms);
+                        renderLibrary();
+                    });
+                    input.click();
+                    return;
+                }
                 if (btn.dataset.act === 'rename') {
                     const name = prompt('Rename ROM:', rom.name);
                     if (name && name.trim()) {
@@ -145,6 +208,7 @@ export default {
             roms.push({
                 id,
                 name: file.name.replace(/\.(gba|gbc?|GBA|GBC?)$/, ''),
+                fileName: file.name,   // original upload name, used verbatim on export
                 ext,
                 size: file.size,
                 addedAt: Date.now(),
@@ -509,12 +573,35 @@ export default {
                         <button class="gba-btn" id="gba-back">← Library</button>
                         <span class="gba-playing">🔗 ${escapeHTML(rom.name)}</span>
                         <span class="gba-link-code" id="gba-link-code" title="Room code — click to copy">${escapeHTML(code)}</span>
+                        <button class="gba-btn" id="gba-vpad-toggle" title="Virtual gamepad">🎮</button>
                         <span class="gba-link-status" id="gba-link-status">${LT().waitShort}</span>
                     </div>
                     <div class="gba-screen gba-link-screen">
                         <canvas id="gba-canvas" width="240" height="160"></canvas>
                         <div class="gba-link-overlay" id="gba-link-overlay">
                             <div>${LT().waiting}<br><span class="gba-link-overlay-code">${escapeHTML(code)}</span></div>
+                        </div>
+                        <div class="gba-vpad" id="gba-vpad" hidden>
+                            <div class="gba-vpad-l">
+                                <button class="gba-vpad-btn shoulder" data-bit="9">L</button>
+                                <div class="gba-vpad-dpad">
+                                    <button class="gba-vpad-btn up" data-bit="6">▲</button>
+                                    <button class="gba-vpad-btn left" data-bit="5">◀</button>
+                                    <button class="gba-vpad-btn right" data-bit="4">▶</button>
+                                    <button class="gba-vpad-btn down" data-bit="7">▼</button>
+                                </div>
+                            </div>
+                            <div class="gba-vpad-c">
+                                <button class="gba-vpad-btn small" data-bit="2">SELECT</button>
+                                <button class="gba-vpad-btn small" data-bit="3">START</button>
+                            </div>
+                            <div class="gba-vpad-r">
+                                <button class="gba-vpad-btn shoulder" data-bit="8">R</button>
+                                <div class="gba-vpad-ab">
+                                    <button class="gba-vpad-btn round" data-bit="1">B</button>
+                                    <button class="gba-vpad-btn round" data-bit="0">A</button>
+                                </div>
+                            </div>
                         </div>
                     </div>
                     <div class="gba-foot">Z=B · X=A · A=L · S=R · Enter=Start · Shift=Select · ${isHost ? LT().host : LT().guest}</div>
@@ -1083,6 +1170,46 @@ export default {
             document.addEventListener('keyup', onKeyUp);
             const onClickResume = () => { if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume(); };
             document.addEventListener('pointerdown', onClickResume);
+
+            /* ── virtual gamepad (touch) ──
+             * Flips the same `keys` bitmask the keyboard uses. Auto-shown on
+             * coarse-pointer devices; 🎮 in the toolbar toggles it anywhere.
+             * All listeners live on elements inside `root`, so they die with
+             * the player markup — no extra cleanup needed. */
+            const vpadEl = root.querySelector('#gba-vpad');
+            const vpadToggle = root.querySelector('#gba-vpad-toggle');
+            let vpadOn = matchMedia('(pointer: coarse)').matches;
+            const applyVpad = () => {
+                vpadEl.hidden = !vpadOn;
+                vpadToggle.classList.toggle('on', vpadOn);
+            };
+            applyVpad();
+            vpadToggle.addEventListener('click', () => { vpadOn = !vpadOn; applyVpad(); });
+            const vpadPointers = new Map();   // pointerId → key bit held by that finger
+            const vpadSet = (bit, down) => {
+                if (down) keys |= 1 << bit; else keys &= ~(1 << bit);
+                api.setKeys(keys);
+            };
+            vpadEl.addEventListener('pointerdown', (e) => {
+                const btn = e.target.closest('[data-bit]');
+                if (!btn) return;
+                if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
+                try { btn.setPointerCapture(e.pointerId); } catch {}
+                const bit = +btn.dataset.bit;
+                vpadPointers.set(e.pointerId, bit);
+                vpadSet(bit, true);
+                btn.classList.add('pressed');
+                e.preventDefault();
+            });
+            const vpadRelease = (e) => {
+                const bit = vpadPointers.get(e.pointerId);
+                if (bit === undefined) return;
+                vpadPointers.delete(e.pointerId);
+                vpadSet(bit, false);
+                vpadEl.querySelector(`[data-bit="${bit}"]`)?.classList.remove('pressed');
+            };
+            vpadEl.addEventListener('pointerup', vpadRelease);
+            vpadEl.addEventListener('pointercancel', vpadRelease);
 
             /* ── frame loop: pace at GBA 59.7275 fps regardless of display Hz ── */
             const FRAME_MS = 1000 / 59.7275;

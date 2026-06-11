@@ -459,8 +459,8 @@ async function mountApp(appId) {
     // allow-modals lets apps use prompt()/alert()/confirm(). Without it these
     // silently return null in sandboxed iframes (Firefox/Chrome both block).
     const sandboxAttr = manifest.allowOrigin
-        ? 'allow-scripts allow-same-origin allow-modals'
-        : 'allow-scripts allow-modals';
+        ? 'allow-scripts allow-same-origin allow-modals allow-downloads'
+        : 'allow-scripts allow-modals allow-downloads';
     iframe.setAttribute('sandbox', sandboxAttr);
     console.debug('[sandbox] mounted', appId, 'with sandbox=', sandboxAttr);
     iframe.style.cssText = 'width:100%;height:100%;border:0;background:transparent;';
@@ -617,8 +617,8 @@ async function mountWidget(widgetId, opts) {
     const iframe = document.createElement('iframe');
     iframe.className = 'widget-iframe';
     const sandboxAttr = manifest.allowOrigin
-        ? 'allow-scripts allow-same-origin allow-modals'
-        : 'allow-scripts allow-modals';
+        ? 'allow-scripts allow-same-origin allow-modals allow-downloads'
+        : 'allow-scripts allow-modals allow-downloads';
     iframe.setAttribute('sandbox', sandboxAttr);
     iframe.style.cssText = 'width:100%;height:100%;border:0;background:transparent;';
     iframe.srcdoc = IFRAME_BOOT;
