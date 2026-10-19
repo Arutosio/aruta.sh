@@ -13,4 +13,8 @@ window.SITE_CONFIG = {
         // [{ src: './Backgrounds/x.webm', kind?: 'video'|'image', slot?: 'dawn'|'noon'|'sunset'|'night' }]
         items: [],
     },
+    // Per-site defaults for Settings → Performance toggles, by toggle id
+    // (e.g. 'settings-hero', 'settings-bgrings', 'settings-intro'). The user's
+    // own choice in Settings always wins.
+    effects: {},
 };
