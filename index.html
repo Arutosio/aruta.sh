@@ -465,12 +465,26 @@
                                 </select>
                             </div>
                             <div class="settings-row">
-                                <div class="settings-label"><span class="settings-icon">🖼</span><div><strong data-i18n="settings_bg">Background</strong><br><small data-i18n="settings_bg_desc">Custom image or video loop (saved in your profile)</small></div></div>
+                                <div class="settings-label"><span class="settings-icon">🖼</span><div><strong data-i18n="settings_bg">Background</strong><br><small data-i18n="settings_bg_desc">Images or video loops, rotated automatically (saved in your profile)</small></div></div>
                                 <div class="settings-actions">
-                                    <button class="settings-reset-btn" id="settings-bg-pick" data-i18n="settings_bg_pick">Upload…</button>
+                                    <button class="settings-reset-btn" id="settings-bg-pick" data-i18n="settings_bg_pick">Add…</button>
                                     <button class="settings-reset-btn" id="settings-bg-clear" data-i18n="settings_bg_clear">Clear</button>
-                                    <span class="settings-status" id="settings-bg-status" data-i18n="settings_status_default">Default</span>
-                                    <input type="file" id="settings-bg-file" accept="image/*,video/*" style="display:none;">
+                                    <span class="settings-status" id="settings-bg-status">Default</span>
+                                    <input type="file" id="settings-bg-file" accept="image/*,video/*" multiple style="display:none;">
+                                </div>
+                            </div>
+                            <ul class="settings-bg-list" id="settings-bg-list" hidden></ul>
+                            <div class="settings-row">
+                                <div class="settings-label"><span class="settings-icon">🔁</span><div><strong data-i18n="settings_bg_rotation">Background rotation</strong><br><small data-i18n="settings_bg_rotation_desc">Cycle every few minutes or follow the time of day</small></div></div>
+                                <div class="settings-actions">
+                                    <select id="settings-bg-mode" class="settings-select">
+                                        <option value="interval" data-i18n="settings_bg_mode_interval">Interval</option>
+                                        <option value="time" data-i18n="settings_bg_mode_time">Time of day</option>
+                                    </select>
+                                    <label class="settings-bg-interval">
+                                        <input type="number" id="settings-bg-interval" class="settings-input" min="1" max="1440" step="1" value="10">
+                                        <span data-i18n="settings_bg_minutes">min</span>
+                                    </label>
                                 </div>
                             </div>
                             <div class="settings-row">
@@ -712,6 +726,7 @@
 
 </main>
 
+<script src="JavaScript/site-config.js"></script>
 <script src="JavaScript/config.js"></script>
 <script src="JavaScript/core.js"></script>
 <script src="JavaScript/util.js"></script>

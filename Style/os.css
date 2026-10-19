@@ -726,6 +726,28 @@ body.taskbar-autohide #taskbar-reveal-zone { display: block; }
     min-width: 180px;
 }
 
+/* Appearance: background playlist + rotation interval */
+.settings-bg-list {
+    list-style: none; margin: 0 0 4px; padding: 0 0 0 40px;
+    display: flex; flex-direction: column; gap: 6px;
+    break-inside: avoid;
+}
+.settings-bg-list[hidden] { display: none; }
+.settings-bg-item {
+    display: flex; align-items: center; gap: 8px;
+    font-size: var(--text-sm); color: var(--text);
+}
+.settings-bg-item-name {
+    flex: 1; min-width: 0;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.settings-bg-item .settings-select { padding: 4px 8px; font-size: var(--text-sm); }
+.settings-bg-interval {
+    display: inline-flex; align-items: center; gap: 6px;
+    font-size: var(--text-sm); color: var(--text-dim);
+}
+.settings-bg-interval .settings-input { min-width: 0; width: 76px; }
+
 /* Language select in settings */
 .settings-select {
     padding: 6px 12px; background: var(--input-bg);

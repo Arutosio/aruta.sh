@@ -75,6 +75,7 @@ function switchLanguage(lang) {
     document.documentElement.setAttribute('lang', lang === 'fn' ? 'en' : lang);
     setActiveLangBtn(lang);
     applyTranslations(lang);
+    if (typeof refreshAppearanceUI === 'function') refreshAppearanceUI();
     buildInterestGrid(lang);
     buildProjectCards(lang);
     typewriterBio(i18n[lang].bio);

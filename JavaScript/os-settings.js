@@ -430,8 +430,8 @@ function initSettings() {
             resetRange('settings-border-alpha', 'border-alpha-label', 100, '%');
             resetRange('settings-blur', 'blur-label', 18, 'px');
             resetRange('settings-radius', 'radius-label', 100, '%');
-            // Reset appearance customizations (background, portrait, name)
-            window.appearance?.reset();
+            // Reset appearance customizations (backgrounds + rotation, portrait, name)
+            window.appearance?.reset().then(refreshAppearanceUI);
             refreshAppearanceUI();
             const t = window.t();
             if (window.showToast) showToast(t.toast_reset_done || 'Settings restored to defaults', 'success');
@@ -937,13 +937,79 @@ function refreshAppearanceUI() {
     const bgStatus = document.getElementById('settings-bg-status');
     const portraitStatus = document.getElementById('settings-portrait-status');
     const nameInput = document.getElementById('settings-name-input');
-    if (bgStatus) bgStatus.textContent = state.background
-        ? (state.background.filename || (state.background.kind === 'video' ? 'Video' : 'Image'))
+    const bgs = state.backgrounds || [];
+    if (bgStatus) bgStatus.textContent = bgs.length
+        ? (t.settings_bg_count || '{n} in rotation').replace('{n}', bgs.length)
         : dflt;
+    renderBackgroundList(bgs, state.rotation.mode);
+    const modeSel = document.getElementById('settings-bg-mode');
+    const intervalInput = document.getElementById('settings-bg-interval');
+    if (modeSel) modeSel.value = state.rotation.mode;
+    // The interval also cycles items that share a phase, so it stays visible in time mode.
+    if (intervalInput && document.activeElement !== intervalInput) intervalInput.value = state.rotation.intervalMin;
     if (portraitStatus) portraitStatus.textContent = state.portrait
         ? (state.portrait.filename || 'Image')
         : dflt;
     if (nameInput) nameInput.value = state.name || '';
+}
+
+/** One row per user background: filename, phase picker (time mode), remove button. */
+function renderBackgroundList(bgs, mode) {
+    const list = document.getElementById('settings-bg-list');
+    if (!list) return;
+    const t = (window.t && window.t()) || {};
+    list.innerHTML = '';
+    list.hidden = !bgs.length;
+    const slotLabels = {
+        '':     t.settings_bg_slot_any    || 'Any time',
+        dawn:   t.settings_bg_slot_dawn   || 'Dawn (5–11)',
+        noon:   t.settings_bg_slot_noon   || 'Noon (11–16)',
+        sunset: t.settings_bg_slot_sunset || 'Sunset (16–20)',
+        night:  t.settings_bg_slot_night  || 'Night (20–5)',
+    };
+    for (const bg of bgs) {
+        const li = document.createElement('li');
+        li.className = 'settings-bg-item';
+
+        const icon = document.createElement('span');
+        icon.textContent = bg.kind === 'video' ? '🎞' : '🖼';
+        icon.setAttribute('aria-hidden', 'true');
+
+        const name = document.createElement('span');
+        name.className = 'settings-bg-item-name';
+        name.textContent = bg.filename || (bg.kind === 'video' ? 'Video' : 'Image');
+        name.title = name.textContent;
+
+        li.append(icon, name);
+
+        if (mode === 'time') {
+            const sel = document.createElement('select');
+            sel.className = 'settings-select';
+            sel.setAttribute('aria-label', t.settings_bg_slot || 'Time of day');
+            for (const [value, label] of Object.entries(slotLabels)) {
+                const opt = document.createElement('option');
+                opt.value = value;
+                opt.textContent = label;
+                sel.appendChild(opt);
+            }
+            sel.value = bg.slot || '';
+            sel.addEventListener('change', () => window.appearance.setBackgroundSlot(bg.id, sel.value || null));
+            li.appendChild(sel);
+        }
+
+        const remove = document.createElement('button');
+        remove.className = 'settings-reset-btn';
+        remove.textContent = '✕';
+        remove.title = t.settings_bg_remove || 'Remove';
+        remove.setAttribute('aria-label', remove.title + ': ' + name.textContent);
+        remove.addEventListener('click', async () => {
+            await window.appearance.removeBackground(bg.id);
+            refreshAppearanceUI();
+        });
+        li.appendChild(remove);
+
+        list.appendChild(li);
+    }
 }
 
 function initAppearanceCustom() {
@@ -976,17 +1042,34 @@ function initAppearanceCustom() {
     if (bgPick && bgFile) {
         bgPick.addEventListener('click', () => bgFile.click());
         bgFile.addEventListener('change', async () => {
-            const f = bgFile.files?.[0];
+            const files = Array.from(bgFile.files || []);
             bgFile.value = '';
-            if (!f) return;
-            const res = await window.appearance.setBackground(f);
+            if (!files.length) return;
+            const res = await window.appearance.addBackgrounds(files);
             toastFor(res);
             refreshAppearanceUI();
         });
     }
     if (bgClear) {
         bgClear.addEventListener('click', async () => {
-            await window.appearance.setBackground(null);
+            await window.appearance.clearBackgrounds();
+            refreshAppearanceUI();
+        });
+    }
+
+    const bgMode = document.getElementById('settings-bg-mode');
+    const bgInterval = document.getElementById('settings-bg-interval');
+    if (bgMode) {
+        bgMode.addEventListener('change', () => {
+            window.appearance.setRotation({ mode: bgMode.value });
+            refreshAppearanceUI();
+        });
+    }
+    if (bgInterval) {
+        bgInterval.addEventListener('change', () => {
+            const n = parseFloat(bgInterval.value);
+            if (!(n > 0)) { refreshAppearanceUI(); return; }
+            window.appearance.setRotation({ intervalMin: n });
             refreshAppearanceUI();
         });
     }
